@@ -32,7 +32,7 @@
 
 - 检测操作系统和基础工具。
 - 在允许的情况下安装缺失的 `git`、Node.js、npm。
-- 从 `https://oracleapex.cn/cli/` 下载稳定文件名的安装脚本和 CLI 压缩包。
+- 从 GitHub Release 下载稳定文件名的安装脚本和 CLI 压缩包。
 - 安装依赖并构建 CLI。
 - 创建本机 `apexcn` 命令。
 - 可选把 skill 安装到已检测到的 Codex、Claude、OpenCode 等 AI 工具中，让后续 agent 知道如何安全调用 CLI。
@@ -50,19 +50,19 @@ https://oracleapex.cn/ords/api
 macOS / Linux：
 
 ```bash
-curl -fsSL https://oracleapex.cn/cli/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
+curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://oracleapex.cn/cli/install-agent.ps1" | iex
+$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
 ```
 
 安装脚本默认下载固定文件名的 CLI 包：
 
 ```bash
-https://oracleapex.cn/cli/apexcn-cli.tgz
+https://github.com/wfg2513148/apexcn-cli/releases/latest/download/apexcn-cli.tgz
 ```
 
 即使 CLI 版本更新，上述 URL 和压缩包文件名也保持不变。

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-package_url="${APEXCN_CLI_PACKAGE_URL:-https://oracleapex.cn/cli/apexcn-cli.tgz}"
+package_url="${APEXCN_CLI_PACKAGE_URL:-https://github.com/wfg2513148/apexcn-cli/releases/latest/download/apexcn-cli.tgz}"
 repo_url="${APEXCN_CLI_REPO:-}"
 repo_ref="${APEXCN_CLI_REF:-main}"
 install_root="${APEXCN_CLI_INSTALL_ROOT:-$HOME/.apexcn/tools/apexcn-cli}"
@@ -35,7 +35,7 @@ Options:
   --install-codex-skill       Install the Codex skill for apexcn-cli agent usage.
   --install-agent-skills      Install the skill into detected AI agent tools without prompting.
   --source-dir <path>         Use an existing local repository checkout.
-  --package-url <url>         Source package URL. Defaults to https://oracleapex.cn/cli/apexcn-cli.tgz.
+  --package-url <url>         Source package URL. Defaults to the latest GitHub release package.
   --repo <url>                Use a Git repository URL instead of the package URL.
   --ref <name>                Git branch/tag/commit to install when --repo is used.
   --install-root <path>       Install root. Defaults to ~/.apexcn/tools/apexcn-cli.

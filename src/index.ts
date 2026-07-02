@@ -17,7 +17,7 @@ export type CreateProgramOptions = Partial<CommandIo> & {
   configPath?: string;
 };
 
-export const CLI_VERSION = "0.1.1";
+export const CLI_VERSION = "0.1.2";
 
 export function createProgram(options: CreateProgramOptions = {}): Command {
   const io: CommandIo = {
