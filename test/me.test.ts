@@ -85,6 +85,37 @@ describe("me command", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("prints clean errors for non-JSON API failures", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response("<html>outage</html>", {
+          status: 503,
+          statusText: "Service Unavailable",
+          headers: { "x-request-id": "req-html" }
+        })
+      )
+    );
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toBe("HTTP 503: Service Unavailable requestId=req-html\n");
+    expect(stderr.join("")).not.toContain("SyntaxError");
+    expect(stderr.join("")).not.toContain("<html>");
+    expect(process.exitCode).toBe(1);
+  });
+
   test("exits non-zero when no profile is configured", async () => {
     const stderr: string[] = [];
     const program = createProgram({

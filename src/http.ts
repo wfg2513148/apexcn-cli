@@ -80,7 +80,13 @@ async function parseJson(response: Response): Promise<unknown> {
   if (text.length === 0) {
     return null;
   }
-  return JSON.parse(text) as unknown;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    const requestId = response.headers.get("x-request-id") ?? undefined;
+    const message = response.ok ? "Invalid JSON response from server" : response.statusText || `HTTP ${response.status}`;
+    throw new HttpError(message, response.status, response.statusText, requestId, null);
+  }
 }
 
 function requestIdFrom(body: unknown): string | undefined {

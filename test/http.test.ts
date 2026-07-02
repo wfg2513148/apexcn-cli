@@ -61,6 +61,12 @@ describe("http", () => {
     });
   });
 
+  test("requestJson preserves empty response bodies as null", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, { status: 204 })));
+
+    await expect(requestJson("https://oracleapex.cn/ords/apexcn", "/api/v1/no-content", { token: "abc123" })).resolves.toBeNull();
+  });
+
   test("requestJson propagates structured errors with requestId", async () => {
     vi.stubGlobal(
       "fetch",
@@ -78,6 +84,51 @@ describe("http", () => {
       status: 401,
       requestId: "req-123",
       body: { ok: false, error: { code: "INVALID_TOKEN", message: "Invalid API token", requestId: "req-123" } }
+    } satisfies Partial<HttpError>);
+  });
+
+  test("requestJson converts non-JSON error responses into HttpError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response("<html>temporary outage</html>", {
+          status: 503,
+          statusText: "Service Unavailable",
+          headers: { "x-request-id": "req-html" }
+        })
+      )
+    );
+
+    await expect(requestJson("https://oracleapex.cn/ords/apexcn", "/api/v1/me", { token: "abc123" })).rejects.toMatchObject({
+      name: "HttpError",
+      message: "Service Unavailable",
+      status: 503,
+      statusText: "Service Unavailable",
+      requestId: "req-html",
+      body: null
+    } satisfies Partial<HttpError>);
+    await expect(requestJson("https://oracleapex.cn/ords/apexcn", "/api/v1/me", { token: "abc123" })).rejects.not.toThrow(SyntaxError);
+  });
+
+  test("requestJson converts non-JSON successful responses into stable HttpError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response("<html>not json</html>", {
+          status: 200,
+          statusText: "OK",
+          headers: { "x-request-id": "req-ok-html" }
+        })
+      )
+    );
+
+    await expect(requestJson("https://oracleapex.cn/ords/apexcn", "/api/v1/me", { token: "abc123" })).rejects.toMatchObject({
+      name: "HttpError",
+      message: "Invalid JSON response from server",
+      status: 200,
+      statusText: "OK",
+      requestId: "req-ok-html",
+      body: null
     } satisfies Partial<HttpError>);
   });
 });

@@ -89,6 +89,34 @@ describe("doctor command", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("reports non-JSON API failures as failed checks", async () => {
+    const responses = [
+      new Response("<html>outage</html>", {
+        status: 503,
+        statusText: "Service Unavailable",
+        headers: { "x-request-id": "req-html" }
+      }),
+      Response.json({ items: [{ id: 4, name: "APEX 进阶技巧" }], requestId: "req-categories" }),
+      Response.json({ items: [{ id: 42, title: "APEX REST" }], requestId: "req-search" })
+    ];
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () => responses.shift() ?? Response.json({ ok: true }));
+
+    await program.parseAsync(["node", "apexcn", "doctor", "--json"]);
+
+    const data = JSON.parse(stdout.join(""));
+    expect(data.ok).toBe(false);
+    expect(data.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "me", ok: false, message: "Service Unavailable", status: 503, requestId: "req-html" })
+      ])
+    );
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(stdout.join("")).not.toContain("SyntaxError");
+    expect(stdout.join("")).not.toContain("<html>");
+    expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBe(1);
+  });
+
   test("reports missing profile without making API requests", async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];

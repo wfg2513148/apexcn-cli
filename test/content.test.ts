@@ -67,6 +67,25 @@ describe("content commands", () => {
     });
   });
 
+  test("category list prints clean errors for non-JSON API failures", async () => {
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () =>
+      new Response("<html>outage</html>", {
+        status: 502,
+        statusText: "Bad Gateway",
+        headers: { "x-request-id": "req-html" }
+      })
+    );
+
+    await program.parseAsync(["node", "apexcn", "category", "list"]);
+
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toBe("HTTP 502: Bad Gateway requestId=req-html\n");
+    expect(stderr.join("")).not.toContain("SyntaxError");
+    expect(stderr.join("")).not.toContain("<html>");
+    expect(process.exitCode).toBe(1);
+  });
+
   test("search calls the keyword API with pageSize and date filters", async () => {
     const { program, stdout, fetch } = await configuredProgram(async () =>
       Response.json({ items: [{ id: 42, title: "APEX topic" }], page: { limit: 2 }, requestId: "req-search" })
