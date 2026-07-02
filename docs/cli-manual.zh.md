@@ -52,6 +52,7 @@ apexcn auth logout
 apexcn me
 apexcn me --json
 apexcn me --verbose --json
+apexcn me --format text
 ```
 
 ## doctor
@@ -111,6 +112,7 @@ apexcn search "JSON" --from-date 2026-01-01 --to-date 2026-12-31 --json
 ```bash
 apexcn topic view 30549 --json
 apexcn thread view 30549 --json
+apexcn topic view 30549 --format text
 ```
 
 创建帖子，正文来自文件：
@@ -228,6 +230,7 @@ apexcn subscription remove 30549 --json
 ```bash
 apexcn ask "Oracle APEX 如何调用 REST API？" --json
 apexcn ask "ORDS OAuth2 Bearer token 怎么生成？" --top-k 3 --json
+apexcn ask "Oracle APEX 如何调用 REST API？" --format text
 ```
 
 ## 常用组合

@@ -4,6 +4,7 @@ import { createInterface } from "node:readline/promises";
 import { Command, InvalidArgumentError, Option } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
 import { HttpError, NetworkError, requestJson } from "../http.js";
+import { blockText, fieldText, isRecord, itemsFromData, outputFormat, parseOutputFormat, printData, validateFormatOptions, type FormatOption, type JsonOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
 
 type ApiCommandOptions = CommandIo & {
@@ -16,16 +17,6 @@ type Session = {
   profile: string;
   baseUrl: string;
   token: string;
-};
-
-type JsonOption = {
-  json?: boolean;
-};
-
-type OutputFormat = "json" | "pretty" | "text";
-
-type FormatOption = JsonOption & {
-  format?: OutputFormat;
 };
 
 type DryRunOption = {
@@ -98,10 +89,14 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
     .command("view")
     .argument("<id>", "topic id", parsePositiveInteger)
     .option("--json", "pretty-print JSON")
-    .action(async (id: number, commandOptions: JsonOption) => {
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async (id: number, commandOptions: FormatOption) => {
+      if (!validateFormatOptions(options, commandOptions)) {
+        return;
+      }
       await runApi(options, async (session) => {
         const data = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
-        printData(options, data, commandOptions.json);
+        printData(options, data, outputFormat(commandOptions), formatTopicText);
       });
     });
 
@@ -395,14 +390,18 @@ export function createAskCommand(options: ApiCommandOptions): Command {
     .argument("<question>")
     .option("--top-k <n>", "number of chunks", parsePositiveInteger)
     .option("--json", "pretty-print JSON")
-    .action(async (question: string, commandOptions: JsonOption & { topK?: number }) => {
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async (question: string, commandOptions: FormatOption & { topK?: number }) => {
+      if (!validateFormatOptions(options, commandOptions)) {
+        return;
+      }
       await runApi(options, async (session) => {
         const data = await requestJson(session.baseUrl, "/api/v1/ask", {
           token: session.token,
           method: "POST",
           body: compactBody({ question, topK: commandOptions.topK })
         });
-        printData(options, data, commandOptions.json);
+        printData(options, data, outputFormat(commandOptions), formatAskText);
       });
     });
 }
@@ -480,16 +479,6 @@ function printDryRun(options: CommandIo, session: Session, request: ApiRequestPl
   }), json);
 }
 
-function printData(options: CommandIo, data: unknown, formatOrJson?: OutputFormat | boolean, textFormatter?: (data: unknown) => string): void {
-  const format = typeof formatOrJson === "string" ? formatOrJson : formatOrJson ? "pretty" : "json";
-  if (format === "text" && textFormatter) {
-    const text = textFormatter(data);
-    options.stdout(text ? `${text}\n` : "");
-    return;
-  }
-  options.stdout(`${JSON.stringify(data, null, format === "pretty" ? 2 : 0)}\n`);
-}
-
 async function contentFromOptions(options: { content?: string; contentFile?: string }, commandOptions: ApiCommandOptions): Promise<string> {
   const content = await optionalContentFromOptions(options, commandOptions);
   if (!content) {
@@ -561,29 +550,6 @@ function compactBody(input: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined));
 }
 
-function outputFormat(options: FormatOption): OutputFormat {
-  if (options.json) {
-    return "pretty";
-  }
-  return options.format ?? "json";
-}
-
-function validateFormatOptions(options: CommandIo, commandOptions: FormatOption): boolean {
-  if (commandOptions.json && commandOptions.format && commandOptions.format !== "pretty") {
-    options.stderr("--json can only be combined with --format pretty\n");
-    process.exitCode = 1;
-    return false;
-  }
-  return true;
-}
-
-function parseOutputFormat(value: string): OutputFormat {
-  if (value === "json" || value === "pretty" || value === "text") {
-    return value;
-  }
-  throw new InvalidArgumentError(`Expected output format json, pretty, or text: ${value}`);
-}
-
 function formatCategoryListText(data: unknown): string {
   const items = itemsFromData(data);
   return items.map((item) => `${fieldText(item.id)}\t${fieldText(item.name)}`).join("\n");
@@ -594,22 +560,76 @@ function formatSearchText(data: unknown): string {
   return items.map((item) => `${fieldText(item.id)}\t${fieldText(item.title)}\t${fieldText(item.url)}`).join("\n");
 }
 
-function itemsFromData(data: unknown): Array<Record<string, unknown>> {
-  if (!isRecord(data) || !Array.isArray(data.items)) {
-    return [];
-  }
-  return data.items.filter(isRecord);
-}
-
-function fieldText(value: unknown): string {
-  if (value === undefined || value === null) {
+function formatTopicText(data: unknown): string {
+  const topic = topicFromData(data);
+  if (!topic) {
     return "";
   }
-  return String(value).replace(/[\t\r\n]+/g, " ");
+  return lines([
+    line("Title", topic.title),
+    line("Author", topic.createdByName ?? topic.authorName ?? topic.createdBy),
+    line("Category", topic.categoryName),
+    line("URL", topic.url ?? topic.threadUrl),
+    line("Original URL", topic.originalUrl),
+    blockLine("Content", topic.content ?? topic.body ?? topic.summary ?? topic.excerpt),
+    line("requestId", isRecord(data) ? data.requestId : undefined)
+  ]);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+function formatAskText(data: unknown): string {
+  if (!isRecord(data)) {
+    return "";
+  }
+  const answer = blockText(data.answer);
+  const sources = sourcesFromData(data);
+  const sourceLines = sources.map((source, index) => {
+    const title = fieldText(source.title ?? source.topicTitle ?? source.topicId ?? `source ${index + 1}`);
+    const url = fieldText(source.url ?? source.threadUrl);
+    const score = fieldText(source.score);
+    const snippet = fieldText(source.snippet ?? source.content);
+    const details = [url, score ? `score ${score}` : "", snippet].filter(Boolean).join(" | ");
+    return details ? `${index + 1}. ${title} - ${details}` : `${index + 1}. ${title}`;
+  });
+  return lines([
+    blockLine("Answer", answer),
+    sourceLines.length > 0 ? "Sources:" : undefined,
+    ...sourceLines,
+    line("requestId", data.requestId)
+  ]);
+}
+
+function topicFromData(data: unknown): Record<string, unknown> | undefined {
+  if (!isRecord(data)) {
+    return undefined;
+  }
+  if (isRecord(data.topic)) {
+    return data.topic;
+  }
+  return data;
+}
+
+function sourcesFromData(data: Record<string, unknown>): Array<Record<string, unknown>> {
+  for (const key of ["sources", "citations", "items"]) {
+    const value = data[key];
+    if (Array.isArray(value)) {
+      return value.filter(isRecord);
+    }
+  }
+  return [];
+}
+
+function line(label: string, value: unknown): string | undefined {
+  const text = fieldText(value);
+  return text ? `${label}: ${text}` : undefined;
+}
+
+function blockLine(label: string, value: unknown): string | undefined {
+  const text = blockText(value);
+  return text ? `${label}:\n${text}` : undefined;
+}
+
+function lines(values: Array<string | undefined>): string {
+  return values.filter((value): value is string => Boolean(value)).join("\n");
 }
 
 async function promptCategoryId(options: CommandIo, session: Session): Promise<number | undefined> {

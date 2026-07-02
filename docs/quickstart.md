@@ -162,6 +162,7 @@ apexcn auth list --json
 apexcn me
 apexcn me --json
 apexcn me --verbose --json
+apexcn me --format text
 ```
 
 退出当前 profile：
@@ -205,6 +206,7 @@ apexcn search "向量索引" --category-id 4 --from-date 2026-01-01 --to-date 20
 ```bash
 apexcn topic view 30549 --json
 apexcn thread view 30549 --json
+apexcn topic view 30549 --format text
 ```
 
 `thread` 是 `topic` 的别名。
@@ -213,6 +215,7 @@ RAG 问答：
 
 ```bash
 apexcn ask "Oracle APEX 如何调用 REST API？" --top-k 3 --json
+apexcn ask "Oracle APEX 如何调用 REST API？" --format text
 ```
 
 生产当前 `API_ENABLE_RAG=N`，所以 `ask` 的预期行为是返回 `HTTP 403`。管理员启用 `API_ENABLE_RAG=Y` 后才会返回回答。

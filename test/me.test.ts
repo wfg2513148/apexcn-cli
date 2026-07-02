@@ -57,6 +57,71 @@ describe("me command", () => {
     expect(process.exitCode).toBeUndefined();
   });
 
+  test("supports text format while preserving verbose diagnostics", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          user: { id: 11, email: "test@example.test", nickname: "Test\ter", roleLevel: 10, isMuted: false },
+          requestId: "req-ok"
+        })
+      )
+    );
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "auth",
+      "set-token",
+      "--token",
+      "abcdefghijklmnopqrstuvwxyz",
+      "--base-url",
+      "https://oracleapex.cn/ords/test",
+      "--profile",
+      "test@oci"
+    ]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me", "--format", "text", "--verbose"]);
+
+    expect(stdout.join("")).toBe([
+      "id: 11",
+      "name: Test er",
+      "email: test@example.test",
+      "roleLevel: 10",
+      "isMuted: false",
+      "requestId: req-ok",
+      ""
+    ].join("\n"));
+    expect(stderr.join("")).toBe("GET https://oracleapex.cn/ords/test/api/v1/me\n");
+  });
+
+  test("rejects ambiguous format options before making API requests", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn());
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "me", "--json", "--format", "text"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toBe("--json can only be combined with --format pretty\n");
+    expect(process.exitCode).toBe(1);
+  });
+
   test("prints requestId on API errors and exits non-zero", async () => {
     const configPath = await tempConfigPath();
     const stdout: string[] = [];

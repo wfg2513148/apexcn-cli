@@ -52,6 +52,7 @@ Show current account:
 apexcn me
 apexcn me --json
 apexcn me --verbose --json
+apexcn me --format text
 ```
 
 ## doctor
@@ -111,6 +112,7 @@ View a topic:
 ```bash
 apexcn topic view 30549 --json
 apexcn thread view 30549 --json
+apexcn topic view 30549 --format text
 ```
 
 Create a topic from a file:
@@ -228,6 +230,7 @@ Ask against community content:
 ```bash
 apexcn ask "How do I call a REST API from Oracle APEX?" --json
 apexcn ask "How do I generate an ORDS OAuth2 Bearer token?" --top-k 3 --json
+apexcn ask "How do I call a REST API from Oracle APEX?" --format text
 ```
 
 ## Common Flows

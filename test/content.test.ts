@@ -394,9 +394,9 @@ describe("content commands", () => {
     expect(search?.helpInformation()).toContain("pretty-print JSON");
   });
 
-  test("format option is exposed only on category list and search", () => {
+  test("format option is exposed only on read commands with text output", () => {
     const program = createProgram();
-    const formatCommands = ["category list", "search"];
+    const formatCommands = ["me", "category list", "search", "topic view", "thread view", "ask"];
 
     for (const path of leafCommandPaths(program)) {
       if (formatCommands.includes(path)) {
@@ -410,7 +410,10 @@ describe("content commands", () => {
   test("format options reject ambiguous or invalid output selections", async () => {
     const invalidCases = [
       ["node", "apexcn", "category", "list", "--format", "xml"],
-      ["node", "apexcn", "search", "APEX", "--format", "yaml"]
+      ["node", "apexcn", "search", "APEX", "--format", "yaml"],
+      ["node", "apexcn", "topic", "view", "42", "--format", "xml"],
+      ["node", "apexcn", "me", "--format", "yaml"],
+      ["node", "apexcn", "ask", "Q", "--format", "yaml"]
     ];
 
     for (const argv of invalidCases) {
@@ -429,7 +432,10 @@ describe("content commands", () => {
 
     const ambiguousCases = [
       ["node", "apexcn", "category", "list", "--json", "--format", "text"],
-      ["node", "apexcn", "search", "APEX", "--json", "--format", "json"]
+      ["node", "apexcn", "search", "APEX", "--json", "--format", "json"],
+      ["node", "apexcn", "topic", "view", "42", "--json", "--format", "text"],
+      ["node", "apexcn", "me", "--json", "--format", "json"],
+      ["node", "apexcn", "ask", "Q", "--json", "--format", "json"]
     ];
 
     for (const argv of ambiguousCases) {
@@ -640,6 +646,36 @@ describe("content commands", () => {
       "https://oracleapex.cn/ords/test/api/v1/topics/42",
       expect.objectContaining({ method: "DELETE" })
     );
+  });
+
+  test("topic view supports text format", async () => {
+    const { program, stdout, fetch } = await configuredProgram(async () =>
+      Response.json({
+        topic: {
+          title: "APEX\tTopic",
+          createdByName: "王方钢",
+          categoryName: "APEX\n进阶",
+          threadUrl: "https://oracleapex.cn/t/42",
+          content: "第一行\n第二行"
+        },
+        requestId: "req-topic"
+      })
+    );
+
+    await program.parseAsync(["node", "apexcn", "thread", "view", "42", "--format", "text"]);
+
+    expect(fetch).toHaveBeenLastCalledWith("https://oracleapex.cn/ords/test/api/v1/topics/42", expect.any(Object));
+    expect(stdout.join("")).toBe([
+      "Title: APEX Topic",
+      "Author: 王方钢",
+      "Category: APEX 进阶",
+      "URL: https://oracleapex.cn/t/42",
+      "Content:",
+      "第一行",
+      "第二行",
+      "requestId: req-topic",
+      ""
+    ].join("\n"));
   });
 
   test("topic write commands can print dry-run plans without calling the API", async () => {
@@ -980,6 +1016,35 @@ describe("content commands", () => {
       "https://oracleapex.cn/ords/test/api/v1/ask",
       expect.objectContaining({ method: "POST", body: JSON.stringify({ question: "How to use APEX?", topK: 3 }) })
     );
+  });
+
+  test("ask supports text format with sources", async () => {
+    const { program, stdout, fetch } = await configuredProgram(async () =>
+      Response.json({
+        answer: "APEX 可以用 REST Data Source。",
+        sources: [
+          { title: "REST\tData", url: "https://oracleapex.cn/t/42", score: 0.88, snippet: "第一行\n第二行" },
+          { topicId: 43 }
+        ],
+        requestId: "req-ask"
+      })
+    );
+
+    await program.parseAsync(["node", "apexcn", "ask", "How?", "--top-k", "2", "--format", "text"]);
+
+    expect(fetch).toHaveBeenLastCalledWith(
+      "https://oracleapex.cn/ords/test/api/v1/ask",
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ question: "How?", topK: 2 }) })
+    );
+    expect(stdout.join("")).toBe([
+      "Answer:",
+      "APEX 可以用 REST Data Source。",
+      "Sources:",
+      "1. REST Data - https://oracleapex.cn/t/42 | score 0.88 | 第一行 第二行",
+      "2. 43",
+      "requestId: req-ask",
+      ""
+    ].join("\n"));
   });
 
   test("reply and relation write commands can print dry-run plans without calling the API", async () => {
