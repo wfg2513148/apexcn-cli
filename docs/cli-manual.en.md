@@ -130,6 +130,8 @@ Create a topic from stdin:
 printf 'Body from stdin\n' | apexcn topic create --category-id 4 --title "stdin example" --json
 ```
 
+Choose exactly one body source: `--content-file`, `--content`, or stdin. The CLI rejects `--content` and `--content-file` when both are supplied.
+
 Edit a topic:
 
 ```bash

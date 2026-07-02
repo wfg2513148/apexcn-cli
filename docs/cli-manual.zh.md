@@ -130,6 +130,8 @@ apexcn topic create \
 printf '正文来自 stdin\n' | apexcn topic create --category-id 4 --title "stdin 示例" --json
 ```
 
+正文来源三选一：`--content-file`、`--content` 或 stdin。不要同时传 `--content` 和 `--content-file`，CLI 会拒绝执行。
+
 编辑帖子：
 
 ```bash

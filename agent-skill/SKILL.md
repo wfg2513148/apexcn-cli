@@ -52,6 +52,7 @@ apexcn auth set-token \
 
 - Always pass `--json` for machine-readability.
 - Prefer `--content-file` for long posts or replies.
+- Never pass both `--content` and `--content-file`; choose one body source.
 - Before creating a topic, run `apexcn category list --json` and use a valid `--category-id`.
 - Do not rely on interactive prompts. Supply required non-interactive flags explicitly.
 - Before deleting a topic, run `apexcn topic view <thread_id> --json`, then pass `--yes --force --confirm-title "<exact title>"`.

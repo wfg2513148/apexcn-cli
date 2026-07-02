@@ -239,11 +239,13 @@ apexcn topic edit 30687 \
 apexcn topic update 30687 --content "新的正文" --json
 ```
 
-内容来源优先级：
+正文来源三选一：
 
-1. `--content-file`
-2. `--content`
-3. stdin
+- 长正文用 `--content-file`
+- 短正文用 `--content`
+- 批处理可用 stdin
+
+不要同时传 `--content` 和 `--content-file`，CLI 会拒绝执行。
 
 示例：
 

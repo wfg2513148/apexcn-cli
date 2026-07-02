@@ -431,7 +431,7 @@ describe("content commands", () => {
     expect(process.exitCode).toBe(1);
   });
 
-  test("content-file wins over inline content", async () => {
+  test("content-file submits file content", async () => {
     const dir = await mkdtemp(join(tmpdir(), "apexcn-content-file-"));
     const file = join(dir, "body.md");
     await writeFile(file, "file body", "utf8");
@@ -446,8 +446,6 @@ describe("content commands", () => {
       "2",
       "--title",
       "CLI title",
-      "--content",
-      "inline body",
       "--content-file",
       file
     ]);
@@ -458,6 +456,32 @@ describe("content commands", () => {
         body: JSON.stringify({ categoryId: 2, title: "CLI title", content: "file body" })
       })
     );
+  });
+
+  test("write commands reject both content and content-file", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "apexcn-content-conflict-"));
+    const file = join(dir, "body.md");
+    await writeFile(file, "file body", "utf8");
+    const cases = [
+      ["node", "apexcn", "topic", "create", "--category-id", "2", "--title", "CLI title", "--content", "inline", "--content-file", file],
+      ["node", "apexcn", "topic", "update", "42", "--content", "inline", "--content-file", file],
+      ["node", "apexcn", "reply", "create", "42", "--content", "inline", "--content-file", file],
+      ["node", "apexcn", "reply", "update", "100", "--content", "inline", "--content-file", file]
+    ];
+
+    for (const argv of cases) {
+      const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ ok: true }));
+      exitOverrideTree(program);
+
+      await expect(program.parseAsync(argv)).rejects.toMatchObject({
+        code: "commander.conflictingOption"
+      });
+
+      expect(fetch).not.toHaveBeenCalled();
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).toContain("error: option '--content <text>' cannot be used with option '--content-file <path>'");
+      vi.unstubAllGlobals();
+    }
   });
 
   test("missing content-file reports a CLI error instead of a stack trace", async () => {

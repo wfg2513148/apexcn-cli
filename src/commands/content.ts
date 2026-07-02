@@ -81,8 +81,8 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
     .command("create")
     .option("--category-id <id>", "category id", parsePositiveInteger)
     .requiredOption("--title <title>")
-    .option("--content <text>")
-    .option("--content-file <path>")
+    .addOption(new Option("--content <text>", "inline content").conflicts("contentFile"))
+    .addOption(new Option("--content-file <path>", "read content from file").conflicts("content"))
     .option("--tags <csv>")
     .option("--json", "pretty-print JSON")
     .action(async (commandOptions: JsonOption & TopicWriteOptions & { categoryId?: number }) => {
@@ -111,8 +111,8 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
     .argument("<id>", "topic id", parsePositiveInteger)
     .option("--category-id <id>", "category id", parsePositiveInteger)
     .option("--title <title>")
-    .option("--content <text>")
-    .option("--content-file <path>")
+    .addOption(new Option("--content <text>", "inline content").conflicts("contentFile"))
+    .addOption(new Option("--content-file <path>", "read content from file").conflicts("content"))
     .option("--tags <csv>")
     .option("--json", "pretty-print JSON")
     .action(async (id: number, commandOptions: JsonOption & TopicWriteOptions & { categoryId?: number }) => {
@@ -197,8 +197,8 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
     .command("create")
     .argument("<topic-id>", "topic id", parsePositiveInteger)
     .option("--parent-post-id <id>", "parent reply id", parsePositiveInteger)
-    .option("--content <text>")
-    .option("--content-file <path>")
+    .addOption(new Option("--content <text>", "inline content").conflicts("contentFile"))
+    .addOption(new Option("--content-file <path>", "read content from file").conflicts("content"))
     .option("--json", "pretty-print JSON")
     .action(async (topicId: number, commandOptions: JsonOption & ReplyWriteOptions) => {
       await runApi(options, async (session) => {
@@ -218,8 +218,8 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
     .command("update")
     .alias("edit")
     .argument("<id>", "reply id", parsePositiveInteger)
-    .option("--content <text>")
-    .option("--content-file <path>")
+    .addOption(new Option("--content <text>", "inline content").conflicts("contentFile"))
+    .addOption(new Option("--content-file <path>", "read content from file").conflicts("content"))
     .option("--json", "pretty-print JSON")
     .action(async (id: number, commandOptions: JsonOption & ReplyWriteOptions) => {
       await runApi(options, async (session) => {
