@@ -24,6 +24,16 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
         process.exitCode = 1;
         return;
       }
+      if (commandOptions.profile.trim().length === 0) {
+        options.stderr("Profile must not be blank\n");
+        process.exitCode = 1;
+        return;
+      }
+      if (commandOptions.baseUrl.trim().length === 0) {
+        options.stderr("Base URL must not be blank\n");
+        process.exitCode = 1;
+        return;
+      }
       try {
         await setCurrentProfile(
           commandOptions.profile,

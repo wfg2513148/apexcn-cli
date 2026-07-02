@@ -132,4 +132,69 @@ describe("auth command", () => {
     });
     expect(process.exitCode).toBeUndefined();
   });
+
+  test("auth set-token rejects blank profile and base URL without writing config", async () => {
+    const cases = [
+      {
+        argv: ["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz", "--profile", "   "],
+        message: "Profile must not be blank\n"
+      },
+      {
+        argv: ["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz", "--base-url", "   "],
+        message: "Base URL must not be blank\n"
+      }
+    ];
+
+    for (const item of cases) {
+      const configPath = await tempConfigPath();
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      const program = createProgram({
+        configPath,
+        stdout: (text) => stdout.push(text),
+        stderr: (text) => stderr.push(text)
+      });
+
+      await program.parseAsync(item.argv);
+      await program.parseAsync(["node", "apexcn", "auth", "show"]);
+
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).toBe(`${item.message}No active profile\n`);
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+    }
+  });
+
+  test("auth set-token stores non-blank profile and base URL exactly as provided", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "auth",
+      "set-token",
+      "--token",
+      "abcdefghijklmnopqrstuvwxyz",
+      "--profile",
+      " prod ",
+      "--base-url",
+      " https://example.test "
+    ]);
+    await program.parseAsync(["node", "apexcn", "auth", "show", "--json"]);
+
+    expect(stderr.join("")).toBe("");
+    expect(JSON.parse(stdout[1])).toEqual({
+      profile: " prod ",
+      baseUrl: " https://example.test ",
+      token: "abcd...wxyz"
+    });
+    expect(process.exitCode).toBeUndefined();
+  });
 });

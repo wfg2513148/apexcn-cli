@@ -23,7 +23,7 @@ apexcn auth set-token \
   --token "$APEXCN_API_KEY"
 ```
 
-`--token` cannot be blank or whitespace-only. If you pass an environment variable, make sure it is set first.
+`--token`, `--profile`, and `--base-url` cannot be blank or whitespace-only. If you pass environment variables, make sure they are set first.
 
 Show current profile:
 
