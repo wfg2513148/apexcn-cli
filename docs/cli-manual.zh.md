@@ -62,7 +62,11 @@ apexcn me --format text
 ```bash
 apexcn doctor
 apexcn doctor --json
+apexcn doctor --format json
+apexcn doctor --format text
 ```
+
+`doctor` 默认输出文本。`--format json` 输出压缩 JSON；`--json` 和 `--format pretty` 输出格式化 JSON。JSON 输出包含 CLI 版本、User-Agent、配置文件路径、Node.js 版本、平台和架构等诊断信息。
 
 ## category
 

@@ -396,7 +396,7 @@ describe("content commands", () => {
 
   test("format option is exposed only on read commands with text output", () => {
     const program = createProgram();
-    const formatCommands = ["me", "category list", "search", "topic view", "thread view", "ask"];
+    const formatCommands = ["doctor", "me", "category list", "search", "topic view", "thread view", "ask"];
 
     for (const path of leafCommandPaths(program)) {
       if (formatCommands.includes(path)) {

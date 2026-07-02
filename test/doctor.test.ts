@@ -55,6 +55,14 @@ describe("doctor command", () => {
     expect(fetch).toHaveBeenNthCalledWith(3, "https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&pageSize=1", expect.any(Object));
     const data = JSON.parse(stdout.join(""));
     expect(data.ok).toBe(true);
+    expect(data.diagnostics).toEqual(expect.objectContaining({
+      cliVersion: "0.1.6",
+      userAgent: "apexcn-cli/0.1.6",
+      configPath: expect.stringContaining("config.json"),
+      nodeVersion: expect.stringMatching(/^v\d+/),
+      platform: process.platform,
+      arch: process.arch
+    }));
     expect(data.profile).toEqual({ name: "test@oci", baseUrl: "https://oracleapex.cn/ords/test" });
     expect(data.checks.map((check: { name: string; ok: boolean }) => [check.name, check.ok])).toEqual([
       ["profile", true],
@@ -65,6 +73,105 @@ describe("doctor command", () => {
     expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(stderr.join("")).toBe("");
     expect(process.exitCode).toBeUndefined();
+  });
+
+  test("supports explicit output formats", async () => {
+    const responses = [
+      { user: { id: 1, nickname: "Tester" }, requestId: "req-me" },
+      { items: [{ id: 4, name: "APEX 进阶技巧" }], requestId: "req-categories" },
+      { items: [{ id: 42, title: "APEX REST" }], requestId: "req-search" }
+    ];
+    const { program, stdout } = await configuredProgram(async () => Response.json(responses.shift()));
+
+    await program.parseAsync(["node", "apexcn", "doctor", "--format", "text"]);
+
+    expect(stdout.join("")).toContain("apexcn doctor: ok\n");
+    expect(stdout.join("")).toContain("CLI Version: 0.1.6\n");
+    expect(stdout.join("")).toContain("User Agent: apexcn-cli/0.1.6\n");
+    expect(stdout.join("")).toContain("Config Path: ");
+    expect(stdout.join("")).toContain("OK search requestId=req-search\n");
+  });
+
+  test("default and explicit text formats use human-readable output", async () => {
+    const cases = [
+      ["node", "apexcn", "doctor"],
+      ["node", "apexcn", "doctor", "--format", "text"]
+    ];
+
+    for (const argv of cases) {
+      const responses = [
+        { user: { id: 1, nickname: "Tester" }, requestId: "req-me" },
+        { items: [{ id: 4, name: "APEX 进阶技巧" }], requestId: "req-categories" },
+        { items: [{ id: 42, title: "APEX REST" }], requestId: "req-search" }
+      ];
+      const { program, stdout } = await configuredProgram(async () => Response.json(responses.shift()));
+
+      await program.parseAsync(argv);
+
+      expect(stdout.join("")).toContain("apexcn doctor: ok\n");
+      expect(stdout.join("")).toContain("CLI Version: 0.1.6\n");
+      expect(() => JSON.parse(stdout.join(""))).toThrow();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("doctor json formats are compact or pretty as requested", async () => {
+    const cases = [
+      { argv: ["node", "apexcn", "doctor", "--format", "json"], pretty: false },
+      { argv: ["node", "apexcn", "doctor", "--format", "pretty"], pretty: true },
+      { argv: ["node", "apexcn", "doctor", "--json"], pretty: true },
+      { argv: ["node", "apexcn", "doctor", "--json", "--format", "pretty"], pretty: true }
+    ];
+
+    for (const item of cases) {
+      const responses = [
+        { user: { id: 1, nickname: "Tester" }, requestId: "req-me" },
+        { items: [{ id: 4, name: "APEX 进阶技巧" }], requestId: "req-categories" },
+        { items: [{ id: 42, title: "APEX REST" }], requestId: "req-search" }
+      ];
+      const { program, stdout } = await configuredProgram(async () => Response.json(responses.shift()));
+
+      await program.parseAsync(item.argv);
+
+      expect(JSON.parse(stdout.join("")).ok).toBe(true);
+      expect(stdout.join("").includes("\n  \"")).toBe(item.pretty);
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("rejects ambiguous or invalid format before loading profile", async () => {
+    const cases = [
+      ["node", "apexcn", "doctor", "--format", "xml"],
+      ["node", "apexcn", "doctor", "--json", "--format", "text"],
+      ["node", "apexcn", "doctor", "--json", "--format", "json"]
+    ];
+
+    for (const argv of cases) {
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      vi.stubGlobal("fetch", vi.fn());
+      const program = createProgram({
+        configPath: await tempConfigPath(),
+        stdout: (text) => stdout.push(text),
+        stderr: (text) => stderr.push(text)
+      });
+      program.exitOverride((error) => {
+        throw error;
+      });
+
+      if (argv.includes("xml")) {
+        await expect(program.parseAsync(argv)).rejects.toThrow();
+        expect(stderr.join("")).toContain("Expected output format json, pretty, or text");
+      } else {
+        await program.parseAsync(argv);
+        expect(stderr.join("")).toBe("--json can only be combined with --format pretty\n");
+        expect(process.exitCode).toBe(1);
+        process.exitCode = undefined;
+      }
+      expect(fetch).not.toHaveBeenCalled();
+      expect(stdout.join("")).toBe("");
+      vi.unstubAllGlobals();
+    }
   });
 
   test("reports failing API checks and exits non-zero", async () => {

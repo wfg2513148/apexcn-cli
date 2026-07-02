@@ -13,14 +13,13 @@ import {
   createTopicCommand
 } from "./commands/content.js";
 import { createMeCommand } from "./commands/me.js";
+import { CLI_VERSION } from "./version.js";
 
 export type CreateProgramOptions = Partial<CommandIo> & {
   configPath?: string;
   readStdin?: () => Promise<string>;
   isStdinTTY?: () => boolean;
 };
-
-export const CLI_VERSION = "0.1.6";
 
 export function createProgram(options: CreateProgramOptions = {}): Command {
   const io: CommandIo = {

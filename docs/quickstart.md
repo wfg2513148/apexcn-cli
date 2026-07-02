@@ -428,7 +428,10 @@ tests/shell/test_apexcn_cli_prod_acceptance.sh apexcn@oci <test_user_id>
 排障顺序：
 
 1. `apexcn auth show --json`
-2. `apexcn me --verbose --json`
-3. 检查 stderr 中的 `HTTP <status>` 和 `requestId`
-4. 用 `requestId` 查服务端日志
-5. 必要时轮换 API key 后重新 `auth set-token`
+2. `apexcn doctor --format json`
+3. `apexcn me --verbose --json`
+
+`doctor` 默认输出文本；`--format json` 适合脚本采集诊断字段，包括 CLI 版本、User-Agent、配置文件路径、Node.js 版本、平台和架构。
+4. 检查 stderr 中的 `HTTP <status>` 和 `requestId`
+5. 用 `requestId` 查服务端日志
+6. 必要时轮换 API key 后重新 `auth set-token`

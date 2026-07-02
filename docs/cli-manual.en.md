@@ -62,7 +62,11 @@ Check install, auth, and API reachability:
 ```bash
 apexcn doctor
 apexcn doctor --json
+apexcn doctor --format json
+apexcn doctor --format text
 ```
+
+`doctor` defaults to text output. `--format json` prints compact JSON; `--json` and `--format pretty` print pretty JSON. JSON output includes diagnostics such as CLI version, user agent, config path, Node.js version, platform, and architecture.
 
 ## category
 

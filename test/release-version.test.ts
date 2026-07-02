@@ -24,8 +24,8 @@ describe("release version check", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Release version check failed for expected version 0.0.0");
     expect(result.stderr).toContain("package.json version: expected 0.0.0");
-    expect(result.stderr).toContain("src/index.ts CLI_VERSION: expected 0.0.0");
-    expect(result.stderr).toContain("src/http.ts DEFAULT_USER_AGENT: expected apexcn-cli/0.0.0");
+    expect(result.stderr).toContain("src/version.ts CLI_VERSION: expected 0.0.0");
+    expect(result.stderr).toContain("src/version.ts DEFAULT_USER_AGENT: expected apexcn-cli/0.0.0");
     expect(result.stderr).toContain("scripts/install-agent.sh default package URL");
     expect(result.stderr).toContain("docs/quickstart.md release URL tag");
     expect(result.stderr).toContain("npm pack filename: expected apexcn-cli-0.0.0.tgz");

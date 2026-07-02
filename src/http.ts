@@ -34,7 +34,9 @@ export class NetworkError extends Error {
   }
 }
 
-export const DEFAULT_USER_AGENT = "apexcn-cli/0.1.6";
+import { DEFAULT_USER_AGENT } from "./version.js";
+
+export { DEFAULT_USER_AGENT };
 
 export function joinUrl(baseUrl: string, path: string): string {
   const left = baseUrl.replace(/\/+$/, "");
