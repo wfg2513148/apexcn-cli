@@ -1,0 +1,20 @@
+{
+  "name": "apexcn-cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "apexcn": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.9"
+  }
+}

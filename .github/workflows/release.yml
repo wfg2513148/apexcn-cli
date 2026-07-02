@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - name: Build release package
+        run: |
+          mkdir -p artifacts/package
+          rsync -a \
+            --exclude .git \
+            --exclude .github \
+            --exclude artifacts \
+            --exclude node_modules \
+            --exclude dist \
+            --exclude coverage \
+            --exclude .DS_Store \
+            ./ artifacts/package/
+          tar -czf artifacts/apexcn-cli.tgz -C artifacts/package .
+          cp scripts/install-agent.sh artifacts/install-agent.sh
+          cp scripts/install-agent.ps1 artifacts/install-agent.ps1
+      - name: Publish GitHub release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            artifacts/apexcn-cli.tgz \
+            artifacts/install-agent.sh \
+            artifacts/install-agent.ps1 \
+            --title "$GITHUB_REF_NAME" \
+            --notes "apexcn-cli release $GITHUB_REF_NAME"
