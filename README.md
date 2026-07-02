@@ -22,13 +22,13 @@
 macOS / Linux：
 
 ```bash
-curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
+curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.3/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
+$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.3/install-agent.ps1" | iex
 ```
 
 ### 普通用户自己安装
@@ -38,13 +38,13 @@ $env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_I
 macOS / Linux：
 
 ```bash
-curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' bash -s -- --yes
+curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.3/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' bash -s -- --yes
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
+$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.3/install-agent.ps1" | iex
 ```
 
 ## 验证
@@ -132,7 +132,7 @@ npm test
 稳定安装文件：
 
 ```text
-https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh
-https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1
-https://github.com/wfg2513148/apexcn-cli/releases/latest/download/apexcn-cli.tgz
+https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.3/install-agent.sh
+https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.3/install-agent.ps1
+https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.3/apexcn-cli.tgz
 ```
