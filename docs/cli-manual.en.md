@@ -135,10 +135,10 @@ apexcn topic create \
 Create a topic from stdin:
 
 ```bash
-printf 'Body from stdin\n' | apexcn topic create --category-id 4 --title "stdin example" --json
+printf 'Body from stdin\n' | apexcn topic create --category-id 4 --title "stdin example" --content-file - --json
 ```
 
-Choose exactly one body source: `--content-file`, `--content`, or stdin. The CLI rejects `--content` and `--content-file` when both are supplied.
+Choose exactly one body source: `--content-file`, `--content`, or stdin. The CLI rejects `--content` and `--content-file` when both are supplied. `--content-file -` reads stdin explicitly; use `--content-file ./-` for a file literally named `-`.
 
 Edit a topic:
 
@@ -167,7 +167,7 @@ Create a reply:
 ```bash
 apexcn reply create 30549 --content "This approach works." --json
 apexcn reply create 30549 --content-file ./reply.md --json
-printf 'Body from stdin\n' | apexcn reply create 30549 --json
+printf 'Body from stdin\n' | apexcn reply create 30549 --content-file - --json
 ```
 
 Create a nested reply:

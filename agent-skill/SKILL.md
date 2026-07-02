@@ -51,7 +51,7 @@ apexcn auth set-token \
 ## Agent Rules
 
 - Always pass `--json` for machine-readability.
-- Prefer `--content-file` for long posts or replies.
+- Prefer `--content-file` for long posts or replies. Use `--content-file -` when piping generated content through stdin.
 - Never pass both `--content` and `--content-file`; choose one body source.
 - Before creating a topic, run `apexcn category list --json` and use a valid `--category-id`.
 - Do not rely on interactive prompts. Supply required non-interactive flags explicitly.
@@ -70,6 +70,7 @@ apexcn search "APEX" --page-size 5 --json
 apexcn ask "Oracle APEX 如何调用 REST API？" --top-k 3 --json
 apexcn topic view 30549 --json
 apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --json
+generator | apexcn topic create --category-id 4 --title "标题" --content-file - --json
 apexcn topic edit 30549 --content-file ./updated.md --json
 apexcn reply create 30549 --content "回复内容" --json
 ```

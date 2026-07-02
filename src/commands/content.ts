@@ -8,6 +8,8 @@ import type { CommandIo } from "./auth.js";
 
 type ApiCommandOptions = CommandIo & {
   configPath?: string;
+  readStdin?: () => Promise<string>;
+  isStdinTTY?: () => boolean;
 };
 
 type Session = {
@@ -97,7 +99,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
           body: compactBody({
             categoryId,
             title: commandOptions.title,
-            content: await contentFromOptions(commandOptions),
+            content: await contentFromOptions(commandOptions, options),
             tags: commandOptions.tags
           })
         });
@@ -123,7 +125,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
           body: compactBody({
             categoryId: commandOptions.categoryId,
             title: commandOptions.title,
-            content: await optionalContentFromOptions(commandOptions),
+            content: await optionalContentFromOptions(commandOptions, options),
             tags: commandOptions.tags
           })
         });
@@ -206,7 +208,7 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
           token: session.token,
           method: "POST",
           body: compactBody({
-            content: await contentFromOptions(commandOptions),
+            content: await contentFromOptions(commandOptions, options),
             parentPostId: commandOptions.parentPostId
           })
         });
@@ -226,7 +228,7 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
         const data = await requestJson(session.baseUrl, `/api/v1/replies/${id}`, {
           token: session.token,
           method: "POST",
-          body: { content: await contentFromOptions(commandOptions) }
+          body: { content: await contentFromOptions(commandOptions, options) }
         });
         printData(options, data, commandOptions.json);
       });
@@ -368,28 +370,31 @@ function printData(options: CommandIo, data: unknown, json?: boolean): void {
   options.stdout(`${JSON.stringify(data, null, json ? 2 : 0)}\n`);
 }
 
-async function contentFromOptions(options: { content?: string; contentFile?: string }): Promise<string> {
-  const content = await optionalContentFromOptions(options);
+async function contentFromOptions(options: { content?: string; contentFile?: string }, commandOptions: ApiCommandOptions): Promise<string> {
+  const content = await optionalContentFromOptions(options, commandOptions);
   if (!content) {
     throw new CliValidationError("content is required");
   }
   return content;
 }
 
-async function optionalContentFromOptions(options: { content?: string; contentFile?: string }): Promise<string | undefined> {
+async function optionalContentFromOptions(options: { content?: string; contentFile?: string }, commandOptions: ApiCommandOptions): Promise<string | undefined> {
   if (options.contentFile) {
-    return readContentFile(options.contentFile);
+    return readContentFile(options.contentFile, commandOptions);
   }
   if (options.content !== undefined) {
     return options.content;
   }
-  if (processStdin.isTTY !== true) {
-    return readStdin();
+  if (isStdinTTY(commandOptions) !== true) {
+    return readStdin(commandOptions);
   }
   return undefined;
 }
 
-async function readContentFile(path: string): Promise<string> {
+async function readContentFile(path: string, options: ApiCommandOptions): Promise<string> {
+  if (path === "-") {
+    return readStdin(options);
+  }
   try {
     return await readFile(path, "utf8");
   } catch (error) {
@@ -403,7 +408,10 @@ async function readContentFile(path: string): Promise<string> {
   }
 }
 
-function readStdin(): Promise<string> {
+function readStdin(options: ApiCommandOptions): Promise<string> {
+  if (options.readStdin) {
+    return options.readStdin();
+  }
   return new Promise((resolve, reject) => {
     let text = "";
     processStdin.setEncoding("utf8");
@@ -414,6 +422,10 @@ function readStdin(): Promise<string> {
     processStdin.on("error", reject);
     processStdin.resume();
   });
+}
+
+function isStdinTTY(options: ApiCommandOptions): boolean {
+  return options.isStdinTTY ? options.isStdinTTY() : processStdin.isTTY === true;
 }
 
 async function promptText(question: string): Promise<string> {

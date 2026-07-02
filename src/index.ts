@@ -16,6 +16,8 @@ import { createMeCommand } from "./commands/me.js";
 
 export type CreateProgramOptions = Partial<CommandIo> & {
   configPath?: string;
+  readStdin?: () => Promise<string>;
+  isStdinTTY?: () => boolean;
 };
 
 export const CLI_VERSION = "0.1.6";
@@ -34,6 +36,8 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   const commandOptions = {
     stdout: io.stdout,
     stderr: io.stderr,
+    readStdin: options.readStdin,
+    isStdinTTY: options.isStdinTTY,
     get configPath() {
       return resolveConfigPath(activeCliConfigPath, options.configPath);
     }

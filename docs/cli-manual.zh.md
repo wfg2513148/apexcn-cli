@@ -135,10 +135,10 @@ apexcn topic create \
 创建帖子，正文来自 stdin：
 
 ```bash
-printf '正文来自 stdin\n' | apexcn topic create --category-id 4 --title "stdin 示例" --json
+printf '正文来自 stdin\n' | apexcn topic create --category-id 4 --title "stdin 示例" --content-file - --json
 ```
 
-正文来源三选一：`--content-file`、`--content` 或 stdin。不要同时传 `--content` 和 `--content-file`，CLI 会拒绝执行。
+正文来源三选一：`--content-file`、`--content` 或 stdin。不要同时传 `--content` 和 `--content-file`，CLI 会拒绝执行。`--content-file -` 会明确读取 stdin；如果文件名真的叫 `-`，请写成 `--content-file ./-`。
 
 编辑帖子：
 
@@ -167,7 +167,7 @@ apexcn topic delete 30549 \
 ```bash
 apexcn reply create 30549 --content "这个方法可行。" --json
 apexcn reply create 30549 --content-file ./reply.md --json
-printf '正文来自 stdin\n' | apexcn reply create 30549 --json
+printf '正文来自 stdin\n' | apexcn reply create 30549 --content-file - --json
 ```
 
 创建楼中楼回复：

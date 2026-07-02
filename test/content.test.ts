@@ -10,14 +10,15 @@ async function tempConfigPath() {
   return join(dir, ".apexcn", "config.json");
 }
 
-async function configuredProgram(fetchImpl: typeof fetch) {
+async function configuredProgram(fetchImpl: typeof fetch, inputOptions: { readStdin?: () => Promise<string>; isStdinTTY?: () => boolean } = {}) {
   const stdout: string[] = [];
   const stderr: string[] = [];
   vi.stubGlobal("fetch", vi.fn(fetchImpl));
   const program = createProgram({
     configPath: await tempConfigPath(),
     stdout: (text) => stdout.push(text),
-    stderr: (text) => stderr.push(text)
+    stderr: (text) => stderr.push(text),
+    ...inputOptions
   });
   await program.parseAsync([
     "node",
@@ -471,6 +472,108 @@ describe("content commands", () => {
       expect.objectContaining({
         body: JSON.stringify({ categoryId: 2, title: "CLI title", content: "file body" })
       })
+    );
+  });
+
+  test("content-file dash reads explicit stdin for write commands", async () => {
+    const responses = [
+      { ok: true, id: 42 },
+      { ok: true, id: 100 },
+      { ok: true, id: 42 },
+      { ok: true, id: 100 }
+    ];
+    const readStdin = vi.fn()
+      .mockResolvedValueOnce("topic stdin body")
+      .mockResolvedValueOnce("reply stdin body")
+      .mockResolvedValueOnce("topic update stdin body")
+      .mockResolvedValueOnce("reply update stdin body");
+    const { program, fetch } = await configuredProgram(
+      async () => Response.json(responses.shift()),
+      { readStdin, isStdinTTY: () => true }
+    );
+
+    await program.parseAsync(["node", "apexcn", "topic", "create", "--category-id", "2", "--title", "CLI title", "--content-file", "-"]);
+    await program.parseAsync(["node", "apexcn", "reply", "create", "42", "--content-file", "-"]);
+    await program.parseAsync(["node", "apexcn", "topic", "update", "42", "--content-file", "-"]);
+    await program.parseAsync(["node", "apexcn", "post", "edit", "100", "--content-file", "-"]);
+
+    expect(readStdin).toHaveBeenCalledTimes(4);
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      "https://oracleapex.cn/ords/test/api/v1/topics",
+      expect.objectContaining({ body: JSON.stringify({ categoryId: 2, title: "CLI title", content: "topic stdin body" }) })
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      "https://oracleapex.cn/ords/test/api/v1/topics/42/replies",
+      expect.objectContaining({ body: JSON.stringify({ content: "reply stdin body" }) })
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      3,
+      "https://oracleapex.cn/ords/test/api/v1/topics/42",
+      expect.objectContaining({ body: JSON.stringify({ content: "topic update stdin body" }) })
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      4,
+      "https://oracleapex.cn/ords/test/api/v1/replies/100",
+      expect.objectContaining({ body: JSON.stringify({ content: "reply update stdin body" }) })
+    );
+  });
+
+  test("required content-file dash rejects zero-length stdin without calling the API", async () => {
+    const cases = [
+      ["node", "apexcn", "topic", "create", "--category-id", "2", "--title", "CLI title", "--content-file", "-"],
+      ["node", "apexcn", "reply", "create", "42", "--content-file", "-"],
+      ["node", "apexcn", "reply", "update", "100", "--content-file", "-"]
+    ];
+
+    for (const argv of cases) {
+      const { program, stdout, stderr, fetch } = await configuredProgram(
+        async () => Response.json({ ok: true }),
+        { readStdin: async () => "", isStdinTTY: () => true }
+      );
+
+      await program.parseAsync(argv);
+
+      expect(fetch).not.toHaveBeenCalled();
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).toBe("content is required\n");
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("topic update content-file dash can send zero-length content", async () => {
+    const { program, fetch } = await configuredProgram(
+      async () => Response.json({ ok: true }),
+      { readStdin: async () => "", isStdinTTY: () => true }
+    );
+
+    await program.parseAsync(["node", "apexcn", "topic", "update", "42", "--content-file", "-"]);
+
+    expect(fetch).toHaveBeenLastCalledWith(
+      "https://oracleapex.cn/ords/test/api/v1/topics/42",
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ content: "" }) })
+    );
+  });
+
+  test("content-file can still read a literal dash filename via relative path", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "apexcn-dash-content-file-"));
+    const file = join(dir, "-");
+    await writeFile(file, "dash file body", "utf8");
+    const readStdin = vi.fn(async () => "stdin body");
+    const { program, fetch } = await configuredProgram(
+      async () => Response.json({ ok: true, id: 42 }),
+      { readStdin, isStdinTTY: () => true }
+    );
+
+    await program.parseAsync(["node", "apexcn", "topic", "create", "--category-id", "2", "--title", "CLI title", "--content-file", file]);
+
+    expect(readStdin).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenLastCalledWith(
+      "https://oracleapex.cn/ords/test/api/v1/topics",
+      expect.objectContaining({ body: JSON.stringify({ categoryId: 2, title: "CLI title", content: "dash file body" }) })
     );
   });
 

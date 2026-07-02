@@ -252,14 +252,15 @@ apexcn topic update 30687 --content "新的正文" --json
 
 - 长正文用 `--content-file`
 - 短正文用 `--content`
-- 批处理可用 stdin
+- 批处理可用 `--content-file -` 明确读取 stdin
 
 不要同时传 `--content` 和 `--content-file`，CLI 会拒绝执行。
+如果文件名真的叫 `-`，请写成 `--content-file ./-`。
 
 示例：
 
 ```bash
-printf '从 stdin 提交正文\n' | apexcn topic create --category-id 4 --title "stdin 示例" --json
+printf '从 stdin 提交正文\n' | apexcn topic create --category-id 4 --title "stdin 示例" --content-file - --json
 ```
 
 ## 6. 删除话题
@@ -290,7 +291,7 @@ AI agent 必须使用非交互确认参数；不要模拟人工输入。
 
 ```bash
 apexcn reply create 30687 --content "这个方法可行。" --json
-printf '从 stdin 回复\n' | apexcn reply create 30687 --json
+printf '从 stdin 回复\n' | apexcn reply create 30687 --content-file - --json
 apexcn reply create 30687 --content-file ./reply.md --json
 ```
 
@@ -344,7 +345,7 @@ AI agent 调用 CLI 时建议固定这些规则：
 - 首次执行前用 `auth show --json` 和 `me --json` 验证身份。
 - 写入前先用 `category list --json` 获取可用板块。
 - 创建话题时必须传 `--category-id`。
-- 长正文用 `--content-file`，短正文用 `--content`，批处理可用 stdin。
+- 长正文用 `--content-file`，短正文用 `--content`，批处理用 `--content-file -` 明确读取 stdin。
 - 删除话题必须先 `topic view <id> --json` 读取标题，再用 `--confirm-title` 精确确认。
 - 捕获 stderr；HTTP 错误通常包含 `requestId`，要写入日志。
 - 遇到 401 先刷新 API key；遇到 403 不要重试写入，先判断权限/禁言/RAG 开关；遇到 429 按限流退避。
