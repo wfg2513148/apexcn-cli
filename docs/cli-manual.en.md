@@ -46,6 +46,15 @@ apexcn me --json
 apexcn me --verbose --json
 ```
 
+## doctor
+
+Check install, auth, and API reachability:
+
+```bash
+apexcn doctor
+apexcn doctor --json
+```
+
 ## category
 
 List categories:
@@ -235,4 +244,3 @@ Confirm title before deleting:
 apexcn topic view 30549 --json
 apexcn topic delete 30549 --yes --force --confirm-title "Full title" --json
 ```
-

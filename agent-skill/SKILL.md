@@ -34,6 +34,7 @@ apexcn --help
 2. Confirm auth without exposing secrets:
 
 ```bash
+apexcn doctor --json
 apexcn auth show --json
 apexcn me --json
 ```

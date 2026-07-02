@@ -102,7 +102,6 @@ If it is already installed, say:
 
 ## 16. When Something Breaks
 
-> apexcn-cli seems broken. Please check the install location, login state, account info, and category list, then tell me exactly which step failed.
+> apexcn-cli seems broken. Please run the built-in diagnostics first, then check the install location, login state, account info, category list, and search capability. Tell me exactly which step failed.
 
 > My AI tool does not seem to recognize apexcn-cli. Please check whether the skill is installed somewhere this AI tool can read.
-

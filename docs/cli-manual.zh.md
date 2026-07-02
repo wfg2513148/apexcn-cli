@@ -46,6 +46,15 @@ apexcn me --json
 apexcn me --verbose --json
 ```
 
+## doctor
+
+检查安装、登录和 API 连通性：
+
+```bash
+apexcn doctor
+apexcn doctor --json
+```
+
 ## category
 
 列出板块：
@@ -235,4 +244,3 @@ apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --
 apexcn topic view 30549 --json
 apexcn topic delete 30549 --yes --force --confirm-title "完整标题" --json
 ```
-

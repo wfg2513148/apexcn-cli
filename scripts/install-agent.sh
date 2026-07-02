@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-package_url="${APEXCN_CLI_PACKAGE_URL:-https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.4/apexcn-cli.tgz}"
+package_url="${APEXCN_CLI_PACKAGE_URL:-https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.5/apexcn-cli.tgz}"
 repo_url="${APEXCN_CLI_REPO:-}"
 repo_ref="${APEXCN_CLI_REF:-main}"
 install_root="${APEXCN_CLI_INSTALL_ROOT:-$HOME/.apexcn/tools/apexcn-cli}"
@@ -262,6 +262,9 @@ prepare_source() {
     if command_exists rsync; then
       if [[ "$dry_run" != "1" && -f "$source_dir/package.json" && ! -f "$source_dir/cli/package.json" && -d "$install_root/cli" ]]; then
         rm -rf "$install_root/cli"
+      fi
+      if [[ "$dry_run" != "1" && -f "$source_dir/package.json" && ! -f "$source_dir/package/package.json" && -d "$install_root/package" ]]; then
+        rm -rf "$install_root/package"
       fi
       run_cmd rsync -a --delete --exclude .git --exclude node_modules --exclude dist "$source_dir"/ "$install_root"/
     else
@@ -623,7 +626,13 @@ repair_shell_launcher() {
   resolved="$(command -v apexcn 2>/dev/null || true)"
   [[ -n "$resolved" && "$resolved" != "$expected" ]] || return 0
 
-  if [[ "$yes" != "1" || ! -L "$resolved" || ! -w "$(dirname "$resolved")" ]]; then
+  if [[ "$yes" != "1" || ! -w "$(dirname "$resolved")" ]]; then
+    return 0
+  fi
+  if launcher_looks_like_apexcn_cli "$resolved"; then
+    return 0
+  fi
+  if [[ ! -L "$resolved" ]] && ! launcher_file_looks_like_apexcn_cli "$resolved"; then
     return 0
   fi
 
@@ -662,6 +671,12 @@ check_shell_launcher() {
 launcher_looks_like_apexcn_cli() {
   local launcher_path="$1"
   "$launcher_path" --help 2>/dev/null | grep -q 'topic|thread'
+}
+
+launcher_file_looks_like_apexcn_cli() {
+  local launcher_path="$1"
+  [[ -f "$launcher_path" ]] || return 1
+  grep -q 'apexcn-cli' "$launcher_path" 2>/dev/null && grep -q 'dist/index.js' "$launcher_path" 2>/dev/null
 }
 
 print_summary() {

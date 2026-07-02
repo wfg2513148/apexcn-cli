@@ -19,7 +19,7 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('--install-agent-skills');
     expect(script).toContain('APEXCN_API_KEY');
     expect(script).toContain('https://oracleapex.cn/ords/api');
-    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.4/apexcn-cli.tgz');
+    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.5/apexcn-cli.tgz');
     expect(script).toContain('--package-url');
     expect(script).toContain('Downloading apexcn-cli package');
     expect(script).toContain('cli_root');
@@ -61,11 +61,13 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('InstallAgentSkills');
     expect(script).toContain('APEXCN_API_KEY');
     expect(script).toContain('https://oracleapex.cn/ords/api');
-    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.4/apexcn-cli.tgz');
+    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.5/apexcn-cli.tgz');
     expect(script).toContain('PackageUrl');
     expect(script).toContain('Downloading apexcn-cli package');
     expect(script).toContain('Get-CliRoot');
     expect(script).toContain('Test-ShellLauncher');
+    expect(script).toContain('Repair-ShellLauncher');
+    expect(script).toContain('Test-LauncherFileLooksLikeApexcnCli');
     expect(script).toContain('auth set-token');
     expect(script).toContain('npm run build');
     expect(script).toContain('else { "main" }');
@@ -210,6 +212,54 @@ describe('agent one-click installer assets', () => {
     }
   });
 
+  test('macOS/Linux installer can replace a stale shadowing apexcn-cli launcher file with --yes', () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-shadow-file-repair-'));
+    const fakeBin = join(tempRoot, 'fake-bin');
+    const installRoot = join(tempRoot, 'tools', 'apexcn-cli');
+    mkdirSync(fakeBin, { recursive: true });
+    const fakeApexcn = join(fakeBin, 'apexcn');
+    writeFileSync(
+      fakeApexcn,
+      `#!/usr/bin/env bash
+if [[ -f "${join(installRoot, 'dist', 'index.js')}" ]]; then
+  exec node "${join(installRoot, 'dist', 'index.js')}" "$@"
+fi
+exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
+`,
+    );
+    chmodSync(fakeApexcn, 0o755);
+
+    try {
+      const output = execFileSync(
+        'bash',
+        [
+          join(repoRoot, 'scripts/install-agent.sh'),
+          '--source-dir',
+          repoRoot,
+          '--install-root',
+          installRoot,
+          '--bin-dir',
+          join(tempRoot, 'bin'),
+          '--yes',
+        ],
+        {
+          cwd: repoRoot,
+          env: {
+            ...process.env,
+            APEXCN_CLI_DRY_RUN: '1',
+            PATH: `${fakeBin}:${process.env.PATH}`,
+          },
+          encoding: 'utf8',
+        },
+      );
+
+      expect(output).toContain('Replacing shadowing apexcn launcher');
+      expect(output).toContain('DRY-RUN: would replace');
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   test('macOS/Linux installer writes a compact launcher for the resolved CLI root', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-launcher-install-'));
 
@@ -249,7 +299,7 @@ describe('agent one-click installer assets', () => {
         cwd: repoRoot,
         encoding: 'utf8',
       });
-      const archive = join(tempRoot, 'apexcn-cli-0.1.4.tgz');
+      const archive = join(tempRoot, 'apexcn-cli-0.1.5.tgz');
 
       execFileSync(
         'bash',
@@ -274,7 +324,7 @@ describe('agent one-click installer assets', () => {
         env: { ...process.env, HOME: join(tempRoot, 'home') },
         encoding: 'utf8',
       });
-      expect(version).toBe('0.1.4\n');
+      expect(version).toBe('0.1.5\n');
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
@@ -331,6 +381,7 @@ describe('agent one-click installer assets', () => {
     const skill = readRepoFile('agent-skill/SKILL.md');
 
     expect(skill).toContain('apexcn auth show --json');
+    expect(skill).toContain('apexcn doctor --json');
     expect(skill).toContain('--json');
     expect(skill).toContain('real URL');
     expect(skill).toContain('originalUrl');
@@ -369,8 +420,8 @@ describe('agent one-click installer assets', () => {
     expect(doc).toContain('APEXCN_CLI_INSTALL_AGENT_SKILLS');
     expect(doc).toContain('--install-agent-skills');
     expect(doc).toContain('当前用户运行该命令的 AI 工具全局 Skills 目录');
-    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.4/install-agent.sh');
-    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.4/install-agent.ps1');
+    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.5/install-agent.sh');
+    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.5/install-agent.ps1');
     expect(doc).not.toContain('wfg2513148/apexcn-forums/main/cli/install-agent.sh');
     expect(doc).not.toContain('wfg2513148/apexcn-forums/main/cli/install-agent.ps1');
     expect(doc).not.toContain('feature/apexcn-cli-ords-api');
@@ -404,6 +455,7 @@ describe('agent one-click installer assets', () => {
     for (const doc of terminalDocs) {
       expect(doc).toContain('apexcn auth set-token');
       expect(doc).toContain('apexcn auth show');
+      expect(doc).toContain('apexcn doctor');
       expect(doc).toContain('apexcn auth logout');
       expect(doc).toContain('apexcn me');
       expect(doc).toContain('apexcn category list');
@@ -429,12 +481,16 @@ describe('agent one-click installer assets', () => {
   test('README gives beginner-friendly AI and manual install paths', () => {
     const doc = readRepoFile('README.md');
 
-    expect(doc).toContain('把 APEX 中文社区装进终端和本地 AI 工具里');
-    expect(doc).toContain('能帮你做什么');
-    expect(doc).toContain('让 AI 帮你');
-    expect(doc).toContain('AI 工具里安装');
-    expect(doc).toContain('普通用户自己安装');
+    expect(doc).toContain('把 APEX 中文社区装进本地 AI 工具里');
+    expect(doc).toContain('快速安装');
+    expect(doc).toContain('推荐：在 AI 工具里安装');
+    expect(doc).toContain('安装后怎么用');
+    expect(doc).toContain('多数情况下不需要显式说 `apexcn-cli`');
+    expect(doc).toContain('帮我在 APEX 中文社区搜索 REST API 相关帖子');
+    expect(doc).toContain('请先搜索社区已有讨论，再帮我起草一篇提问帖');
+    expect(doc).toContain('帮我收藏帖子 30549');
     expect(doc).toContain('APEXCN_CLI_INSTALL_AGENT_SKILLS');
+    expect(doc).toContain('apexcn doctor --json');
     expect(doc).toContain('apexcn auth show --json');
     expect(doc).toContain('command -v apexcn');
     expect(doc).toContain('docs/user-guide.zh.md');

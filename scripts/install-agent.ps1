@@ -4,7 +4,7 @@ param(
   [switch]$InstallCodexSkill,
   [switch]$InstallAgentSkills,
   [string]$SourceDir = "",
-  [string]$PackageUrl = $(if ($env:APEXCN_CLI_PACKAGE_URL) { $env:APEXCN_CLI_PACKAGE_URL } else { "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.4/apexcn-cli.tgz" }),
+  [string]$PackageUrl = $(if ($env:APEXCN_CLI_PACKAGE_URL) { $env:APEXCN_CLI_PACKAGE_URL } else { "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.5/apexcn-cli.tgz" }),
   [string]$Repo = $(if ($env:APEXCN_CLI_REPO) { $env:APEXCN_CLI_REPO } else { "" }),
   [string]$Ref = $(if ($env:APEXCN_CLI_REF) { $env:APEXCN_CLI_REF } else { "main" }),
   [string]$InstallRoot = $(if ($env:APEXCN_CLI_INSTALL_ROOT) { $env:APEXCN_CLI_INSTALL_ROOT } else { Join-Path $env:LOCALAPPDATA "apexcn\tools\apexcn-cli" }),
@@ -416,11 +416,13 @@ function Verify-Install {
   $apexcn = Join-Path $BinDir "apexcn.cmd"
   if ($DryRun) {
     Write-Step "DRY-RUN: would run $apexcn --help"
+    Repair-ShellLauncher
     Test-ShellLauncher
     if ($Token) { Write-Step "DRY-RUN: would run $apexcn me --json" }
     return
   }
   & $apexcn --help | Out-Null
+  Repair-ShellLauncher
   Test-ShellLauncher
   if ($Token) {
     & $apexcn auth show --json | Out-Null
@@ -429,6 +431,25 @@ function Verify-Install {
       Write-Step "Auth profile saved, but account check failed. Run: apexcn me --json"
     }
   }
+}
+
+function Repair-ShellLauncher {
+  $expected = Join-Path $BinDir "apexcn.cmd"
+  $command = Get-Command "apexcn" -ErrorAction SilentlyContinue
+  if (-not $command) {
+    $command = Get-Command "apexcn.cmd" -ErrorAction SilentlyContinue
+  }
+  if ((-not $command) -or ($command.Source -eq $expected)) { return }
+  if ((-not $Yes) -or (Test-LooksLikeApexcnCli $command.Source)) { return }
+  if (-not (Test-LauncherFileLooksLikeApexcnCli $command.Source)) { return }
+
+  Write-Step "Replacing shadowing apexcn launcher: $($command.Source)"
+  if ($DryRun) {
+    Write-Step "DRY-RUN: would replace $($command.Source) with launcher for $(Get-CliRoot)"
+    return
+  }
+  Remove-Item -Force $command.Source
+  Write-Launcher $command.Source (Get-CliRoot)
 }
 
 function Test-ShellLauncher {
@@ -442,6 +463,9 @@ function Test-ShellLauncher {
     return
   }
   if (Test-LooksLikeApexcnCli $command.Source) {
+    if ($command.Source -ne $expected) {
+      Write-Step "Your shell currently resolves apexcn to an existing apexcn-cli launcher: $($command.Source)"
+    }
     return
   }
   if ($command.Source -ne $expected) {
@@ -458,6 +482,17 @@ function Test-LooksLikeApexcnCli {
     return $false
   }
   return (($help -join "`n") -like "*topic|thread*")
+}
+
+function Test-LauncherFileLooksLikeApexcnCli {
+  param([string]$Launcher)
+  if (-not (Test-Path -PathType Leaf $Launcher)) { return $false }
+  try {
+    $text = Get-Content -Raw -Path $Launcher
+  } catch {
+    return $false
+  }
+  return ($text -like "*apexcn-cli*" -and (($text -like "*dist\index.js*") -or ($text -like "*dist/index.js*")))
 }
 
 Write-Step "Installing apexcn-cli for AI agent use."

@@ -3,6 +3,7 @@ import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { createAuthCommand, type CommandIo } from "./commands/auth.js";
+import { createDoctorCommand } from "./commands/doctor.js";
 import {
   createAskCommand,
   createCategoryCommand,
@@ -17,7 +18,7 @@ export type CreateProgramOptions = Partial<CommandIo> & {
   configPath?: string;
 };
 
-export const CLI_VERSION = "0.1.4";
+export const CLI_VERSION = "0.1.5";
 
 export function createProgram(options: CreateProgramOptions = {}): Command {
   const io: CommandIo = {
@@ -29,6 +30,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   program.name("apexcn");
   program.version(CLI_VERSION);
   program.addCommand(createAuthCommand({ ...io, configPath: options.configPath }));
+  program.addCommand(createDoctorCommand({ ...io, configPath: options.configPath }));
   program.addCommand(createMeCommand({ ...io, configPath: options.configPath }));
   program.addCommand(createCategoryCommand({ ...io, configPath: options.configPath }));
   program.addCommand(createSearchCommand({ ...io, configPath: options.configPath }));
