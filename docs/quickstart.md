@@ -142,7 +142,7 @@ apexcn auth set-token \
 
 保存后，`prod` 会成为当前 active profile。后续命令不需要再传 `--profile`。
 
-`--token`、`--profile` 和 `--base-url` 不能是空字符串或只有空白字符；如果使用环境变量，先确认变量已经设置。
+`--token`、`--profile` 和 `--base-url` 不能是空字符串或只有空白字符；`--base-url` 必须是绝对 `http` 或 `https` URL。如果使用环境变量，先确认变量已经设置。
 
 查看当前配置，不会泄露完整 token：
 

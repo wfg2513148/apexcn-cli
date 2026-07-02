@@ -185,16 +185,126 @@ describe("auth command", () => {
       "--profile",
       " prod ",
       "--base-url",
-      " https://example.test "
+      "https://example.test/ords/api"
     ]);
     await program.parseAsync(["node", "apexcn", "auth", "show", "--json"]);
 
     expect(stderr.join("")).toBe("");
     expect(JSON.parse(stdout[1])).toEqual({
       profile: " prod ",
-      baseUrl: " https://example.test ",
+      baseUrl: "https://example.test/ords/api",
       token: "abcd...wxyz"
     });
     expect(process.exitCode).toBeUndefined();
+  });
+
+  test("auth set-token accepts only absolute http or https base URLs", async () => {
+    const cases = [
+      "not a url",
+      "ftp://example.test",
+      "file:///tmp/api",
+      "//example.test",
+      "https://example.test ",
+      "https:example.com",
+      "http:example.com",
+      "http:///path"
+    ];
+
+    for (const baseUrl of cases) {
+      const configPath = await tempConfigPath();
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      const program = createProgram({
+        configPath,
+        stdout: (text) => stdout.push(text),
+        stderr: (text) => stderr.push(text)
+      });
+
+      await program.parseAsync([
+        "node",
+        "apexcn",
+        "auth",
+        "set-token",
+        "--token",
+        "abcdefghijklmnopqrstuvwxyz",
+        "--base-url",
+        baseUrl
+      ]);
+      await program.parseAsync(["node", "apexcn", "auth", "show"]);
+
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).toBe("Base URL must be an absolute http or https URL\nNo active profile\n");
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+    }
+  });
+
+  test("auth set-token does not overwrite invalid config when base URL is invalid", async () => {
+    const configPath = await tempConfigPath();
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(configPath, "{not-json", "utf8");
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "auth",
+      "set-token",
+      "--token",
+      "abcdefghijklmnopqrstuvwxyz",
+      "--base-url",
+      "not a url"
+    ]);
+    await program.parseAsync(["node", "apexcn", "auth", "show"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toBe(
+      `Base URL must be an absolute http or https URL\nInvalid config file: ${configPath}. Run apexcn auth set-token to reconfigure.\n`
+    );
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("auth set-token stores accepted base URLs exactly as provided", async () => {
+    const cases = [
+      { argv: [], baseUrl: "https://oracleapex.cn/ords/api" },
+      { argv: ["--base-url", "https://example.test/ords/api"], baseUrl: "https://example.test/ords/api" },
+      { argv: ["--base-url", "http://127.0.0.1:9"], baseUrl: "http://127.0.0.1:9" }
+    ];
+
+    for (const item of cases) {
+      const configPath = await tempConfigPath();
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      const program = createProgram({
+        configPath,
+        stdout: (text) => stdout.push(text),
+        stderr: (text) => stderr.push(text)
+      });
+
+      await program.parseAsync([
+        "node",
+        "apexcn",
+        "auth",
+        "set-token",
+        "--token",
+        "abcdefghijklmnopqrstuvwxyz",
+        ...item.argv
+      ]);
+      await program.parseAsync(["node", "apexcn", "auth", "show", "--json"]);
+
+      expect(stderr.join("")).toBe("");
+      expect(JSON.parse(stdout[1])).toEqual({
+        profile: "prod",
+        baseUrl: item.baseUrl,
+        token: "abcd...wxyz"
+      });
+      expect(process.exitCode).toBeUndefined();
+    }
   });
 });

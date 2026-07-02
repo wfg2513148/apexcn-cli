@@ -34,6 +34,11 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
         process.exitCode = 1;
         return;
       }
+      if (!isValidBaseUrl(commandOptions.baseUrl)) {
+        options.stderr("Base URL must be an absolute http or https URL\n");
+        process.exitCode = 1;
+        return;
+      }
       try {
         await setCurrentProfile(
           commandOptions.profile,
@@ -101,6 +106,27 @@ export function redactToken(token: string): string {
     return "********";
   }
   return `${token.slice(0, 4)}...${token.slice(-4)}`;
+}
+
+function isValidBaseUrl(value: string): boolean {
+  if (value.trim() !== value) {
+    return false;
+  }
+  const prefix = value.startsWith("http://") ? "http://" : value.startsWith("https://") ? "https://" : undefined;
+  if (!prefix) {
+    return false;
+  }
+  const hostStart = value.slice(prefix.length, prefix.length + 1);
+  if (!hostStart || hostStart === "/" || hostStart === "?" || hostStart === "#") {
+    return false;
+  }
+
+  try {
+    const url = new URL(value);
+    return (url.protocol === "http:" || url.protocol === "https:") && url.hostname.length > 0;
+  } catch {
+    return false;
+  }
 }
 
 function printConfigError(error: unknown, options: CommandIo): boolean {
