@@ -70,6 +70,7 @@ List categories:
 ```bash
 apexcn category list
 apexcn category list --json
+apexcn category list --format text
 ```
 
 ## search
@@ -78,6 +79,7 @@ Basic search:
 
 ```bash
 apexcn search "Oracle APEX" --json
+apexcn search "Oracle APEX" --format text
 ```
 
 Limit result count:

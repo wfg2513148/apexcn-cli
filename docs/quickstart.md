@@ -187,12 +187,14 @@ apexcn auth logout
 ```bash
 apexcn category list
 apexcn category list --json
+apexcn category list --format text
 ```
 
 搜索话题：
 
 ```bash
 apexcn search APEX --page-size 5 --json
+apexcn search APEX --page-size 5 --format text
 apexcn search "向量索引" --category-id 4 --from-date 2026-01-01 --to-date 2026-12-31 --json
 ```
 

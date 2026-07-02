@@ -129,6 +129,41 @@ describe("content commands", () => {
     });
   });
 
+  test("category list supports explicit output formats", async () => {
+    const categoryPayload = { items: [{ id: 2, name: "APEX 进阶技巧", canCreateTopic: true }], requestId: "req-cat" };
+    const cases = [
+      { argv: ["node", "apexcn", "category", "list", "--format", "json"], expected: `${JSON.stringify(categoryPayload)}\n` },
+      { argv: ["node", "apexcn", "category", "list", "--format", "pretty"], expected: `${JSON.stringify(categoryPayload, null, 2)}\n` },
+      { argv: ["node", "apexcn", "category", "list", "--format", "text"], expected: "2\tAPEX 进阶技巧\n" },
+      { argv: ["node", "apexcn", "category", "list", "--json", "--format", "pretty"], expected: `${JSON.stringify(categoryPayload, null, 2)}\n` }
+    ];
+
+    for (const item of cases) {
+      const { program, stdout } = await configuredProgram(async () => Response.json(categoryPayload));
+
+      await program.parseAsync(item.argv);
+
+      expect(stdout.join("")).toBe(item.expected);
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("category list text output is empty for empty lists and sanitizes fields", async () => {
+    const cases = [
+      { payload: { items: [] }, expected: "" },
+      { payload: { items: [{ id: 2, name: "APEX\t进阶\n技巧" }] }, expected: "2\tAPEX 进阶 技巧\n" }
+    ];
+
+    for (const item of cases) {
+      const { program, stdout } = await configuredProgram(async () => Response.json(item.payload));
+
+      await program.parseAsync(["node", "apexcn", "category", "list", "--format", "text"]);
+
+      expect(stdout.join("")).toBe(item.expected);
+      vi.unstubAllGlobals();
+    }
+  });
+
   test("category list prints clean errors for non-JSON API failures", async () => {
     const { program, stdout, stderr, fetch } = await configuredProgram(async () =>
       new Response("<html>outage</html>", {
@@ -176,6 +211,51 @@ describe("content commands", () => {
       expect.any(Object)
     );
     expect(JSON.parse(stdout.join("")).items[0].id).toBe(42);
+  });
+
+  test("search supports explicit output formats", async () => {
+    const payload = {
+      items: [
+        { id: 42, title: "APEX topic", url: "https://oracleapex.cn/t/42" },
+        { id: 43, title: "ORDS topic" }
+      ],
+      page: { limit: 2 },
+      requestId: "req-search"
+    };
+    const cases = [
+      { argv: ["node", "apexcn", "search", "APEX", "--format", "json"], expected: `${JSON.stringify(payload)}\n` },
+      { argv: ["node", "apexcn", "search", "APEX", "--format", "pretty"], expected: `${JSON.stringify(payload, null, 2)}\n` },
+      { argv: ["node", "apexcn", "search", "APEX", "--format", "text"], expected: "42\tAPEX topic\thttps://oracleapex.cn/t/42\n43\tORDS topic\t\n" },
+      { argv: ["node", "apexcn", "search", "APEX", "--json", "--format", "pretty"], expected: `${JSON.stringify(payload, null, 2)}\n` }
+    ];
+
+    for (const item of cases) {
+      const { program, stdout } = await configuredProgram(async () => Response.json(payload));
+
+      await program.parseAsync(item.argv);
+
+      expect(stdout.join("")).toBe(item.expected);
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("search text output is empty for empty lists and sanitizes fields", async () => {
+    const cases = [
+      { payload: { items: [] }, expected: "" },
+      {
+        payload: { items: [{ id: 42, title: "APEX\ttopic\none", url: "https://oracleapex.cn/t/42\nref" }] },
+        expected: "42\tAPEX topic one\thttps://oracleapex.cn/t/42 ref\n"
+      }
+    ];
+
+    for (const item of cases) {
+      const { program, stdout } = await configuredProgram(async () => Response.json(item.payload));
+
+      await program.parseAsync(["node", "apexcn", "search", "APEX", "--format", "text"]);
+
+      expect(stdout.join("")).toBe(item.expected);
+      vi.unstubAllGlobals();
+    }
   });
 
   test("search accepts the maximum page size", async () => {
@@ -309,8 +389,61 @@ describe("content commands", () => {
     expect(search).toBeDefined();
     expect(search?.helpInformation()).not.toContain("--offset");
     expect(search?.helpInformation()).toContain("--json");
+    expect(search?.helpInformation()).toContain("--format");
     expect(search?.helpInformation()).toContain("page size, 1-50");
     expect(search?.helpInformation()).toContain("pretty-print JSON");
+  });
+
+  test("format option is exposed only on category list and search", () => {
+    const program = createProgram();
+    const formatCommands = ["category list", "search"];
+
+    for (const path of leafCommandPaths(program)) {
+      if (formatCommands.includes(path)) {
+        expect(leafCommand(program, path).helpInformation()).toContain("--format");
+      } else {
+        expect(leafCommand(program, path).helpInformation()).not.toContain("--format");
+      }
+    }
+  });
+
+  test("format options reject ambiguous or invalid output selections", async () => {
+    const invalidCases = [
+      ["node", "apexcn", "category", "list", "--format", "xml"],
+      ["node", "apexcn", "search", "APEX", "--format", "yaml"]
+    ];
+
+    for (const argv of invalidCases) {
+      const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ items: [] }));
+      exitOverrideTree(program);
+
+      await expect(program.parseAsync(argv)).rejects.toMatchObject({
+        code: "commander.invalidArgument"
+      });
+
+      expect(fetch).not.toHaveBeenCalled();
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).not.toContain("src/commands/content");
+      vi.unstubAllGlobals();
+    }
+
+    const ambiguousCases = [
+      ["node", "apexcn", "category", "list", "--json", "--format", "text"],
+      ["node", "apexcn", "search", "APEX", "--json", "--format", "json"]
+    ];
+
+    for (const argv of ambiguousCases) {
+      const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ items: [] }));
+
+      await program.parseAsync(argv);
+
+      expect(fetch).not.toHaveBeenCalled();
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).toBe("--json can only be combined with --format pretty\n");
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+      vi.unstubAllGlobals();
+    }
   });
 
   test("all leaf commands have an API dry-run classification", () => {

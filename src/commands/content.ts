@@ -22,6 +22,12 @@ type JsonOption = {
   json?: boolean;
 };
 
+type OutputFormat = "json" | "pretty" | "text";
+
+type FormatOption = JsonOption & {
+  format?: OutputFormat;
+};
+
 type DryRunOption = {
   dryRun?: boolean;
 };
@@ -38,10 +44,14 @@ export function createCategoryCommand(options: ApiCommandOptions): Command {
   category
     .command("list")
     .option("--json", "pretty-print JSON")
-    .action(async (commandOptions: JsonOption) => {
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async (commandOptions: FormatOption) => {
+      if (!validateFormatOptions(options, commandOptions)) {
+        return;
+      }
       await runApi(options, async (session) => {
         const data = await requestJson(session.baseUrl, "/api/v1/categories", { token: session.token });
-        printData(options, data, commandOptions.json);
+        printData(options, data, outputFormat(commandOptions), formatCategoryListText);
       });
     });
   return category;
@@ -56,7 +66,11 @@ export function createSearchCommand(options: ApiCommandOptions): Command {
     .option("--from-date <date>", "inclusive updated-from date, YYYY-MM-DD", parseSearchDate)
     .option("--to-date <date>", "inclusive updated-to date, YYYY-MM-DD", parseSearchDate)
     .option("--json", "pretty-print JSON")
-    .action(async (keyword: string, commandOptions: JsonOption & { categoryId?: number; pageSize?: number; offset?: number; fromDate?: string; toDate?: string }) => {
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async (keyword: string, commandOptions: FormatOption & { categoryId?: number; pageSize?: number; offset?: number; fromDate?: string; toDate?: string }) => {
+      if (!validateFormatOptions(options, commandOptions)) {
+        return;
+      }
       if (!validateSearchDateRange(options, commandOptions.fromDate, commandOptions.toDate)) {
         return;
       }
@@ -72,7 +86,7 @@ export function createSearchCommand(options: ApiCommandOptions): Command {
             toDate: commandOptions.toDate
           }
         });
-        printData(options, data, commandOptions.json);
+        printData(options, data, outputFormat(commandOptions), formatSearchText);
       });
     });
 }
@@ -466,8 +480,14 @@ function printDryRun(options: CommandIo, session: Session, request: ApiRequestPl
   }), json);
 }
 
-function printData(options: CommandIo, data: unknown, json?: boolean): void {
-  options.stdout(`${JSON.stringify(data, null, json ? 2 : 0)}\n`);
+function printData(options: CommandIo, data: unknown, formatOrJson?: OutputFormat | boolean, textFormatter?: (data: unknown) => string): void {
+  const format = typeof formatOrJson === "string" ? formatOrJson : formatOrJson ? "pretty" : "json";
+  if (format === "text" && textFormatter) {
+    const text = textFormatter(data);
+    options.stdout(text ? `${text}\n` : "");
+    return;
+  }
+  options.stdout(`${JSON.stringify(data, null, format === "pretty" ? 2 : 0)}\n`);
 }
 
 async function contentFromOptions(options: { content?: string; contentFile?: string }, commandOptions: ApiCommandOptions): Promise<string> {
@@ -539,6 +559,57 @@ async function promptText(question: string): Promise<string> {
 
 function compactBody(input: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined));
+}
+
+function outputFormat(options: FormatOption): OutputFormat {
+  if (options.json) {
+    return "pretty";
+  }
+  return options.format ?? "json";
+}
+
+function validateFormatOptions(options: CommandIo, commandOptions: FormatOption): boolean {
+  if (commandOptions.json && commandOptions.format && commandOptions.format !== "pretty") {
+    options.stderr("--json can only be combined with --format pretty\n");
+    process.exitCode = 1;
+    return false;
+  }
+  return true;
+}
+
+function parseOutputFormat(value: string): OutputFormat {
+  if (value === "json" || value === "pretty" || value === "text") {
+    return value;
+  }
+  throw new InvalidArgumentError(`Expected output format json, pretty, or text: ${value}`);
+}
+
+function formatCategoryListText(data: unknown): string {
+  const items = itemsFromData(data);
+  return items.map((item) => `${fieldText(item.id)}\t${fieldText(item.name)}`).join("\n");
+}
+
+function formatSearchText(data: unknown): string {
+  const items = itemsFromData(data);
+  return items.map((item) => `${fieldText(item.id)}\t${fieldText(item.title)}\t${fieldText(item.url)}`).join("\n");
+}
+
+function itemsFromData(data: unknown): Array<Record<string, unknown>> {
+  if (!isRecord(data) || !Array.isArray(data.items)) {
+    return [];
+  }
+  return data.items.filter(isRecord);
+}
+
+function fieldText(value: unknown): string {
+  if (value === undefined || value === null) {
+    return "";
+  }
+  return String(value).replace(/[\t\r\n]+/g, " ");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 async function promptCategoryId(options: CommandIo, session: Session): Promise<number | undefined> {

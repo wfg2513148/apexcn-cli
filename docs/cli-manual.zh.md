@@ -70,6 +70,7 @@ apexcn doctor --json
 ```bash
 apexcn category list
 apexcn category list --json
+apexcn category list --format text
 ```
 
 ## search
@@ -78,6 +79,7 @@ apexcn category list --json
 
 ```bash
 apexcn search "Oracle APEX" --json
+apexcn search "Oracle APEX" --format text
 ```
 
 限制数量：
