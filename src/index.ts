@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { Command } from "commander";
+import { Command, InvalidArgumentError } from "commander";
 import { createAuthCommand, type CommandIo } from "./commands/auth.js";
 import { createDoctorCommand } from "./commands/doctor.js";
 import {
@@ -27,20 +27,71 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   };
 
   const program = new Command();
+  let activeCliConfigPath: string | undefined;
   program.name("apexcn");
   program.version(CLI_VERSION);
-  program.addCommand(createAuthCommand({ ...io, configPath: options.configPath }));
-  program.addCommand(createDoctorCommand({ ...io, configPath: options.configPath }));
-  program.addCommand(createMeCommand({ ...io, configPath: options.configPath }));
-  program.addCommand(createCategoryCommand({ ...io, configPath: options.configPath }));
-  program.addCommand(createSearchCommand({ ...io, configPath: options.configPath }));
-  program.addCommand(createTopicCommand({ ...io, configPath: options.configPath }));
-  program.addCommand(createReplyCommand({ ...io, configPath: options.configPath }));
-  program.addCommand(createRelationCommand("favorite", { ...io, configPath: options.configPath }));
-  program.addCommand(createRelationCommand("subscription", { ...io, configPath: options.configPath }));
-  program.addCommand(createAskCommand({ ...io, configPath: options.configPath }));
+  program.option("--config <path>", "config file path", parseConfigPath);
+  const commandOptions = {
+    stdout: io.stdout,
+    stderr: io.stderr,
+    get configPath() {
+      return resolveConfigPath(activeCliConfigPath, options.configPath);
+    }
+  };
+  program.addCommand(createAuthCommand(commandOptions));
+  program.addCommand(createDoctorCommand(commandOptions));
+  program.addCommand(createMeCommand(commandOptions));
+  program.addCommand(createCategoryCommand(commandOptions));
+  program.addCommand(createSearchCommand(commandOptions));
+  program.addCommand(createTopicCommand(commandOptions));
+  program.addCommand(createReplyCommand(commandOptions));
+  program.addCommand(createRelationCommand("favorite", commandOptions));
+  program.addCommand(createRelationCommand("subscription", commandOptions));
+  program.addCommand(createAskCommand(commandOptions));
   configureCommandOutput(program, io);
+  const parseAsync = program.parseAsync.bind(program);
+  program.parseAsync = async (argv, parseOptions) => {
+    activeCliConfigPath = configPathFromArgv(argv, parseOptions);
+    try {
+      return await parseAsync(argv, parseOptions);
+    } finally {
+      activeCliConfigPath = undefined;
+      program.setOptionValue("config", undefined);
+    }
+  };
   return program;
+}
+
+function parseConfigPath(value: string): string {
+  if (value.trim().length === 0) {
+    throw new InvalidArgumentError("Config path must not be blank");
+  }
+  return value;
+}
+
+function configPathFromArgv(argv: readonly string[] | undefined, parseOptions: Parameters<Command["parseAsync"]>[1]): string | undefined {
+  const values = argv ?? process.argv;
+  const startIndex = parseOptions?.from === "user" ? 0 : 2;
+  for (let index = startIndex; index < values.length; index += 1) {
+    const value = values[index];
+    if (value === "--config") {
+      return values[index + 1];
+    }
+    if (value.startsWith("--config=")) {
+      return value.slice("--config=".length);
+    }
+  }
+  return undefined;
+}
+
+function resolveConfigPath(cliConfigPath: string | undefined, injectedConfigPath?: string): string | undefined {
+  if (cliConfigPath !== undefined) {
+    return cliConfigPath;
+  }
+  if (process.env.APEXCN_CONFIG_PATH && process.env.APEXCN_CONFIG_PATH.trim().length > 0) {
+    return process.env.APEXCN_CONFIG_PATH;
+  }
+  return injectedConfigPath;
 }
 
 function configureCommandOutput(command: Command, io: CommandIo): void {

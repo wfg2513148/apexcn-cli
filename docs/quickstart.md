@@ -173,6 +173,8 @@ apexcn auth logout
 ~/.apexcn/config.json
 ```
 
+自动化测试或一次性脚本需要隔离配置时，可在根命令位置传 `--config <path>`，也可以设置 `APEXCN_CONFIG_PATH`。
+
 文件权限会尽量设为 `0600`。一个社区账号只允许一个 active API key；轮换 API key 会让旧 key 失效。
 
 ## 4. 基本读取

@@ -8,9 +8,10 @@
 apexcn --help
 apexcn --version
 apexcn help search
+apexcn --config /tmp/apexcn-config.json auth show --json
 ```
 
-建议脚本和 AI agent 都加 `--json`，方便解析。
+建议脚本和 AI agent 都加 `--json`，方便解析。自动化需要隔离配置文件时，可使用根选项 `--config <path>` 或环境变量 `APEXCN_CONFIG_PATH`。
 
 ## auth
 

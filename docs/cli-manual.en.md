@@ -8,9 +8,10 @@ This manual is for users running commands directly in a terminal. Examples assum
 apexcn --help
 apexcn --version
 apexcn help search
+apexcn --config /tmp/apexcn-config.json auth show --json
 ```
 
-Use `--json` in scripts and AI-agent workflows.
+Use `--json` in scripts and AI-agent workflows. Use root `--config <path>` or `APEXCN_CONFIG_PATH` when automation needs an isolated config file.
 
 ## auth
 
