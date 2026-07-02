@@ -13,12 +13,24 @@ type ApiCommandOptions = CommandIo & {
 };
 
 type Session = {
+  profile: string;
   baseUrl: string;
   token: string;
 };
 
 type JsonOption = {
   json?: boolean;
+};
+
+type DryRunOption = {
+  dryRun?: boolean;
+};
+
+type ApiRequestPlan = {
+  method: string;
+  path: string;
+  query?: Record<string, string | number | boolean | undefined>;
+  body?: unknown;
 };
 
 export function createCategoryCommand(options: ApiCommandOptions): Command {
@@ -87,21 +99,36 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
     .addOption(new Option("--content-file <path>", "read content from file").conflicts("content"))
     .option("--tags <csv>")
     .option("--json", "pretty-print JSON")
-    .action(async (commandOptions: JsonOption & TopicWriteOptions & { categoryId?: number }) => {
+    .option("--dry-run", "print the API request without sending it")
+    .action(async (commandOptions: JsonOption & DryRunOption & TopicWriteOptions & { categoryId?: number }) => {
       await runApi(options, async (session) => {
+        if (commandOptions.dryRun && commandOptions.categoryId === undefined) {
+          options.stderr("Missing --category-id in dry-run mode\n");
+          process.exitCode = 1;
+          return;
+        }
         const categoryId = commandOptions.categoryId ?? await promptCategoryId(options, session);
         if (categoryId === undefined) {
           return;
         }
-        const data = await requestJson(session.baseUrl, "/api/v1/topics", {
-          token: session.token,
+        const request = {
           method: "POST",
+          path: "/api/v1/topics",
           body: compactBody({
             categoryId,
             title: commandOptions.title,
             content: await contentFromOptions(commandOptions, options),
             tags: commandOptions.tags
           })
+        };
+        if (commandOptions.dryRun) {
+          printDryRun(options, session, request, commandOptions.json);
+          return;
+        }
+        const data = await requestJson(session.baseUrl, request.path, {
+          token: session.token,
+          method: request.method,
+          body: request.body
         });
         printData(options, data, commandOptions.json);
       });
@@ -117,17 +144,27 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
     .addOption(new Option("--content-file <path>", "read content from file").conflicts("content"))
     .option("--tags <csv>")
     .option("--json", "pretty-print JSON")
-    .action(async (id: number, commandOptions: JsonOption & TopicWriteOptions & { categoryId?: number }) => {
+    .option("--dry-run", "print the API request without sending it")
+    .action(async (id: number, commandOptions: JsonOption & DryRunOption & TopicWriteOptions & { categoryId?: number }) => {
       await runApi(options, async (session) => {
-        const data = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, {
-          token: session.token,
+        const request = {
           method: "POST",
+          path: `/api/v1/topics/${id}`,
           body: compactBody({
             categoryId: commandOptions.categoryId,
             title: commandOptions.title,
             content: await optionalContentFromOptions(commandOptions, options),
             tags: commandOptions.tags
           })
+        };
+        if (commandOptions.dryRun) {
+          printDryRun(options, session, request, commandOptions.json);
+          return;
+        }
+        const data = await requestJson(session.baseUrl, request.path, {
+          token: session.token,
+          method: request.method,
+          body: request.body
         });
         printData(options, data, commandOptions.json);
       });
@@ -140,8 +177,14 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
     .option("--force", "required for non-interactive delete")
     .option("--confirm-title <title>", "required topic title confirmation")
     .option("--json", "pretty-print JSON")
-    .action(async (id: number, commandOptions: JsonOption & { yes?: boolean; force?: boolean; confirmTitle?: string }) => {
+    .option("--dry-run", "print the API request without sending it")
+    .action(async (id: number, commandOptions: JsonOption & DryRunOption & { yes?: boolean; force?: boolean; confirmTitle?: string }) => {
       if (!commandOptions.yes || !commandOptions.force || !commandOptions.confirmTitle) {
+        if (commandOptions.dryRun) {
+          options.stderr("Refusing to delete topic without --yes --force --confirm-title\n");
+          process.exitCode = 1;
+          return;
+        }
         if (processStdin.isTTY === true && !commandOptions.yes && !commandOptions.force) {
           await runApi(options, async (session) => {
             const topic = await requestJson<{ topic?: { title?: string; createdByName?: string; categoryName?: string } }>(session.baseUrl, `/api/v1/topics/${id}`, {
@@ -176,6 +219,11 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
         return;
       }
       await runApi(options, async (session) => {
+        const request = { method: "DELETE", path: `/api/v1/topics/${id}` };
+        if (commandOptions.dryRun) {
+          printDryRun(options, session, request, commandOptions.json);
+          return;
+        }
         const topic = await requestJson<{ topic?: { title?: string } }>(session.baseUrl, `/api/v1/topics/${id}`, {
           token: session.token
         });
@@ -202,15 +250,25 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
     .addOption(new Option("--content <text>", "inline content").conflicts("contentFile"))
     .addOption(new Option("--content-file <path>", "read content from file").conflicts("content"))
     .option("--json", "pretty-print JSON")
-    .action(async (topicId: number, commandOptions: JsonOption & ReplyWriteOptions) => {
+    .option("--dry-run", "print the API request without sending it")
+    .action(async (topicId: number, commandOptions: JsonOption & DryRunOption & ReplyWriteOptions) => {
       await runApi(options, async (session) => {
-        const data = await requestJson(session.baseUrl, `/api/v1/topics/${topicId}/replies`, {
-          token: session.token,
+        const request = {
           method: "POST",
+          path: `/api/v1/topics/${topicId}/replies`,
           body: compactBody({
             content: await contentFromOptions(commandOptions, options),
             parentPostId: commandOptions.parentPostId
           })
+        };
+        if (commandOptions.dryRun) {
+          printDryRun(options, session, request, commandOptions.json);
+          return;
+        }
+        const data = await requestJson(session.baseUrl, request.path, {
+          token: session.token,
+          method: request.method,
+          body: request.body
         });
         printData(options, data, commandOptions.json);
       });
@@ -223,12 +281,22 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
     .addOption(new Option("--content <text>", "inline content").conflicts("contentFile"))
     .addOption(new Option("--content-file <path>", "read content from file").conflicts("content"))
     .option("--json", "pretty-print JSON")
-    .action(async (id: number, commandOptions: JsonOption & ReplyWriteOptions) => {
+    .option("--dry-run", "print the API request without sending it")
+    .action(async (id: number, commandOptions: JsonOption & DryRunOption & ReplyWriteOptions) => {
       await runApi(options, async (session) => {
-        const data = await requestJson(session.baseUrl, `/api/v1/replies/${id}`, {
-          token: session.token,
+        const request = {
           method: "POST",
+          path: `/api/v1/replies/${id}`,
           body: { content: await contentFromOptions(commandOptions, options) }
+        };
+        if (commandOptions.dryRun) {
+          printDryRun(options, session, request, commandOptions.json);
+          return;
+        }
+        const data = await requestJson(session.baseUrl, request.path, {
+          token: session.token,
+          method: request.method,
+          body: request.body
         });
         printData(options, data, commandOptions.json);
       });
@@ -240,8 +308,14 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
     .option("--yes", "confirm delete")
     .option("--force", "required for non-interactive delete")
     .option("--json", "pretty-print JSON")
-    .action(async (id: number, commandOptions: JsonOption & { yes?: boolean; force?: boolean }) => {
+    .option("--dry-run", "print the API request without sending it")
+    .action(async (id: number, commandOptions: JsonOption & DryRunOption & { yes?: boolean; force?: boolean }) => {
       if (!commandOptions.yes || !commandOptions.force) {
+        if (commandOptions.dryRun) {
+          options.stderr("Refusing to delete reply without --yes --force\n");
+          process.exitCode = 1;
+          return;
+        }
         if (processStdin.isTTY === true && !commandOptions.yes && !commandOptions.force) {
           const confirmed = await promptText("Type delete to delete this reply: ");
           if (confirmed !== "delete") {
@@ -260,7 +334,12 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
         return;
       }
       await runApi(options, async (session) => {
-        const data = await requestJson(session.baseUrl, `/api/v1/replies/${id}`, { token: session.token, method: "DELETE" });
+        const request = { method: "DELETE", path: `/api/v1/replies/${id}` };
+        if (commandOptions.dryRun) {
+          printDryRun(options, session, request, commandOptions.json);
+          return;
+        }
+        const data = await requestJson(session.baseUrl, request.path, { token: session.token, method: request.method });
         printData(options, data, commandOptions.json);
       });
     });
@@ -275,11 +354,20 @@ export function createRelationCommand(name: "favorite" | "subscription", options
       .command(action)
       .argument("<topic-id>", "topic id", parsePositiveInteger)
       .option("--json", "pretty-print JSON")
-      .action(async (topicId: number, commandOptions: JsonOption) => {
+      .option("--dry-run", "print the API request without sending it")
+      .action(async (topicId: number, commandOptions: JsonOption & DryRunOption) => {
         await runApi(options, async (session) => {
-          const data = await requestJson(session.baseUrl, `/api/v1/topics/${topicId}/${name}`, {
-            token: session.token,
+          const request = {
+            path: `/api/v1/topics/${topicId}/${name}`,
             method: action === "add" ? "POST" : "DELETE"
+          };
+          if (commandOptions.dryRun) {
+            printDryRun(options, session, request, commandOptions.json);
+            return;
+          }
+          const data = await requestJson(session.baseUrl, request.path, {
+            token: session.token,
+            method: request.method
           });
           printData(options, data, commandOptions.json);
         });
@@ -363,7 +451,19 @@ async function loadSession(options: ApiCommandOptions): Promise<Session | undefi
     process.exitCode = 1;
     return undefined;
   }
-  return current;
+  return { profile, ...current };
+}
+
+function printDryRun(options: CommandIo, session: Session, request: ApiRequestPlan, json?: boolean): void {
+  printData(options, compactBody({
+    dryRun: true,
+    profile: session.profile,
+    baseUrl: session.baseUrl,
+    method: request.method,
+    path: request.path,
+    query: request.query,
+    body: request.body
+  }), json);
 }
 
 function printData(options: CommandIo, data: unknown, json?: boolean): void {

@@ -54,6 +54,7 @@ apexcn auth set-token \
 - Prefer `--content-file` for long posts or replies. Use `--content-file -` when piping generated content through stdin.
 - Never pass both `--content` and `--content-file`; choose one body source.
 - Before creating a topic, run `apexcn category list --json` and use a valid `--category-id`.
+- For API write dry-runs, do not preflight with `category list` or `topic view`; pass the same required write flags and add `--dry-run`.
 - Do not rely on interactive prompts. Supply required non-interactive flags explicitly.
 - Before deleting a topic, run `apexcn topic view <thread_id> --json`, then pass `--yes --force --confirm-title "<exact title>"`.
 - Before deleting a reply, confirm the target post id belongs to the intended thread, then pass `--yes --force`.

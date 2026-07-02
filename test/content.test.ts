@@ -67,7 +67,7 @@ function leafCommand(program: Command, path: string): Command {
   return current;
 }
 
-const futureApiDryRunCommands = [
+const apiDryRunCommands = [
   "topic create",
   "topic update",
   "topic edit",
@@ -316,15 +316,18 @@ describe("content commands", () => {
   test("all leaf commands have an API dry-run classification", () => {
     const program = createProgram();
     const actual = leafCommandPaths(program).sort();
-    const classified = [...futureApiDryRunCommands, ...neverApiDryRunCommands].sort();
+    const classified = [...apiDryRunCommands, ...neverApiDryRunCommands].sort();
 
     expect(classified).toEqual(actual);
   });
 
-  test("API dry-run is not exposed before implementation", () => {
+  test("API dry-run is exposed only for community API write commands", () => {
     const program = createProgram();
 
-    for (const path of [...futureApiDryRunCommands, ...neverApiDryRunCommands]) {
+    for (const path of apiDryRunCommands) {
+      expect(leafCommand(program, path).helpInformation()).toContain("--dry-run");
+    }
+    for (const path of neverApiDryRunCommands) {
       expect(leafCommand(program, path).helpInformation()).not.toContain("--dry-run");
     }
   });
@@ -506,6 +509,82 @@ describe("content commands", () => {
     );
   });
 
+  test("topic write commands can print dry-run plans without calling the API", async () => {
+    const { program, stdout, fetch } = await configuredProgram(async () => Response.json({ ok: true }));
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "thread",
+      "create",
+      "--category-id",
+      "2",
+      "--title",
+      "CLI title",
+      "--content",
+      "CLI body",
+      "--tags",
+      "cli,e2e",
+      "--dry-run"
+    ]);
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "topic",
+      "edit",
+      "42",
+      "--title",
+      "CLI updated",
+      "--content",
+      "Updated body",
+      "--dry-run"
+    ]);
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "topic",
+      "delete",
+      "42",
+      "--yes",
+      "--force",
+      "--confirm-title",
+      "CLI updated",
+      "--dry-run"
+    ]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    expect(stdout.join("")).not.toContain("Bearer");
+    expect(stdout.join("")).not.toContain("Authorization");
+    expect(stdout.join("")).not.toContain("X-APEXCN-API-Key");
+    const plans = stdout.join("").trim().split("\n").map((line) => JSON.parse(line));
+    expect(plans).toEqual([
+      {
+        dryRun: true,
+        profile: "test@oci",
+        baseUrl: "https://oracleapex.cn/ords/test",
+        method: "POST",
+        path: "/api/v1/topics",
+        body: { categoryId: 2, title: "CLI title", content: "CLI body", tags: "cli,e2e" }
+      },
+      {
+        dryRun: true,
+        profile: "test@oci",
+        baseUrl: "https://oracleapex.cn/ords/test",
+        method: "POST",
+        path: "/api/v1/topics/42",
+        body: { title: "CLI updated", content: "Updated body" }
+      },
+      {
+        dryRun: true,
+        profile: "test@oci",
+        baseUrl: "https://oracleapex.cn/ords/test",
+        method: "DELETE",
+        path: "/api/v1/topics/42"
+      }
+    ]);
+  });
+
   test("delete commands require explicit confirmation", async () => {
     const { program, stderr } = await configuredProgram(async () => Response.json({ ok: true }));
 
@@ -521,6 +600,20 @@ describe("content commands", () => {
     await program.parseAsync(["node", "apexcn", "topic", "create", "--title", "CLI title", "--content", "CLI body"]);
 
     expect(stderr.join("")).toBe("Missing --category-id in non-interactive mode\n");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("topic dry-run create still requires category id without loading categories", async () => {
+    const { program, stdout, stderr, fetch } = await configuredProgram(
+      async () => Response.json({ ok: true }),
+      { isStdinTTY: () => true }
+    );
+
+    await program.parseAsync(["node", "apexcn", "topic", "create", "--title", "CLI title", "--content", "CLI body", "--dry-run"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toBe("Missing --category-id in dry-run mode\n");
     expect(process.exitCode).toBe(1);
   });
 
@@ -754,5 +847,79 @@ describe("content commands", () => {
       "https://oracleapex.cn/ords/test/api/v1/ask",
       expect.objectContaining({ method: "POST", body: JSON.stringify({ question: "How to use APEX?", topK: 3 }) })
     );
+  });
+
+  test("reply and relation write commands can print dry-run plans without calling the API", async () => {
+    const { program, stdout, fetch } = await configuredProgram(async () => Response.json({ ok: true }));
+
+    await program.parseAsync(["node", "apexcn", "reply", "create", "42", "--content", "Reply body", "--dry-run"]);
+    await program.parseAsync(["node", "apexcn", "post", "edit", "100", "--content", "Reply updated", "--dry-run"]);
+    await program.parseAsync(["node", "apexcn", "reply", "delete", "100", "--yes", "--force", "--dry-run"]);
+    await program.parseAsync(["node", "apexcn", "favorite", "add", "42", "--dry-run"]);
+    await program.parseAsync(["node", "apexcn", "subscription", "remove", "42", "--dry-run"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    expect(stdout.join("")).not.toContain("Bearer");
+    expect(stdout.join("")).not.toContain("Authorization");
+    expect(stdout.join("")).not.toContain("X-APEXCN-API-Key");
+    const plans = stdout.join("").trim().split("\n").map((line) => JSON.parse(line));
+    expect(plans).toEqual([
+      {
+        dryRun: true,
+        profile: "test@oci",
+        baseUrl: "https://oracleapex.cn/ords/test",
+        method: "POST",
+        path: "/api/v1/topics/42/replies",
+        body: { content: "Reply body" }
+      },
+      {
+        dryRun: true,
+        profile: "test@oci",
+        baseUrl: "https://oracleapex.cn/ords/test",
+        method: "POST",
+        path: "/api/v1/replies/100",
+        body: { content: "Reply updated" }
+      },
+      {
+        dryRun: true,
+        profile: "test@oci",
+        baseUrl: "https://oracleapex.cn/ords/test",
+        method: "DELETE",
+        path: "/api/v1/replies/100"
+      },
+      {
+        dryRun: true,
+        profile: "test@oci",
+        baseUrl: "https://oracleapex.cn/ords/test",
+        method: "POST",
+        path: "/api/v1/topics/42/favorite"
+      },
+      {
+        dryRun: true,
+        profile: "test@oci",
+        baseUrl: "https://oracleapex.cn/ords/test",
+        method: "DELETE",
+        path: "/api/v1/topics/42/subscription"
+      }
+    ]);
+  });
+
+  test("dry-run output is pretty printed when json is requested", async () => {
+    const { program, stdout, fetch } = await configuredProgram(async () => Response.json({ ok: true }));
+
+    await program.parseAsync(["node", "apexcn", "favorite", "add", "42", "--dry-run", "--json"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).toBe([
+      "{",
+      "  \"dryRun\": true,",
+      "  \"profile\": \"test@oci\",",
+      "  \"baseUrl\": \"https://oracleapex.cn/ords/test\",",
+      "  \"method\": \"POST\",",
+      "  \"path\": \"/api/v1/topics/42/favorite\"",
+      "}",
+      ""
+    ].join("\n"));
   });
 });
