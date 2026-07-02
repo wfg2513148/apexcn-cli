@@ -322,6 +322,11 @@ build_cli() {
     return
   fi
 
+  if [[ -z "$source_dir" && "$use_git" != "1" && -f "$cli_root_path/dist/index.js" && -d "$cli_root_path/node_modules/commander" ]]; then
+    log "Using bundled prebuilt apexcn-cli package."
+    return
+  fi
+
   (
     cd "$cli_root_path"
     if [[ -f package-lock.json ]]; then

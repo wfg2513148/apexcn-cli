@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { loadConfig } from "../config.js";
+import { ConfigFileError, loadConfig } from "../config.js";
 import { HttpError, requestJson } from "../http.js";
 import type { CommandIo } from "./auth.js";
 
@@ -27,9 +27,20 @@ type DoctorOutput = {
 export function createDoctorCommand(options: DoctorCommandOptions): Command {
   return new Command("doctor")
     .description("check apexcn-cli installation, auth, and API reachability")
-    .option("--json", "print JSON")
+    .option("--json", "pretty-print JSON")
     .action(async (commandOptions: { json?: boolean }) => {
-      const result = await runDoctor(options);
+      let result: DoctorOutput;
+      try {
+        result = await runDoctor(options);
+      } catch (error) {
+        if (!(error instanceof ConfigFileError)) {
+          throw error;
+        }
+        result = {
+          ok: false,
+          checks: [{ name: "profile", ok: false, message: error.message }]
+        };
+      }
       printDoctor(options, result, commandOptions.json);
       if (!result.ok) {
         process.exitCode = 1;

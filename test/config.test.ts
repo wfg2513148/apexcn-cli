@@ -1,9 +1,10 @@
-import { chmod, mkdtemp, stat } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, test } from "vitest";
 import {
   clearCurrentProfile,
+  ConfigFileError,
   defaultConfigPath,
   loadConfig,
   saveConfig,
@@ -22,6 +23,18 @@ describe("config", () => {
 
   test("loadConfig returns an empty config when the file is missing", async () => {
     await expect(loadConfig(await tempConfigPath())).resolves.toEqual({ profiles: {} });
+  });
+
+  test("loadConfig reports invalid JSON as a config file error", async () => {
+    const path = await tempConfigPath();
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, "{not-json", "utf8");
+
+    await expect(loadConfig(path)).rejects.toBeInstanceOf(ConfigFileError);
+    await expect(loadConfig(path)).rejects.toMatchObject({
+      name: "ConfigFileError",
+      configPath: path
+    });
   });
 
   test("saveConfig writes config with user-only permissions where supported", async () => {

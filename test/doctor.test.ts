@@ -1,6 +1,6 @@
-import { mkdtemp } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createProgram } from "../src/index.js";
 
@@ -104,6 +104,35 @@ describe("doctor command", () => {
     const data = JSON.parse(stdout.join(""));
     expect(data.ok).toBe(false);
     expect(data.checks).toEqual([expect.objectContaining({ name: "profile", ok: false, message: "No active profile" })]);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("reports invalid config as a failed profile check", async () => {
+    const configPath = await tempConfigPath();
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(configPath, "{not-json", "utf8");
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn());
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "--json"]);
+
+    const data = JSON.parse(stdout.join(""));
+    expect(data.ok).toBe(false);
+    expect(data.checks).toEqual([
+      {
+        name: "profile",
+        ok: false,
+        message: `Invalid config file: ${configPath}. Run apexcn auth set-token to reconfigure.`
+      }
+    ]);
     expect(fetch).not.toHaveBeenCalled();
     expect(stderr.join("")).toBe("");
     expect(process.exitCode).toBe(1);

@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { DEFAULT_BASE_URL, clearCurrentProfile, loadConfig, setCurrentProfile } from "../config.js";
+import { ConfigFileError, DEFAULT_BASE_URL, clearCurrentProfile, loadConfig, setCurrentProfile } from "../config.js";
 
 export type CommandIo = {
   stdout: (text: string) => void;
@@ -19,19 +19,34 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
     .option("--base-url <url>", "ORDS base URL", DEFAULT_BASE_URL)
     .option("--profile <profile>", "profile name", "prod")
     .action(async (commandOptions: { token: string; baseUrl: string; profile: string }) => {
-      await setCurrentProfile(
-        commandOptions.profile,
-        { baseUrl: commandOptions.baseUrl, token: commandOptions.token },
-        options.configPath
-      );
+      try {
+        await setCurrentProfile(
+          commandOptions.profile,
+          { baseUrl: commandOptions.baseUrl, token: commandOptions.token },
+          options.configPath
+        );
+      } catch (error) {
+        if (printConfigError(error, options)) {
+          return;
+        }
+        throw error;
+      }
       options.stdout(`Saved profile ${commandOptions.profile}\n`);
     });
 
   auth
     .command("show")
-    .option("--json", "print JSON")
+    .option("--json", "pretty-print JSON")
     .action(async (commandOptions: { json?: boolean }) => {
-      const config = await loadConfig(options.configPath);
+      let config;
+      try {
+        config = await loadConfig(options.configPath);
+      } catch (error) {
+        if (printConfigError(error, options)) {
+          return;
+        }
+        throw error;
+      }
       const profile = config.current;
       const current = profile ? config.profiles[profile] : undefined;
 
@@ -51,7 +66,14 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
     });
 
   auth.command("logout").action(async () => {
-    await clearCurrentProfile(options.configPath);
+    try {
+      await clearCurrentProfile(options.configPath);
+    } catch (error) {
+      if (printConfigError(error, options)) {
+        return;
+      }
+      throw error;
+    }
     options.stdout("Logged out\n");
   });
 
@@ -63,4 +85,13 @@ export function redactToken(token: string): string {
     return "********";
   }
   return `${token.slice(0, 4)}...${token.slice(-4)}`;
+}
+
+function printConfigError(error: unknown, options: CommandIo): boolean {
+  if (!(error instanceof ConfigFileError)) {
+    return false;
+  }
+  options.stderr(`${error.message}\n`);
+  process.exitCode = 1;
+  return true;
 }

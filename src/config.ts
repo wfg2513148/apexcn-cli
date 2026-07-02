@@ -14,6 +14,16 @@ export type ApexcnConfig = {
 
 export const DEFAULT_BASE_URL = "https://oracleapex.cn/ords/api";
 
+export class ConfigFileError extends Error {
+  readonly configPath: string;
+
+  constructor(configPath: string) {
+    super(`Invalid config file: ${configPath}. Run apexcn auth set-token to reconfigure.`);
+    this.name = "ConfigFileError";
+    this.configPath = configPath;
+  }
+}
+
 export function defaultConfigPath(home = homedir()): string {
   return join(home, ".apexcn", "config.json");
 }
@@ -21,7 +31,12 @@ export function defaultConfigPath(home = homedir()): string {
 export async function loadConfig(configPath = defaultConfigPath()): Promise<ApexcnConfig> {
   try {
     const text = await readFile(configPath, "utf8");
-    const parsed = JSON.parse(text) as Partial<ApexcnConfig>;
+    let parsed: Partial<ApexcnConfig>;
+    try {
+      parsed = JSON.parse(text) as Partial<ApexcnConfig>;
+    } catch {
+      throw new ConfigFileError(configPath);
+    }
     return {
       ...parsed,
       profiles: parsed.profiles ?? {}

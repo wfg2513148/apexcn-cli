@@ -1,7 +1,7 @@
-import { mkdtemp } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { describe, expect, test } from "vitest";
+import { dirname, join } from "node:path";
+import { afterEach, describe, expect, test } from "vitest";
 import { createProgram } from "../src/index.js";
 
 async function tempConfigPath() {
@@ -10,6 +10,10 @@ async function tempConfigPath() {
 }
 
 describe("auth command", () => {
+  afterEach(() => {
+    process.exitCode = undefined;
+  });
+
   test("auth show redacts the token", async () => {
     const configPath = await tempConfigPath();
     const output: string[] = [];
@@ -27,5 +31,26 @@ describe("auth command", () => {
     expect(text).toContain("Base URL: https://oracleapex.cn/ords/api");
     expect(text).toContain("Token: abcd...wxyz");
     expect(text).not.toContain("abcdefghijklmnopqrstuvwxyz");
+  });
+
+  test("auth show reports invalid config without a stack trace", async () => {
+    const configPath = await tempConfigPath();
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(configPath, "{not-json", "utf8");
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "show"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toBe(`Invalid config file: ${configPath}. Run apexcn auth set-token to reconfigure.\n`);
+    expect(stderr.join("")).not.toContain("SyntaxError");
+    expect(stderr.join("")).not.toContain("src/config");
+    expect(process.exitCode).toBe(1);
   });
 });

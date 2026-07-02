@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { stdin as processStdin, stdout as processStdout } from "node:process";
 import { createInterface } from "node:readline/promises";
-import { Command, InvalidArgumentError } from "commander";
-import { loadConfig } from "../config.js";
+import { Command, InvalidArgumentError, Option } from "commander";
+import { ConfigFileError, loadConfig } from "../config.js";
 import { HttpError, requestJson } from "../http.js";
 import type { CommandIo } from "./auth.js";
 
@@ -23,7 +23,7 @@ export function createCategoryCommand(options: ApiCommandOptions): Command {
   const category = new Command("category");
   category
     .command("list")
-    .option("--json", "print JSON")
+    .option("--json", "pretty-print JSON")
     .action(async (commandOptions: JsonOption) => {
       await runApi(options, async (session) => {
         const data = await requestJson(session.baseUrl, "/api/v1/categories", { token: session.token });
@@ -38,10 +38,10 @@ export function createSearchCommand(options: ApiCommandOptions): Command {
     .argument("<keyword>")
     .option("--category-id <id>", "category id", parsePositiveInteger)
     .option("--page-size <n>", "page size", parsePositiveInteger)
-    .option("--offset <n>", "unsupported; current search API ignores offset", rejectUnsupportedOffset)
+    .addOption(new Option("--offset <n>", "unsupported; current search API ignores offset").argParser(rejectUnsupportedOffset).hideHelp())
     .option("--from-date <date>", "inclusive updated-from date, YYYY-MM-DD")
     .option("--to-date <date>", "inclusive updated-to date, YYYY-MM-DD")
-    .option("--json", "print JSON")
+    .option("--json", "pretty-print JSON")
     .action(async (keyword: string, commandOptions: JsonOption & { categoryId?: number; pageSize?: number; offset?: number; fromDate?: string; toDate?: string }) => {
       await runApi(options, async (session) => {
         const data = await requestJson(session.baseUrl, "/api/v1/search", {
@@ -66,7 +66,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
   topic
     .command("view")
     .argument("<id>", "topic id", parsePositiveInteger)
-    .option("--json", "print JSON")
+    .option("--json", "pretty-print JSON")
     .action(async (id: number, commandOptions: JsonOption) => {
       await runApi(options, async (session) => {
         const data = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
@@ -81,7 +81,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
     .option("--content <text>")
     .option("--content-file <path>")
     .option("--tags <csv>")
-    .option("--json", "print JSON")
+    .option("--json", "pretty-print JSON")
     .action(async (commandOptions: JsonOption & TopicWriteOptions & { categoryId?: number }) => {
       await runApi(options, async (session) => {
         const categoryId = commandOptions.categoryId ?? await promptCategoryId(options, session);
@@ -111,7 +111,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
     .option("--content <text>")
     .option("--content-file <path>")
     .option("--tags <csv>")
-    .option("--json", "print JSON")
+    .option("--json", "pretty-print JSON")
     .action(async (id: number, commandOptions: JsonOption & TopicWriteOptions & { categoryId?: number }) => {
       await runApi(options, async (session) => {
         const data = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, {
@@ -134,7 +134,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
     .option("--yes", "confirm delete")
     .option("--force", "required for non-interactive delete")
     .option("--confirm-title <title>", "required topic title confirmation")
-    .option("--json", "print JSON")
+    .option("--json", "pretty-print JSON")
     .action(async (id: number, commandOptions: JsonOption & { yes?: boolean; force?: boolean; confirmTitle?: string }) => {
       if (!commandOptions.yes || !commandOptions.force || !commandOptions.confirmTitle) {
         if (processStdin.isTTY === true && !commandOptions.yes && !commandOptions.force) {
@@ -196,7 +196,7 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
     .option("--parent-post-id <id>", "parent reply id", parsePositiveInteger)
     .option("--content <text>")
     .option("--content-file <path>")
-    .option("--json", "print JSON")
+    .option("--json", "pretty-print JSON")
     .action(async (topicId: number, commandOptions: JsonOption & ReplyWriteOptions) => {
       await runApi(options, async (session) => {
         const data = await requestJson(session.baseUrl, `/api/v1/topics/${topicId}/replies`, {
@@ -217,7 +217,7 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
     .argument("<id>", "reply id", parsePositiveInteger)
     .option("--content <text>")
     .option("--content-file <path>")
-    .option("--json", "print JSON")
+    .option("--json", "pretty-print JSON")
     .action(async (id: number, commandOptions: JsonOption & ReplyWriteOptions) => {
       await runApi(options, async (session) => {
         const data = await requestJson(session.baseUrl, `/api/v1/replies/${id}`, {
@@ -234,7 +234,7 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
     .argument("<id>", "reply id", parsePositiveInteger)
     .option("--yes", "confirm delete")
     .option("--force", "required for non-interactive delete")
-    .option("--json", "print JSON")
+    .option("--json", "pretty-print JSON")
     .action(async (id: number, commandOptions: JsonOption & { yes?: boolean; force?: boolean }) => {
       if (!commandOptions.yes || !commandOptions.force) {
         if (processStdin.isTTY === true && !commandOptions.yes && !commandOptions.force) {
@@ -269,7 +269,7 @@ export function createRelationCommand(name: "favorite" | "subscription", options
     command
       .command(action)
       .argument("<topic-id>", "topic id", parsePositiveInteger)
-      .option("--json", "print JSON")
+      .option("--json", "pretty-print JSON")
       .action(async (topicId: number, commandOptions: JsonOption) => {
         await runApi(options, async (session) => {
           const data = await requestJson(session.baseUrl, `/api/v1/topics/${topicId}/${name}`, {
@@ -287,7 +287,7 @@ export function createAskCommand(options: ApiCommandOptions): Command {
   return new Command("ask")
     .argument("<question>")
     .option("--top-k <n>", "number of chunks", parsePositiveInteger)
-    .option("--json", "print JSON")
+    .option("--json", "pretty-print JSON")
     .action(async (question: string, commandOptions: JsonOption & { topK?: number }) => {
       await runApi(options, async (session) => {
         const data = await requestJson(session.baseUrl, "/api/v1/ask", {
@@ -317,11 +317,11 @@ class CliValidationError extends Error {
 }
 
 async function runApi(options: ApiCommandOptions, callback: (session: Session) => Promise<void>): Promise<void> {
-  const session = await loadSession(options);
-  if (!session) {
-    return;
-  }
   try {
+    const session = await loadSession(options);
+    if (!session) {
+      return;
+    }
     await callback(session);
   } catch (error) {
     if (error instanceof HttpError) {
@@ -331,6 +331,11 @@ async function runApi(options: ApiCommandOptions, callback: (session: Session) =
       return;
     }
     if (error instanceof CliValidationError) {
+      options.stderr(`${error.message}\n`);
+      process.exitCode = 1;
+      return;
+    }
+    if (error instanceof ConfigFileError) {
       options.stderr(`${error.message}\n`);
       process.exitCode = 1;
       return;
@@ -365,7 +370,7 @@ async function contentFromOptions(options: { content?: string; contentFile?: str
 
 async function optionalContentFromOptions(options: { content?: string; contentFile?: string }): Promise<string | undefined> {
   if (options.contentFile) {
-    return readFile(options.contentFile, "utf8");
+    return readContentFile(options.contentFile);
   }
   if (options.content !== undefined) {
     return options.content;
@@ -374,6 +379,20 @@ async function optionalContentFromOptions(options: { content?: string; contentFi
     return readStdin();
   }
   return undefined;
+}
+
+async function readContentFile(path: string): Promise<string> {
+  try {
+    return await readFile(path, "utf8");
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      throw new CliValidationError(`Content file not found: ${path}`);
+    }
+    if (isNodeError(error) && error.code === "EACCES") {
+      throw new CliValidationError(`Content file is not readable: ${path}`);
+    }
+    throw error;
+  }
 }
 
 function readStdin(): Promise<string> {
@@ -459,4 +478,8 @@ function parseNonNegativeInteger(value: string): number {
 
 function rejectUnsupportedOffset(): never {
   throw new InvalidArgumentError("Current search API does not support offset pagination. Narrow results with --category-id, --from-date, or --to-date instead.");
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && "code" in error;
 }

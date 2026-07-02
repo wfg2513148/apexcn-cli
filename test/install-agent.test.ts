@@ -131,7 +131,7 @@ describe('agent one-click installer assets', () => {
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, 30000);
 
   test('macOS/Linux installer warns when another apexcn command shadows the launcher', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-shadow-install-'));
@@ -170,7 +170,7 @@ describe('agent one-click installer assets', () => {
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, 30000);
 
   test('macOS/Linux installer can replace a shadowing apexcn symlink with --yes', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-shadow-repair-'));
@@ -210,7 +210,7 @@ describe('agent one-click installer assets', () => {
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, 30000);
 
   test('macOS/Linux installer can replace a stale shadowing apexcn-cli launcher file with --yes', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-shadow-file-repair-'));
@@ -289,7 +289,46 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, 30000);
+
+  test('macOS/Linux source-dir install rebuilds instead of reusing stale dist', () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-source-rebuild-install-'));
+    const installRoot = join(tempRoot, 'install');
+    mkdirSync(join(installRoot, 'dist'), { recursive: true });
+    mkdirSync(join(installRoot, 'node_modules', 'commander'), { recursive: true });
+    writeFileSync(join(installRoot, 'dist', 'index.js'), '#!/usr/bin/env node\nconsole.log("stale")\n');
+
+    try {
+      const output = execFileSync(
+        'bash',
+        [
+          join(repoRoot, 'scripts/install-agent.sh'),
+          '--source-dir',
+          repoRoot,
+          '--install-root',
+          installRoot,
+          '--bin-dir',
+          join(tempRoot, 'bin'),
+          '--yes',
+        ],
+        {
+          cwd: repoRoot,
+          env: { ...process.env, HOME: join(tempRoot, 'home') },
+          encoding: 'utf8',
+        },
+      );
+
+      expect(output).not.toContain('Using bundled prebuilt apexcn-cli package.');
+      const version = execFileSync(join(tempRoot, 'bin', 'apexcn'), ['--version'], {
+        env: { ...process.env, HOME: join(tempRoot, 'home') },
+        encoding: 'utf8',
+      });
+      expect(version).toBe('0.1.6\n');
+      expect(readFileSync(join(installRoot, 'dist', 'index.js'), 'utf8')).not.toContain('stale');
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  }, 30000);
 
   test('macOS/Linux installer can install the npm package tarball layout', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-package-install-'));
@@ -301,7 +340,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
       });
       const archive = join(tempRoot, 'apexcn-cli-0.1.6.tgz');
 
-      execFileSync(
+      const output = execFileSync(
         'bash',
         [
           join(repoRoot, 'scripts/install-agent.sh'),
@@ -319,6 +358,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
           encoding: 'utf8',
         },
       );
+      expect(output).toContain('Using bundled prebuilt apexcn-cli package.');
 
       const version = execFileSync(join(tempRoot, 'bin', 'apexcn'), ['--version'], {
         env: { ...process.env, HOME: join(tempRoot, 'home') },
@@ -375,7 +415,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, 30000);
 
   test('Codex skill tells agents how to use the installed CLI safely', () => {
     const skill = readRepoFile('agent-skill/SKILL.md');

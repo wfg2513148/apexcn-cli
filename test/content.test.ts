@@ -96,6 +96,16 @@ describe("content commands", () => {
     expect(stderr.join("")).toContain("Current search API does not support offset pagination");
   });
 
+  test("search help hides unsupported offset and describes json as pretty-print", () => {
+    const program = createProgram();
+    const search = program.commands.find((command) => command.name() === "search");
+
+    expect(search).toBeDefined();
+    expect(search?.helpInformation()).not.toContain("--offset");
+    expect(search?.helpInformation()).toContain("--json");
+    expect(search?.helpInformation()).toContain("pretty-print JSON");
+  });
+
   test("numeric options print a CLI error instead of a stack trace", async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];
@@ -315,6 +325,31 @@ describe("content commands", () => {
         body: JSON.stringify({ categoryId: 2, title: "CLI title", content: "file body" })
       })
     );
+  });
+
+  test("missing content-file reports a CLI error instead of a stack trace", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "apexcn-missing-content-"));
+    const topicFile = join(dir, "topic.md");
+    const replyFile = join(dir, "reply.md");
+    const cases = [
+      { argv: ["node", "apexcn", "topic", "create", "--category-id", "2", "--title", "CLI title", "--content-file", topicFile], path: topicFile },
+      { argv: ["node", "apexcn", "reply", "create", "42", "--content-file", replyFile], path: replyFile }
+    ];
+
+    for (const item of cases) {
+      const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ ok: true }));
+
+      await program.parseAsync(item.argv);
+
+      expect(fetch).not.toHaveBeenCalled();
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).toBe(`Content file not found: ${item.path}\n`);
+      expect(stderr.join("")).not.toContain("ENOENT");
+      expect(stderr.join("")).not.toContain("src/commands/content");
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+      vi.unstubAllGlobals();
+    }
   });
 
   test("reply, favorite, subscription, and ask commands call their endpoints", async () => {
