@@ -116,6 +116,31 @@ describe("me command", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("prints clean errors for network failures", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw new TypeError("fetch failed");
+    }));
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toBe("Network error: failed to reach https://oracleapex.cn/ords/api/api/v1/me\n");
+    expect(stderr.join("")).not.toContain("TypeError");
+    expect(stderr.join("")).not.toContain("fetch failed");
+    expect(stderr.join("")).not.toContain("src/");
+    expect(process.exitCode).toBe(1);
+  });
+
   test("exits non-zero when no profile is configured", async () => {
     const stderr: string[] = [];
     const program = createProgram({

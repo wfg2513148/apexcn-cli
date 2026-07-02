@@ -3,7 +3,7 @@ import { stdin as processStdin, stdout as processStdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { Command, InvalidArgumentError, Option } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
-import { HttpError, requestJson } from "../http.js";
+import { HttpError, NetworkError, requestJson } from "../http.js";
 import type { CommandIo } from "./auth.js";
 
 type ApiCommandOptions = CommandIo & {
@@ -339,6 +339,11 @@ async function runApi(options: ApiCommandOptions, callback: (session: Session) =
       return;
     }
     if (error instanceof ConfigFileError) {
+      options.stderr(`${error.message}\n`);
+      process.exitCode = 1;
+      return;
+    }
+    if (error instanceof NetworkError) {
       options.stderr(`${error.message}\n`);
       process.exitCode = 1;
       return;

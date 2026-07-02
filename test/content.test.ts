@@ -86,6 +86,22 @@ describe("content commands", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("category list prints clean errors for network failures", async () => {
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () => {
+      throw new TypeError("fetch failed");
+    });
+
+    await program.parseAsync(["node", "apexcn", "category", "list"]);
+
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toBe("Network error: failed to reach https://oracleapex.cn/ords/test/api/v1/categories\n");
+    expect(stderr.join("")).not.toContain("TypeError");
+    expect(stderr.join("")).not.toContain("fetch failed");
+    expect(stderr.join("")).not.toContain("src/");
+    expect(process.exitCode).toBe(1);
+  });
+
   test("search calls the keyword API with pageSize and date filters", async () => {
     const { program, stdout, fetch } = await configuredProgram(async () =>
       Response.json({ items: [{ id: 42, title: "APEX topic" }], page: { limit: 2 }, requestId: "req-search" })

@@ -22,6 +22,18 @@ export class HttpError extends Error {
   }
 }
 
+export class NetworkError extends Error {
+  readonly url: string;
+  readonly cause: unknown;
+
+  constructor(url: string, cause: unknown) {
+    super(`Network error: failed to reach ${url}`);
+    this.name = "NetworkError";
+    this.url = url;
+    this.cause = cause;
+  }
+}
+
 export const DEFAULT_USER_AGENT = "apexcn-cli/0.1.6";
 
 export function joinUrl(baseUrl: string, path: string): string {
@@ -64,7 +76,13 @@ export async function requestJson<T = unknown>(
     init.body = JSON.stringify(options.body);
   }
 
-  const response = await fetch(addQuery(joinUrl(baseUrl, path), options.query), init);
+  const url = addQuery(joinUrl(baseUrl, path), options.query);
+  let response: Response;
+  try {
+    response = await fetch(url, init);
+  } catch (error) {
+    throw new NetworkError(url, error);
+  }
   const body = await parseJson(response);
 
   if (!response.ok) {

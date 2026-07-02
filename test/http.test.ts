@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { HttpError, joinUrl, requestJson } from "../src/http.js";
+import { HttpError, joinUrl, NetworkError, requestJson } from "../src/http.js";
 
 describe("http", () => {
   afterEach(() => {
@@ -130,5 +130,19 @@ describe("http", () => {
       requestId: "req-ok-html",
       body: null
     } satisfies Partial<HttpError>);
+  });
+
+  test("requestJson converts fetch failures into NetworkError", async () => {
+    const cause = new TypeError("fetch failed");
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw cause;
+    }));
+
+    await expect(requestJson("https://oracleapex.cn/ords/apexcn", "/api/v1/me", { token: "abc123" })).rejects.toMatchObject({
+      name: "NetworkError",
+      message: "Network error: failed to reach https://oracleapex.cn/ords/apexcn/api/v1/me",
+      url: "https://oracleapex.cn/ords/apexcn/api/v1/me",
+      cause
+    } satisfies Partial<NetworkError>);
   });
 });

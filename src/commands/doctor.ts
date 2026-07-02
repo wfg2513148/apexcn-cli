@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
-import { HttpError, requestJson } from "../http.js";
+import { HttpError, NetworkError, requestJson } from "../http.js";
 import type { CommandIo } from "./auth.js";
 
 export type DoctorCommandOptions = CommandIo & {
@@ -84,6 +84,9 @@ async function checkApi(
   } catch (error) {
     if (error instanceof HttpError) {
       return { name, ok: false, message: error.message, status: error.status, requestId: error.requestId };
+    }
+    if (error instanceof NetworkError) {
+      return { name, ok: false, message: error.message };
     }
     throw error;
   }

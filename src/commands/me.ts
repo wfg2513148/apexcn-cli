@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
-import { HttpError, requestJson } from "../http.js";
+import { HttpError, NetworkError, requestJson } from "../http.js";
 import type { CommandIo } from "./auth.js";
 
 export type MeCommandOptions = CommandIo & {
@@ -36,6 +36,11 @@ export function createMeCommand(options: MeCommandOptions): Command {
           return;
         }
         if (error instanceof ConfigFileError) {
+          options.stderr(`${error.message}\n`);
+          process.exitCode = 1;
+          return;
+        }
+        if (error instanceof NetworkError) {
           options.stderr(`${error.message}\n`);
           process.exitCode = 1;
           return;

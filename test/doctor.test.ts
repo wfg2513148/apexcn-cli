@@ -117,6 +117,29 @@ describe("doctor command", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("reports network failures as failed checks without HTTP status", async () => {
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () => {
+      throw new TypeError("fetch failed");
+    });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "--json"]);
+
+    const data = JSON.parse(stdout.join(""));
+    expect(data.ok).toBe(false);
+    expect(data.checks).toEqual([
+      { name: "profile", ok: true },
+      { name: "me", ok: false, message: "Network error: failed to reach https://oracleapex.cn/ords/test/api/v1/me" },
+      { name: "categories", ok: false, message: "Network error: failed to reach https://oracleapex.cn/ords/test/api/v1/categories" },
+      { name: "search", ok: false, message: "Network error: failed to reach https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&pageSize=1" }
+    ]);
+    expect(data.checks).not.toEqual(expect.arrayContaining([expect.objectContaining({ status: 0 })]));
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(stdout.join("")).not.toContain("TypeError");
+    expect(stdout.join("")).not.toContain("fetch failed");
+    expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBe(1);
+  });
+
   test("reports missing profile without making API requests", async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];
