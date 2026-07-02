@@ -39,10 +39,13 @@ export function createSearchCommand(options: ApiCommandOptions): Command {
     .option("--category-id <id>", "category id", parsePositiveInteger)
     .option("--page-size <n>", "page size", parsePositiveInteger)
     .addOption(new Option("--offset <n>", "unsupported; current search API ignores offset").argParser(rejectUnsupportedOffset).hideHelp())
-    .option("--from-date <date>", "inclusive updated-from date, YYYY-MM-DD")
-    .option("--to-date <date>", "inclusive updated-to date, YYYY-MM-DD")
+    .option("--from-date <date>", "inclusive updated-from date, YYYY-MM-DD", parseSearchDate)
+    .option("--to-date <date>", "inclusive updated-to date, YYYY-MM-DD", parseSearchDate)
     .option("--json", "pretty-print JSON")
     .action(async (keyword: string, commandOptions: JsonOption & { categoryId?: number; pageSize?: number; offset?: number; fromDate?: string; toDate?: string }) => {
+      if (!validateSearchDateRange(options, commandOptions.fromDate, commandOptions.toDate)) {
+        return;
+      }
       await runApi(options, async (session) => {
         const data = await requestJson(session.baseUrl, "/api/v1/search", {
           token: session.token,
@@ -478,6 +481,34 @@ function parseNonNegativeInteger(value: string): number {
 
 function rejectUnsupportedOffset(): never {
   throw new InvalidArgumentError("Current search API does not support offset pagination. Narrow results with --category-id, --from-date, or --to-date instead.");
+}
+
+function parseSearchDate(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
+    throw new InvalidArgumentError(`Expected YYYY-MM-DD date: ${value}`);
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    throw new InvalidArgumentError(`Expected YYYY-MM-DD date: ${value}`);
+  }
+  return value;
+}
+
+function validateSearchDateRange(options: CommandIo, fromDate?: string, toDate?: string): boolean {
+  if (fromDate && toDate && fromDate > toDate) {
+    options.stderr("--from-date must be earlier than or equal to --to-date\n");
+    process.exitCode = 1;
+    return false;
+  }
+  return true;
 }
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {

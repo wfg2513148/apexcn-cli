@@ -100,6 +100,102 @@ describe("content commands", () => {
     expect(JSON.parse(stdout.join("")).items[0].id).toBe(42);
   });
 
+  test("search allows single-sided date filters", async () => {
+    const cases = [
+      {
+        argv: ["node", "apexcn", "search", "APEX", "--from-date", "2026-01-01"],
+        url: "https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&fromDate=2026-01-01"
+      },
+      {
+        argv: ["node", "apexcn", "search", "APEX", "--to-date", "2026-12-31"],
+        url: "https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&toDate=2026-12-31"
+      }
+    ];
+
+    for (const item of cases) {
+      const { program, fetch } = await configuredProgram(async () =>
+        Response.json({ items: [], page: { limit: 2 }, requestId: "req-search" })
+      );
+
+      await program.parseAsync(item.argv);
+
+      expect(fetch).toHaveBeenLastCalledWith(item.url, expect.any(Object));
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("search rejects invalid date filters before making API requests", async () => {
+    const cases = [
+      ["node", "apexcn", "search", "APEX", "--from-date", "20260101"],
+      ["node", "apexcn", "search", "APEX", "--from-date", "2026-02-30"],
+      ["node", "apexcn", "search", "APEX", "--to-date", "2026-13-01"],
+      ["node", "apexcn", "search", "APEX", "--to-date", "2026-1-1"]
+    ];
+
+    for (const argv of cases) {
+      const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ items: [] }));
+      exitOverrideTree(program);
+
+      await expect(program.parseAsync(argv)).rejects.toMatchObject({
+        code: "commander.invalidArgument"
+      });
+
+      expect(fetch).not.toHaveBeenCalled();
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).toContain("Expected YYYY-MM-DD date");
+      expect(stderr.join("")).not.toContain("src/commands/content");
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("search rejects reversed date ranges before making API requests", async () => {
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ items: [] }));
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "search",
+      "APEX",
+      "--from-date",
+      "2026-12-31",
+      "--to-date",
+      "2026-01-01"
+    ]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toBe("--from-date must be earlier than or equal to --to-date\n");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("search rejects reversed date ranges before loading a profile", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn());
+    const program = createProgram({
+      configPath: await tempConfigPath(),
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "search",
+      "APEX",
+      "--from-date",
+      "2026-12-31",
+      "--to-date",
+      "2026-01-01"
+    ]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toBe("--from-date must be earlier than or equal to --to-date\n");
+    expect(stderr.join("")).not.toContain("No active profile");
+    expect(process.exitCode).toBe(1);
+  });
+
   test("search rejects offset because the current API ignores it", async () => {
     const { program, stdout, stderr, fetch } = await configuredProgram(async () =>
       Response.json({ items: [], page: { limit: 5, offset: 0, count: 0, hasMore: false } })
