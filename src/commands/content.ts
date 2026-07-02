@@ -38,7 +38,7 @@ export function createSearchCommand(options: ApiCommandOptions): Command {
     .argument("<keyword>")
     .option("--category-id <id>", "category id", parsePositiveInteger)
     .option("--page-size <n>", "page size", parsePositiveInteger)
-    .option("--offset <n>", "offset", parseNonNegativeInteger)
+    .option("--offset <n>", "unsupported; current search API ignores offset", rejectUnsupportedOffset)
     .option("--from-date <date>", "inclusive updated-from date, YYYY-MM-DD")
     .option("--to-date <date>", "inclusive updated-to date, YYYY-MM-DD")
     .option("--json", "print JSON")
@@ -455,4 +455,8 @@ function parseNonNegativeInteger(value: string): number {
     throw new InvalidArgumentError(`Expected a non-negative integer: ${value}`);
   }
   return parsed;
+}
+
+function rejectUnsupportedOffset(): never {
+  throw new InvalidArgumentError("Current search API does not support offset pagination. Narrow results with --category-id, --from-date, or --to-date instead.");
 }

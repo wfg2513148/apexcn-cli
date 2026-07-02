@@ -84,17 +84,13 @@ apexcn search "REST API" --page-size 5 --json
 apexcn search "ORDS" --category-id 4 --page-size 10 --json
 ```
 
-分页：
-
-```bash
-apexcn search "APEX" --page-size 10 --offset 20 --json
-```
-
 按更新时间范围搜索：
 
 ```bash
 apexcn search "JSON" --from-date 2026-01-01 --to-date 2026-12-31 --json
 ```
+
+当前搜索接口不支持 offset 翻页。需要缩小范围时，优先使用 `--category-id`、`--from-date` 和 `--to-date`。
 
 ## topic / thread
 

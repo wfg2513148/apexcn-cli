@@ -81,6 +81,21 @@ describe("content commands", () => {
     expect(JSON.parse(stdout.join("")).items[0].id).toBe(42);
   });
 
+  test("search rejects offset because the current API ignores it", async () => {
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () =>
+      Response.json({ items: [], page: { limit: 5, offset: 0, count: 0, hasMore: false } })
+    );
+    exitOverrideTree(program);
+
+    await expect(program.parseAsync(["node", "apexcn", "search", "APEX", "--offset", "5"])).rejects.toMatchObject({
+      code: "commander.invalidArgument"
+    });
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toContain("Current search API does not support offset pagination");
+  });
+
   test("numeric options print a CLI error instead of a stack trace", async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];
@@ -109,10 +124,6 @@ describe("content commands", () => {
       {
         argv: ["node", "apexcn", "search", "APEX", "--category-id", "-1"],
         message: "Expected a positive integer"
-      },
-      {
-        argv: ["node", "apexcn", "search", "APEX", "--offset", "-1"],
-        message: "Expected a non-negative integer"
       },
       {
         argv: ["node", "apexcn", "topic", "create", "--category-id", "0", "--title", "CLI title", "--content", "CLI body"],

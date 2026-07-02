@@ -19,7 +19,7 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('--install-agent-skills');
     expect(script).toContain('APEXCN_API_KEY');
     expect(script).toContain('https://oracleapex.cn/ords/api');
-    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.5/apexcn-cli.tgz');
+    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.6/apexcn-cli.tgz');
     expect(script).toContain('--package-url');
     expect(script).toContain('Downloading apexcn-cli package');
     expect(script).toContain('cli_root');
@@ -61,7 +61,7 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('InstallAgentSkills');
     expect(script).toContain('APEXCN_API_KEY');
     expect(script).toContain('https://oracleapex.cn/ords/api');
-    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.5/apexcn-cli.tgz');
+    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.6/apexcn-cli.tgz');
     expect(script).toContain('PackageUrl');
     expect(script).toContain('Downloading apexcn-cli package');
     expect(script).toContain('Get-CliRoot');
@@ -299,7 +299,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         cwd: repoRoot,
         encoding: 'utf8',
       });
-      const archive = join(tempRoot, 'apexcn-cli-0.1.5.tgz');
+      const archive = join(tempRoot, 'apexcn-cli-0.1.6.tgz');
 
       execFileSync(
         'bash',
@@ -324,7 +324,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         env: { ...process.env, HOME: join(tempRoot, 'home') },
         encoding: 'utf8',
       });
-      expect(version).toBe('0.1.5\n');
+      expect(version).toBe('0.1.6\n');
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
@@ -420,8 +420,8 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
     expect(doc).toContain('APEXCN_CLI_INSTALL_AGENT_SKILLS');
     expect(doc).toContain('--install-agent-skills');
     expect(doc).toContain('当前用户运行该命令的 AI 工具全局 Skills 目录');
-    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.5/install-agent.sh');
-    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.5/install-agent.ps1');
+    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.6/install-agent.sh');
+    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.6/install-agent.ps1');
     expect(doc).not.toContain('wfg2513148/apexcn-forums/main/cli/install-agent.sh');
     expect(doc).not.toContain('wfg2513148/apexcn-forums/main/cli/install-agent.ps1');
     expect(doc).not.toContain('feature/apexcn-cli-ords-api');

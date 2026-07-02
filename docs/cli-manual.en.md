@@ -84,17 +84,13 @@ Search within a category:
 apexcn search "ORDS" --category-id 4 --page-size 10 --json
 ```
 
-Pagination:
-
-```bash
-apexcn search "APEX" --page-size 10 --offset 20 --json
-```
-
 Search by updated date range:
 
 ```bash
 apexcn search "JSON" --from-date 2026-01-01 --to-date 2026-12-31 --json
 ```
+
+The current search API does not support offset pagination. Narrow large result sets with `--category-id`, `--from-date`, and `--to-date`.
 
 ## topic / thread
 

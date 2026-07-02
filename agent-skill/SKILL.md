@@ -57,6 +57,7 @@ apexcn auth set-token \
 - Before deleting a topic, run `apexcn topic view <thread_id> --json`, then pass `--yes --force --confirm-title "<exact title>"`.
 - Before deleting a reply, confirm the target post id belongs to the intended thread, then pass `--yes --force`.
 - When reporting search results, topic summaries, or inspected content to a user, include each topic's real URL from `url` or `threadUrl`; include `originalUrl` too when present.
+- Do not infer an exact total from search results. If `page.hasMore` is true, report a lower bound such as "at least N results" and suggest narrowing by category or date.
 - Treat `401` as auth/token failure, `403` as permission/config denial, `409` as state conflict, and `429` as rate limiting.
 - Preserve stderr and `requestId` in logs for troubleshooting.
 - Do not output full API key, local config file contents, or other secrets.
