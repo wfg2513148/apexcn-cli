@@ -19,6 +19,11 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
     .option("--base-url <url>", "ORDS base URL", DEFAULT_BASE_URL)
     .option("--profile <profile>", "profile name", "prod")
     .action(async (commandOptions: { token: string; baseUrl: string; profile: string }) => {
+      if (commandOptions.token.trim().length === 0) {
+        options.stderr("Token must not be blank\n");
+        process.exitCode = 1;
+        return;
+      }
       try {
         await setCurrentProfile(
           commandOptions.profile,

@@ -23,6 +23,8 @@ apexcn auth set-token \
   --token "$APEXCN_API_KEY"
 ```
 
+`--token` 不能是空字符串或只有空白字符。如果传环境变量，先确认变量已经设置。
+
 查看当前 profile：
 
 ```bash

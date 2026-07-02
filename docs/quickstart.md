@@ -142,6 +142,8 @@ apexcn auth set-token \
 
 保存后，`prod` 会成为当前 active profile。后续命令不需要再传 `--profile`。
 
+`--token` 不能是空字符串或只有空白字符；如果使用环境变量，先确认变量已经设置。
+
 查看当前配置，不会泄露完整 token：
 
 ```bash

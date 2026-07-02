@@ -87,4 +87,49 @@ describe("auth command", () => {
     });
     expect(process.exitCode).toBeUndefined();
   });
+
+  test("auth set-token rejects blank tokens without writing config", async () => {
+    const cases = ["", "   "];
+
+    for (const token of cases) {
+      const configPath = await tempConfigPath();
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      const program = createProgram({
+        configPath,
+        stdout: (text) => stdout.push(text),
+        stderr: (text) => stderr.push(text)
+      });
+
+      await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", token, "--profile", "prod"]);
+      await program.parseAsync(["node", "apexcn", "auth", "show"]);
+
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).toBe("Token must not be blank\nNo active profile\n");
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+    }
+  });
+
+  test("auth set-token stores non-blank tokens exactly as provided", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "  abcdefghijklmnopqrstuvwxyz  ", "--profile", "prod"]);
+    await program.parseAsync(["node", "apexcn", "auth", "show", "--json"]);
+
+    expect(stderr.join("")).toBe("");
+    expect(JSON.parse(stdout[1])).toEqual({
+      profile: "prod",
+      baseUrl: "https://oracleapex.cn/ords/api",
+      token: "  ab...yz  "
+    });
+    expect(process.exitCode).toBeUndefined();
+  });
 });
