@@ -86,6 +86,8 @@ Windows 可加：
 $env:APEXCN_CLI_DRY_RUN="1"
 ```
 
+自动化测试或受控环境中，如需禁止安装脚本根据当前 AI 工具自动写入 skill，可设置 `APEXCN_CLI_CURRENT_AGENT=none`；显式设置 `APEXCN_CLI_INSTALL_AGENT_SKILLS=1` 时仍会安装已检测到的工具 skill。
+
 安装完成后验证：
 
 ```bash

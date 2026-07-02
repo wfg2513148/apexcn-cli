@@ -286,6 +286,12 @@ function Normalize-AgentName {
   return ""
 }
 
+function Test-CurrentAgentOptOut {
+  if (-not $env:APEXCN_CLI_CURRENT_AGENT) { return $false }
+  $agent = [string]$env:APEXCN_CLI_CURRENT_AGENT
+  return ($agent.ToLowerInvariant() -eq "none")
+}
+
 function Get-CurrentAgentFromProcessTree {
   $processId = $PID
   for ($depth = 0; $depth -lt 12 -and $processId; $depth++) {
@@ -309,6 +315,10 @@ function Get-CurrentAgentFromProcessTree {
 }
 
 function Get-CurrentAgentTool {
+  if (Test-CurrentAgentOptOut) {
+    return ""
+  }
+
   if ($env:APEXCN_CLI_CURRENT_AGENT) {
     $agent = Normalize-AgentName $env:APEXCN_CLI_CURRENT_AGENT
     if ($agent) { return $agent }
@@ -501,7 +511,7 @@ Build-Cli
 Install-Launcher
 Install-CodexSkill
 Install-CurrentAgentSkill
-if ((-not $CurrentAgentSkillInstalled) -or $InstallAgentSkills -or $Yes) {
+if ($InstallAgentSkills -or ((-not (Test-CurrentAgentOptOut)) -and ((-not $CurrentAgentSkillInstalled) -or $Yes))) {
   Install-AgentSkills
 }
 Configure-Auth

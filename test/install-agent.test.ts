@@ -38,6 +38,8 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('install_agent_skills');
     expect(script).toContain('install_current_agent_skill');
     expect(script).toContain('APEXCN_CLI_CURRENT_AGENT');
+    expect(script).toContain('current_agent_opt_out');
+    expect(script).toContain('Set to none to disable current-agent auto skill installation.');
     expect(script).not.toContain('Optional current AI agent override: codex');
     expect(script).toContain('prompt_install_agent_skill');
     expect(script).toContain('codex');
@@ -81,6 +83,9 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('Install-AgentSkills');
     expect(script).toContain('Install-CurrentAgentSkill');
     expect(script).toContain('APEXCN_CLI_CURRENT_AGENT');
+    expect(script).toContain('function Test-CurrentAgentOptOut');
+    expect(script).toContain('if (Test-CurrentAgentOptOut) {');
+    expect(script).toContain('if ($InstallAgentSkills -or ((-not (Test-CurrentAgentOptOut))');
     expect(script).toContain('Confirm-AgentSkillInstall');
     expect(script).toContain('codex');
     expect(script).toContain('claude');
@@ -128,6 +133,86 @@ describe('agent one-click installer assets', () => {
       expect(output).toContain(join(home, '.codex/skills/apexcn-cli'));
       expect(output).toContain(join(home, '.agents/skills/apexcn-cli'));
       expect(output).not.toContain('Re-run with --install-agent-skills');
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  }, 30000);
+
+  test('macOS/Linux installer can opt out of current agent skill installation', () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-agent-opt-out-'));
+    const home = join(tempRoot, 'home');
+    mkdirSync(home);
+
+    try {
+      const output = execFileSync(
+        'bash',
+        [
+          join(repoRoot, 'scripts/install-agent.sh'),
+          '--source-dir',
+          repoRoot,
+          '--install-root',
+          join(tempRoot, 'install'),
+          '--bin-dir',
+          join(tempRoot, 'bin'),
+          '--yes',
+        ],
+        {
+          cwd: repoRoot,
+          env: {
+            ...process.env,
+            APEXCN_CLI_DRY_RUN: '1',
+            APEXCN_CLI_CURRENT_AGENT: 'none',
+            CODEX_SHELL: '1',
+            HOME: home,
+          },
+          encoding: 'utf8',
+        },
+      );
+
+      expect(output).not.toContain('Detected current AI tool: codex');
+      expect(output).not.toContain(join(home, '.codex/skills/apexcn-cli'));
+      expect(output).not.toContain(join(home, '.agents/skills/apexcn-cli'));
+      expect(output).not.toContain('Re-run with --install-agent-skills');
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  }, 30000);
+
+  test('macOS/Linux current agent opt-out preserves explicit broad skill installation', () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-agent-broad-install-'));
+    const home = join(tempRoot, 'home');
+    const codexHome = join(home, '.codex');
+    mkdirSync(codexHome, { recursive: true });
+
+    try {
+      const output = execFileSync(
+        'bash',
+        [
+          join(repoRoot, 'scripts/install-agent.sh'),
+          '--source-dir',
+          repoRoot,
+          '--install-root',
+          join(tempRoot, 'install'),
+          '--bin-dir',
+          join(tempRoot, 'bin'),
+        ],
+        {
+          cwd: repoRoot,
+          env: {
+            ...process.env,
+            APEXCN_CLI_DRY_RUN: '1',
+            APEXCN_CLI_CURRENT_AGENT: 'none',
+            APEXCN_CLI_INSTALL_AGENT_SKILLS: '1',
+            CODEX_HOME: codexHome,
+            HOME: home,
+          },
+          encoding: 'utf8',
+        },
+      );
+
+      expect(output).not.toContain('Detected current AI tool: codex');
+      expect(output).toContain(join(codexHome, 'skills/apexcn-cli'));
+      expect(output).toContain(join(home, '.agents/skills/apexcn-cli'));
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }

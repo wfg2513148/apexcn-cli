@@ -54,6 +54,7 @@ Environment:
   APEXCN_CLI_INSTALL_AGENT_SKILLS=1
                               Same as --install-agent-skills.
   APEXCN_CLI_CURRENT_AGENT    Optional current AI agent override for advanced integrations.
+                              Set to none to disable current-agent auto skill installation.
   APEXCN_CLI_PACKAGE_URL      Override source package URL.
 USAGE
 }
@@ -464,6 +465,13 @@ normalize_agent_name() {
   esac
 }
 
+current_agent_opt_out() {
+  [[ -n "${APEXCN_CLI_CURRENT_AGENT:-}" ]] || return 1
+  local agent=""
+  agent="$(printf '%s' "$APEXCN_CLI_CURRENT_AGENT" | tr '[:upper:]' '[:lower:]')"
+  [[ "$agent" == "none" ]]
+}
+
 current_agent_from_process_tree() {
   local pid="$$"
   local command_name=""
@@ -491,6 +499,10 @@ current_agent_from_process_tree() {
 }
 
 current_agent_tool() {
+  if current_agent_opt_out; then
+    return 1
+  fi
+
   if [[ -n "${APEXCN_CLI_CURRENT_AGENT:-}" ]]; then
     normalize_agent_name "$APEXCN_CLI_CURRENT_AGENT" && return 0
   fi
@@ -719,7 +731,9 @@ main() {
   install_launcher
   install_skill
   install_current_agent_skill
-  if [[ "$current_agent_skill_installed" != "1" || "$install_agent_skills" == "1" || "$yes" == "1" ]]; then
+  if [[ "$install_agent_skills" == "1" ]]; then
+    install_agent_skills
+  elif ! current_agent_opt_out && { [[ "$current_agent_skill_installed" != "1" ]] || [[ "$yes" == "1" ]]; }; then
     install_agent_skills
   fi
   configure_auth
