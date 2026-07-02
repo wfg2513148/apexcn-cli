@@ -23,7 +23,8 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
         await setCurrentProfile(
           commandOptions.profile,
           { baseUrl: commandOptions.baseUrl, token: commandOptions.token },
-          options.configPath
+          options.configPath,
+          { overwriteInvalid: true }
         );
       } catch (error) {
         if (printConfigError(error, options)) {

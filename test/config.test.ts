@@ -59,6 +59,28 @@ describe("config", () => {
     });
   });
 
+  test("setCurrentProfile can overwrite an invalid config when explicitly allowed", async () => {
+    const path = await tempConfigPath();
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, "{not-json", "utf8");
+
+    await setCurrentProfile(
+      "prod",
+      { baseUrl: "https://example.test", token: "secret" },
+      path,
+      { overwriteInvalid: true }
+    );
+
+    await expect(loadConfig(path)).resolves.toEqual({
+      current: "prod",
+      profiles: {
+        prod: { baseUrl: "https://example.test", token: "secret" }
+      }
+    });
+    const mode = (await stat(path)).mode & 0o777;
+    expect(mode).toBe(0o600);
+  });
+
   test("clearCurrentProfile removes only the current pointer", async () => {
     const path = await tempConfigPath();
     await saveConfig({ current: "prod", profiles: { prod: { baseUrl: "https://example.test", token: "secret" } } }, path);

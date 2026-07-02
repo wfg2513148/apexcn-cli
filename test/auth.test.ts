@@ -53,4 +53,38 @@ describe("auth command", () => {
     expect(stderr.join("")).not.toContain("src/config");
     expect(process.exitCode).toBe(1);
   });
+
+  test("auth set-token overwrites invalid config so the suggested recovery command works", async () => {
+    const configPath = await tempConfigPath();
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(configPath, "{not-json", "utf8");
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "auth",
+      "set-token",
+      "--token",
+      "abcdefghijklmnopqrstuvwxyz",
+      "--profile",
+      "prod"
+    ]);
+    await program.parseAsync(["node", "apexcn", "auth", "show", "--json"]);
+
+    expect(stderr.join("")).toBe("");
+    expect(stdout[0]).toBe("Saved profile prod\n");
+    expect(JSON.parse(stdout[1])).toEqual({
+      profile: "prod",
+      baseUrl: "https://oracleapex.cn/ords/api",
+      token: "abcd...wxyz"
+    });
+    expect(process.exitCode).toBeUndefined();
+  });
 });

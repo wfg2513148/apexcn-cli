@@ -58,9 +58,18 @@ export async function saveConfig(config: ApexcnConfig, configPath = defaultConfi
 export async function setCurrentProfile(
   profile: string,
   profileConfig: ProfileConfig,
-  configPath = defaultConfigPath()
+  configPath = defaultConfigPath(),
+  options: { overwriteInvalid?: boolean } = {}
 ): Promise<void> {
-  const config = await loadConfig(configPath);
+  let config: ApexcnConfig;
+  try {
+    config = await loadConfig(configPath);
+  } catch (error) {
+    if (!options.overwriteInvalid || !(error instanceof ConfigFileError)) {
+      throw error;
+    }
+    config = { profiles: {} };
+  }
   await saveConfig(
     {
       current: profile,
