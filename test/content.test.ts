@@ -100,6 +100,19 @@ describe("content commands", () => {
     expect(JSON.parse(stdout.join("")).items[0].id).toBe(42);
   });
 
+  test("search accepts the maximum page size", async () => {
+    const { program, fetch } = await configuredProgram(async () =>
+      Response.json({ items: [], page: { limit: 50 }, requestId: "req-search" })
+    );
+
+    await program.parseAsync(["node", "apexcn", "search", "APEX", "--page-size", "50"]);
+
+    expect(fetch).toHaveBeenLastCalledWith(
+      "https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&pageSize=50",
+      expect.any(Object)
+    );
+  });
+
   test("search allows single-sided date filters", async () => {
     const cases = [
       {
@@ -218,6 +231,7 @@ describe("content commands", () => {
     expect(search).toBeDefined();
     expect(search?.helpInformation()).not.toContain("--offset");
     expect(search?.helpInformation()).toContain("--json");
+    expect(search?.helpInformation()).toContain("page size, 1-50");
     expect(search?.helpInformation()).toContain("pretty-print JSON");
   });
 
@@ -261,6 +275,10 @@ describe("content commands", () => {
       {
         argv: ["node", "apexcn", "ask", "Q", "--top-k", "0"],
         message: "Expected a positive integer"
+      },
+      {
+        argv: ["node", "apexcn", "search", "APEX", "--page-size", "51"],
+        message: "Expected --page-size to be between 1 and 50"
       }
     ];
 

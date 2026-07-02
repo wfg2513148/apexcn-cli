@@ -90,7 +90,7 @@ Search by updated date range:
 apexcn search "JSON" --from-date 2026-01-01 --to-date 2026-12-31 --json
 ```
 
-The current search API does not support offset pagination. Narrow large result sets with `--category-id`, `--from-date`, and `--to-date`.
+`--page-size` accepts 1 to 50. The current search API does not support offset pagination. Narrow large result sets with `--category-id`, `--from-date`, and `--to-date`.
 
 ## topic / thread
 

@@ -187,7 +187,7 @@ apexcn search APEX --page-size 5 --json
 apexcn search "向量索引" --category-id 4 --from-date 2026-01-01 --to-date 2026-12-31 --json
 ```
 
-当前搜索接口不支持 offset 翻页。需要缩小搜索范围时，用 `--category-id`、`--from-date` 和 `--to-date`。
+`--page-size` 支持 1 到 50。当前搜索接口不支持 offset 翻页。需要缩小搜索范围时，用 `--category-id`、`--from-date` 和 `--to-date`。
 
 查看话题：
 

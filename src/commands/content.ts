@@ -37,7 +37,7 @@ export function createSearchCommand(options: ApiCommandOptions): Command {
   return new Command("search")
     .argument("<keyword>")
     .option("--category-id <id>", "category id", parsePositiveInteger)
-    .option("--page-size <n>", "page size", parsePositiveInteger)
+    .option("--page-size <n>", "page size, 1-50", parseSearchPageSize)
     .addOption(new Option("--offset <n>", "unsupported; current search API ignores offset").argParser(rejectUnsupportedOffset).hideHelp())
     .option("--from-date <date>", "inclusive updated-from date, YYYY-MM-DD", parseSearchDate)
     .option("--to-date <date>", "inclusive updated-to date, YYYY-MM-DD", parseSearchDate)
@@ -467,6 +467,14 @@ function parsePositiveInteger(value: string): number {
   const parsed = parseNumber(value);
   if (parsed < 1) {
     throw new InvalidArgumentError(`Expected a positive integer: ${value}`);
+  }
+  return parsed;
+}
+
+function parseSearchPageSize(value: string): number {
+  const parsed = parsePositiveInteger(value);
+  if (parsed > 50) {
+    throw new InvalidArgumentError("Expected --page-size to be between 1 and 50");
   }
   return parsed;
 }
