@@ -250,3 +250,7 @@ Confirm title before deleting:
 apexcn topic view 30549 --json
 apexcn topic delete 30549 --yes --force --confirm-title "Full title" --json
 ```
+
+## API write dry-run classification
+
+Installer `--dry-run` is separate from CLI API command dry-run. API write dry-run is not available in the current CLI. It is planned only for community API write commands: `topic create/update/edit/delete`, `reply create/update/edit/delete`, `favorite add/remove`, and `subscription add/remove`; aliases `thread` and `post` inherit the same classification. `ask` uses POST but is a read-like RAG command and is excluded.

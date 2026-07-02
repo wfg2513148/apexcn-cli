@@ -250,3 +250,7 @@ apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --
 apexcn topic view 30549 --json
 apexcn topic delete 30549 --yes --force --confirm-title "完整标题" --json
 ```
+
+## API 写操作 dry-run 分类
+
+安装脚本的 `--dry-run` 和 CLI API 命令 dry-run 是两件事。当前 CLI API 命令尚未开放 dry-run。后续只计划覆盖社区 API 写操作：`topic create/update/edit/delete`、`reply create/update/edit/delete`、`favorite add/remove`、`subscription add/remove`，别名 `thread` 和 `post` 继承同样分类。`ask` 虽然使用 POST，但属于只读 RAG 问答，不纳入 API 写操作 dry-run。

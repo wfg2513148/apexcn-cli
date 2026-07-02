@@ -45,6 +45,67 @@ function exitOverrideTree(command: Command): void {
   }
 }
 
+function leafCommandPaths(command: Command, prefix: string[] = [], includeCurrent = false): string[] {
+  const aliases = command.aliases();
+  const names = [command.name(), ...aliases];
+  const nextPrefixes = includeCurrent ? names.map((name) => [...prefix, name]) : [prefix];
+  if (command.commands.length === 0) {
+    return nextPrefixes.map((parts) => parts.join(" ")).filter(Boolean);
+  }
+  return nextPrefixes.flatMap((parts) => command.commands.flatMap((child) => leafCommandPaths(child, parts, true)));
+}
+
+function leafCommand(program: Command, path: string): Command {
+  let current = program;
+  for (const part of path.split(" ")) {
+    const next = current.commands.find((command) => command.name() === part || command.aliases().includes(part));
+    if (!next) {
+      throw new Error(`Command not found: ${path}`);
+    }
+    current = next;
+  }
+  return current;
+}
+
+const futureApiDryRunCommands = [
+  "topic create",
+  "topic update",
+  "topic edit",
+  "topic delete",
+  "thread create",
+  "thread update",
+  "thread edit",
+  "thread delete",
+  "reply create",
+  "reply update",
+  "reply edit",
+  "reply delete",
+  "post create",
+  "post update",
+  "post edit",
+  "post delete",
+  "favorite add",
+  "favorite remove",
+  "subscription add",
+  "subscription remove"
+].sort();
+
+const neverApiDryRunCommands = [
+  "auth set-token",
+  "auth list",
+  "auth use",
+  "auth remove",
+  "auth show",
+  "auth logout",
+  "doctor",
+  "me",
+  "category list",
+  "search",
+  "topic view",
+  "thread view",
+  "ask"
+].sort();
+
 describe("content commands", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -250,6 +311,30 @@ describe("content commands", () => {
     expect(search?.helpInformation()).toContain("--json");
     expect(search?.helpInformation()).toContain("page size, 1-50");
     expect(search?.helpInformation()).toContain("pretty-print JSON");
+  });
+
+  test("all leaf commands have an API dry-run classification", () => {
+    const program = createProgram();
+    const actual = leafCommandPaths(program).sort();
+    const classified = [...futureApiDryRunCommands, ...neverApiDryRunCommands].sort();
+
+    expect(classified).toEqual(actual);
+  });
+
+  test("API dry-run is not exposed before implementation", () => {
+    const program = createProgram();
+
+    for (const path of [...futureApiDryRunCommands, ...neverApiDryRunCommands]) {
+      expect(leafCommand(program, path).helpInformation()).not.toContain("--dry-run");
+    }
+  });
+
+  test("commands that never support API dry-run remain excluded", () => {
+    const program = createProgram();
+
+    for (const path of neverApiDryRunCommands) {
+      expect(leafCommand(program, path).helpInformation()).not.toContain("--dry-run");
+    }
   });
 
   test("numeric options print a CLI error instead of a stack trace", async () => {
