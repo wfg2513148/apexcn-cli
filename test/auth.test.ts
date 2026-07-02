@@ -24,7 +24,7 @@ describe("auth command", () => {
 
     const text = output.join("");
     expect(text).toContain("Profile: prod");
-    expect(text).toContain("Base URL: https://oracleapex.cn/ords/apexcn");
+    expect(text).toContain("Base URL: https://oracleapex.cn/ords/api");
     expect(text).toContain("Token: abcd...wxyz");
     expect(text).not.toContain("abcdefghijklmnopqrstuvwxyz");
   });

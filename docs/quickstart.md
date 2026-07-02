@@ -35,7 +35,8 @@
 - 从 `https://oracleapex.cn/cli/` 下载稳定文件名的安装脚本和 CLI 压缩包。
 - 安装依赖并构建 CLI。
 - 创建本机 `apexcn` 命令。
-- 可选安装 Codex skill，让后续 agent 知道如何安全调用 CLI。
+- 可选把 skill 安装到已检测到的 Codex、Claude、OpenCode 等 AI 工具中，让后续 agent 知道如何安全调用 CLI。
+- 如果安装命令是在支持的 AI 工具内执行，默认会把 skill 安装到当前用户运行该命令的 AI 工具全局 Skills 目录。
 - 如果提供 `APEXCN_API_KEY`，自动配置生产 API profile。
 
 当前生产 ORDS base URL 是：
@@ -49,13 +50,13 @@ https://oracleapex.cn/ords/api
 macOS / Linux：
 
 ```bash
-curl -fsSL https://oracleapex.cn/cli/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_CODEX_SKILL=1 bash -s -- --yes
+curl -fsSL https://oracleapex.cn/cli/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_CODEX_SKILL="1"; irm "https://oracleapex.cn/cli/install-agent.ps1" | iex
+$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://oracleapex.cn/cli/install-agent.ps1" | iex
 ```
 
 安装脚本默认下载固定文件名的 CLI 包：
@@ -69,7 +70,7 @@ https://oracleapex.cn/cli/apexcn-cli.tgz
 如果只是让 agent 先检查会做什么，把 macOS / Linux 命令最后的 `--yes` 改为：
 
 ```bash
---dry-run --yes --install-codex-skill
+--dry-run --yes --install-agent-skills
 ```
 
 Windows 可加：
@@ -81,12 +82,13 @@ $env:APEXCN_CLI_DRY_RUN="1"
 安装完成后验证：
 
 ```bash
+command -v apexcn
 apexcn auth show --json
 apexcn me --json
 apexcn category list --json
 ```
 
-如果 shell 找不到 `apexcn`，按安装脚本最后输出的提示把安装目录加入 `PATH`。macOS / Linux 默认是 `~/.local/bin`，Windows 默认是 `%LOCALAPPDATA%\apexcn\bin`。
+如果 shell 找不到 `apexcn`，或者 `command -v apexcn` 显示的不是安装脚本最后输出的目录，先把该目录放到 `PATH` 前面。macOS / Linux 默认是 `~/.local/bin`，Windows 默认是 `%LOCALAPPDATA%\apexcn\bin`。
 
 ### 本地源码开发模式
 

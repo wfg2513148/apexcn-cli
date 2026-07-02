@@ -12,7 +12,7 @@ export type ApexcnConfig = {
   profiles: Record<string, ProfileConfig>;
 };
 
-export const DEFAULT_BASE_URL = "https://oracleapex.cn/ords/apexcn";
+export const DEFAULT_BASE_URL = "https://oracleapex.cn/ords/api";
 
 export function defaultConfigPath(home = homedir()): string {
   return join(home, ".apexcn", "config.json");

@@ -17,6 +17,8 @@ export type CreateProgramOptions = Partial<CommandIo> & {
   configPath?: string;
 };
 
+export const CLI_VERSION = "0.1.1";
+
 export function createProgram(options: CreateProgramOptions = {}): Command {
   const io: CommandIo = {
     stdout: options.stdout ?? ((text) => process.stdout.write(text)),
@@ -25,6 +27,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
 
   const program = new Command();
   program.name("apexcn");
+  program.version(CLI_VERSION);
   program.addCommand(createAuthCommand({ ...io, configPath: options.configPath }));
   program.addCommand(createMeCommand({ ...io, configPath: options.configPath }));
   program.addCommand(createCategoryCommand({ ...io, configPath: options.configPath }));
@@ -34,7 +37,18 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   program.addCommand(createRelationCommand("favorite", { ...io, configPath: options.configPath }));
   program.addCommand(createRelationCommand("subscription", { ...io, configPath: options.configPath }));
   program.addCommand(createAskCommand({ ...io, configPath: options.configPath }));
+  configureCommandOutput(program, io);
   return program;
+}
+
+function configureCommandOutput(command: Command, io: CommandIo): void {
+  command.configureOutput({
+    writeOut: io.stdout,
+    writeErr: io.stderr
+  });
+  for (const child of command.commands) {
+    configureCommandOutput(child, io);
+  }
 }
 
 export function isCliEntrypoint(moduleUrl: string, argvScriptPath: string | undefined): boolean {

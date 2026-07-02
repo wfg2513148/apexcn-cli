@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { stdin as processStdin, stdout as processStdout } from "node:process";
 import { createInterface } from "node:readline/promises";
-import { Command } from "commander";
+import { Command, InvalidArgumentError } from "commander";
 import { loadConfig } from "../config.js";
 import { HttpError, requestJson } from "../http.js";
 import type { CommandIo } from "./auth.js";
@@ -436,7 +436,7 @@ async function promptCategoryId(options: CommandIo, session: Session): Promise<n
 function parseNumber(value: string): number {
   const parsed = Number(value);
   if (!Number.isInteger(parsed)) {
-    throw new Error(`Invalid number: ${value}`);
+    throw new InvalidArgumentError(`Invalid number: ${value}`);
   }
   return parsed;
 }

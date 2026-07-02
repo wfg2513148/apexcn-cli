@@ -2,6 +2,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import type { Command } from "commander";
 import { createProgram } from "../src/index.js";
 
 async function tempConfigPath() {
@@ -32,6 +33,15 @@ async function configuredProgram(fetchImpl: typeof fetch) {
   ]);
   stdout.length = 0;
   return { program, stdout, stderr, fetch: vi.mocked(fetch) };
+}
+
+function exitOverrideTree(command: Command): void {
+  command.exitOverride((error) => {
+    throw error;
+  });
+  for (const child of command.commands) {
+    exitOverrideTree(child);
+  }
 }
 
 describe("content commands", () => {
@@ -69,6 +79,25 @@ describe("content commands", () => {
       expect.any(Object)
     );
     expect(JSON.parse(stdout.join("")).items[0].id).toBe(42);
+  });
+
+  test("numeric options print a CLI error instead of a stack trace", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const program = createProgram({
+      configPath: await tempConfigPath(),
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+    exitOverrideTree(program);
+
+    await expect(program.parseAsync(["node", "apexcn", "search", "APEX", "--page-size", "nope"])).rejects.toMatchObject({
+      code: "commander.invalidArgument"
+    });
+
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toContain("Invalid number: nope");
+    expect(stderr.join("")).not.toContain("src/commands/content");
   });
 
   test("topic create, update, and delete call the expected API paths", async () => {
