@@ -7,8 +7,11 @@ import {
   ConfigFileError,
   defaultConfigPath,
   loadConfig,
+  removeProfile,
   saveConfig,
-  setCurrentProfile
+  setCurrentProfile,
+  setCurrentProfileName,
+  setProfile
 } from "../src/config.js";
 
 async function tempConfigPath() {
@@ -57,6 +60,59 @@ describe("config", () => {
         prod: { baseUrl: "https://example.test", token: "secret" }
       }
     });
+  });
+
+  test("setProfile can save a profile without switching current", async () => {
+    const path = await tempConfigPath();
+    await saveConfig({ current: "prod", profiles: { prod: { baseUrl: "https://prod.test", token: "prod-secret" } } }, path);
+
+    await setProfile("staging", { baseUrl: "https://staging.test", token: "staging-secret" }, path, { switchCurrent: false });
+
+    await expect(loadConfig(path)).resolves.toEqual({
+      current: "prod",
+      profiles: {
+        prod: { baseUrl: "https://prod.test", token: "prod-secret" },
+        staging: { baseUrl: "https://staging.test", token: "staging-secret" }
+      }
+    });
+  });
+
+  test("setCurrentProfileName switches only to existing profiles", async () => {
+    const path = await tempConfigPath();
+    await saveConfig({
+      current: "prod",
+      profiles: {
+        prod: { baseUrl: "https://prod.test", token: "prod-secret" },
+        staging: { baseUrl: "https://staging.test", token: "staging-secret" }
+      }
+    }, path);
+
+    await expect(setCurrentProfileName("staging", path)).resolves.toBe(true);
+    await expect(loadConfig(path)).resolves.toMatchObject({ current: "staging" });
+    await expect(setCurrentProfileName("missing", path)).resolves.toBe(false);
+    await expect(loadConfig(path)).resolves.toMatchObject({ current: "staging" });
+  });
+
+  test("removeProfile removes profiles and clears current only when needed", async () => {
+    const path = await tempConfigPath();
+    await saveConfig({
+      current: "prod",
+      profiles: {
+        prod: { baseUrl: "https://prod.test", token: "prod-secret" },
+        staging: { baseUrl: "https://staging.test", token: "staging-secret" }
+      }
+    }, path);
+
+    await expect(removeProfile("staging", path)).resolves.toBe(true);
+    await expect(loadConfig(path)).resolves.toEqual({
+      current: "prod",
+      profiles: {
+        prod: { baseUrl: "https://prod.test", token: "prod-secret" }
+      }
+    });
+    await expect(removeProfile("prod", path)).resolves.toBe(true);
+    await expect(loadConfig(path)).resolves.toEqual({ profiles: {} });
+    await expect(removeProfile("missing", path)).resolves.toBe(false);
   });
 
   test("setCurrentProfile can overwrite an invalid config when explicitly allowed", async () => {

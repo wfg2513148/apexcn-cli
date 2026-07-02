@@ -1,5 +1,13 @@
 import { Command } from "commander";
-import { ConfigFileError, DEFAULT_BASE_URL, clearCurrentProfile, loadConfig, setCurrentProfile } from "../config.js";
+import {
+  ConfigFileError,
+  DEFAULT_BASE_URL,
+  clearCurrentProfile,
+  loadConfig,
+  removeProfile,
+  setCurrentProfileName,
+  setProfile
+} from "../config.js";
 
 export type CommandIo = {
   stdout: (text: string) => void;
@@ -18,7 +26,8 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
     .requiredOption("--token <token>")
     .option("--base-url <url>", "ORDS base URL", DEFAULT_BASE_URL)
     .option("--profile <profile>", "profile name", "prod")
-    .action(async (commandOptions: { token: string; baseUrl: string; profile: string }) => {
+    .option("--no-switch", "save the profile without making it current")
+    .action(async (commandOptions: { token: string; baseUrl: string; profile: string; switch?: boolean }) => {
       if (commandOptions.token.trim().length === 0) {
         options.stderr("Token must not be blank\n");
         process.exitCode = 1;
@@ -40,11 +49,11 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
         return;
       }
       try {
-        await setCurrentProfile(
+        await setProfile(
           commandOptions.profile,
           { baseUrl: commandOptions.baseUrl, token: commandOptions.token },
           options.configPath,
-          { overwriteInvalid: true }
+          { overwriteInvalid: true, switchCurrent: commandOptions.switch !== false }
         );
       } catch (error) {
         if (printConfigError(error, options)) {
@@ -53,6 +62,81 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
         throw error;
       }
       options.stdout(`Saved profile ${commandOptions.profile}\n`);
+    });
+
+  auth
+    .command("list")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: { json?: boolean }) => {
+      let config;
+      try {
+        config = await loadConfig(options.configPath);
+      } catch (error) {
+        if (printConfigError(error, options)) {
+          return;
+        }
+        throw error;
+      }
+      const names = Object.keys(config.profiles).sort();
+      const current = config.current && config.profiles[config.current] ? config.current : undefined;
+      const profiles = names.map((name) => ({
+        name,
+        current: name === current,
+        baseUrl: config.profiles[name].baseUrl,
+        token: redactToken(config.profiles[name].token)
+      }));
+
+      if (commandOptions.json) {
+        options.stdout(`${JSON.stringify({ current, profiles }, null, 2)}\n`);
+        return;
+      }
+      if (profiles.length === 0) {
+        options.stdout("No profiles configured\n");
+        return;
+      }
+      for (const profile of profiles) {
+        options.stdout(`${profile.current ? "*" : " "} ${profile.name} ${profile.baseUrl} ${profile.token}\n`);
+      }
+    });
+
+  auth
+    .command("use")
+    .argument("<profile>")
+    .action(async (profile: string) => {
+      try {
+        const ok = await setCurrentProfileName(profile, options.configPath);
+        if (!ok) {
+          options.stderr(`Profile not found: ${profile}\n`);
+          process.exitCode = 1;
+          return;
+        }
+      } catch (error) {
+        if (printConfigError(error, options)) {
+          return;
+        }
+        throw error;
+      }
+      options.stdout(`Using profile ${profile}\n`);
+    });
+
+  auth
+    .command("remove")
+    .argument("<profile>")
+    .action(async (profile: string) => {
+      try {
+        const ok = await removeProfile(profile, options.configPath);
+        if (!ok) {
+          options.stderr(`Profile not found: ${profile}\n`);
+          process.exitCode = 1;
+          return;
+        }
+      } catch (error) {
+        if (printConfigError(error, options)) {
+          return;
+        }
+        throw error;
+      }
+      options.stdout(`Removed profile ${profile}\n`);
     });
 
   auth

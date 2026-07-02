@@ -151,7 +151,10 @@ apexcn auth set-token \
 ```bash
 apexcn auth show
 apexcn auth show --json
+apexcn auth list --json
 ```
+
+需要维护多个 API profile 时，可用 `auth set-token --no-switch` 保存但不切换当前 profile，用 `auth use <profile>` 切换，用 `auth remove <profile>` 删除。删除当前 profile 会清空 active profile，但不会自动切到其他账号。
 
 验证当前身份：
 

@@ -61,6 +61,15 @@ export async function setCurrentProfile(
   configPath = defaultConfigPath(),
   options: { overwriteInvalid?: boolean } = {}
 ): Promise<void> {
+  await setProfile(profile, profileConfig, configPath, { ...options, switchCurrent: true });
+}
+
+export async function setProfile(
+  profile: string,
+  profileConfig: ProfileConfig,
+  configPath = defaultConfigPath(),
+  options: { overwriteInvalid?: boolean; switchCurrent?: boolean } = {}
+): Promise<void> {
   let config: ApexcnConfig;
   try {
     config = await loadConfig(configPath);
@@ -72,7 +81,7 @@ export async function setCurrentProfile(
   }
   await saveConfig(
     {
-      current: profile,
+      current: options.switchCurrent ? profile : config.current,
       profiles: {
         ...config.profiles,
         [profile]: profileConfig
@@ -80,6 +89,29 @@ export async function setCurrentProfile(
     },
     configPath
   );
+}
+
+export async function setCurrentProfileName(profile: string, configPath = defaultConfigPath()): Promise<boolean> {
+  const config = await loadConfig(configPath);
+  if (!config.profiles[profile]) {
+    return false;
+  }
+  await saveConfig({ ...config, current: profile }, configPath);
+  return true;
+}
+
+export async function removeProfile(profile: string, configPath = defaultConfigPath()): Promise<boolean> {
+  const config = await loadConfig(configPath);
+  if (!config.profiles[profile]) {
+    return false;
+  }
+  const { [profile]: _removed, ...profiles } = config.profiles;
+  const next: ApexcnConfig = { profiles };
+  if (config.current && config.current !== profile) {
+    next.current = config.current;
+  }
+  await saveConfig(next, configPath);
+  return true;
 }
 
 export async function clearCurrentProfile(configPath = defaultConfigPath()): Promise<void> {

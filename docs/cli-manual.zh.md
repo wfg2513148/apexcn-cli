@@ -25,12 +25,17 @@ apexcn auth set-token \
 ```
 
 `--token`、`--profile` 和 `--base-url` 不能是空字符串或只有空白字符。`--base-url` 必须是绝对 `http` 或 `https` URL。如果传环境变量，先确认变量已经设置。
+如果只想保存 profile 而不切换当前 profile，加 `--no-switch`。
 
 查看当前 profile：
 
 ```bash
 apexcn auth show
 apexcn auth show --json
+apexcn auth list
+apexcn auth list --json
+apexcn auth use agent-prod
+apexcn auth remove old-profile
 ```
 
 退出当前 profile：

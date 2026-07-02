@@ -25,12 +25,17 @@ apexcn auth set-token \
 ```
 
 `--token`, `--profile`, and `--base-url` cannot be blank or whitespace-only. `--base-url` must be an absolute `http` or `https` URL. If you pass environment variables, make sure they are set first.
+Add `--no-switch` when you want to save a profile without making it current.
 
 Show current profile:
 
 ```bash
 apexcn auth show
 apexcn auth show --json
+apexcn auth list
+apexcn auth list --json
+apexcn auth use agent-prod
+apexcn auth remove old-profile
 ```
 
 Log out:
