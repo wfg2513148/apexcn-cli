@@ -36,9 +36,9 @@ export function createCategoryCommand(options: ApiCommandOptions): Command {
 export function createSearchCommand(options: ApiCommandOptions): Command {
   return new Command("search")
     .argument("<keyword>")
-    .option("--category-id <id>", "category id", parseNumber)
-    .option("--page-size <n>", "page size", parseNumber)
-    .option("--offset <n>", "offset", parseNumber)
+    .option("--category-id <id>", "category id", parsePositiveInteger)
+    .option("--page-size <n>", "page size", parsePositiveInteger)
+    .option("--offset <n>", "offset", parseNonNegativeInteger)
     .option("--from-date <date>", "inclusive updated-from date, YYYY-MM-DD")
     .option("--to-date <date>", "inclusive updated-to date, YYYY-MM-DD")
     .option("--json", "print JSON")
@@ -65,9 +65,9 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
 
   topic
     .command("view")
-    .argument("<id>")
+    .argument("<id>", "topic id", parsePositiveInteger)
     .option("--json", "print JSON")
-    .action(async (id: string, commandOptions: JsonOption) => {
+    .action(async (id: number, commandOptions: JsonOption) => {
       await runApi(options, async (session) => {
         const data = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
         printData(options, data, commandOptions.json);
@@ -76,7 +76,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
 
   topic
     .command("create")
-    .option("--category-id <id>", "category id", parseNumber)
+    .option("--category-id <id>", "category id", parsePositiveInteger)
     .requiredOption("--title <title>")
     .option("--content <text>")
     .option("--content-file <path>")
@@ -105,14 +105,14 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
   topic
     .command("update")
     .alias("edit")
-    .argument("<id>")
-    .option("--category-id <id>", "category id", parseNumber)
+    .argument("<id>", "topic id", parsePositiveInteger)
+    .option("--category-id <id>", "category id", parsePositiveInteger)
     .option("--title <title>")
     .option("--content <text>")
     .option("--content-file <path>")
     .option("--tags <csv>")
     .option("--json", "print JSON")
-    .action(async (id: string, commandOptions: JsonOption & TopicWriteOptions & { categoryId?: number }) => {
+    .action(async (id: number, commandOptions: JsonOption & TopicWriteOptions & { categoryId?: number }) => {
       await runApi(options, async (session) => {
         const data = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, {
           token: session.token,
@@ -130,12 +130,12 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
 
   topic
     .command("delete")
-    .argument("<id>")
+    .argument("<id>", "topic id", parsePositiveInteger)
     .option("--yes", "confirm delete")
     .option("--force", "required for non-interactive delete")
     .option("--confirm-title <title>", "required topic title confirmation")
     .option("--json", "print JSON")
-    .action(async (id: string, commandOptions: JsonOption & { yes?: boolean; force?: boolean; confirmTitle?: string }) => {
+    .action(async (id: number, commandOptions: JsonOption & { yes?: boolean; force?: boolean; confirmTitle?: string }) => {
       if (!commandOptions.yes || !commandOptions.force || !commandOptions.confirmTitle) {
         if (processStdin.isTTY === true && !commandOptions.yes && !commandOptions.force) {
           await runApi(options, async (session) => {
@@ -192,12 +192,12 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
 
   reply
     .command("create")
-    .argument("<topic-id>")
-    .option("--parent-post-id <id>", "parent reply id", parseNumber)
+    .argument("<topic-id>", "topic id", parsePositiveInteger)
+    .option("--parent-post-id <id>", "parent reply id", parsePositiveInteger)
     .option("--content <text>")
     .option("--content-file <path>")
     .option("--json", "print JSON")
-    .action(async (topicId: string, commandOptions: JsonOption & ReplyWriteOptions) => {
+    .action(async (topicId: number, commandOptions: JsonOption & ReplyWriteOptions) => {
       await runApi(options, async (session) => {
         const data = await requestJson(session.baseUrl, `/api/v1/topics/${topicId}/replies`, {
           token: session.token,
@@ -214,11 +214,11 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
   reply
     .command("update")
     .alias("edit")
-    .argument("<id>")
+    .argument("<id>", "reply id", parsePositiveInteger)
     .option("--content <text>")
     .option("--content-file <path>")
     .option("--json", "print JSON")
-    .action(async (id: string, commandOptions: JsonOption & ReplyWriteOptions) => {
+    .action(async (id: number, commandOptions: JsonOption & ReplyWriteOptions) => {
       await runApi(options, async (session) => {
         const data = await requestJson(session.baseUrl, `/api/v1/replies/${id}`, {
           token: session.token,
@@ -231,11 +231,11 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
 
   reply
     .command("delete")
-    .argument("<id>")
+    .argument("<id>", "reply id", parsePositiveInteger)
     .option("--yes", "confirm delete")
     .option("--force", "required for non-interactive delete")
     .option("--json", "print JSON")
-    .action(async (id: string, commandOptions: JsonOption & { yes?: boolean; force?: boolean }) => {
+    .action(async (id: number, commandOptions: JsonOption & { yes?: boolean; force?: boolean }) => {
       if (!commandOptions.yes || !commandOptions.force) {
         if (processStdin.isTTY === true && !commandOptions.yes && !commandOptions.force) {
           const confirmed = await promptText("Type delete to delete this reply: ");
@@ -268,9 +268,9 @@ export function createRelationCommand(name: "favorite" | "subscription", options
   for (const action of ["add", "remove"] as const) {
     command
       .command(action)
-      .argument("<topic-id>")
+      .argument("<topic-id>", "topic id", parsePositiveInteger)
       .option("--json", "print JSON")
-      .action(async (topicId: string, commandOptions: JsonOption) => {
+      .action(async (topicId: number, commandOptions: JsonOption) => {
         await runApi(options, async (session) => {
           const data = await requestJson(session.baseUrl, `/api/v1/topics/${topicId}/${name}`, {
             token: session.token,
@@ -286,7 +286,7 @@ export function createRelationCommand(name: "favorite" | "subscription", options
 export function createAskCommand(options: ApiCommandOptions): Command {
   return new Command("ask")
     .argument("<question>")
-    .option("--top-k <n>", "number of chunks", parseNumber)
+    .option("--top-k <n>", "number of chunks", parsePositiveInteger)
     .option("--json", "print JSON")
     .action(async (question: string, commandOptions: JsonOption & { topK?: number }) => {
       await runApi(options, async (session) => {
@@ -437,6 +437,22 @@ function parseNumber(value: string): number {
   const parsed = Number(value);
   if (!Number.isInteger(parsed)) {
     throw new InvalidArgumentError(`Invalid number: ${value}`);
+  }
+  return parsed;
+}
+
+function parsePositiveInteger(value: string): number {
+  const parsed = parseNumber(value);
+  if (parsed < 1) {
+    throw new InvalidArgumentError(`Expected a positive integer: ${value}`);
+  }
+  return parsed;
+}
+
+function parseNonNegativeInteger(value: string): number {
+  const parsed = parseNumber(value);
+  if (parsed < 0) {
+    throw new InvalidArgumentError(`Expected a non-negative integer: ${value}`);
   }
   return parsed;
 }

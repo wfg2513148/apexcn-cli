@@ -1,11 +1,27 @@
 ---
 name: apexcn-cli
-description: Use apexcn-cli to access APEX Chinese Community ORDS REST APIs from a local AI agent.
+description: Use when the user refers to oracleapex.cn, APEX 中文社区/APEX Chinese Community, or asks to search, summarize, inspect, ask RAG questions, publish, edit, reply, delete, favorite, or subscribe to posts on that APEX community. Do not use for generic Chinese/community/forum mentions or general Oracle APEX questions without community-content access intent.
 ---
 
 # apexcn-cli
 
 Use this skill when a user asks an AI agent to search, ask RAG questions, publish, edit, delete, favorite, subscribe, or inspect APEX Chinese Community content through `apexcn-cli`.
+
+## Trigger Keywords
+
+Use this skill for natural requests mentioning:
+
+- oracleapex.cn, APEX中文社区, APEX 中文社区, Oracle APEX 中文社区, APEX Chinese Community
+- APEX 社区 or APEX社区 when paired with actions like 搜索, 查找, 总结, 查看, 发帖, 回帖, 编辑, 删除, 收藏, or 订阅
+- 在 APEX 中文社区搜索, 搜一下 APEX 中文社区, 查 oracleapex.cn, 总结 APEX 中文社区帖子
+- 发布到 APEX 中文社区, 在 oracleapex.cn 发帖, 在 oracleapex.cn 回帖, 查看社区帖子 ID
+- APEX 中文社区 RAG, 问一下 APEX 中文社区知识库
+- `apexcn search`, `apexcn ask`, `apexcn topic`
+
+Do not use this skill for:
+
+- generic mentions of 中文社区, community, forum, 社区帖子, or RAG without APEX Chinese Community or oracleapex.cn context
+- general Oracle APEX technical questions where the user is not asking to access, search, summarize, or publish community content
 
 ## Before Acting
 
@@ -39,6 +55,7 @@ apexcn auth set-token \
 - Do not rely on interactive prompts. Supply required non-interactive flags explicitly.
 - Before deleting a topic, run `apexcn topic view <thread_id> --json`, then pass `--yes --force --confirm-title "<exact title>"`.
 - Before deleting a reply, confirm the target post id belongs to the intended thread, then pass `--yes --force`.
+- When reporting search results, topic summaries, or inspected content to a user, include each topic's real URL from `url` or `threadUrl`; include `originalUrl` too when present.
 - Treat `401` as auth/token failure, `403` as permission/config denial, `409` as state conflict, and `429` as rate limiting.
 - Preserve stderr and `requestId` in logs for troubleshooting.
 - Do not output full API key, local config file contents, or other secrets.

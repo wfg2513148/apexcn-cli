@@ -22,7 +22,7 @@ export class HttpError extends Error {
   }
 }
 
-export const DEFAULT_USER_AGENT = "apexcn-cli/0.1.3";
+export const DEFAULT_USER_AGENT = "apexcn-cli/0.1.4";
 
 export function joinUrl(baseUrl: string, path: string): string {
   const left = baseUrl.replace(/\/+$/, "");

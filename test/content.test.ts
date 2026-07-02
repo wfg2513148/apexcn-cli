@@ -100,6 +100,85 @@ describe("content commands", () => {
     expect(stderr.join("")).not.toContain("src/commands/content");
   });
 
+  test("numeric options reject zero or negative values where they do not make sense", async () => {
+    const cases = [
+      {
+        argv: ["node", "apexcn", "search", "APEX", "--page-size", "0"],
+        message: "Expected a positive integer"
+      },
+      {
+        argv: ["node", "apexcn", "search", "APEX", "--category-id", "-1"],
+        message: "Expected a positive integer"
+      },
+      {
+        argv: ["node", "apexcn", "search", "APEX", "--offset", "-1"],
+        message: "Expected a non-negative integer"
+      },
+      {
+        argv: ["node", "apexcn", "topic", "create", "--category-id", "0", "--title", "CLI title", "--content", "CLI body"],
+        message: "Expected a positive integer"
+      },
+      {
+        argv: ["node", "apexcn", "reply", "create", "42", "--parent-post-id", "0", "--content", "CLI body"],
+        message: "Expected a positive integer"
+      },
+      {
+        argv: ["node", "apexcn", "ask", "Q", "--top-k", "0"],
+        message: "Expected a positive integer"
+      }
+    ];
+
+    for (const item of cases) {
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      const program = createProgram({
+        configPath: await tempConfigPath(),
+        stdout: (text) => stdout.push(text),
+        stderr: (text) => stderr.push(text)
+      });
+      exitOverrideTree(program);
+
+      await expect(program.parseAsync(item.argv)).rejects.toMatchObject({
+        code: "commander.invalidArgument"
+      });
+
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).toContain(item.message);
+    }
+  });
+
+  test("id arguments reject non-positive or non-numeric values", async () => {
+    const cases = [
+      ["node", "apexcn", "topic", "view", "abc"],
+      ["node", "apexcn", "thread", "view", "0"],
+      ["node", "apexcn", "topic", "update", "0", "--content", "CLI body"],
+      ["node", "apexcn", "topic", "delete", "abc"],
+      ["node", "apexcn", "reply", "create", "0", "--content", "CLI body"],
+      ["node", "apexcn", "reply", "update", "abc", "--content", "CLI body"],
+      ["node", "apexcn", "reply", "delete", "0"],
+      ["node", "apexcn", "favorite", "add", "abc"],
+      ["node", "apexcn", "subscription", "remove", "0"]
+    ];
+
+    for (const argv of cases) {
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      const program = createProgram({
+        configPath: await tempConfigPath(),
+        stdout: (text) => stdout.push(text),
+        stderr: (text) => stderr.push(text)
+      });
+      exitOverrideTree(program);
+
+      await expect(program.parseAsync(argv)).rejects.toMatchObject({
+        code: "commander.invalidArgument"
+      });
+
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).toMatch(/Invalid number|Expected a positive integer/);
+    }
+  });
+
   test("topic create, update, and delete call the expected API paths", async () => {
     const responses = [
       { ok: true, id: 42, requestId: "req-create" },

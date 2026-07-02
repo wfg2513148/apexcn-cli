@@ -19,7 +19,7 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('--install-agent-skills');
     expect(script).toContain('APEXCN_API_KEY');
     expect(script).toContain('https://oracleapex.cn/ords/api');
-    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.3/apexcn-cli.tgz');
+    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.4/apexcn-cli.tgz');
     expect(script).toContain('--package-url');
     expect(script).toContain('Downloading apexcn-cli package');
     expect(script).toContain('cli_root');
@@ -61,7 +61,7 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('InstallAgentSkills');
     expect(script).toContain('APEXCN_API_KEY');
     expect(script).toContain('https://oracleapex.cn/ords/api');
-    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.3/apexcn-cli.tgz');
+    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.4/apexcn-cli.tgz');
     expect(script).toContain('PackageUrl');
     expect(script).toContain('Downloading apexcn-cli package');
     expect(script).toContain('Get-CliRoot');
@@ -210,6 +210,76 @@ describe('agent one-click installer assets', () => {
     }
   });
 
+  test('macOS/Linux installer writes a compact launcher for the resolved CLI root', () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-launcher-install-'));
+
+    try {
+      execFileSync(
+        'bash',
+        [
+          join(repoRoot, 'scripts/install-agent.sh'),
+          '--source-dir',
+          repoRoot,
+          '--install-root',
+          join(tempRoot, 'install'),
+          '--bin-dir',
+          join(tempRoot, 'bin'),
+          '--yes',
+        ],
+        {
+          cwd: repoRoot,
+          env: { ...process.env, HOME: join(tempRoot, 'home') },
+          encoding: 'utf8',
+        },
+      );
+
+      const launcher = readFileSync(join(tempRoot, 'bin', 'apexcn'), 'utf8');
+      expect(launcher.match(/exec node/g)).toHaveLength(1);
+      expect(launcher).not.toContain('/cli/dist/index.js');
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('macOS/Linux installer can install the npm package tarball layout', () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-package-install-'));
+
+    try {
+      execFileSync('npm', ['pack', '--pack-destination', tempRoot], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+      });
+      const archive = join(tempRoot, 'apexcn-cli-0.1.4.tgz');
+
+      execFileSync(
+        'bash',
+        [
+          join(repoRoot, 'scripts/install-agent.sh'),
+          '--package-url',
+          `file://${archive}`,
+          '--install-root',
+          join(tempRoot, 'install'),
+          '--bin-dir',
+          join(tempRoot, 'bin'),
+          '--yes',
+        ],
+        {
+          cwd: repoRoot,
+          env: { ...process.env, HOME: join(tempRoot, 'home') },
+          encoding: 'utf8',
+        },
+      );
+
+      const version = execFileSync(join(tempRoot, 'bin', 'apexcn'), ['--version'], {
+        env: { ...process.env, HOME: join(tempRoot, 'home') },
+        encoding: 'utf8',
+      });
+      expect(version).toBe('0.1.4\n');
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  }, 30000);
+
   test('macOS/Linux installer keeps the auth profile when account check fails', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-auth-install-'));
     const home = join(tempRoot, 'home');
@@ -262,8 +332,30 @@ describe('agent one-click installer assets', () => {
 
     expect(skill).toContain('apexcn auth show --json');
     expect(skill).toContain('--json');
+    expect(skill).toContain('real URL');
+    expect(skill).toContain('originalUrl');
     expect(skill).toContain('不要输出完整 API key');
     expect(skill).toContain('apexcn-cli');
+  });
+
+  test('Codex skill description includes natural community trigger keywords', () => {
+    const skill = readRepoFile('agent-skill/SKILL.md');
+    const description = /^description: (.+)$/m.exec(skill)?.[1] ?? '';
+
+    expect(description).toMatch(/^Use when/);
+    expect(description.length).toBeLessThan(500);
+    expect(description).toContain('APEX 中文社区');
+    expect(description).toContain('oracleapex.cn');
+    expect(description).toContain('APEX Chinese Community');
+    expect(description).toContain('community-content access intent');
+    expect(description).not.toContain('community posts/topics');
+    expect(description).not.toContain('forum search');
+    expect(skill).toContain('## Trigger Keywords');
+    expect(skill).toContain('APEX社区 when paired with actions');
+    expect(skill).toContain('在 APEX 中文社区搜索');
+    expect(skill).toContain('发布到 APEX 中文社区');
+    expect(skill).toContain('Do not use this skill for:');
+    expect(skill).toContain('without APEX Chinese Community or oracleapex.cn context');
   });
 
   test('quickstart exposes one-line AI agent installation as the primary path', () => {
@@ -277,11 +369,61 @@ describe('agent one-click installer assets', () => {
     expect(doc).toContain('APEXCN_CLI_INSTALL_AGENT_SKILLS');
     expect(doc).toContain('--install-agent-skills');
     expect(doc).toContain('当前用户运行该命令的 AI 工具全局 Skills 目录');
-    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.3/install-agent.sh');
-    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.3/install-agent.ps1');
+    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.4/install-agent.sh');
+    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.4/install-agent.ps1');
     expect(doc).not.toContain('wfg2513148/apexcn-forums/main/cli/install-agent.sh');
     expect(doc).not.toContain('wfg2513148/apexcn-forums/main/cli/install-agent.ps1');
     expect(doc).not.toContain('feature/apexcn-cli-ords-api');
+  });
+
+  test('split manuals cover beginner and terminal usage in Chinese and English', () => {
+    const userDocs = [
+      readRepoFile('docs/user-guide.zh.md'),
+      readRepoFile('docs/user-guide.en.md'),
+    ];
+    const terminalDocs = [
+      readRepoFile('docs/cli-manual.zh.md'),
+      readRepoFile('docs/cli-manual.en.md'),
+    ];
+
+    for (const doc of userDocs) {
+      expect(doc).toContain('AI');
+      expect(doc).toContain('apexcn-cli');
+      expect(doc).toMatch(/搜索|Search/);
+      expect(doc).toMatch(/发布|Publish/);
+      expect(doc).toMatch(/回复|Reply/);
+      expect(doc).toMatch(/收藏|Favorite/);
+      expect(doc).toMatch(/订阅|Subscribe/);
+      expect(doc).not.toContain('```');
+      expect(doc).not.toContain('apexcn ');
+      expect(doc).not.toContain('curl ');
+      expect(doc).not.toContain('PowerShell');
+      expect(doc).not.toContain('APEXCN_API_KEY=');
+    }
+
+    for (const doc of terminalDocs) {
+      expect(doc).toContain('apexcn auth set-token');
+      expect(doc).toContain('apexcn auth show');
+      expect(doc).toContain('apexcn auth logout');
+      expect(doc).toContain('apexcn me');
+      expect(doc).toContain('apexcn category list');
+      expect(doc).toContain('apexcn search');
+      expect(doc).toContain('apexcn topic view');
+      expect(doc).toContain('apexcn topic create');
+      expect(doc).toContain('apexcn topic delete');
+      expect(doc).toContain('apexcn reply create');
+      expect(doc).toContain('apexcn reply delete');
+      expect(doc).toContain('apexcn favorite add');
+      expect(doc).toContain('apexcn favorite remove');
+      expect(doc).toContain('apexcn subscription add');
+      expect(doc).toContain('apexcn subscription remove');
+      expect(doc).toContain('apexcn ask');
+    }
+
+    expect(userDocs[0]).toContain('小白用户手册');
+    expect(userDocs[1]).toContain('Beginner Guide');
+    expect(terminalDocs[0]).toContain('命令行终端手册');
+    expect(terminalDocs[1]).toContain('Terminal Manual');
   });
 
   test('README gives beginner-friendly AI and manual install paths', () => {
@@ -295,6 +437,10 @@ describe('agent one-click installer assets', () => {
     expect(doc).toContain('APEXCN_CLI_INSTALL_AGENT_SKILLS');
     expect(doc).toContain('apexcn auth show --json');
     expect(doc).toContain('command -v apexcn');
+    expect(doc).toContain('docs/user-guide.zh.md');
+    expect(doc).toContain('docs/user-guide.en.md');
+    expect(doc).toContain('docs/cli-manual.zh.md');
+    expect(doc).toContain('docs/cli-manual.en.md');
     expect(doc).toContain('如果 shell 找不到 `apexcn`');
     expect(doc).not.toContain('APEXCN_CLI_CURRENT_AGENT');
     expect(doc).not.toContain('可选值');

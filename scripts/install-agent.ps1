@@ -4,7 +4,7 @@ param(
   [switch]$InstallCodexSkill,
   [switch]$InstallAgentSkills,
   [string]$SourceDir = "",
-  [string]$PackageUrl = $(if ($env:APEXCN_CLI_PACKAGE_URL) { $env:APEXCN_CLI_PACKAGE_URL } else { "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.3/apexcn-cli.tgz" }),
+  [string]$PackageUrl = $(if ($env:APEXCN_CLI_PACKAGE_URL) { $env:APEXCN_CLI_PACKAGE_URL } else { "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.4/apexcn-cli.tgz" }),
   [string]$Repo = $(if ($env:APEXCN_CLI_REPO) { $env:APEXCN_CLI_REPO } else { "" }),
   [string]$Ref = $(if ($env:APEXCN_CLI_REF) { $env:APEXCN_CLI_REF } else { "main" }),
   [string]$InstallRoot = $(if ($env:APEXCN_CLI_INSTALL_ROOT) { $env:APEXCN_CLI_INSTALL_ROOT } else { Join-Path $env:LOCALAPPDATA "apexcn\tools\apexcn-cli" }),
@@ -75,7 +75,10 @@ function Get-CliRoot {
   $nestedRoot = Join-Path $InstallRoot "cli"
   $nestedPackage = Join-Path $nestedRoot "package.json"
   if (Test-Path $nestedPackage) { return $nestedRoot }
-  throw "Installed files do not contain package.json at $InstallRoot or $nestedRoot."
+  $npmRoot = Join-Path $InstallRoot "package"
+  $npmPackage = Join-Path $npmRoot "package.json"
+  if (Test-Path $npmPackage) { return $npmRoot }
+  throw "Installed files do not contain package.json at $InstallRoot, $nestedRoot, or $npmRoot."
 }
 
 function Get-SkillSourcePath {

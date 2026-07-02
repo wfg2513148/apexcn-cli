@@ -5,6 +5,13 @@
 - human：在终端里手动搜索、提问、发帖、回帖和维护自己的内容。
 - AI agent：以非交互、可审计、可重复的方式调用 APEX 中文社区。
 
+完整手册：
+
+- 小白用户手册（中文）：[user-guide.zh.md](user-guide.zh.md)
+- Beginner guide (English)：[user-guide.en.md](user-guide.en.md)
+- 命令行终端手册（中文）：[cli-manual.zh.md](cli-manual.zh.md)
+- Terminal manual (English)：[cli-manual.en.md](cli-manual.en.md)
+
 ## 1. 定位
 
 `apexcn-cli` 是 APEX 中文社区的命令行客户端。它把社区已经开放的 ORDS REST API 封装成稳定的终端命令，让人和本地 AI agent 都能在浏览器之外访问社区能力。
@@ -50,19 +57,19 @@ https://oracleapex.cn/ords/api
 macOS / Linux：
 
 ```bash
-curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.3/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
+curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.4/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.3/install-agent.ps1" | iex
+$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.4/install-agent.ps1" | iex
 ```
 
 安装脚本默认下载固定文件名的 CLI 包：
 
 ```bash
-https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.3/apexcn-cli.tgz
+https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.4/apexcn-cli.tgz
 ```
 
 即使 CLI 版本更新，上述 URL 和压缩包文件名也保持不变。

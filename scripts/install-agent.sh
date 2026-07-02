@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-package_url="${APEXCN_CLI_PACKAGE_URL:-https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.3/apexcn-cli.tgz}"
+package_url="${APEXCN_CLI_PACKAGE_URL:-https://github.com/wfg2513148/apexcn-cli/releases/download/v0.1.4/apexcn-cli.tgz}"
 repo_url="${APEXCN_CLI_REPO:-}"
 repo_ref="${APEXCN_CLI_REF:-main}"
 install_root="${APEXCN_CLI_INSTALL_ROOT:-$HOME/.apexcn/tools/apexcn-cli}"
@@ -149,11 +149,15 @@ cli_root() {
     printf '%s\n' "$install_root/cli"
     return 0
   fi
+  if [[ -f "$install_root/package/package.json" ]]; then
+    printf '%s\n' "$install_root/package"
+    return 0
+  fi
   return 1
 }
 
 require_cli_root() {
-  cli_root || die "Installed files do not contain package.json at $install_root or $install_root/cli."
+  cli_root || die "Installed files do not contain package.json at $install_root, $install_root/cli, or $install_root/package."
 }
 
 skill_source_path() {
@@ -349,13 +353,7 @@ write_launcher() {
 if [[ -f "$cli_root_path/dist/index.js" ]]; then
   exec node "$cli_root_path/dist/index.js" "\$@"
 fi
-if [[ -f "$install_root/dist/index.js" ]]; then
-  exec node "$install_root/dist/index.js" "\$@"
-fi
-if [[ -f "$install_root/cli/dist/index.js" ]]; then
-  exec node "$install_root/cli/dist/index.js" "\$@"
-fi
-echo "apexcn-cli launcher cannot find dist/index.js under $install_root" >&2
+echo "apexcn-cli launcher cannot find dist/index.js under $cli_root_path" >&2
 exit 127
 EOF
   chmod +x "$launcher_path"
@@ -651,10 +649,11 @@ check_shell_launcher() {
     log "apexcn is not on PATH yet. Run this before README examples: export PATH=\"$bin_dir:\$PATH\""
     return
   fi
-  if launcher_looks_like_apexcn_cli "$resolved"; then
-    return
-  fi
   if [[ "$resolved" != "$expected" ]]; then
+    if launcher_looks_like_apexcn_cli "$resolved"; then
+      log "Your shell currently resolves apexcn to an existing apexcn-cli launcher: $resolved"
+      return
+    fi
     log "WARNING: your shell currently resolves apexcn to $resolved, not $expected."
     log "Run this before README examples: export PATH=\"$bin_dir:\$PATH\""
   fi
