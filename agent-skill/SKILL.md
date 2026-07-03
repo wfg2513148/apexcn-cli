@@ -51,7 +51,8 @@ apexcn auth set-token \
 
 ## Agent Rules
 
-- Always pass `--json` for machine-readability.
+- Pass `--json` for machine-readability by default. Exception: use `apexcn draft question --format text` when generating Markdown content for `topic create --content-file`.
+- `apexcn draft question` is local-only and does not require auth preflight when you are only drafting content; run auth checks before API reads or writes.
 - Use `apexcn commands --json` to inspect available commands, purposes, safety metadata, examples, and options instead of parsing help text.
 - This skill supports manifest `schemaVersion === 1`. If `schemaVersion` is missing or unsupported, do not consume structured `safety` or `examples`; upgrade `apexcn-cli` or ask the user before continuing.
 - Prefer manifest `examples[].command` for command shape, check `examples[].mode`, and inspect `safety.effects`, `safety.preview`, and `safety.confirmation` before writes or destructive actions.
@@ -76,6 +77,7 @@ apexcn auth set-token \
 ```bash
 apexcn search "APEX" --page-size 5 --json
 apexcn research "REST API" --limit 3 --json
+apexcn draft question --title "标题" --problem "问题描述" --research-file ./research.json --format text
 apexcn commands --json
 apexcn ask "Oracle APEX 如何调用 REST API？" --top-k 3 --json
 apexcn topic view 30549 --json

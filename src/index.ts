@@ -13,6 +13,7 @@ import {
   createSearchCommand,
   createTopicCommand
 } from "./commands/content.js";
+import { createDraftCommand } from "./commands/draft.js";
 import { createMeCommand } from "./commands/me.js";
 import { CLI_VERSION } from "./version.js";
 
@@ -44,6 +45,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   };
   program.addCommand(createAuthCommand(commandOptions));
   program.addCommand(createDoctorCommand(commandOptions));
+  program.addCommand(createDraftCommand(commandOptions));
   program.addCommand(createMeCommand(commandOptions));
   program.addCommand(createCategoryCommand(commandOptions));
   program.addCommand(createSearchCommand(commandOptions));
@@ -163,6 +165,7 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "category list": "list community categories",
   "commands": "print a machine-readable command manifest",
   "doctor": "check installation, auth, and API reachability",
+  "draft question": "draft a local community question from structured inputs and research links",
   "favorite add": "favorite a community topic",
   "favorite remove": "remove a topic from favorites",
   "me": "show the authenticated community account",
@@ -219,6 +222,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "doctor": {
     safety: { effects: ["diagnostic"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn doctor --json", mode: "read" }]
+  },
+  "draft question": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: 'apexcn draft question --title "标题" --problem "问题描述" --research-file ./research.json --format text', mode: "read" }]
   },
   "favorite add": {
     safety: { effects: ["api-write"], preview: "available", confirmation: [] },

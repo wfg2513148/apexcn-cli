@@ -127,6 +127,37 @@ apexcn research "ORDS" --category-id 4 --from-date 2026-01-01 --format text
 
 `--limit` accepts 1 to 10 and defaults to 3. JSON output always contains `query`, `items`, `topics`, `links`, `requestIds`, and `errors`. If one topic fetch fails, the command still prints the completed portion of the research bundle, records the failure in `errors`, and exits non-zero.
 
+## draft
+
+Generate a local reviewable question draft. This command does not read auth config, call the community API, or publish content:
+
+```bash
+apexcn draft question \
+  --title "APEX REST API returns 403" \
+  --problem "A page process gets 403 when calling a REST API." \
+  --environment "APEX 24.1 / ORDS 24" \
+  --tried "Confirmed the URL opens in a browser." \
+  --expected "Return JSON data." \
+  --actual "Returns 403." \
+  --json
+```
+
+The JSON contract is stable: `kind`, `schemaVersion`, `title`, `content`, `sections`, and `references`. `content` is the complete Markdown body. `sections` always contains `problem`, `environment`, `tried`, `expected`, and `actual`; blank fields stay as empty strings in JSON and render as `待补充` in Markdown.
+
+Use a `research` bundle as citation input:
+
+```bash
+apexcn research "REST API" --limit 3 --json > research.json
+apexcn draft question \
+  --title "APEX REST API returns 403" \
+  --problem "A page process gets 403 when calling a REST API." \
+  --research-file research.json \
+  --format text > question.md
+apexcn topic create --category-id 4 --title "APEX REST API returns 403" --content-file question.md --preview
+```
+
+`--research-file <path>` accepts `research --json` output, or `--research-file -` to read stdin. References are deduped by `url`, `originalUrl`, then `id`, and are extracted in `links`, `items`, `topics` order from `id`, `title`, `url`, and `originalUrl`. Only `--format text` is intended as Markdown body input for `topic create --content-file`; JSON output is for review and scripts.
+
 ## topic / thread
 
 `thread` is an alias of `topic`.

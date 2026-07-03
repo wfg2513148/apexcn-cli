@@ -127,6 +127,37 @@ apexcn research "ORDS" --category-id 4 --from-date 2026-01-01 --format text
 
 `--limit` 支持 1 到 10，默认 3。JSON 输出固定包含 `query`、`items`、`topics`、`links`、`requestIds` 和 `errors`。单个帖子抓取失败时，命令仍输出已完成的研究包并把失败写入 `errors`，同时返回非零退出码。
 
+## draft
+
+本地生成可审阅的问题草稿，不读取认证配置，不调用社区 API，也不会发布内容：
+
+```bash
+apexcn draft question \
+  --title "APEX 中调用 REST API 返回 403" \
+  --problem "页面进程调用 REST API 时返回 403。" \
+  --environment "APEX 24.1 / ORDS 24" \
+  --tried "确认 URL 可以从浏览器访问。" \
+  --expected "返回 JSON 数据。" \
+  --actual "返回 403。" \
+  --json
+```
+
+JSON 契约固定为 `kind`、`schemaVersion`、`title`、`content`、`sections` 和 `references`。`content` 是完整 Markdown 正文；`sections` 固定包含 `problem`、`environment`、`tried`、`expected` 和 `actual`；空字段在 JSON 中保留为空字符串，在 Markdown 中显示为 `待补充`。
+
+接入 `research` 研究包：
+
+```bash
+apexcn research "REST API" --limit 3 --json > research.json
+apexcn draft question \
+  --title "APEX 中调用 REST API 返回 403" \
+  --problem "页面进程调用 REST API 时返回 403。" \
+  --research-file research.json \
+  --format text > question.md
+apexcn topic create --category-id 4 --title "APEX 中调用 REST API 返回 403" --content-file question.md --preview
+```
+
+`--research-file <path>` 接受 `research --json` 输出，也可用 `--research-file -` 从 stdin 读取。引用会按 `url`、`originalUrl`、`id` 去重，并按 `links`、`items`、`topics` 的顺序提取 `id`、`title`、`url` 和 `originalUrl`。只有 `--format text` 输出适合作为 `topic create --content-file` 的 Markdown 正文；JSON 输出用于审查和脚本处理。
+
 ## topic / thread
 
 `thread` 是 `topic` 的别名。

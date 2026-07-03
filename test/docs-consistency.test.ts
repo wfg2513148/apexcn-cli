@@ -42,7 +42,7 @@ describe("documentation consistency", () => {
       encoding: "utf8"
     });
 
-    for (const command of ["auth", "doctor", "me", "category", "search", "topic", "reply", "favorite", "subscription", "ask"]) {
+    for (const command of ["auth", "doctor", "draft", "me", "category", "search", "topic", "reply", "favorite", "subscription", "ask"]) {
       expect(commands).toContain(command);
     }
   });
