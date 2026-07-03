@@ -14,7 +14,7 @@ apexcn --config /tmp/apexcn-config.json auth show --json
 
 建议脚本和 AI agent 都加 `--json`，方便解析。自动化需要隔离配置文件时，可使用根选项 `--config <path>` 或环境变量 `APEXCN_CONFIG_PATH`。
 
-AI agent 需要判断命令、别名、用途和可用选项时，优先使用 `apexcn commands --json`，不要解析 `--help` 文本。
+AI agent 需要判断命令、别名、用途、风险分类、安全示例和可用选项时，优先使用 `apexcn commands --json`，不要解析 `--help` 文本。manifest 中的 `safety.effects` 描述命令影响，`safety.preview` 描述是否支持或要求预览，`safety.confirmation` 列出显式确认参数，`examples[].mode` 区分读取、预览和执行示例。
 
 网络不稳定时，可设置 `APEXCN_HTTP_TIMEOUT_MS` 为所有社区 API 请求提供默认超时；`doctor --timeout-ms` 会覆盖这个默认值。空值或非正整数会被忽略。
 

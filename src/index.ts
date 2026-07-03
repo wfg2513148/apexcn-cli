@@ -73,7 +73,30 @@ type CommandManifest = {
     aliases: string[];
     description: string;
     options: string[];
+    safety: CommandSafety;
+    examples: CommandExample[];
   }>;
+};
+
+type SafetyEffect = "read" | "api-write" | "destructive" | "config-read" | "config-write" | "auth" | "secret" | "diagnostic" | "manifest";
+type PreviewPolicy = "required" | "available" | "none";
+type ExampleMode = "read" | "preview" | "execute";
+
+type CommandSafety = {
+  effects: SafetyEffect[];
+  preview: PreviewPolicy;
+  confirmation: string[];
+};
+
+type CommandExample = {
+  command: string;
+  mode: ExampleMode;
+  note?: string;
+};
+
+type CommandGuidance = {
+  safety: CommandSafety;
+  examples: CommandExample[];
 };
 
 function createCommandsCommand(root: Command, io: CommandIo): Command {
@@ -96,12 +119,18 @@ function createCommandsCommand(root: Command, io: CommandIo): Command {
 function commandManifest(root: Command): CommandManifest {
   return {
     version: CLI_VERSION,
-    commands: root.commands.flatMap((child) => leafCommands(child)).map((item) => ({
-      path: item.path.join(" "),
-      aliases: aliasPaths(item.path, item.aliases).map((path) => path.join(" ")),
-      description: manifestDescription(item.path.join(" "), item.command.description()),
-      options: item.command.options.filter((option) => !option.hidden).map((option) => option.flags)
-    })).sort((left, right) => left.path.localeCompare(right.path))
+    commands: root.commands.flatMap((child) => leafCommands(child)).map((item) => {
+      const path = item.path.join(" ");
+      const guidance = manifestGuidance(path);
+      return {
+        path,
+        aliases: aliasPaths(item.path, item.aliases).map((aliasPath) => aliasPath.join(" ")),
+        description: manifestDescription(path, item.command.description()),
+        options: item.command.options.filter((option) => !option.hidden).map((option) => option.flags),
+        safety: guidance.safety,
+        examples: guidance.examples
+      };
+    }).sort((left, right) => left.path.localeCompare(right.path))
   };
 }
 
@@ -131,8 +160,141 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "topic view": "view a community topic"
 };
 
+const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
+  "ask": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: 'apexcn ask "Oracle APEX 如何调用 REST API？" --top-k 3 --json', mode: "read" }]
+  },
+  "auth list": {
+    safety: { effects: ["config-read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn auth list --json", mode: "read" }]
+  },
+  "auth logout": {
+    safety: { effects: ["config-write", "auth"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn auth logout", mode: "execute" }]
+  },
+  "auth remove": {
+    safety: { effects: ["config-write", "auth"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn auth remove old-profile", mode: "execute" }]
+  },
+  "auth set-token": {
+    safety: { effects: ["config-write", "auth", "secret"], preview: "none", confirmation: [] },
+    examples: [{ command: 'apexcn auth set-token --profile agent-prod --base-url https://oracleapex.cn/ords/api --token "$APEXCN_API_KEY"', mode: "execute" }]
+  },
+  "auth show": {
+    safety: { effects: ["config-read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn auth show --json", mode: "read" }]
+  },
+  "auth use": {
+    safety: { effects: ["config-write", "auth"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn auth use agent-prod", mode: "execute" }]
+  },
+  "category list": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn category list --json", mode: "read" }]
+  },
+  "commands": {
+    safety: { effects: ["manifest"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn commands --json", mode: "read" }]
+  },
+  "doctor": {
+    safety: { effects: ["diagnostic"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn doctor --json", mode: "read" }]
+  },
+  "favorite add": {
+    safety: { effects: ["api-write"], preview: "available", confirmation: [] },
+    examples: [
+      { command: "apexcn favorite add 30549 --preview", mode: "preview" },
+      { command: "apexcn favorite add 30549 --json", mode: "execute" }
+    ]
+  },
+  "favorite remove": {
+    safety: { effects: ["api-write"], preview: "available", confirmation: [] },
+    examples: [
+      { command: "apexcn favorite remove 30549 --preview", mode: "preview" },
+      { command: "apexcn favorite remove 30549 --json", mode: "execute" }
+    ]
+  },
+  "me": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn me --json", mode: "read" }]
+  },
+  "reply create": {
+    safety: { effects: ["api-write"], preview: "available", confirmation: [] },
+    examples: [
+      { command: 'apexcn reply create 30549 --content "回复内容" --preview', mode: "preview" },
+      { command: "apexcn reply create 30549 --content-file ./reply.md --json", mode: "execute" }
+    ]
+  },
+  "reply delete": {
+    safety: { effects: ["api-write", "destructive"], preview: "required", confirmation: ["--yes", "--force"] },
+    examples: [
+      { command: "apexcn reply delete 67890 --yes --force --preview", mode: "preview" },
+      { command: "apexcn reply delete 67890 --yes --force --json", mode: "execute" }
+    ]
+  },
+  "reply update": {
+    safety: { effects: ["api-write"], preview: "available", confirmation: [] },
+    examples: [
+      "apexcn reply update 67890 --content-file ./updated-reply.md --preview",
+      "apexcn reply update 67890 --content-file ./updated-reply.md --json"
+    ].map((command, index) => ({ command, mode: index === 0 ? "preview" as const : "execute" as const }))
+  },
+  "search": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: 'apexcn search "REST API" --page-size 5 --json', mode: "read" }]
+  },
+  "subscription add": {
+    safety: { effects: ["api-write"], preview: "available", confirmation: [] },
+    examples: [
+      { command: "apexcn subscription add 30549 --preview", mode: "preview" },
+      { command: "apexcn subscription add 30549 --json", mode: "execute" }
+    ]
+  },
+  "subscription remove": {
+    safety: { effects: ["api-write"], preview: "available", confirmation: [] },
+    examples: [
+      { command: "apexcn subscription remove 30549 --preview", mode: "preview" },
+      { command: "apexcn subscription remove 30549 --json", mode: "execute" }
+    ]
+  },
+  "topic create": {
+    safety: { effects: ["api-write"], preview: "available", confirmation: [] },
+    examples: [
+      { command: 'apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --preview', mode: "preview" },
+      { command: 'apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --json', mode: "execute" }
+    ]
+  },
+  "topic delete": {
+    safety: { effects: ["api-write", "destructive"], preview: "required", confirmation: ["--yes", "--force", "--confirm-title"] },
+    examples: [
+      { command: 'apexcn topic delete 30549 --yes --force --confirm-title "精确标题" --preview', mode: "preview" },
+      { command: 'apexcn topic delete 30549 --yes --force --confirm-title "精确标题" --json', mode: "execute" }
+    ]
+  },
+  "topic update": {
+    safety: { effects: ["api-write"], preview: "available", confirmation: [] },
+    examples: [
+      { command: "apexcn topic update 30549 --content-file ./updated-post.md --preview", mode: "preview" },
+      { command: "apexcn topic update 30549 --content-file ./updated-post.md --json", mode: "execute" }
+    ]
+  },
+  "topic view": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn topic view 30549 --json", mode: "read" }]
+  }
+};
+
 function manifestDescription(path: string, fallback: string): string {
   return COMMAND_DESCRIPTIONS[path] ?? fallback;
+}
+
+function manifestGuidance(path: string): CommandGuidance {
+  const guidance = COMMAND_GUIDANCE[path];
+  if (!guidance) {
+    throw new Error(`Missing command manifest guidance for ${path}`);
+  }
+  return guidance;
 }
 
 function leafCommands(command: Command, path: string[] = [], aliases: string[][] = []): Array<{ command: Command; path: string[]; aliases: string[][] }> {

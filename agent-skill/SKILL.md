@@ -52,7 +52,8 @@ apexcn auth set-token \
 ## Agent Rules
 
 - Always pass `--json` for machine-readability.
-- Use `apexcn commands --json` to inspect available commands, purposes, and options instead of parsing help text.
+- Use `apexcn commands --json` to inspect available commands, purposes, safety metadata, examples, and options instead of parsing help text.
+- Prefer manifest `examples[].command` for command shape, check `examples[].mode`, and inspect `safety.effects`, `safety.preview`, and `safety.confirmation` before writes or destructive actions.
 - Prefer `--content-file` for long posts or replies. Use `--content-file -` when piping generated content through stdin.
 - Never pass both `--content` and `--content-file`; choose one body source.
 - Before creating a topic, run `apexcn category list --json` and use a valid `--category-id`.

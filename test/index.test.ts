@@ -17,7 +17,7 @@ describe("CLI entrypoint detection", () => {
 
     await expect(program.parseAsync(["node", "apexcn", "--version"])).rejects.toMatchObject({ code: "commander.version" });
 
-    expect(output.join("")).toBe("0.11.0\n");
+    expect(output.join("")).toBe("0.12.0\n");
   });
 
   test("prints a machine-readable command manifest", async () => {
@@ -30,30 +30,40 @@ describe("CLI entrypoint detection", () => {
     await program.parseAsync(["node", "apexcn", "commands", "--json"]);
 
     const manifest = JSON.parse(output.join(""));
-    expect(manifest.version).toBe("0.11.0");
+    expect(manifest.version).toBe("0.12.0");
     expect(manifest.commands).toEqual(expect.arrayContaining([
       expect.objectContaining({
         path: "topic create",
         aliases: expect.arrayContaining(["thread create"]),
-        options: expect.arrayContaining(["--json", "--dry-run", "--preview"])
+        options: expect.arrayContaining(["--json", "--dry-run", "--preview"]),
+        safety: expect.objectContaining({ effects: expect.arrayContaining(["api-write"]), preview: "available" }),
+        examples: expect.arrayContaining([
+          expect.objectContaining({ command: 'apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --preview', mode: "preview" })
+        ])
       }),
       expect.objectContaining({
         path: "topic update",
         aliases: expect.arrayContaining(["topic edit", "thread update", "thread edit"]),
-        options: expect.arrayContaining(["--content <text>", "--content-file <path>"])
+        options: expect.arrayContaining(["--content <text>", "--content-file <path>"]),
+        safety: expect.objectContaining({ effects: expect.arrayContaining(["api-write"]), preview: "available" })
       }),
       expect.objectContaining({
         path: "ask",
         aliases: [],
-        options: expect.not.arrayContaining(["--preview", "--dry-run"])
+        options: expect.not.arrayContaining(["--preview", "--dry-run"]),
+        safety: expect.objectContaining({ effects: ["read"], preview: "none" })
       }),
       expect.objectContaining({
         path: "search",
-        options: expect.not.arrayContaining(["--offset <n>"])
+        options: expect.not.arrayContaining(["--offset <n>"]),
+        examples: expect.arrayContaining([
+          expect.objectContaining({ command: 'apexcn search "REST API" --page-size 5 --json', mode: "read" })
+        ])
       }),
       expect.objectContaining({
         path: "commands",
-        options: expect.arrayContaining(["--json"])
+        options: expect.arrayContaining(["--json"]),
+        safety: expect.objectContaining({ effects: ["manifest"], preview: "none" })
       })
     ]));
   });
@@ -87,6 +97,78 @@ describe("CLI entrypoint detection", () => {
       expect.objectContaining({ path: "topic create", description: "create a community topic" }),
       expect.objectContaining({ path: "reply delete", description: "delete a reply after explicit confirmation" })
     ]));
+  });
+
+  test("command manifest includes stable agent guidance for every leaf command", async () => {
+    const output: string[] = [];
+    const program = createProgram({
+      stdout: (text) => output.push(text),
+      stderr: () => undefined
+    });
+
+    await program.parseAsync(["node", "apexcn", "commands", "--json"]);
+
+    const manifest = JSON.parse(output.join(""));
+    const paths = leafCommandPaths(createProgram()).sort();
+    expect(manifest.commands.map((command: { path: string }) => command.path).sort()).toEqual(paths);
+    expect(manifest.commands.every((command: ManifestCommand) => command.safety.effects.length > 0)).toBe(true);
+    expect(manifest.commands.every((command: ManifestCommand) => command.examples.length > 0)).toBe(true);
+    expect(manifest.commands.every((command: ManifestCommand) => ["required", "available", "none"].includes(command.safety.preview))).toBe(true);
+    expect(manifest.commands).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        path: "topic delete",
+        safety: expect.objectContaining({
+          effects: expect.arrayContaining(["api-write", "destructive"]),
+          preview: "required",
+          confirmation: ["--yes", "--force", "--confirm-title"]
+        }),
+        examples: expect.arrayContaining([
+          expect.objectContaining({ command: 'apexcn topic delete 30549 --yes --force --confirm-title "精确标题" --preview', mode: "preview" })
+        ])
+      }),
+      expect.objectContaining({
+        path: "reply delete",
+        safety: expect.objectContaining({
+          effects: expect.arrayContaining(["api-write", "destructive"]),
+          preview: "required",
+          confirmation: ["--yes", "--force"]
+        }),
+        examples: expect.arrayContaining([
+          expect.objectContaining({ command: "apexcn reply delete 67890 --yes --force --preview", mode: "preview" })
+        ])
+      }),
+      expect.objectContaining({
+        path: "auth set-token",
+        safety: expect.objectContaining({
+          effects: expect.arrayContaining(["config-write", "auth", "secret"]),
+          preview: "none"
+        }),
+        examples: expect.arrayContaining([
+          expect.objectContaining({ command: 'apexcn auth set-token --profile agent-prod --base-url https://oracleapex.cn/ords/api --token "$APEXCN_API_KEY"', mode: "execute" })
+        ])
+      })
+    ]));
+  });
+
+  test("command manifest examples match registered command arguments", async () => {
+    const output: string[] = [];
+    const program = createProgram({
+      stdout: (text) => output.push(text),
+      stderr: () => undefined
+    });
+
+    await program.parseAsync(["node", "apexcn", "commands", "--json"]);
+
+    const manifest = JSON.parse(output.join(""));
+    const reference = createProgram();
+    for (const command of manifest.commands as ManifestCommand[]) {
+      for (const example of command.examples) {
+        const parsed = commandFromExample(reference, example.command);
+        expect(parsed.path).toBe(command.path);
+        expect(example.mode).toMatch(/^(read|preview|execute)$/);
+        expect(positionalsFromExample(parsed.command, parsed.pathLength, example.command).length).toBe(argumentCount(parsed.command));
+      }
+    }
   });
 
   test("command manifest does not read config or call the API", async () => {
@@ -146,4 +228,71 @@ function leafCommandPaths(command: Command, prefix: string[] = [], includeCurren
     return nextPrefixes.map((parts) => parts.join(" ")).filter(Boolean);
   }
   return nextPrefixes.flatMap((parts) => command.commands.flatMap((child) => leafCommandPaths(child, parts, true)));
+}
+
+type ManifestCommand = {
+  path: string;
+  safety: {
+    effects: string[];
+    preview: string;
+    confirmation: string[];
+  };
+  examples: Array<{
+    command: string;
+    mode: string;
+  }>;
+};
+
+function commandFromExample(program: Command, example: string): { command: Command; path: string; pathLength: number } {
+  const tokens = tokenizeExample(example);
+  expect(tokens[0]).toBe("apexcn");
+  let current = program;
+  let index = 1;
+  const path: string[] = [];
+  while (index < tokens.length) {
+    const next = current.commands.find((command) => command.name() === tokens[index] || command.aliases().includes(tokens[index]));
+    if (!next) {
+      break;
+    }
+    path.push(next.name());
+    current = next;
+    index += 1;
+  }
+  expect(path.length).toBeGreaterThan(0);
+  return { command: current, path: path.join(" "), pathLength: index };
+}
+
+function positionalsFromExample(command: Command, pathLength: number, example: string): string[] {
+  const tokens = tokenizeExample(example);
+  const valueOptions = new Set(command.options.filter((option) => option.required || option.optional).map((option) => option.long));
+  const positionals: string[] = [];
+  for (let index = pathLength; index < tokens.length;) {
+    const token = tokens[index];
+    const [optionName] = token.split("=", 1);
+    if (token.startsWith("--")) {
+      if (!token.includes("=") && valueOptions.has(optionName) && tokens[index + 1] && !tokens[index + 1].startsWith("-")) {
+        index += 2;
+        continue;
+      }
+      index += 1;
+      continue;
+    }
+    positionals.push(token);
+    index += 1;
+  }
+  return positionals;
+}
+
+function argumentCount(command: Command): number {
+  return (command as unknown as { registeredArguments: unknown[] }).registeredArguments.length;
+}
+
+function tokenizeExample(example: string): string[] {
+  const tokens: string[] = [];
+  const pattern = /"([^"]*)"|'([^']*)'|(\S+)/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(example)) !== null) {
+    tokens.push(match[1] ?? match[2] ?? match[3]);
+  }
+  return tokens;
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-package_url="${APEXCN_CLI_PACKAGE_URL:-https://github.com/wfg2513148/apexcn-cli/releases/download/v0.11.0/apexcn-cli.tgz}"
+package_url="${APEXCN_CLI_PACKAGE_URL:-https://github.com/wfg2513148/apexcn-cli/releases/download/v0.12.0/apexcn-cli.tgz}"
 repo_url="${APEXCN_CLI_REPO:-}"
 repo_ref="${APEXCN_CLI_REF:-main}"
 install_root="${APEXCN_CLI_INSTALL_ROOT:-$HOME/.apexcn/tools/apexcn-cli}"
