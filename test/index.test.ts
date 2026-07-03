@@ -17,7 +17,7 @@ describe("CLI entrypoint detection", () => {
 
     await expect(program.parseAsync(["node", "apexcn", "--version"])).rejects.toMatchObject({ code: "commander.version" });
 
-    expect(output.join("")).toBe("0.10.0\n");
+    expect(output.join("")).toBe("0.11.0\n");
   });
 
   test("prints a machine-readable command manifest", async () => {
@@ -30,7 +30,7 @@ describe("CLI entrypoint detection", () => {
     await program.parseAsync(["node", "apexcn", "commands", "--json"]);
 
     const manifest = JSON.parse(output.join(""));
-    expect(manifest.version).toBe("0.10.0");
+    expect(manifest.version).toBe("0.11.0");
     expect(manifest.commands).toEqual(expect.arrayContaining([
       expect.objectContaining({
         path: "topic create",

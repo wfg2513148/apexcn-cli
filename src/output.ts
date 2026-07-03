@@ -11,6 +11,13 @@ export type FormatOption = JsonOption & {
   format?: OutputFormat;
 };
 
+export type ErrorPayload = {
+  type: string;
+  message: string;
+  status?: number;
+  requestId?: string;
+};
+
 export function parseOutputFormat(value: string): OutputFormat {
   if (value === "json" || value === "pretty" || value === "text") {
     return value;
@@ -20,7 +27,7 @@ export function parseOutputFormat(value: string): OutputFormat {
 
 export function validateFormatOptions(options: CommandIo, commandOptions: FormatOption): boolean {
   if (commandOptions.json && commandOptions.format && commandOptions.format !== "pretty") {
-    options.stderr("--json can only be combined with --format pretty\n");
+    printError(options, { type: "validation", message: "--json can only be combined with --format pretty" });
     process.exitCode = 1;
     return false;
   }
@@ -42,6 +49,14 @@ export function printData(options: CommandIo, data: unknown, formatOrJson?: Outp
     return;
   }
   options.stdout(`${JSON.stringify(data, null, format === "pretty" ? 2 : 0)}\n`);
+}
+
+export function printError(options: CommandIo, error: ErrorPayload, fallbackText?: string): void {
+  if (process.env.APEXCN_ERROR_FORMAT === "json") {
+    options.stderr(`${JSON.stringify({ ok: false, error: withoutUndefined(error) })}\n`);
+    return;
+  }
+  options.stderr(fallbackText ?? `${error.message}\n`);
 }
 
 export function itemsFromData(data: unknown): Array<Record<string, unknown>> {
@@ -71,4 +86,8 @@ export function blockText(value: unknown): string {
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function withoutUndefined(input: ErrorPayload): ErrorPayload {
+  return Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined)) as ErrorPayload;
 }

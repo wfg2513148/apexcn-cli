@@ -1,6 +1,6 @@
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { Command } from "commander";
 import { createProgram } from "../src/index.js";
@@ -112,6 +112,7 @@ describe("content commands", () => {
     vi.unstubAllGlobals();
     process.exitCode = undefined;
     delete process.env.APEXCN_HTTP_TIMEOUT_MS;
+    delete process.env.APEXCN_ERROR_FORMAT;
   });
 
   test("category list prints categories as JSON", async () => {
@@ -202,6 +203,86 @@ describe("content commands", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("category list can print API errors as JSON", async () => {
+    process.env.APEXCN_ERROR_FORMAT = "json";
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () =>
+      Response.json(
+        { error: { message: "token abcdefghijklmnopqrstuvwxyz is not allowed", requestId: "req-token" } },
+        { status: 403 }
+      )
+    );
+
+    await program.parseAsync(["node", "apexcn", "category", "list"]);
+
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "http",
+        message: "token [redacted] is not allowed",
+        status: 403,
+        requestId: "req-token"
+      }
+    });
+    expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("category list can print missing profile errors as JSON", async () => {
+    process.env.APEXCN_ERROR_FORMAT = "json";
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn());
+    const program = createProgram({
+      configPath: await tempConfigPath(),
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "category", "list"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "no-profile",
+        message: "No active profile"
+      }
+    });
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("category list can print config errors as JSON", async () => {
+    process.env.APEXCN_ERROR_FORMAT = "json";
+    const configPath = await tempConfigPath();
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(configPath, "{not-json", "utf8");
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn());
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "category", "list"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "config",
+        message: `Invalid config file: ${configPath}. Run apexcn auth set-token to reconfigure.`
+      }
+    });
+    expect(stderr.join("")).not.toContain("SyntaxError");
+    expect(process.exitCode).toBe(1);
+  });
+
   test("category list prints clean errors for network failures", async () => {
     const { program, stdout, stderr, fetch } = await configuredProgram(async () => {
       throw new TypeError("fetch failed");
@@ -218,6 +299,28 @@ describe("content commands", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("category list can print network errors as JSON", async () => {
+    process.env.APEXCN_ERROR_FORMAT = "json";
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () => {
+      throw new TypeError("fetch failed");
+    });
+
+    await program.parseAsync(["node", "apexcn", "category", "list"]);
+
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "network",
+        message: "Network error: failed to reach https://oracleapex.cn/ords/test/api/v1/categories"
+      }
+    });
+    expect(stderr.join("")).not.toContain("TypeError");
+    expect(stderr.join("")).not.toContain("fetch failed");
+    expect(process.exitCode).toBe(1);
+  });
+
   test("category list reports timeout failures from the default HTTP timeout", async () => {
     process.env.APEXCN_HTTP_TIMEOUT_MS = "5";
     const timeout = new Error("timed out");
@@ -231,6 +334,30 @@ describe("content commands", () => {
     expect(fetch).toHaveBeenCalledOnce();
     expect(stdout.join("")).toBe("");
     expect(stderr.join("")).toBe("Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/categories\n");
+    expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("category list can print timeout errors as JSON", async () => {
+    process.env.APEXCN_ERROR_FORMAT = "json";
+    process.env.APEXCN_HTTP_TIMEOUT_MS = "5";
+    const timeout = new Error("timed out");
+    timeout.name = "TimeoutError";
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () => {
+      throw timeout;
+    });
+
+    await program.parseAsync(["node", "apexcn", "category", "list"]);
+
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "timeout",
+        message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/categories"
+      }
+    });
     expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(process.exitCode).toBe(1);
   });
@@ -403,6 +530,40 @@ describe("content commands", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("search can print reversed date range errors as JSON", async () => {
+    process.env.APEXCN_ERROR_FORMAT = "json";
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn());
+    const program = createProgram({
+      configPath: await tempConfigPath(),
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "search",
+      "APEX",
+      "--from-date",
+      "2026-12-31",
+      "--to-date",
+      "2026-01-01"
+    ]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "validation",
+        message: "--from-date must be earlier than or equal to --to-date"
+      }
+    });
+    expect(process.exitCode).toBe(1);
+  });
+
   test("search rejects offset because the current API ignores it", async () => {
     const { program, stdout, stderr, fetch } = await configuredProgram(async () =>
       Response.json({ items: [], page: { limit: 5, offset: 0, count: 0, hasMore: false } })
@@ -486,6 +647,31 @@ describe("content commands", () => {
       process.exitCode = undefined;
       vi.unstubAllGlobals();
     }
+  });
+
+  test("format ambiguity can print validation errors as JSON", async () => {
+    process.env.APEXCN_ERROR_FORMAT = "json";
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn());
+    const program = createProgram({
+      configPath: await tempConfigPath(),
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "category", "list", "--json", "--format", "text"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "validation",
+        message: "--json can only be combined with --format pretty"
+      }
+    });
+    expect(process.exitCode).toBe(1);
   });
 
   test("all leaf commands have an API dry-run classification", () => {

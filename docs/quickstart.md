@@ -57,19 +57,19 @@ https://oracleapex.cn/ords/api
 macOS / Linux：
 
 ```bash
-curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.10.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
+curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.11.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.10.0/install-agent.ps1" | iex
+$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.11.0/install-agent.ps1" | iex
 ```
 
 安装脚本默认下载固定文件名的 CLI 包：
 
 ```bash
-https://github.com/wfg2513148/apexcn-cli/releases/download/v0.10.0/apexcn-cli.tgz
+https://github.com/wfg2513148/apexcn-cli/releases/download/v0.11.0/apexcn-cli.tgz
 ```
 
 即使 CLI 版本更新，上述 URL 和压缩包文件名也保持不变。
@@ -185,6 +185,12 @@ export APEXCN_HTTP_TIMEOUT_MS=10000
 ```
 
 空值或非正整数会被忽略。
+
+脚本需要解析错误时，可设置：
+
+```bash
+export APEXCN_ERROR_FORMAT=json
+```
 
 文件权限会尽量设为 `0600`。一个社区账号只允许一个 active API key；轮换 API key 会让旧 key 失效。
 

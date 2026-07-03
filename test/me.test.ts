@@ -14,6 +14,7 @@ describe("me command", () => {
     vi.unstubAllGlobals();
     process.exitCode = undefined;
     delete process.env.APEXCN_HTTP_TIMEOUT_MS;
+    delete process.env.APEXCN_ERROR_FORMAT;
   });
 
   test("prints the authenticated user JSON", async () => {
@@ -123,6 +124,31 @@ describe("me command", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("can print format validation errors as JSON", async () => {
+    process.env.APEXCN_ERROR_FORMAT = "json";
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn());
+    const program = createProgram({
+      configPath: await tempConfigPath(),
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "me", "--json", "--format", "text"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "validation",
+        message: "--json can only be combined with --format pretty"
+      }
+    });
+    expect(process.exitCode).toBe(1);
+  });
+
   test("prints requestId on API errors and exits non-zero", async () => {
     const configPath = await tempConfigPath();
     const stdout: string[] = [];
@@ -180,6 +206,44 @@ describe("me command", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("can print API errors as JSON", async () => {
+    process.env.APEXCN_ERROR_FORMAT = "json";
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json(
+          { error: { message: "token abcdefghijklmnopqrstuvwxyz is not allowed", requestId: "req-token" } },
+          { status: 403 }
+        )
+      )
+    );
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "http",
+        message: "token [redacted] is not allowed",
+        status: 403,
+        requestId: "req-token"
+      }
+    });
+    expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    expect(process.exitCode).toBe(1);
+  });
+
   test("reports timeout failures from the default HTTP timeout", async () => {
     process.env.APEXCN_HTTP_TIMEOUT_MS = "5";
     const configPath = await tempConfigPath();
@@ -202,6 +266,39 @@ describe("me command", () => {
 
     expect(stdout.join("")).toBe("");
     expect(stderr.join("")).toBe("Request timed out after 5ms: https://oracleapex.cn/ords/api/api/v1/me\n");
+    expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("can print timeout errors as JSON", async () => {
+    process.env.APEXCN_ERROR_FORMAT = "json";
+    process.env.APEXCN_HTTP_TIMEOUT_MS = "5";
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const timeout = new Error("timed out");
+    timeout.name = "TimeoutError";
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw timeout;
+    }));
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "timeout",
+        message: "Request timed out after 5ms: https://oracleapex.cn/ords/api/api/v1/me"
+      }
+    });
     expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(process.exitCode).toBe(1);
   });
@@ -262,6 +359,37 @@ describe("me command", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("can print network errors as JSON", async () => {
+    process.env.APEXCN_ERROR_FORMAT = "json";
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw new TypeError("fetch failed");
+    }));
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "network",
+        message: "Network error: failed to reach https://oracleapex.cn/ords/api/api/v1/me"
+      }
+    });
+    expect(stderr.join("")).not.toContain("TypeError");
+    expect(stderr.join("")).not.toContain("fetch failed");
+    expect(process.exitCode).toBe(1);
+  });
+
   test("exits non-zero when no profile is configured", async () => {
     const stderr: string[] = [];
     const program = createProgram({
@@ -295,6 +423,56 @@ describe("me command", () => {
     expect(stdout.join("")).toBe("");
     expect(stderr.join("")).toBe(`Invalid config file: ${configPath}. Run apexcn auth set-token to reconfigure.\n`);
     expect(stderr.join("")).not.toContain("SyntaxError");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("can print config errors as JSON", async () => {
+    process.env.APEXCN_ERROR_FORMAT = "json";
+    const configPath = await tempConfigPath();
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(configPath, "{not-json", "utf8");
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn());
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "me"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "config",
+        message: `Invalid config file: ${configPath}. Run apexcn auth set-token to reconfigure.`
+      }
+    });
+    expect(stderr.join("")).not.toContain("SyntaxError");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("can print auth errors as JSON", async () => {
+    process.env.APEXCN_ERROR_FORMAT = "json";
+    const stderr: string[] = [];
+    const program = createProgram({
+      configPath: await tempConfigPath(),
+      stdout: () => undefined,
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "me"]);
+
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "no-profile",
+        message: "No active profile"
+      }
+    });
     expect(process.exitCode).toBe(1);
   });
 });

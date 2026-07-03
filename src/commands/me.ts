@@ -1,7 +1,7 @@
 import { Command, Option } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
-import { fieldText, isRecord, outputFormat, parseOutputFormat, printData, validateFormatOptions, type FormatOption } from "../output.js";
+import { fieldText, isRecord, outputFormat, parseOutputFormat, printData, printError, validateFormatOptions, type FormatOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
 
 export type MeCommandOptions = CommandIo & {
@@ -24,7 +24,7 @@ export function createMeCommand(options: MeCommandOptions): Command {
         const current = profile ? config.profiles[profile] : undefined;
 
         if (!profile || !current) {
-          options.stderr("No active profile\n");
+          printError(options, { type: "no-profile", message: "No active profile" });
           process.exitCode = 1;
           return;
         }
@@ -38,22 +38,27 @@ export function createMeCommand(options: MeCommandOptions): Command {
       } catch (error) {
         if (error instanceof HttpError) {
           const requestId = error.requestId ? ` requestId=${error.requestId}` : "";
-          options.stderr(`HTTP ${error.status}: ${redactSecret(error.message, token)}${requestId}\n`);
+          printError(options, {
+            type: "http",
+            message: redactSecret(error.message, token),
+            status: error.status,
+            requestId: error.requestId
+          }, `HTTP ${error.status}: ${redactSecret(error.message, token)}${requestId}\n`);
           process.exitCode = 1;
           return;
         }
         if (error instanceof ConfigFileError) {
-          options.stderr(`${error.message}\n`);
+          printError(options, { type: "config", message: error.message });
           process.exitCode = 1;
           return;
         }
         if (error instanceof NetworkError) {
-          options.stderr(`${error.message}\n`);
+          printError(options, { type: "network", message: error.message });
           process.exitCode = 1;
           return;
         }
         if (error instanceof TimeoutError) {
-          options.stderr(`${error.message}\n`);
+          printError(options, { type: "timeout", message: error.message });
           process.exitCode = 1;
           return;
         }

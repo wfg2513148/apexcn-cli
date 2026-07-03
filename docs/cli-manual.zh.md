@@ -18,6 +18,8 @@ AI agent 需要判断命令、别名、用途和可用选项时，优先使用 `
 
 网络不稳定时，可设置 `APEXCN_HTTP_TIMEOUT_MS` 为所有社区 API 请求提供默认超时；`doctor --timeout-ms` 会覆盖这个默认值。空值或非正整数会被忽略。
 
+脚本需要解析失败原因时，可设置 `APEXCN_ERROR_FORMAT=json`，content/me 等 API 命令会把错误写成单行 JSON 到 stderr；默认仍输出人类可读文本。
+
 ## auth
 
 保存 API key：

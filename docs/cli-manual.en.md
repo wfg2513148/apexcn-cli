@@ -18,6 +18,8 @@ When an AI agent needs available commands, aliases, purposes, and options, prefe
 
 For unstable networks, set `APEXCN_HTTP_TIMEOUT_MS` to provide a default timeout for community API requests. `doctor --timeout-ms` overrides this default. Blank or non-positive values are ignored.
 
+When scripts need parseable failures, set `APEXCN_ERROR_FORMAT=json`. Content and account API commands write one-line JSON errors to stderr; default output remains human-readable text.
+
 ## auth
 
 Save an API key:

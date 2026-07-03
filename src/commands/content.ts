@@ -4,7 +4,7 @@ import { createInterface } from "node:readline/promises";
 import { Command, InvalidArgumentError, Option } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
-import { blockText, fieldText, isRecord, itemsFromData, outputFormat, parseOutputFormat, printData, validateFormatOptions, type FormatOption, type JsonOption } from "../output.js";
+import { blockText, fieldText, isRecord, itemsFromData, outputFormat, parseOutputFormat, printData, printError, validateFormatOptions, type FormatOption, type JsonOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
 
 type ApiCommandOptions = CommandIo & {
@@ -114,7 +114,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
     .action(async (commandOptions: JsonOption & DryRunOption & TopicWriteOptions & { categoryId?: number }) => {
       await runApi(options, async (session) => {
         if (isRequestPreview(commandOptions) && commandOptions.categoryId === undefined) {
-          options.stderr(`Missing --category-id in ${requestPreviewMode(commandOptions)} mode\n`);
+          printError(options, { type: "validation", message: `Missing --category-id in ${requestPreviewMode(commandOptions)} mode` });
           process.exitCode = 1;
           return;
         }
@@ -194,7 +194,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
     .action(async (id: number, commandOptions: JsonOption & DryRunOption & { yes?: boolean; force?: boolean; confirmTitle?: string }) => {
       if (!commandOptions.yes || !commandOptions.force || !commandOptions.confirmTitle) {
         if (isRequestPreview(commandOptions)) {
-          options.stderr("Refusing to delete topic without --yes --force --confirm-title\n");
+          printError(options, { type: "safety", message: "Refusing to delete topic without --yes --force --confirm-title" });
           process.exitCode = 1;
           return;
         }
@@ -205,7 +205,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
             });
             const title = topic.topic?.title;
             if (!title) {
-              options.stderr("Unable to load topic for confirmation\n");
+              printError(options, { type: "validation", message: "Unable to load topic for confirmation" });
               process.exitCode = 1;
               return;
             }
@@ -218,7 +218,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
             }
             const confirmed = await promptText(`Type the full topic title to delete: `);
             if (confirmed !== title) {
-              options.stderr("Delete cancelled\n");
+              printError(options, { type: "safety", message: "Delete cancelled" });
               process.exitCode = 1;
               return;
             }
@@ -227,7 +227,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
           });
           return;
         }
-        options.stderr("Refusing to delete topic without --yes --force --confirm-title\n");
+        printError(options, { type: "safety", message: "Refusing to delete topic without --yes --force --confirm-title" });
         process.exitCode = 1;
         return;
       }
@@ -241,7 +241,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
           token: session.token
         });
         if (topic.topic?.title !== commandOptions.confirmTitle) {
-          options.stderr("Refusing to delete topic because --confirm-title does not match\n");
+          printError(options, { type: "safety", message: "Refusing to delete topic because --confirm-title does not match" });
           process.exitCode = 1;
           return;
         }
@@ -328,14 +328,14 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
     .action(async (id: number, commandOptions: JsonOption & DryRunOption & { yes?: boolean; force?: boolean }) => {
       if (!commandOptions.yes || !commandOptions.force) {
         if (isRequestPreview(commandOptions)) {
-          options.stderr("Refusing to delete reply without --yes --force\n");
+          printError(options, { type: "safety", message: "Refusing to delete reply without --yes --force" });
           process.exitCode = 1;
           return;
         }
         if (processStdin.isTTY === true && !commandOptions.yes && !commandOptions.force) {
           const confirmed = await promptText("Type delete to delete this reply: ");
           if (confirmed !== "delete") {
-            options.stderr("Delete cancelled\n");
+            printError(options, { type: "safety", message: "Delete cancelled" });
             process.exitCode = 1;
             return;
           }
@@ -345,7 +345,7 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
           });
           return;
         }
-        options.stderr("Refusing to delete reply without --yes --force\n");
+        printError(options, { type: "safety", message: "Refusing to delete reply without --yes --force" });
         process.exitCode = 1;
         return;
       }
@@ -441,27 +441,32 @@ async function runApi(options: ApiCommandOptions, callback: (session: Session) =
   } catch (error) {
     if (error instanceof HttpError) {
       const requestId = error.requestId ? ` requestId=${error.requestId}` : "";
-      options.stderr(`HTTP ${error.status}: ${redactSecret(error.message, session?.token)}${requestId}\n`);
+      printError(options, {
+        type: "http",
+        message: redactSecret(error.message, session?.token),
+        status: error.status,
+        requestId: error.requestId
+      }, `HTTP ${error.status}: ${redactSecret(error.message, session?.token)}${requestId}\n`);
       process.exitCode = 1;
       return;
     }
     if (error instanceof CliValidationError) {
-      options.stderr(`${error.message}\n`);
+      printError(options, { type: "validation", message: error.message });
       process.exitCode = 1;
       return;
     }
     if (error instanceof ConfigFileError) {
-      options.stderr(`${error.message}\n`);
+      printError(options, { type: "config", message: error.message });
       process.exitCode = 1;
       return;
     }
     if (error instanceof NetworkError) {
-      options.stderr(`${error.message}\n`);
+      printError(options, { type: "network", message: error.message });
       process.exitCode = 1;
       return;
     }
     if (error instanceof TimeoutError) {
-      options.stderr(`${error.message}\n`);
+      printError(options, { type: "timeout", message: error.message });
       process.exitCode = 1;
       return;
     }
@@ -474,7 +479,7 @@ async function loadSession(options: ApiCommandOptions): Promise<Session | undefi
   const profile = config.current;
   const current = profile ? config.profiles[profile] : undefined;
   if (!profile || !current) {
-    options.stderr("No active profile\n");
+    printError(options, { type: "no-profile", message: "No active profile" });
     process.exitCode = 1;
     return undefined;
   }
@@ -657,7 +662,7 @@ function lines(values: Array<string | undefined>): string {
 
 async function promptCategoryId(options: CommandIo, session: Session): Promise<number | undefined> {
   if (processStdin.isTTY !== true) {
-    options.stderr("Missing --category-id in non-interactive mode\n");
+    printError(options, { type: "validation", message: "Missing --category-id in non-interactive mode" });
     process.exitCode = 1;
     return undefined;
   }
@@ -667,7 +672,7 @@ async function promptCategoryId(options: CommandIo, session: Session): Promise<n
   });
   const categories = (data.items ?? []).filter((item) => item.canCreateTopic !== false);
   if (categories.length === 0) {
-    options.stderr("No categories are available for topic creation\n");
+    printError(options, { type: "validation", message: "No categories are available for topic creation" });
     process.exitCode = 1;
     return undefined;
   }
@@ -679,7 +684,7 @@ async function promptCategoryId(options: CommandIo, session: Session): Promise<n
   const answer = await promptText("Category number: ");
   const index = Number(answer);
   if (!Number.isInteger(index) || index < 1 || index > categories.length) {
-    options.stderr("Invalid category selection\n");
+    printError(options, { type: "validation", message: "Invalid category selection" });
     process.exitCode = 1;
     return undefined;
   }
@@ -743,7 +748,7 @@ function parseSearchDate(value: string): string {
 
 function validateSearchDateRange(options: CommandIo, fromDate?: string, toDate?: string): boolean {
   if (fromDate && toDate && fromDate > toDate) {
-    options.stderr("--from-date must be earlier than or equal to --to-date\n");
+    printError(options, { type: "validation", message: "--from-date must be earlier than or equal to --to-date" });
     process.exitCode = 1;
     return false;
   }
