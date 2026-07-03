@@ -158,6 +158,25 @@ apexcn topic create --category-id 4 --title "APEX REST API returns 403" --conten
 
 `--research-file <path>` accepts `research --json` output, or `--research-file -` to read stdin. References are deduped by `url`, `originalUrl`, then `id`, and are extracted in `links`, `items`, `topics` order from `id`, `title`, `url`, and `originalUrl`. Only `--format text` is intended as Markdown body input for `topic create --content-file`; JSON output is for review and scripts.
 
+## review
+
+Review a local topic draft before publishing. This command does not read auth config, call the community API, or publish content. Use it between `draft question` and `topic create --preview`:
+
+```bash
+apexcn review topic \
+  --title "APEX REST API returns 403" \
+  --content-file question.md \
+  --category-id 4 \
+  --tags "APEX,REST" \
+  --json
+```
+
+Choose one input mode: `--title` + `--content-file <path|->`, or `--draft-file <path|->`. `--draft-file` only accepts v2 draft JSON where `kind === "question-draft"`, `schemaVersion === 1`, and `title` and `content` are strings.
+
+JSON output always contains `kind`, `schemaVersion`, `ok`, `issues`, `warnings`, `metrics`, `requestPlan`, and `suggestedCommand`. `issues[].severity` is `issue` and causes `ok=false` plus a non-zero exit code. `warnings[].severity` is `warning` and does not fail the review by itself. Hard issues include blank title, blank content, content under 80 characters, remaining `待补充` placeholders, and possible `Authorization: Bearer ...`, `Bearer ...`, `APEXCN_API_KEY=`, `token=`, or `password=` secrets. When possible secrets are detected, `requestPlan.body.content` is redacted.
+
+`suggestedCommand` is generated only when the input came from a reusable Markdown file. For stdin or draft JSON input, the command does not inline content into the shell and does not treat draft JSON as `--content-file`; `suggestedCommand` is `null`, and you should save the Markdown body to a file before running `topic create --content-file`. `review topic` does not replace `topic create --preview`; it is a local quality and safety gate before API preview.
+
 ## topic / thread
 
 `thread` is an alias of `topic`.

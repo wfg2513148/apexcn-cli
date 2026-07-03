@@ -15,6 +15,7 @@ import {
 } from "./commands/content.js";
 import { createDraftCommand } from "./commands/draft.js";
 import { createMeCommand } from "./commands/me.js";
+import { createReviewCommand } from "./commands/review.js";
 import { CLI_VERSION } from "./version.js";
 
 export type CreateProgramOptions = Partial<CommandIo> & {
@@ -47,6 +48,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   program.addCommand(createDoctorCommand(commandOptions));
   program.addCommand(createDraftCommand(commandOptions));
   program.addCommand(createMeCommand(commandOptions));
+  program.addCommand(createReviewCommand(commandOptions));
   program.addCommand(createCategoryCommand(commandOptions));
   program.addCommand(createSearchCommand(commandOptions));
   program.addCommand(createResearchCommand(commandOptions));
@@ -173,6 +175,7 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "reply delete": "delete a reply after explicit confirmation",
   "reply update": "update an existing reply",
   "research": "build a research bundle from search results and topic content",
+  "review topic": "review a local topic draft before API preview or publish",
   "search": "search community topics",
   "subscription add": "subscribe to a community topic",
   "subscription remove": "unsubscribe from a community topic",
@@ -269,6 +272,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "research": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: 'apexcn research "REST API" --limit 3 --json', mode: "read" }]
+  },
+  "review topic": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: 'apexcn review topic --title "标题" --content-file ./question.md --category-id 4 --json', mode: "read" }]
   },
   "search": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },

@@ -103,6 +103,7 @@ const neverApiDryRunCommands = [
   "me",
   "category list",
   "research",
+  "review topic",
   "search",
   "topic view",
   "thread view",
@@ -743,7 +744,7 @@ describe("content commands", () => {
 
   test("format option is exposed only on read commands with text output", () => {
     const program = createProgram();
-    const formatCommands = ["doctor", "draft question", "me", "category list", "search", "research", "topic view", "thread view", "ask"];
+    const formatCommands = ["doctor", "draft question", "review topic", "me", "category list", "search", "research", "topic view", "thread view", "ask"];
 
     for (const path of leafCommandPaths(program)) {
       if (formatCommands.includes(path)) {

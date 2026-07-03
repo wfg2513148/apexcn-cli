@@ -158,6 +158,25 @@ apexcn topic create --category-id 4 --title "APEX 中调用 REST API 返回 403"
 
 `--research-file <path>` 接受 `research --json` 输出，也可用 `--research-file -` 从 stdin 读取。引用会按 `url`、`originalUrl`、`id` 去重，并按 `links`、`items`、`topics` 的顺序提取 `id`、`title`、`url` 和 `originalUrl`。只有 `--format text` 输出适合作为 `topic create --content-file` 的 Markdown 正文；JSON 输出用于审查和脚本处理。
 
+## review
+
+本地审查待发布话题，不读取认证配置，不调用社区 API，也不会发布内容。它用于 `draft question` 和 `topic create --preview` 之间：
+
+```bash
+apexcn review topic \
+  --title "APEX 中调用 REST API 返回 403" \
+  --content-file question.md \
+  --category-id 4 \
+  --tags "APEX,REST" \
+  --json
+```
+
+输入模式二选一：`--title` + `--content-file <path|->`，或 `--draft-file <path|->`。`--draft-file` 只接受 v2 草稿 JSON：`kind === "question-draft"`、`schemaVersion === 1`、并包含字符串 `title` 和 `content`。
+
+JSON 输出固定包含 `kind`、`schemaVersion`、`ok`、`issues`、`warnings`、`metrics`、`requestPlan` 和 `suggestedCommand`。`issues[].severity` 为 `issue`，会导致 `ok=false` 和非零退出码；`warnings[].severity` 为 `warning`，只提醒。硬性问题包括空标题、空正文、正文少于 80 个字符、仍含 `待补充`、以及疑似 `Authorization: Bearer ...`、`Bearer ...`、`APEXCN_API_KEY=`、`token=`、`password=`。如果命中疑似密钥，`requestPlan.body.content` 会脱敏。
+
+`suggestedCommand` 只在输入来自可复用 Markdown 文件时生成。stdin 或 draft JSON 输入不会把内容直接拼进 shell 命令，也不会把 draft JSON 当作 `--content-file`；此时 `suggestedCommand` 为 `null`，需要先把 Markdown 正文保存到文件再执行 `topic create --content-file`。`review topic` 不替代 `topic create --preview`，只是在 API 预览前做本地质量和安全闸门。
+
 ## topic / thread
 
 `thread` 是 `topic` 的别名。
