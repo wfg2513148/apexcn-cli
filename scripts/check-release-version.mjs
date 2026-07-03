@@ -22,6 +22,7 @@ checkSourceConstant("src/version.ts", "DEFAULT_USER_AGENT", `apexcn-cli/${expect
 checkShellInstallerDefaultUrl("scripts/install-agent.sh");
 checkPowerShellInstallerDefaultUrl("scripts/install-agent.ps1");
 checkMarkdownReleaseUrls(trackedMarkdownFiles());
+checkCiWorkflow();
 checkReleaseWorkflow();
 checkNpmPackFilename();
 checkReleaseArtifacts();
@@ -160,6 +161,17 @@ function checkReleaseWorkflow() {
     if (!expectedAssets.includes(asset)) {
       failures.push(`${path}: release assets include unexpected ${asset}`);
     }
+  }
+}
+
+function checkCiWorkflow() {
+  const path = ".github/workflows/ci.yml";
+  const text = readText(path);
+  if (!text.includes("windows-latest")) {
+    failures.push(`${path}: missing windows-latest installer coverage`);
+  }
+  if (!text.includes("test/install-agent.test.ts test/release-version.test.ts")) {
+    failures.push(`${path}: missing focused Windows installer/release tests`);
   }
 }
 

@@ -1,11 +1,15 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { rmSync } from "node:fs";
+import { readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
 const repoRoot = join(__dirname, "..");
 const script = join(repoRoot, "scripts/check-release-version.mjs");
 const artifactScript = join(repoRoot, "scripts/check-release-artifacts.mjs");
+
+function readRepoFile(relativePath: string): string {
+  return readFileSync(join(repoRoot, relativePath), "utf8");
+}
 
 describe("release version check", () => {
   test("passes for the current repository version", () => {
@@ -103,6 +107,13 @@ describe("release version check", () => {
       rmSync(join(repoRoot, artifactsDir), { recursive: true, force: true });
     }
   }, 30000);
+
+  test("CI runs Windows installer coverage", () => {
+    const workflow = readRepoFile(".github/workflows/ci.yml");
+
+    expect(workflow).toContain("windows-latest");
+    expect(workflow).toContain("test/install-agent.test.ts test/release-version.test.ts");
+  });
 
   test("readonly e2e script skips when no API key is configured", () => {
     const result = spawnSync("bash", ["scripts/e2e-readonly.sh"], {
