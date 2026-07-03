@@ -57,19 +57,19 @@ https://oracleapex.cn/ords/api
 macOS / Linux：
 
 ```bash
-curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.2.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
+curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.3.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.2.0/install-agent.ps1" | iex
+$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.3.0/install-agent.ps1" | iex
 ```
 
 安装脚本默认下载固定文件名的 CLI 包：
 
 ```bash
-https://github.com/wfg2513148/apexcn-cli/releases/download/v0.2.0/apexcn-cli.tgz
+https://github.com/wfg2513148/apexcn-cli/releases/download/v0.3.0/apexcn-cli.tgz
 ```
 
 即使 CLI 版本更新，上述 URL 和压缩包文件名也保持不变。
@@ -104,7 +104,6 @@ apexcn category list --json
 开发者也可以从当前仓库源码直接运行：
 
 ```bash
-cd cli
 npm install
 npm run build
 ```
@@ -114,13 +113,13 @@ npm run build
 源码运行命令：
 
 ```bash
-node cli/dist/index.js <command>
+node dist/index.js <command>
 ```
 
 为了让下面的示例可以直接复制，也可以在当前 shell 里设置临时 alias：
 
 ```bash
-alias apexcn='node cli/dist/index.js'
+alias apexcn='node dist/index.js'
 ```
 
 一键安装或以后作为 npm 包安装后，命令名是：
@@ -129,7 +128,7 @@ alias apexcn='node cli/dist/index.js'
 apexcn <command>
 ```
 
-下面统一用 `apexcn` 表示 CLI 命令。源码模式下可替换为 `node cli/dist/index.js`。
+下面统一用 `apexcn` 表示 CLI 命令。源码模式下可替换为 `node dist/index.js`。
 
 ## 3. 登录与配置
 

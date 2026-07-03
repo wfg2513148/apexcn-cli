@@ -16,7 +16,7 @@ describe("CLI entrypoint detection", () => {
 
     await expect(program.parseAsync(["node", "apexcn", "--version"])).rejects.toMatchObject({ code: "commander.version" });
 
-    expect(output.join("")).toBe("0.2.0\n");
+    expect(output.join("")).toBe("0.3.0\n");
   });
 
   test("matches file URLs against argv script paths", () => {
