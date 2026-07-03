@@ -33,6 +33,7 @@ describe("documentation consistency", () => {
     expect(quickstart).toContain("alias apexcn='node dist/index.js'");
     expect(quickstart).not.toContain("cd cli");
     expect(quickstart).not.toContain("node cli/dist/index.js");
+    expect(quickstart).not.toContain("--prefix cli");
   });
 
   test("documented common commands are registered by the CLI", () => {

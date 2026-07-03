@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import type { Command } from "commander";
 import { createProgram } from "../src/index.js";
 
 async function tempConfigPath() {
@@ -34,6 +35,15 @@ async function configuredProgram(fetchImpl: typeof fetch) {
   return { program, stdout, stderr, fetch: vi.mocked(fetch) };
 }
 
+function exitOverrideTree(command: Command): void {
+  command.exitOverride((error) => {
+    throw error;
+  });
+  for (const child of command.commands) {
+    exitOverrideTree(child);
+  }
+}
+
 describe("doctor command", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -57,8 +67,8 @@ describe("doctor command", () => {
     const data = JSON.parse(stdout.join(""));
     expect(data.ok).toBe(true);
     expect(data.diagnostics).toEqual(expect.objectContaining({
-      cliVersion: "0.6.0",
-      userAgent: "apexcn-cli/0.6.0",
+      cliVersion: "0.7.0",
+      userAgent: "apexcn-cli/0.7.0",
       configPath: expect.stringContaining("config.json"),
       nodeVersion: expect.stringMatching(/^v\d+/),
       platform: process.platform,
@@ -92,6 +102,26 @@ describe("doctor command", () => {
     expect(stdout.join("")).toBe("");
     expect(stderr.join("")).toBe("--check-ask must not be blank\n");
     expect(process.exitCode).toBe(1);
+  });
+
+  test("rejects invalid timeout values before loading a profile", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn());
+    const program = createProgram({
+      configPath: await tempConfigPath(),
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+    exitOverrideTree(program);
+
+    await expect(program.parseAsync(["node", "apexcn", "doctor", "--timeout-ms", "0", "--json"])).rejects.toMatchObject({
+      code: "commander.invalidArgument"
+    });
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toContain("Expected a positive integer timeout");
   });
 
   test("redacts the active token from doctor check failures", async () => {
@@ -175,8 +205,8 @@ describe("doctor command", () => {
     await program.parseAsync(["node", "apexcn", "doctor", "--format", "text"]);
 
     expect(stdout.join("")).toContain("apexcn doctor: ok\n");
-    expect(stdout.join("")).toContain("CLI Version: 0.6.0\n");
-    expect(stdout.join("")).toContain("User Agent: apexcn-cli/0.6.0\n");
+    expect(stdout.join("")).toContain("CLI Version: 0.7.0\n");
+    expect(stdout.join("")).toContain("User Agent: apexcn-cli/0.7.0\n");
     expect(stdout.join("")).toContain("Config Path: ");
     expect(stdout.join("")).toContain("OK search requestId=req-search\n");
   });
@@ -198,7 +228,7 @@ describe("doctor command", () => {
       await program.parseAsync(argv);
 
       expect(stdout.join("")).toContain("apexcn doctor: ok\n");
-      expect(stdout.join("")).toContain("CLI Version: 0.6.0\n");
+      expect(stdout.join("")).toContain("CLI Version: 0.7.0\n");
       expect(() => JSON.parse(stdout.join(""))).toThrow();
       vi.unstubAllGlobals();
     }
@@ -332,6 +362,29 @@ describe("doctor command", () => {
     expect(fetch).toHaveBeenCalledTimes(3);
     expect(stdout.join("")).not.toContain("TypeError");
     expect(stdout.join("")).not.toContain("fetch failed");
+    expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("reports timeout failures as failed checks", async () => {
+    const timeout = new Error("timed out");
+    timeout.name = "TimeoutError";
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () => {
+      throw timeout;
+    });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "--timeout-ms", "5", "--json"]);
+
+    const data = JSON.parse(stdout.join(""));
+    expect(data.ok).toBe(false);
+    expect(data.checks).toEqual([
+      { name: "profile", ok: true },
+      { name: "me", ok: false, message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/me" },
+      { name: "categories", ok: false, message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/categories" },
+      { name: "search", ok: false, message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&pageSize=1" }
+    ]);
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(stderr.join("")).toBe("");
     expect(process.exitCode).toBe(1);
   });

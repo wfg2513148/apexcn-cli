@@ -65,9 +65,10 @@ apexcn doctor --json
 apexcn doctor --format json
 apexcn doctor --format text
 apexcn doctor --check-ask "How do I call a REST API from Oracle APEX?" --json
+apexcn doctor --timeout-ms 10000 --json
 ```
 
-`doctor` defaults to text output. `--format json` prints compact JSON; `--json` and `--format pretty` print pretty JSON. JSON output includes diagnostics such as CLI version, user agent, config path, Node.js version, platform, and architecture. By default it checks only the profile, account, categories, and search. It checks the RAG ask endpoint only when you explicitly pass `--check-ask <question>`.
+`doctor` defaults to text output. `--format json` prints compact JSON; `--json` and `--format pretty` print pretty JSON. JSON output includes diagnostics such as CLI version, user agent, config path, Node.js version, platform, and architecture. By default it checks only the profile, account, categories, and search. It checks the RAG ask endpoint only when you explicitly pass `--check-ask <question>`. `--timeout-ms` sets a per-check request timeout in milliseconds.
 
 ## category
 
@@ -250,6 +251,12 @@ apexcn ask "How do I call a REST API from Oracle APEX?" --format text
 ```
 
 ## Common Flows
+
+Readonly real-environment acceptance. The script skips when `APEXCN_API_KEY` is not set. With a key, it checks `doctor`, `me`, `category list`, `search`, and `ask`; write paths only run with `--preview`:
+
+```bash
+npm run test:e2e:readonly
+```
 
 Search, then view a result:
 

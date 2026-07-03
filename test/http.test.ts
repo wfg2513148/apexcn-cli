@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { HttpError, joinUrl, NetworkError, redactSecret, requestJson } from "../src/http.js";
+import { HttpError, joinUrl, NetworkError, redactSecret, requestJson, TimeoutError } from "../src/http.js";
 
 describe("http", () => {
   afterEach(() => {
@@ -46,10 +46,25 @@ describe("http", () => {
       headers: {
         Authorization: "Bearer abc123",
         "X-APEXCN-API-Key": "abc123",
-        "User-Agent": "apexcn-cli/0.6.0",
+        "User-Agent": "apexcn-cli/0.7.0",
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ title: "Hello" })
+    });
+  });
+
+  test("requestJson can set a request timeout signal", async () => {
+    const fetch = vi.fn(async () => Response.json({ ok: true }));
+    vi.stubGlobal("fetch", fetch);
+
+    await requestJson("https://oracleapex.cn/ords/dev", "/api/v1/me", {
+      token: "abc123",
+      timeoutMs: 1000
+    });
+
+    expect(fetch).toHaveBeenCalledWith("https://oracleapex.cn/ords/dev/api/v1/me", {
+      headers: expect.any(Object),
+      signal: expect.any(AbortSignal)
     });
   });
 
@@ -144,6 +159,24 @@ describe("http", () => {
       url: "https://oracleapex.cn/ords/apexcn/api/v1/me",
       cause
     } satisfies Partial<NetworkError>);
+  });
+
+  test("requestJson converts aborts into TimeoutError when timeout is configured", async () => {
+    const cause = new Error("timed out");
+    cause.name = "TimeoutError";
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw cause;
+    }));
+
+    await expect(requestJson("https://oracleapex.cn/ords/apexcn", "/api/v1/me", {
+      token: "abc123",
+      timeoutMs: 5
+    })).rejects.toMatchObject({
+      name: "TimeoutError",
+      message: "Request timed out after 5ms: https://oracleapex.cn/ords/apexcn/api/v1/me",
+      url: "https://oracleapex.cn/ords/apexcn/api/v1/me",
+      timeoutMs: 5
+    } satisfies Partial<TimeoutError>);
   });
 
   test("redactSecret replaces exact secret values", () => {

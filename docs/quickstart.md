@@ -57,19 +57,19 @@ https://oracleapex.cn/ords/api
 macOS / Linux：
 
 ```bash
-curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.6.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
+curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.7.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.6.0/install-agent.ps1" | iex
+$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.7.0/install-agent.ps1" | iex
 ```
 
 安装脚本默认下载固定文件名的 CLI 包：
 
 ```bash
-https://github.com/wfg2513148/apexcn-cli/releases/download/v0.6.0/apexcn-cli.tgz
+https://github.com/wfg2513148/apexcn-cli/releases/download/v0.7.0/apexcn-cli.tgz
 ```
 
 即使 CLI 版本更新，上述 URL 和压缩包文件名也保持不变。
@@ -414,15 +414,17 @@ apexcn search "APEX" --page-size 3 --json
 本地验证：
 
 ```bash
-npm test --prefix cli
-npm run build --prefix cli
+npm test
+npm run build
 ```
 
-生产安全验收脚本：
+可选只读真实环境验收：
 
 ```bash
-tests/shell/test_apexcn_cli_prod_acceptance.sh apexcn@oci <test_user_id>
+npm run test:e2e:readonly
 ```
+
+没有 `APEXCN_API_KEY` 时脚本会跳过；有 key 时会用临时配置运行 `doctor`、`me`、`category list`、`search` 和 `ask`，写操作只做 `--preview`。
 
 排障顺序：
 
@@ -430,7 +432,7 @@ tests/shell/test_apexcn_cli_prod_acceptance.sh apexcn@oci <test_user_id>
 2. `apexcn doctor --format json`
 3. `apexcn me --verbose --json`
 
-`doctor` 默认输出文本；`--format json` 适合脚本采集诊断字段，包括 CLI 版本、User-Agent、配置文件路径、Node.js 版本、平台和架构。默认只检查 profile、账号、板块和搜索；只有显式传 `--check-ask <question>` 时才会额外检查 RAG 问答接口。
+`doctor` 默认输出文本；`--format json` 适合脚本采集诊断字段，包括 CLI 版本、User-Agent、配置文件路径、Node.js 版本、平台和架构。默认只检查 profile、账号、板块和搜索；只有显式传 `--check-ask <question>` 时才会额外检查 RAG 问答接口。网络不稳定时可加 `--timeout-ms 10000` 设置每个检查的超时时间。
 4. 检查 stderr 中的 `HTTP <status>` 和 `requestId`
 5. 用 `requestId` 查服务端日志
 6. 必要时轮换 API key 后重新 `auth set-token`

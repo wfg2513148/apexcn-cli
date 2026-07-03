@@ -1,6 +1,6 @@
-import { Command, Option } from "commander";
+import { Command, InvalidArgumentError, Option } from "commander";
 import { ConfigFileError, defaultConfigPath, loadConfig } from "../config.js";
-import { DEFAULT_USER_AGENT, HttpError, NetworkError, redactSecret, requestJson } from "../http.js";
+import { DEFAULT_USER_AGENT, HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { parseOutputFormat, printData, validateFormatOptions, type FormatOption, type OutputFormat } from "../output.js";
 import { CLI_VERSION } from "../version.js";
 import type { CommandIo } from "./auth.js";
@@ -38,9 +38,10 @@ export function createDoctorCommand(options: DoctorCommandOptions): Command {
   return new Command("doctor")
     .description("check apexcn-cli installation, auth, and API reachability")
     .option("--check-ask <question>", "also check the RAG ask endpoint with a read-only question")
+    .option("--timeout-ms <ms>", "per-request timeout in milliseconds", parseTimeoutMs)
     .option("--json", "pretty-print JSON")
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
-    .action(async (commandOptions: FormatOption & { checkAsk?: string }) => {
+    .action(async (commandOptions: FormatOption & { checkAsk?: string; timeoutMs?: number }) => {
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
@@ -69,7 +70,7 @@ export function createDoctorCommand(options: DoctorCommandOptions): Command {
     });
 }
 
-async function runDoctor(options: DoctorCommandOptions, commandOptions: { checkAsk?: string } = {}): Promise<DoctorOutput> {
+async function runDoctor(options: DoctorCommandOptions, commandOptions: { checkAsk?: string; timeoutMs?: number } = {}): Promise<DoctorOutput> {
   const configPath = options.configPath ?? defaultConfigPath();
   const config = await loadConfig(configPath);
   const profile = config.current;
@@ -83,13 +84,14 @@ async function runDoctor(options: DoctorCommandOptions, commandOptions: { checkA
 
   checks.push({ name: "profile", ok: true });
   const session = { baseUrl: current.baseUrl, token: current.token };
-  checks.push(await checkApi("me", session, "/api/v1/me"));
-  checks.push(await checkApi("categories", session, "/api/v1/categories"));
-  checks.push(await checkApi("search", session, "/api/v1/search", { keyword: "APEX", pageSize: 1 }));
+  checks.push(await checkApi("me", session, "/api/v1/me", undefined, { timeoutMs: commandOptions.timeoutMs }));
+  checks.push(await checkApi("categories", session, "/api/v1/categories", undefined, { timeoutMs: commandOptions.timeoutMs }));
+  checks.push(await checkApi("search", session, "/api/v1/search", { keyword: "APEX", pageSize: 1 }, { timeoutMs: commandOptions.timeoutMs }));
   if (commandOptions.checkAsk !== undefined) {
     checks.push(await checkApi("ask", session, "/api/v1/ask", undefined, {
       method: "POST",
-      body: { question: commandOptions.checkAsk, topK: 1 }
+      body: { question: commandOptions.checkAsk, topK: 1 },
+      timeoutMs: commandOptions.timeoutMs
     }));
   }
 
@@ -106,14 +108,15 @@ async function checkApi(
   session: { baseUrl: string; token: string },
   path: string,
   query?: Record<string, string | number>,
-  requestOptions: { method?: string; body?: unknown } = {}
+  requestOptions: { method?: string; body?: unknown; timeoutMs?: number } = {}
 ): Promise<DoctorCheck> {
   try {
     const data = await requestJson<{ requestId?: string }>(session.baseUrl, path, {
       token: session.token,
       query,
       method: requestOptions.method,
-      body: requestOptions.body
+      body: requestOptions.body,
+      timeoutMs: requestOptions.timeoutMs
     });
     return { name, ok: true, requestId: data.requestId };
   } catch (error) {
@@ -121,6 +124,9 @@ async function checkApi(
       return { name, ok: false, message: redactSecret(error.message, session.token), status: error.status, requestId: error.requestId };
     }
     if (error instanceof NetworkError) {
+      return { name, ok: false, message: error.message };
+    }
+    if (error instanceof TimeoutError) {
       return { name, ok: false, message: error.message };
     }
     throw error;
@@ -162,4 +168,12 @@ function diagnostics(configPath: string): DoctorOutput["diagnostics"] {
     platform: process.platform,
     arch: process.arch
   };
+}
+
+function parseTimeoutMs(value: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new InvalidArgumentError(`Expected a positive integer timeout: ${value}`);
+  }
+  return parsed;
 }

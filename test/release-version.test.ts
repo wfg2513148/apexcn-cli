@@ -46,6 +46,7 @@ describe("release version check", () => {
       "docs/user-guide.en.md",
       "node_modules/commander/package.json",
       "package.json",
+      "scripts/e2e-readonly.sh",
       "scripts/install-agent.ps1",
       "scripts/install-agent.sh"
     ]));
@@ -60,5 +61,17 @@ describe("release version check", () => {
     expect(files.some((path: string) => path.startsWith("src/"))).toBe(false);
     expect(files.some((path: string) => path.startsWith("test/"))).toBe(false);
     expect(files.some((path: string) => path.startsWith(".github/"))).toBe(false);
+  }, 30000);
+
+  test("readonly e2e script skips when no API key is configured", () => {
+    const result = spawnSync("bash", ["scripts/e2e-readonly.sh"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      env: { ...process.env, APEXCN_API_KEY: "" }
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Skipping readonly e2e");
+    expect(result.stderr).toBe("");
   }, 30000);
 });

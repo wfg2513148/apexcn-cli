@@ -4,6 +4,7 @@ export type RequestJsonOptions = {
   query?: Record<string, string | number | boolean | undefined>;
   body?: unknown;
   userAgent?: string;
+  timeoutMs?: number;
 };
 
 export class HttpError extends Error {
@@ -31,6 +32,18 @@ export class NetworkError extends Error {
     this.name = "NetworkError";
     this.url = url;
     this.cause = cause;
+  }
+}
+
+export class TimeoutError extends Error {
+  readonly url: string;
+  readonly timeoutMs: number;
+
+  constructor(url: string, timeoutMs: number) {
+    super(`Request timed out after ${timeoutMs}ms: ${url}`);
+    this.name = "TimeoutError";
+    this.url = url;
+    this.timeoutMs = timeoutMs;
   }
 }
 
@@ -69,6 +82,9 @@ export async function requestJson<T = unknown>(
     "User-Agent": options.userAgent ?? DEFAULT_USER_AGENT
   };
   const init: RequestInit = { headers };
+  if (options.timeoutMs !== undefined) {
+    init.signal = AbortSignal.timeout(options.timeoutMs);
+  }
 
   if (options.method) {
     init.method = options.method;
@@ -83,6 +99,9 @@ export async function requestJson<T = unknown>(
   try {
     response = await fetch(url, init);
   } catch (error) {
+    if (options.timeoutMs !== undefined && isAbortError(error)) {
+      throw new TimeoutError(url, options.timeoutMs);
+    }
     throw new NetworkError(url, error);
   }
   const body = await parseJson(response);
@@ -132,6 +151,10 @@ function errorMessageFrom(body: unknown, response: Response): string {
     }
   }
   return response.statusText || `HTTP ${response.status}`;
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError");
 }
 
 export function redactSecret(text: string, secret?: string): string {

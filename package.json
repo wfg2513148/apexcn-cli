@@ -1,6 +1,6 @@
 {
   "name": "apexcn-cli",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "type": "module",
   "bin": {
     "apexcn": "./dist/index.js"
@@ -9,6 +9,7 @@
     "agent-skill/",
     "dist/",
     "docs/",
+    "scripts/e2e-readonly.sh",
     "scripts/install-agent.ps1",
     "scripts/install-agent.sh",
     "README.md"
@@ -16,7 +17,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check:release": "node scripts/check-release-version.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e:readonly": "bash scripts/e2e-readonly.sh"
   },
   "dependencies": {
     "commander": "^12.1.0"
