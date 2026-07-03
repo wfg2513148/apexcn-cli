@@ -158,6 +158,20 @@ apexcn topic create --category-id 4 --title "APEX 中调用 REST API 返回 403"
 
 `--research-file <path>` 接受 `research --json` 输出，也可用 `--research-file -` 从 stdin 读取。引用会按 `url`、`originalUrl`、`id` 去重，并按 `links`、`items`、`topics` 的顺序提取 `id`、`title`、`url` 和 `originalUrl`。只有 `--format text` 输出适合作为 `topic create --content-file` 的 Markdown 正文；JSON 输出用于审查和脚本处理。
 
+本地起草回复：
+
+```bash
+apexcn draft reply \
+  --topic-id 30549 \
+  --answer "建议先确认 Web Credential，再检查 ORDS 日志。" \
+  --topic-file topic.json \
+  --research-file research.json \
+  --format text > reply.md
+apexcn reply create 30549 --content-file reply.md --preview
+```
+
+`draft reply` 默认输出 JSON，固定包含 `kind: "reply-draft"`、`schemaVersion: 1`、`topicId`、`parentPostId`、`content`、`references` 和 `metadata`。未提供 `--parent-post-id` 时 JSON 中固定为 `null`。`--topic-id` 必填；如果 `--topic-file` 中的 `topic.id`、根 `id`、`topicId` 或 `threadId` 与 `--topic-id` 不一致，命令会拒绝。Markdown 固定包含 `## 简短回应`、`## 建议步骤`、`## 参考链接`；无引用时输出 `无参考链接。`，不会输出 `待补充`。`--tone concise|friendly|technical` 会产生固定不同的开头语，JSON 的 `metadata.tone` 也会记录该值。
+
 ## review
 
 本地审查待发布话题，不读取认证配置，不调用社区 API，也不会发布内容。它用于 `draft question` 和 `topic create --preview` 之间：

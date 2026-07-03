@@ -17,7 +17,7 @@ describe("CLI entrypoint detection", () => {
 
     await expect(program.parseAsync(["node", "apexcn", "--version"])).rejects.toMatchObject({ code: "commander.version" });
 
-    expect(output.join("")).toBe("3.0.0\n");
+    expect(output.join("")).toBe("4.0.0\n");
   });
 
   test("prints a machine-readable command manifest", async () => {
@@ -31,7 +31,7 @@ describe("CLI entrypoint detection", () => {
 
     const manifest = JSON.parse(output.join(""));
     expect(manifest.schemaVersion).toBe(1);
-    expect(manifest.version).toBe("3.0.0");
+    expect(manifest.version).toBe("4.0.0");
     expect(manifest.schema).toEqual({
       safetyEffects: ["read", "api-write", "destructive", "config-read", "config-write", "auth", "secret", "diagnostic", "manifest"],
       previewPolicies: ["required", "available", "none"],
@@ -80,6 +80,14 @@ describe("CLI entrypoint detection", () => {
         ])
       }),
       expect.objectContaining({
+        path: "draft reply",
+        options: expect.arrayContaining(["--topic-id <id>", "--answer <text>", "--topic-file <path>", "--research-file <path>", "--format <format>"]),
+        safety: expect.objectContaining({ effects: ["read"], preview: "none" }),
+        examples: expect.arrayContaining([
+          expect.objectContaining({ command: 'apexcn draft reply --topic-id 30549 --answer "回复建议" --format text', mode: "read" })
+        ])
+      }),
+      expect.objectContaining({
         path: "review topic",
         options: expect.arrayContaining(["--content-file <path>", "--draft-file <path>", "--category-id <id>", "--format <format>"]),
         safety: expect.objectContaining({ effects: ["read"], preview: "none" }),
@@ -116,6 +124,7 @@ describe("CLI entrypoint detection", () => {
     expect(manifest.commands.every((command: { description: string }) => command.description.trim().length > 0)).toBe(true);
     expect(manifest.commands).toEqual(expect.arrayContaining([
       expect.objectContaining({ path: "draft question", description: "draft a local community question from structured inputs and research links" }),
+      expect.objectContaining({ path: "draft reply", description: "draft a local community reply from structured inputs and references" }),
       expect.objectContaining({ path: "review topic", description: "review a local topic draft before API preview or publish" }),
       expect.objectContaining({ path: "search", description: "search community topics" }),
       expect.objectContaining({ path: "topic create", description: "create a community topic" }),

@@ -168,6 +168,7 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "commands": "print a machine-readable command manifest",
   "doctor": "check installation, auth, and API reachability",
   "draft question": "draft a local community question from structured inputs and research links",
+  "draft reply": "draft a local community reply from structured inputs and references",
   "favorite add": "favorite a community topic",
   "favorite remove": "remove a topic from favorites",
   "me": "show the authenticated community account",
@@ -229,6 +230,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "draft question": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: 'apexcn draft question --title "标题" --problem "问题描述" --research-file ./research.json --format text', mode: "read" }]
+  },
+  "draft reply": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: 'apexcn draft reply --topic-id 30549 --answer "回复建议" --format text', mode: "read" }]
   },
   "favorite add": {
     safety: { effects: ["api-write"], preview: "available", confirmation: [] },

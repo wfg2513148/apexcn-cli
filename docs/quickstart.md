@@ -57,19 +57,19 @@ https://oracleapex.cn/ords/api
 macOS / Linux：
 
 ```bash
-curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v3.0.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
+curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v4.0.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v3.0.0/install-agent.ps1" | iex
+$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v4.0.0/install-agent.ps1" | iex
 ```
 
 安装脚本默认下载固定文件名的 CLI 包：
 
 ```bash
-https://github.com/wfg2513148/apexcn-cli/releases/download/v3.0.0/apexcn-cli.tgz
+https://github.com/wfg2513148/apexcn-cli/releases/download/v4.0.0/apexcn-cli.tgz
 ```
 
 即使 CLI 版本更新，上述 URL 和压缩包文件名也保持不变。
@@ -213,12 +213,14 @@ apexcn search APEX --page-size 5 --format text
 apexcn search "向量索引" --category-id 4 --from-date 2026-01-01 --to-date 2026-12-31 --json
 apexcn research "REST API" --limit 3 --json
 apexcn draft question --title "APEX 问题" --problem "现象描述" --research-file research.json --format text
+apexcn draft reply --topic-id 30549 --answer "回复建议" --format text
 apexcn review topic --title "APEX 问题" --content-file question.md --category-id 4 --json
 ```
 
 `--page-size` 支持 1 到 50。当前搜索接口不支持 offset 翻页。需要缩小搜索范围时，用 `--category-id`、`--from-date` 和 `--to-date`。
 需要给 AI agent 一次性整理可引用资料时，用 `research` 直接生成搜索结果和帖子详情组合的研究包。
 需要把问题信息和研究包整理成可发帖正文时，用本地 `draft question` 生成 Markdown 草稿。该命令不需要认证、不调用 API；`--format text` 输出可保存为 `question.md` 并传给 `topic create --content-file`。
+需要先起草回帖时，用本地 `draft reply --format text` 生成 Markdown 回复，再传给 `reply create --content-file` 做 API 预览。
 发布预览前，用本地 `review topic` 检查 Markdown 草稿是否仍含 `待补充`、过短正文或疑似密钥；该命令不替代 `topic create --preview`。
 
 查看话题：
@@ -419,6 +421,7 @@ apexcn search "APEX" --page-size 3 --json
 | 搜索 | `apexcn search "APEX" --page-size 5 --json` |
 | 研究包 | `apexcn research "REST API" --limit 3 --json` |
 | 问题草稿 | `apexcn draft question --title <title> --problem <text> --research-file <file> --format text` |
+| 回复草稿 | `apexcn draft reply --topic-id <thread_id> --answer <text> --format text` |
 | 发布审查 | `apexcn review topic --title <title> --content-file <file> --category-id <id> --json` |
 | RAG 问答 | `apexcn ask "问题" --top-k 3 --json` |
 | 查看话题 | `apexcn topic view <thread_id> --json` |

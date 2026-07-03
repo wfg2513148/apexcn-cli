@@ -158,6 +158,20 @@ apexcn topic create --category-id 4 --title "APEX REST API returns 403" --conten
 
 `--research-file <path>` accepts `research --json` output, or `--research-file -` to read stdin. References are deduped by `url`, `originalUrl`, then `id`, and are extracted in `links`, `items`, `topics` order from `id`, `title`, `url`, and `originalUrl`. Only `--format text` is intended as Markdown body input for `topic create --content-file`; JSON output is for review and scripts.
 
+Draft a local reply:
+
+```bash
+apexcn draft reply \
+  --topic-id 30549 \
+  --answer "Check the Web Credential first, then inspect the ORDS logs." \
+  --topic-file topic.json \
+  --research-file research.json \
+  --format text > reply.md
+apexcn reply create 30549 --content-file reply.md --preview
+```
+
+`draft reply` defaults to JSON and always contains `kind: "reply-draft"`, `schemaVersion: 1`, `topicId`, `parentPostId`, `content`, `references`, and `metadata`. When `--parent-post-id` is omitted, `parentPostId` is `null`. `--topic-id` is required. If `topic.id`, root `id`, `topicId`, or `threadId` in `--topic-file` does not match `--topic-id`, the command fails. Markdown output always contains `## 简短回应`, `## 建议步骤`, and `## 参考链接`; when there are no references it prints `无参考链接。`, never `待补充`. `--tone concise|friendly|technical` selects deterministic opening text, and JSON `metadata.tone` records the selected value.
+
 ## review
 
 Review a local topic draft before publishing. This command does not read auth config, call the community API, or publish content. Use it between `draft question` and `topic create --preview`:
