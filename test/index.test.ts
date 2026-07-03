@@ -17,7 +17,7 @@ describe("CLI entrypoint detection", () => {
 
     await expect(program.parseAsync(["node", "apexcn", "--version"])).rejects.toMatchObject({ code: "commander.version" });
 
-    expect(output.join("")).toBe("0.9.0\n");
+    expect(output.join("")).toBe("0.10.0\n");
   });
 
   test("prints a machine-readable command manifest", async () => {
@@ -30,7 +30,7 @@ describe("CLI entrypoint detection", () => {
     await program.parseAsync(["node", "apexcn", "commands", "--json"]);
 
     const manifest = JSON.parse(output.join(""));
-    expect(manifest.version).toBe("0.9.0");
+    expect(manifest.version).toBe("0.10.0");
     expect(manifest.commands).toEqual(expect.arrayContaining([
       expect.objectContaining({
         path: "topic create",
@@ -69,6 +69,24 @@ describe("CLI entrypoint detection", () => {
 
     const manifest = JSON.parse(output.join(""));
     expect(manifest.commands.map((command: { path: string }) => command.path).sort()).toEqual(leafCommandPaths(createProgram()).sort());
+  });
+
+  test("command manifest descriptions are stable and non-empty", async () => {
+    const output: string[] = [];
+    const program = createProgram({
+      stdout: (text) => output.push(text),
+      stderr: () => undefined
+    });
+
+    await program.parseAsync(["node", "apexcn", "commands", "--json"]);
+
+    const manifest = JSON.parse(output.join(""));
+    expect(manifest.commands.every((command: { description: string }) => command.description.trim().length > 0)).toBe(true);
+    expect(manifest.commands).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: "search", description: "search community topics" }),
+      expect.objectContaining({ path: "topic create", description: "create a community topic" }),
+      expect.objectContaining({ path: "reply delete", description: "delete a reply after explicit confirmation" })
+    ]));
   });
 
   test("command manifest does not read config or call the API", async () => {

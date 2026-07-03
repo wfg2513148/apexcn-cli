@@ -99,10 +99,40 @@ function commandManifest(root: Command): CommandManifest {
     commands: root.commands.flatMap((child) => leafCommands(child)).map((item) => ({
       path: item.path.join(" "),
       aliases: aliasPaths(item.path, item.aliases).map((path) => path.join(" ")),
-      description: item.command.description(),
+      description: manifestDescription(item.path.join(" "), item.command.description()),
       options: item.command.options.filter((option) => !option.hidden).map((option) => option.flags)
     })).sort((left, right) => left.path.localeCompare(right.path))
   };
+}
+
+const COMMAND_DESCRIPTIONS: Record<string, string> = {
+  "ask": "answer a question using APEX Chinese Community content",
+  "auth list": "list configured auth profiles",
+  "auth logout": "clear the active auth profile",
+  "auth remove": "remove an auth profile",
+  "auth set-token": "save an API token profile",
+  "auth show": "show the active auth profile with a redacted token",
+  "auth use": "switch the active auth profile",
+  "category list": "list community categories",
+  "commands": "print a machine-readable command manifest",
+  "doctor": "check installation, auth, and API reachability",
+  "favorite add": "favorite a community topic",
+  "favorite remove": "remove a topic from favorites",
+  "me": "show the authenticated community account",
+  "reply create": "create a reply on a topic",
+  "reply delete": "delete a reply after explicit confirmation",
+  "reply update": "update an existing reply",
+  "search": "search community topics",
+  "subscription add": "subscribe to a community topic",
+  "subscription remove": "unsubscribe from a community topic",
+  "topic create": "create a community topic",
+  "topic delete": "delete a topic after explicit confirmation",
+  "topic update": "update an existing topic",
+  "topic view": "view a community topic"
+};
+
+function manifestDescription(path: string, fallback: string): string {
+  return COMMAND_DESCRIPTIONS[path] ?? fallback;
 }
 
 function leafCommands(command: Command, path: string[] = [], aliases: string[][] = []): Array<{ command: Command; path: string[]; aliases: string[][] }> {

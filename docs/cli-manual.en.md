@@ -14,7 +14,7 @@ apexcn --config /tmp/apexcn-config.json auth show --json
 
 Use `--json` in scripts and AI-agent workflows. Use root `--config <path>` or `APEXCN_CONFIG_PATH` when automation needs an isolated config file.
 
-When an AI agent needs available commands, aliases, and options, prefer `apexcn commands --json` instead of parsing `--help` text.
+When an AI agent needs available commands, aliases, purposes, and options, prefer `apexcn commands --json` instead of parsing `--help` text.
 
 For unstable networks, set `APEXCN_HTTP_TIMEOUT_MS` to provide a default timeout for community API requests. `doctor --timeout-ms` overrides this default. Blank or non-positive values are ignored.
 
