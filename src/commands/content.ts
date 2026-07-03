@@ -83,6 +83,77 @@ export function createSearchCommand(options: ApiCommandOptions): Command {
     });
 }
 
+export function createResearchCommand(options: ApiCommandOptions): Command {
+  return new Command("research")
+    .argument("<keyword>")
+    .option("--limit <n>", "topics to fetch, 1-10", parseResearchLimit)
+    .option("--category-id <id>", "category id", parsePositiveInteger)
+    .option("--from-date <date>", "inclusive updated-from date, YYYY-MM-DD", parseSearchDate)
+    .option("--to-date <date>", "inclusive updated-to date, YYYY-MM-DD", parseSearchDate)
+    .option("--json", "pretty-print JSON")
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async (keyword: string, commandOptions: FormatOption & { limit?: number; categoryId?: number; fromDate?: string; toDate?: string }) => {
+      if (!validateFormatOptions(options, commandOptions)) {
+        return;
+      }
+      if (!validateSearchDateRange(options, commandOptions.fromDate, commandOptions.toDate)) {
+        return;
+      }
+      await runApi(options, async (session) => {
+        const limit = commandOptions.limit ?? 3;
+        const search = await requestJson(session.baseUrl, "/api/v1/search", {
+          token: session.token,
+          query: {
+            keyword,
+            pageSize: limit,
+            categoryId: commandOptions.categoryId,
+            fromDate: commandOptions.fromDate,
+            toDate: commandOptions.toDate
+          }
+        });
+        const items = itemsFromData(search).slice(0, limit);
+        const topics = [];
+        const topicRequestIds = [];
+        const errors = [];
+        for (const [sourceItemIndex, item] of items.entries()) {
+          const id = topicIdFromSearchItem(item);
+          if (id !== undefined) {
+            try {
+              const topic = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
+              topics.push(researchTopicFromData(topic, sourceItemIndex));
+              if (isRecord(topic) && topic.requestId) {
+                topicRequestIds.push(topic.requestId);
+              }
+            } catch (error) {
+              errors.push(researchTopicError(error, id, sourceItemIndex, session));
+            }
+          }
+        }
+        const data = {
+          query: compactBody({
+            keyword,
+            limit,
+            categoryId: commandOptions.categoryId,
+            fromDate: commandOptions.fromDate,
+            toDate: commandOptions.toDate
+          }),
+          items,
+          topics,
+          links: researchLinks(items, topics),
+          requestIds: {
+            search: isRecord(search) ? search.requestId : undefined,
+            topics: topicRequestIds
+          },
+          errors
+        };
+        if (errors.length > 0) {
+          process.exitCode = 1;
+        }
+        printData(options, data, outputFormat(commandOptions), formatResearchText);
+      });
+    });
+}
+
 export function createTopicCommand(options: ApiCommandOptions): Command {
   const topic = new Command("topic").alias("thread");
 
@@ -587,6 +658,29 @@ function formatSearchText(data: unknown): string {
   return items.map((item) => `${fieldText(item.id)}\t${fieldText(item.title)}\t${fieldText(item.url)}`).join("\n");
 }
 
+function formatResearchText(data: unknown): string {
+  if (!isRecord(data) || !isRecord(data.query) || !Array.isArray(data.topics)) {
+    return "";
+  }
+  const keyword = fieldText(data.query.keyword);
+  const topics = data.topics.filter(isRecord);
+  const errors = Array.isArray(data.errors) ? data.errors.filter(isRecord) : [];
+  const sections = topics.map((topic, index) => lines([
+    `${index + 1}. ${fieldText(topic.title ?? topic.topicTitle ?? `topic ${index + 1}`)}`,
+    line("URL", topic.url ?? topic.threadUrl),
+    line("Original URL", topic.originalUrl),
+    blockLine("Excerpt", excerptText(topic.content ?? topic.body ?? topic.summary ?? topic.excerpt))
+  ]));
+  const errorLines = errors.map((error) => `- item ${fieldText(error.sourceItemIndex)} topic ${fieldText(error.id)}: ${fieldText(error.type)} ${fieldText(error.message)}`);
+  return lines([
+    keyword ? `Research: ${keyword}` : "Research",
+    `Topics: ${topics.length}`,
+    ...sections,
+    errorLines.length > 0 ? "Errors:" : undefined,
+    ...errorLines
+  ]);
+}
+
 function formatTopicText(data: unknown): string {
   const topic = topicFromData(data);
   if (!topic) {
@@ -644,6 +738,77 @@ function sourcesFromData(data: Record<string, unknown>): Array<Record<string, un
     }
   }
   return [];
+}
+
+function topicIdFromSearchItem(item: Record<string, unknown>): number | undefined {
+  for (const key of ["id", "topicId", "threadId"]) {
+    const value = item[key];
+    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+      return value;
+    }
+    if (typeof value === "string" && /^\d+$/.test(value)) {
+      return Number(value);
+    }
+  }
+  return undefined;
+}
+
+function researchLinks(items: Array<Record<string, unknown>>, topics: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  const seen = new Set<string>();
+  const links = [...items, ...topics].map((item) => compactBody({
+    id: item.id ?? item.topicId ?? item.threadId,
+    title: item.title ?? item.topicTitle,
+    url: item.url ?? item.threadUrl,
+    originalUrl: item.originalUrl
+  })).filter((item) => Object.keys(item).length > 0);
+  return links.filter((link) => {
+    const key = [link.id, link.url, link.originalUrl].map(fieldText).join("|");
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function researchTopicFromData(data: unknown, sourceItemIndex: number): Record<string, unknown> {
+  const topic = topicFromData(data) ?? {};
+  const content = topic.content ?? topic.body;
+  return compactBody({
+    sourceItemIndex,
+    id: topic.id ?? topic.topicId ?? topic.threadId,
+    title: topic.title ?? topic.topicTitle,
+    url: topic.url ?? topic.threadUrl,
+    originalUrl: topic.originalUrl,
+    content,
+    excerpt: topic.summary ?? topic.excerpt ?? (content ? excerptText(content) : undefined),
+    requestId: isRecord(data) ? data.requestId : undefined
+  });
+}
+
+function researchTopicError(error: unknown, id: number, sourceItemIndex: number, session: Session): Record<string, unknown> {
+  if (error instanceof HttpError) {
+    return compactBody({
+      sourceItemIndex,
+      id,
+      type: "http",
+      message: redactSecret(error.message, session.token),
+      status: error.status,
+      requestId: error.requestId
+    });
+  }
+  if (error instanceof NetworkError) {
+    return { sourceItemIndex, id, type: "network", message: error.message };
+  }
+  if (error instanceof TimeoutError) {
+    return { sourceItemIndex, id, type: "timeout", message: error.message };
+  }
+  throw error;
+}
+
+function excerptText(value: unknown): string {
+  const text = blockText(value);
+  return text.length > 1200 ? `${text.slice(0, 1200)}...` : text;
 }
 
 function line(label: string, value: unknown): string | undefined {
@@ -711,6 +876,14 @@ function parseSearchPageSize(value: string): number {
   const parsed = parsePositiveInteger(value);
   if (parsed > 50) {
     throw new InvalidArgumentError("Expected --page-size to be between 1 and 50");
+  }
+  return parsed;
+}
+
+function parseResearchLimit(value: string): number {
+  const parsed = parsePositiveInteger(value);
+  if (parsed > 10) {
+    throw new InvalidArgumentError("Expected --limit to be between 1 and 10");
   }
   return parsed;
 }

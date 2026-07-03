@@ -116,6 +116,17 @@ apexcn search "JSON" --from-date 2026-01-01 --to-date 2026-12-31 --json
 
 `--page-size` 支持 1 到 50。当前搜索接口不支持 offset 翻页。需要缩小范围时，优先使用 `--category-id`、`--from-date` 和 `--to-date`。
 
+## research
+
+一次搜索并抓取前几条帖子，生成适合 AI agent 总结和引用的研究包：
+
+```bash
+apexcn research "REST API" --limit 3 --json
+apexcn research "ORDS" --category-id 4 --from-date 2026-01-01 --format text
+```
+
+`--limit` 支持 1 到 10，默认 3。JSON 输出固定包含 `query`、`items`、`topics`、`links`、`requestIds` 和 `errors`。单个帖子抓取失败时，命令仍输出已完成的研究包并把失败写入 `errors`，同时返回非零退出码。
+
 ## topic / thread
 
 `thread` 是 `topic` 的别名。

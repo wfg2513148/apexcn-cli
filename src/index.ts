@@ -9,6 +9,7 @@ import {
   createCategoryCommand,
   createRelationCommand,
   createReplyCommand,
+  createResearchCommand,
   createSearchCommand,
   createTopicCommand
 } from "./commands/content.js";
@@ -46,6 +47,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   program.addCommand(createMeCommand(commandOptions));
   program.addCommand(createCategoryCommand(commandOptions));
   program.addCommand(createSearchCommand(commandOptions));
+  program.addCommand(createResearchCommand(commandOptions));
   program.addCommand(createTopicCommand(commandOptions));
   program.addCommand(createReplyCommand(commandOptions));
   program.addCommand(createRelationCommand("favorite", commandOptions));
@@ -167,6 +169,7 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "reply create": "create a reply on a topic",
   "reply delete": "delete a reply after explicit confirmation",
   "reply update": "update an existing reply",
+  "research": "build a research bundle from search results and topic content",
   "search": "search community topics",
   "subscription add": "subscribe to a community topic",
   "subscription remove": "unsubscribe from a community topic",
@@ -255,6 +258,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
       "apexcn reply update 67890 --content-file ./updated-reply.md --preview",
       "apexcn reply update 67890 --content-file ./updated-reply.md --json"
     ].map((command, index) => ({ command, mode: index === 0 ? "preview" as const : "execute" as const }))
+  },
+  "research": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: 'apexcn research "REST API" --limit 3 --json', mode: "read" }]
   },
   "search": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },

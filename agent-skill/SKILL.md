@@ -75,6 +75,7 @@ apexcn auth set-token \
 
 ```bash
 apexcn search "APEX" --page-size 5 --json
+apexcn research "REST API" --limit 3 --json
 apexcn commands --json
 apexcn ask "Oracle APEX 如何调用 REST API？" --top-k 3 --json
 apexcn topic view 30549 --json

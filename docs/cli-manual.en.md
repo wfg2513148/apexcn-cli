@@ -116,6 +116,17 @@ apexcn search "JSON" --from-date 2026-01-01 --to-date 2026-12-31 --json
 
 `--page-size` accepts 1 to 50. The current search API does not support offset pagination. Narrow large result sets with `--category-id`, `--from-date`, and `--to-date`.
 
+## research
+
+Search and fetch the top topics in one read-only research bundle for AI-agent summarization and citation:
+
+```bash
+apexcn research "REST API" --limit 3 --json
+apexcn research "ORDS" --category-id 4 --from-date 2026-01-01 --format text
+```
+
+`--limit` accepts 1 to 10 and defaults to 3. JSON output always contains `query`, `items`, `topics`, `links`, `requestIds`, and `errors`. If one topic fetch fails, the command still prints the completed portion of the research bundle, records the failure in `errors`, and exits non-zero.
+
 ## topic / thread
 
 `thread` is an alias of `topic`.

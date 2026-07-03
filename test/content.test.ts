@@ -101,6 +101,7 @@ const neverApiDryRunCommands = [
   "doctor",
   "me",
   "category list",
+  "research",
   "search",
   "topic view",
   "thread view",
@@ -458,6 +459,154 @@ describe("content commands", () => {
     }
   });
 
+  test("research searches and fetches topic details as a bundle", async () => {
+    const fetchImpl = vi.fn(async (url: string | URL | Request) => {
+      const href = String(url);
+      if (href.includes("/api/v1/search")) {
+        return Response.json({
+          items: [
+            { id: 42, title: "REST API", url: "https://oracleapex.cn/t/42" },
+            { topicId: 43, title: "ORDS", threadUrl: "https://oracleapex.cn/t/43" },
+            { id: 44, title: "Ignored" }
+          ],
+          requestId: "req-search"
+        });
+      }
+      if (href.endsWith("/api/v1/topics/42")) {
+        return Response.json({
+          topic: {
+            id: 42,
+            title: "REST API",
+            url: "https://oracleapex.cn/t/42",
+            originalUrl: "https://oracleapex.cn/original/42",
+            content: "Use REST Source modules."
+          },
+          requestId: "req-topic-42"
+        });
+      }
+      if (href.endsWith("/api/v1/topics/43")) {
+        return Response.json({
+          topic: {
+            id: 43,
+            title: "ORDS",
+            threadUrl: "https://oracleapex.cn/t/43",
+            body: "Configure ORDS credentials."
+          },
+          requestId: "req-topic-43"
+        });
+      }
+      return Response.json({ error: { message: "unexpected url" } }, { status: 500 });
+    });
+    const { program, stdout, fetch } = await configuredProgram(fetchImpl as typeof fetch);
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "research",
+      "REST API",
+      "--limit",
+      "2",
+      "--category-id",
+      "4",
+      "--from-date",
+      "2026-01-01",
+      "--to-date",
+      "2026-12-31",
+      "--json"
+    ]);
+
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      "https://oracleapex.cn/ords/test/api/v1/search?keyword=REST+API&pageSize=2&categoryId=4&fromDate=2026-01-01&toDate=2026-12-31",
+      expect.any(Object)
+    );
+    expect(fetch).toHaveBeenNthCalledWith(2, "https://oracleapex.cn/ords/test/api/v1/topics/42", expect.any(Object));
+    expect(fetch).toHaveBeenNthCalledWith(3, "https://oracleapex.cn/ords/test/api/v1/topics/43", expect.any(Object));
+    const data = JSON.parse(stdout.join(""));
+    expect(data.query).toEqual({
+      keyword: "REST API",
+      limit: 2,
+      categoryId: 4,
+      fromDate: "2026-01-01",
+      toDate: "2026-12-31"
+    });
+    expect(data.items).toHaveLength(2);
+    expect(data.topics.map((topic: { id: number }) => topic.id)).toEqual([42, 43]);
+    expect(data.links).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 42, url: "https://oracleapex.cn/t/42", originalUrl: "https://oracleapex.cn/original/42" }),
+      expect.objectContaining({ id: 43, url: "https://oracleapex.cn/t/43" })
+    ]));
+    expect(data.requestIds).toEqual({ search: "req-search", topics: ["req-topic-42", "req-topic-43"] });
+  });
+
+  test("research supports text output and empty results", async () => {
+    const textProgram = await configuredProgram(async (url: string | URL | Request) => {
+      const href = String(url);
+      if (href.includes("/api/v1/search")) {
+        return Response.json({ items: [{ id: 42, title: "REST API" }] });
+      }
+      return Response.json({ topic: { id: 42, title: "REST API", url: "https://oracleapex.cn/t/42", content: "Line 1\nLine 2" } });
+    });
+
+    await textProgram.program.parseAsync(["node", "apexcn", "research", "REST", "--format", "text"]);
+
+    expect(textProgram.stdout.join("")).toContain("Research: REST");
+    expect(textProgram.stdout.join("")).toContain("Topics: 1");
+    expect(textProgram.stdout.join("")).toContain("URL: https://oracleapex.cn/t/42");
+    expect(textProgram.stdout.join("")).toContain("Excerpt:\nLine 1\nLine 2");
+
+    const emptyProgram = await configuredProgram(async () => Response.json({ items: [], requestId: "req-empty" }));
+
+    await emptyProgram.program.parseAsync(["node", "apexcn", "research", "REST", "--format", "text"]);
+
+    expect(emptyProgram.stdout.join("")).toBe("Research: REST\nTopics: 0\n");
+  });
+
+  test("research keeps partial bundles when one topic fetch fails", async () => {
+    const { program, stdout, fetch } = await configuredProgram(async (url: string | URL | Request) => {
+      const href = String(url);
+      if (href.includes("/api/v1/search")) {
+        return Response.json({
+          items: [
+            { id: 42, title: "REST API" },
+            { id: 43, title: "Missing topic" }
+          ],
+          requestId: "req-search"
+        });
+      }
+      if (href.endsWith("/api/v1/topics/42")) {
+        return Response.json({ topic: { id: 42, title: "REST API", content: "ok" }, requestId: "req-topic-42" });
+      }
+      return Response.json({ error: { message: "not found", requestId: "req-topic-43" } }, { status: 404 });
+    });
+
+    await program.parseAsync(["node", "apexcn", "research", "REST", "--limit", "2", "--format", "json"]);
+
+    expect(fetch).toHaveBeenCalledTimes(3);
+    const data = JSON.parse(stdout.join(""));
+    expect(data.items).toHaveLength(2);
+    expect(data.topics).toEqual([
+      expect.objectContaining({ id: 42, title: "REST API", sourceItemIndex: 0, requestId: "req-topic-42" })
+    ]);
+    expect(data.errors).toEqual([
+      expect.objectContaining({ id: 43, sourceItemIndex: 1, type: "http", status: 404, requestId: "req-topic-43" })
+    ]);
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("research rejects invalid limits before making API requests", async () => {
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ items: [] }));
+    exitOverrideTree(program);
+
+    await expect(program.parseAsync(["node", "apexcn", "research", "APEX", "--limit", "11"])).rejects.toMatchObject({
+      code: "commander.invalidArgument"
+    });
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toContain("Expected --limit to be between 1 and 10");
+  });
+
   test("search rejects invalid date filters before making API requests", async () => {
     const cases = [
       ["node", "apexcn", "search", "APEX", "--from-date", "20260101"],
@@ -593,7 +742,7 @@ describe("content commands", () => {
 
   test("format option is exposed only on read commands with text output", () => {
     const program = createProgram();
-    const formatCommands = ["doctor", "me", "category list", "search", "topic view", "thread view", "ask"];
+    const formatCommands = ["doctor", "me", "category list", "search", "research", "topic view", "thread view", "ask"];
 
     for (const path of leafCommandPaths(program)) {
       if (formatCommands.includes(path)) {
