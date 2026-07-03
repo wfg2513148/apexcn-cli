@@ -17,7 +17,7 @@ describe("CLI entrypoint detection", () => {
 
     await expect(program.parseAsync(["node", "apexcn", "--version"])).rejects.toMatchObject({ code: "commander.version" });
 
-    expect(output.join("")).toBe("0.12.0\n");
+    expect(output.join("")).toBe("0.13.0\n");
   });
 
   test("prints a machine-readable command manifest", async () => {
@@ -30,7 +30,13 @@ describe("CLI entrypoint detection", () => {
     await program.parseAsync(["node", "apexcn", "commands", "--json"]);
 
     const manifest = JSON.parse(output.join(""));
-    expect(manifest.version).toBe("0.12.0");
+    expect(manifest.schemaVersion).toBe(1);
+    expect(manifest.version).toBe("0.13.0");
+    expect(manifest.schema).toEqual({
+      safetyEffects: ["read", "api-write", "destructive", "config-read", "config-write", "auth", "secret", "diagnostic", "manifest"],
+      previewPolicies: ["required", "available", "none"],
+      exampleModes: ["read", "preview", "execute"]
+    });
     expect(manifest.commands).toEqual(expect.arrayContaining([
       expect.objectContaining({
         path: "topic create",
@@ -110,10 +116,15 @@ describe("CLI entrypoint detection", () => {
 
     const manifest = JSON.parse(output.join(""));
     const paths = leafCommandPaths(createProgram()).sort();
+    const safetyEffects = new Set(manifest.schema.safetyEffects);
+    const previewPolicies = new Set(manifest.schema.previewPolicies);
+    const exampleModes = new Set(manifest.schema.exampleModes);
     expect(manifest.commands.map((command: { path: string }) => command.path).sort()).toEqual(paths);
     expect(manifest.commands.every((command: ManifestCommand) => command.safety.effects.length > 0)).toBe(true);
     expect(manifest.commands.every((command: ManifestCommand) => command.examples.length > 0)).toBe(true);
-    expect(manifest.commands.every((command: ManifestCommand) => ["required", "available", "none"].includes(command.safety.preview))).toBe(true);
+    expect(manifest.commands.every((command: ManifestCommand) => command.safety.effects.every((effect) => safetyEffects.has(effect)))).toBe(true);
+    expect(manifest.commands.every((command: ManifestCommand) => previewPolicies.has(command.safety.preview))).toBe(true);
+    expect(manifest.commands.every((command: ManifestCommand) => command.examples.every((example) => exampleModes.has(example.mode)))).toBe(true);
     expect(manifest.commands).toEqual(expect.arrayContaining([
       expect.objectContaining({
         path: "topic delete",

@@ -67,7 +67,13 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
 }
 
 type CommandManifest = {
+  schemaVersion: number;
   version: string;
+  schema: {
+    safetyEffects: SafetyEffect[];
+    previewPolicies: PreviewPolicy[];
+    exampleModes: ExampleMode[];
+  };
   commands: Array<{
     path: string;
     aliases: string[];
@@ -78,9 +84,13 @@ type CommandManifest = {
   }>;
 };
 
-type SafetyEffect = "read" | "api-write" | "destructive" | "config-read" | "config-write" | "auth" | "secret" | "diagnostic" | "manifest";
-type PreviewPolicy = "required" | "available" | "none";
-type ExampleMode = "read" | "preview" | "execute";
+const SAFETY_EFFECTS = ["read", "api-write", "destructive", "config-read", "config-write", "auth", "secret", "diagnostic", "manifest"] as const;
+const PREVIEW_POLICIES = ["required", "available", "none"] as const;
+const EXAMPLE_MODES = ["read", "preview", "execute"] as const;
+
+type SafetyEffect = typeof SAFETY_EFFECTS[number];
+type PreviewPolicy = typeof PREVIEW_POLICIES[number];
+type ExampleMode = typeof EXAMPLE_MODES[number];
 
 type CommandSafety = {
   effects: SafetyEffect[];
@@ -118,7 +128,13 @@ function createCommandsCommand(root: Command, io: CommandIo): Command {
 
 function commandManifest(root: Command): CommandManifest {
   return {
+    schemaVersion: 1,
     version: CLI_VERSION,
+    schema: {
+      safetyEffects: [...SAFETY_EFFECTS],
+      previewPolicies: [...PREVIEW_POLICIES],
+      exampleModes: [...EXAMPLE_MODES]
+    },
     commands: root.commands.flatMap((child) => leafCommands(child)).map((item) => {
       const path = item.path.join(" ");
       const guidance = manifestGuidance(path);
