@@ -64,9 +64,10 @@ apexcn doctor
 apexcn doctor --json
 apexcn doctor --format json
 apexcn doctor --format text
+apexcn doctor --check-ask "How do I call a REST API from Oracle APEX?" --json
 ```
 
-`doctor` defaults to text output. `--format json` prints compact JSON; `--json` and `--format pretty` print pretty JSON. JSON output includes diagnostics such as CLI version, user agent, config path, Node.js version, platform, and architecture.
+`doctor` defaults to text output. `--format json` prints compact JSON; `--json` and `--format pretty` print pretty JSON. JSON output includes diagnostics such as CLI version, user agent, config path, Node.js version, platform, and architecture. By default it checks only the profile, account, categories, and search. It checks the RAG ask endpoint only when you explicitly pass `--check-ask <question>`.
 
 ## category
 

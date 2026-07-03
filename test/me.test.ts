@@ -150,6 +150,35 @@ describe("me command", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("redacts the active token from API error messages", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json(
+          { error: { message: "token abcdefghijklmnopqrstuvwxyz is not allowed", requestId: "req-token" } },
+          { status: 403 }
+        )
+      )
+    );
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toBe("HTTP 403: token [redacted] is not allowed requestId=req-token\n");
+    expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    expect(process.exitCode).toBe(1);
+  });
+
   test("prints clean errors for non-JSON API failures", async () => {
     const configPath = await tempConfigPath();
     const stdout: string[] = [];

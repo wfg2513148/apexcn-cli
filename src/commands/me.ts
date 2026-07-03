@@ -1,6 +1,6 @@
 import { Command, Option } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
-import { HttpError, NetworkError, requestJson } from "../http.js";
+import { HttpError, NetworkError, redactSecret, requestJson } from "../http.js";
 import { fieldText, isRecord, outputFormat, parseOutputFormat, printData, validateFormatOptions, type FormatOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
 
@@ -14,6 +14,7 @@ export function createMeCommand(options: MeCommandOptions): Command {
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
     .option("--verbose", "print request diagnostics")
     .action(async (commandOptions: FormatOption & { verbose?: boolean }) => {
+      let token: string | undefined;
       try {
         if (!validateFormatOptions(options, commandOptions)) {
           return;
@@ -28,6 +29,7 @@ export function createMeCommand(options: MeCommandOptions): Command {
           return;
         }
 
+        token = current.token;
         const me = await requestJson(current.baseUrl, "/api/v1/me", { token: current.token });
         if (commandOptions.verbose) {
           options.stderr(`GET ${current.baseUrl.replace(/\/+$/, "")}/api/v1/me\n`);
@@ -36,7 +38,7 @@ export function createMeCommand(options: MeCommandOptions): Command {
       } catch (error) {
         if (error instanceof HttpError) {
           const requestId = error.requestId ? ` requestId=${error.requestId}` : "";
-          options.stderr(`HTTP ${error.status}: ${error.message}${requestId}\n`);
+          options.stderr(`HTTP ${error.status}: ${redactSecret(error.message, token)}${requestId}\n`);
           process.exitCode = 1;
           return;
         }

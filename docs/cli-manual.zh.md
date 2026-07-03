@@ -64,9 +64,10 @@ apexcn doctor
 apexcn doctor --json
 apexcn doctor --format json
 apexcn doctor --format text
+apexcn doctor --check-ask "Oracle APEX 如何调用 REST API？" --json
 ```
 
-`doctor` 默认输出文本。`--format json` 输出压缩 JSON；`--json` 和 `--format pretty` 输出格式化 JSON。JSON 输出包含 CLI 版本、User-Agent、配置文件路径、Node.js 版本、平台和架构等诊断信息。
+`doctor` 默认输出文本。`--format json` 输出压缩 JSON；`--json` 和 `--format pretty` 输出格式化 JSON。JSON 输出包含 CLI 版本、User-Agent、配置文件路径、Node.js 版本、平台和架构等诊断信息。默认只检查 profile、账号、板块和搜索；只有显式传 `--check-ask <question>` 时才会额外检查 RAG 问答接口。
 
 ## category
 

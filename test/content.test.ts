@@ -183,6 +183,23 @@ describe("content commands", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("category list redacts the active token from API error messages", async () => {
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () =>
+      Response.json(
+        { error: { message: "token abcdefghijklmnopqrstuvwxyz is not allowed", requestId: "req-token" } },
+        { status: 403 }
+      )
+    );
+
+    await program.parseAsync(["node", "apexcn", "category", "list"]);
+
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toBe("HTTP 403: token [redacted] is not allowed requestId=req-token\n");
+    expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    expect(process.exitCode).toBe(1);
+  });
+
   test("category list prints clean errors for network failures", async () => {
     const { program, stdout, stderr, fetch } = await configuredProgram(async () => {
       throw new TypeError("fetch failed");
@@ -652,6 +669,7 @@ describe("content commands", () => {
     const { program, stdout, fetch } = await configuredProgram(async () =>
       Response.json({
         topic: {
+          id: 42,
           title: "APEX\tTopic",
           createdByName: "王方钢",
           categoryName: "APEX\n进阶",
@@ -666,6 +684,7 @@ describe("content commands", () => {
 
     expect(fetch).toHaveBeenLastCalledWith("https://oracleapex.cn/ords/test/api/v1/topics/42", expect.any(Object));
     expect(stdout.join("")).toBe([
+      "id: 42",
       "Title: APEX Topic",
       "Author: 王方钢",
       "Category: APEX 进阶",

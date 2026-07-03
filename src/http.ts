@@ -134,6 +134,13 @@ function errorMessageFrom(body: unknown, response: Response): string {
   return response.statusText || `HTTP ${response.status}`;
 }
 
+export function redactSecret(text: string, secret?: string): string {
+  if (!secret) {
+    return text;
+  }
+  return text.split(secret).join("[redacted]");
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }

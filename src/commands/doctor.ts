@@ -1,6 +1,6 @@
 import { Command, Option } from "commander";
 import { ConfigFileError, defaultConfigPath, loadConfig } from "../config.js";
-import { DEFAULT_USER_AGENT, HttpError, NetworkError, requestJson } from "../http.js";
+import { DEFAULT_USER_AGENT, HttpError, NetworkError, redactSecret, requestJson } from "../http.js";
 import { parseOutputFormat, printData, validateFormatOptions, type FormatOption, type OutputFormat } from "../output.js";
 import { CLI_VERSION } from "../version.js";
 import type { CommandIo } from "./auth.js";
@@ -37,15 +37,21 @@ type DoctorOutput = {
 export function createDoctorCommand(options: DoctorCommandOptions): Command {
   return new Command("doctor")
     .description("check apexcn-cli installation, auth, and API reachability")
+    .option("--check-ask <question>", "also check the RAG ask endpoint with a read-only question")
     .option("--json", "pretty-print JSON")
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
-    .action(async (commandOptions: FormatOption) => {
+    .action(async (commandOptions: FormatOption & { checkAsk?: string }) => {
       if (!validateFormatOptions(options, commandOptions)) {
+        return;
+      }
+      if (commandOptions.checkAsk !== undefined && commandOptions.checkAsk.trim().length === 0) {
+        options.stderr("--check-ask must not be blank\n");
+        process.exitCode = 1;
         return;
       }
       let result: DoctorOutput;
       try {
-        result = await runDoctor(options);
+        result = await runDoctor(options, commandOptions);
       } catch (error) {
         if (!(error instanceof ConfigFileError)) {
           throw error;
@@ -63,7 +69,7 @@ export function createDoctorCommand(options: DoctorCommandOptions): Command {
     });
 }
 
-async function runDoctor(options: DoctorCommandOptions): Promise<DoctorOutput> {
+async function runDoctor(options: DoctorCommandOptions, commandOptions: { checkAsk?: string } = {}): Promise<DoctorOutput> {
   const configPath = options.configPath ?? defaultConfigPath();
   const config = await loadConfig(configPath);
   const profile = config.current;
@@ -80,6 +86,12 @@ async function runDoctor(options: DoctorCommandOptions): Promise<DoctorOutput> {
   checks.push(await checkApi("me", session, "/api/v1/me"));
   checks.push(await checkApi("categories", session, "/api/v1/categories"));
   checks.push(await checkApi("search", session, "/api/v1/search", { keyword: "APEX", pageSize: 1 }));
+  if (commandOptions.checkAsk !== undefined) {
+    checks.push(await checkApi("ask", session, "/api/v1/ask", undefined, {
+      method: "POST",
+      body: { question: commandOptions.checkAsk, topK: 1 }
+    }));
+  }
 
   return {
     ok: checks.every((check) => check.ok),
@@ -93,14 +105,20 @@ async function checkApi(
   name: string,
   session: { baseUrl: string; token: string },
   path: string,
-  query?: Record<string, string | number>
+  query?: Record<string, string | number>,
+  requestOptions: { method?: string; body?: unknown } = {}
 ): Promise<DoctorCheck> {
   try {
-    const data = await requestJson<{ requestId?: string }>(session.baseUrl, path, { token: session.token, query });
+    const data = await requestJson<{ requestId?: string }>(session.baseUrl, path, {
+      token: session.token,
+      query,
+      method: requestOptions.method,
+      body: requestOptions.body
+    });
     return { name, ok: true, requestId: data.requestId };
   } catch (error) {
     if (error instanceof HttpError) {
-      return { name, ok: false, message: error.message, status: error.status, requestId: error.requestId };
+      return { name, ok: false, message: redactSecret(error.message, session.token), status: error.status, requestId: error.requestId };
     }
     if (error instanceof NetworkError) {
       return { name, ok: false, message: error.message };

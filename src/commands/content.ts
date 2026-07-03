@@ -3,7 +3,7 @@ import { stdin as processStdin, stdout as processStdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { Command, InvalidArgumentError, Option } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
-import { HttpError, NetworkError, requestJson } from "../http.js";
+import { HttpError, NetworkError, redactSecret, requestJson } from "../http.js";
 import { blockText, fieldText, isRecord, itemsFromData, outputFormat, parseOutputFormat, printData, validateFormatOptions, type FormatOption, type JsonOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
 
@@ -423,8 +423,9 @@ class CliValidationError extends Error {
 }
 
 async function runApi(options: ApiCommandOptions, callback: (session: Session) => Promise<void>): Promise<void> {
+  let session: Session | undefined;
   try {
-    const session = await loadSession(options);
+    session = await loadSession(options);
     if (!session) {
       return;
     }
@@ -432,7 +433,7 @@ async function runApi(options: ApiCommandOptions, callback: (session: Session) =
   } catch (error) {
     if (error instanceof HttpError) {
       const requestId = error.requestId ? ` requestId=${error.requestId}` : "";
-      options.stderr(`HTTP ${error.status}: ${error.message}${requestId}\n`);
+      options.stderr(`HTTP ${error.status}: ${redactSecret(error.message, session?.token)}${requestId}\n`);
       process.exitCode = 1;
       return;
     }
@@ -566,6 +567,7 @@ function formatTopicText(data: unknown): string {
     return "";
   }
   return lines([
+    line("id", topic.id),
     line("Title", topic.title),
     line("Author", topic.createdByName ?? topic.authorName ?? topic.createdBy),
     line("Category", topic.categoryName),

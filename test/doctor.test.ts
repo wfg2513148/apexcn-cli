@@ -53,11 +53,12 @@ describe("doctor command", () => {
     expect(fetch).toHaveBeenNthCalledWith(1, "https://oracleapex.cn/ords/test/api/v1/me", expect.any(Object));
     expect(fetch).toHaveBeenNthCalledWith(2, "https://oracleapex.cn/ords/test/api/v1/categories", expect.any(Object));
     expect(fetch).toHaveBeenNthCalledWith(3, "https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&pageSize=1", expect.any(Object));
+    expect(fetch).toHaveBeenCalledTimes(3);
     const data = JSON.parse(stdout.join(""));
     expect(data.ok).toBe(true);
     expect(data.diagnostics).toEqual(expect.objectContaining({
-      cliVersion: "0.3.0",
-      userAgent: "apexcn-cli/0.3.0",
+      cliVersion: "0.4.0",
+      userAgent: "apexcn-cli/0.4.0",
       configPath: expect.stringContaining("config.json"),
       nodeVersion: expect.stringMatching(/^v\d+/),
       platform: process.platform,
@@ -75,6 +76,94 @@ describe("doctor command", () => {
     expect(process.exitCode).toBeUndefined();
   });
 
+  test("rejects blank ask checks before loading a profile", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn());
+    const program = createProgram({
+      configPath: await tempConfigPath(),
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "--check-ask", "   ", "--json"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toBe("--check-ask must not be blank\n");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("redacts the active token from doctor check failures", async () => {
+    const responses = [
+      { user: { id: 1, nickname: "Tester" }, requestId: "req-me" },
+      { items: [{ id: 4, name: "APEX 进阶技巧" }], requestId: "req-categories" },
+      { items: [{ id: 42, title: "APEX REST" }], requestId: "req-search" },
+      Response.json(
+        { error: { message: "token abcdefghijklmnopqrstuvwxyz is not allowed", requestId: "req-ask-bad" } },
+        { status: 403 }
+      )
+    ];
+    const { program, stdout, stderr } = await configuredProgram(async () => {
+      const next = responses.shift();
+      return next instanceof Response ? next : Response.json(next);
+    });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "--check-ask", "How?", "--json"]);
+
+    const data = JSON.parse(stdout.join(""));
+    expect(data.ok).toBe(false);
+    expect(data.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: "ask",
+        ok: false,
+        status: 403,
+        requestId: "req-ask-bad",
+        message: "token [redacted] is not allowed"
+      })
+    ]));
+    expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("checks ask only when explicitly requested", async () => {
+    const responses = [
+      { user: { id: 1, nickname: "Tester" }, requestId: "req-me" },
+      { items: [{ id: 4, name: "APEX 进阶技巧" }], requestId: "req-categories" },
+      { items: [{ id: 42, title: "APEX REST" }], requestId: "req-search" },
+      { answer: "APEX answer", requestId: "req-ask" }
+    ];
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json(responses.shift()));
+
+    await program.parseAsync(["node", "apexcn", "doctor", "--check-ask", "How to use APEX?", "--json"]);
+
+    expect(fetch).toHaveBeenNthCalledWith(
+      4,
+      "https://oracleapex.cn/ords/test/api/v1/ask",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ question: "How to use APEX?", topK: 1 }),
+        headers: expect.objectContaining({
+          Authorization: "Bearer abcdefghijklmnopqrstuvwxyz",
+          "X-APEXCN-API-Key": "abcdefghijklmnopqrstuvwxyz"
+        })
+      })
+    );
+    const data = JSON.parse(stdout.join(""));
+    expect(data.ok).toBe(true);
+    expect(data.checks.map((check: { name: string; ok: boolean }) => [check.name, check.ok])).toEqual([
+      ["profile", true],
+      ["me", true],
+      ["categories", true],
+      ["search", true],
+      ["ask", true]
+    ]);
+    expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBeUndefined();
+  });
+
   test("supports explicit output formats", async () => {
     const responses = [
       { user: { id: 1, nickname: "Tester" }, requestId: "req-me" },
@@ -86,8 +175,8 @@ describe("doctor command", () => {
     await program.parseAsync(["node", "apexcn", "doctor", "--format", "text"]);
 
     expect(stdout.join("")).toContain("apexcn doctor: ok\n");
-    expect(stdout.join("")).toContain("CLI Version: 0.3.0\n");
-    expect(stdout.join("")).toContain("User Agent: apexcn-cli/0.3.0\n");
+    expect(stdout.join("")).toContain("CLI Version: 0.4.0\n");
+    expect(stdout.join("")).toContain("User Agent: apexcn-cli/0.4.0\n");
     expect(stdout.join("")).toContain("Config Path: ");
     expect(stdout.join("")).toContain("OK search requestId=req-search\n");
   });
@@ -109,7 +198,7 @@ describe("doctor command", () => {
       await program.parseAsync(argv);
 
       expect(stdout.join("")).toContain("apexcn doctor: ok\n");
-      expect(stdout.join("")).toContain("CLI Version: 0.3.0\n");
+      expect(stdout.join("")).toContain("CLI Version: 0.4.0\n");
       expect(() => JSON.parse(stdout.join(""))).toThrow();
       vi.unstubAllGlobals();
     }

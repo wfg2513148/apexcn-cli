@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { HttpError, joinUrl, NetworkError, requestJson } from "../src/http.js";
+import { HttpError, joinUrl, NetworkError, redactSecret, requestJson } from "../src/http.js";
 
 describe("http", () => {
   afterEach(() => {
@@ -46,7 +46,7 @@ describe("http", () => {
       headers: {
         Authorization: "Bearer abc123",
         "X-APEXCN-API-Key": "abc123",
-        "User-Agent": "apexcn-cli/0.3.0",
+        "User-Agent": "apexcn-cli/0.4.0",
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ title: "Hello" })
@@ -144,5 +144,10 @@ describe("http", () => {
       url: "https://oracleapex.cn/ords/apexcn/api/v1/me",
       cause
     } satisfies Partial<NetworkError>);
+  });
+
+  test("redactSecret replaces exact secret values", () => {
+    expect(redactSecret("token abc123 failed: abc123", "abc123")).toBe("token [redacted] failed: [redacted]");
+    expect(redactSecret("token abc123 failed", undefined)).toBe("token abc123 failed");
   });
 });
