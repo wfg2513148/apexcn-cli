@@ -482,9 +482,11 @@ describe("content commands", () => {
 
     for (const path of apiDryRunCommands) {
       expect(leafCommand(program, path).helpInformation()).toContain("--dry-run");
+      expect(leafCommand(program, path).helpInformation()).toContain("--preview");
     }
     for (const path of neverApiDryRunCommands) {
       expect(leafCommand(program, path).helpInformation()).not.toContain("--dry-run");
+      expect(leafCommand(program, path).helpInformation()).not.toContain("--preview");
     }
   });
 
@@ -493,6 +495,7 @@ describe("content commands", () => {
 
     for (const path of neverApiDryRunCommands) {
       expect(leafCommand(program, path).helpInformation()).not.toContain("--dry-run");
+      expect(leafCommand(program, path).helpInformation()).not.toContain("--preview");
     }
   });
 
@@ -773,6 +776,43 @@ describe("content commands", () => {
     ]);
   });
 
+  test("write commands can print preview plans without calling the API", async () => {
+    const { program, stdout, fetch } = await configuredProgram(async () => Response.json({ ok: true }));
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "reply",
+      "create",
+      "42",
+      "--content",
+      "Preview body",
+      "--preview"
+    ]);
+    await program.parseAsync(["node", "apexcn", "favorite", "add", "42", "--preview"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    const plans = stdout.join("").trim().split("\n").map((line) => JSON.parse(line));
+    expect(plans).toEqual([
+      {
+        dryRun: true,
+        profile: "test@oci",
+        baseUrl: "https://oracleapex.cn/ords/test",
+        method: "POST",
+        path: "/api/v1/topics/42/replies",
+        body: { content: "Preview body" }
+      },
+      {
+        dryRun: true,
+        profile: "test@oci",
+        baseUrl: "https://oracleapex.cn/ords/test",
+        method: "POST",
+        path: "/api/v1/topics/42/favorite"
+      }
+    ]);
+  });
+
   test("delete commands require explicit confirmation", async () => {
     const { program, stderr } = await configuredProgram(async () => Response.json({ ok: true }));
 
@@ -791,18 +831,33 @@ describe("content commands", () => {
     expect(process.exitCode).toBe(1);
   });
 
-  test("topic dry-run create still requires category id without loading categories", async () => {
+  test("topic dry-run and preview create still require category id without loading categories", async () => {
+    const cases = [
+      {
+        argv: ["node", "apexcn", "topic", "create", "--title", "CLI title", "--content", "CLI body", "--dry-run"],
+        message: "Missing --category-id in dry-run mode\n"
+      },
+      {
+        argv: ["node", "apexcn", "topic", "create", "--title", "CLI title", "--content", "CLI body", "--preview"],
+        message: "Missing --category-id in preview mode\n"
+      }
+    ];
+
+    for (const item of cases) {
     const { program, stdout, stderr, fetch } = await configuredProgram(
       async () => Response.json({ ok: true }),
       { isStdinTTY: () => true }
     );
 
-    await program.parseAsync(["node", "apexcn", "topic", "create", "--title", "CLI title", "--content", "CLI body", "--dry-run"]);
+      await program.parseAsync(item.argv);
 
-    expect(fetch).not.toHaveBeenCalled();
-    expect(stdout.join("")).toBe("");
-    expect(stderr.join("")).toBe("Missing --category-id in dry-run mode\n");
-    expect(process.exitCode).toBe(1);
+      expect(fetch).not.toHaveBeenCalled();
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).toBe(item.message);
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+      vi.unstubAllGlobals();
+    }
   });
 
   test("topic create fails without content", async () => {

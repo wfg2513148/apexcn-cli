@@ -128,6 +128,17 @@ apexcn topic create \
   --title "How do I call a REST API from APEX?" \
   --content-file ./post.md \
   --tags "APEX,ORDS,REST" \
+  --preview
+```
+
+After the preview looks correct, execute it:
+
+```bash
+apexcn topic create \
+  --category-id 4 \
+  --title "How do I call a REST API from APEX?" \
+  --content-file ./post.md \
+  --tags "APEX,ORDS,REST" \
   --json
 ```
 
@@ -263,4 +274,4 @@ apexcn topic delete 30549 --yes --force --confirm-title "Full title" --json
 
 ## API write dry-run classification
 
-Installer `--dry-run` is separate from CLI API command dry-run. Installer dry-run checks installation actions; CLI API dry-run prints the community API write request that would be sent without executing it. API write dry-run is available only for `topic create/update/edit/delete`, `reply create/update/edit/delete`, `favorite add/remove`, and `subscription add/remove`; aliases `thread` and `post` inherit the same classification. `ask` uses POST but is a read-like RAG command and is excluded. Dry-run does not require a prior `category list` or `topic view`; topic creation still requires `--category-id`, and topic deletion still requires `--yes --force --confirm-title`.
+Installer `--dry-run` is separate from CLI API command preview. Installer dry-run checks installation actions; CLI API `--preview` / `--dry-run` prints the community API write request that would be sent without executing it. API write preview is available only for `topic create/update/edit/delete`, `reply create/update/edit/delete`, `favorite add/remove`, and `subscription add/remove`; aliases `thread` and `post` inherit the same classification. `ask` uses POST but is a read-like RAG command and is excluded. Preview does not require a prior `category list` or `topic view`; topic creation still requires `--category-id`, and topic deletion still requires `--yes --force --confirm-title`.

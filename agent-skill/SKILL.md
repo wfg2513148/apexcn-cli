@@ -54,7 +54,8 @@ apexcn auth set-token \
 - Prefer `--content-file` for long posts or replies. Use `--content-file -` when piping generated content through stdin.
 - Never pass both `--content` and `--content-file`; choose one body source.
 - Before creating a topic, run `apexcn category list --json` and use a valid `--category-id`.
-- For API write dry-runs, do not preflight with `category list` or `topic view`; pass the same required write flags and add `--dry-run`.
+- Before API writes, preview the exact request with `--preview` or `--dry-run`, show it to the user, then execute only after confirmation.
+- For API write previews, do not preflight with `category list` or `topic view`; pass the same required write flags and add `--preview` or `--dry-run`.
 - Do not rely on interactive prompts. Supply required non-interactive flags explicitly.
 - Before deleting a topic, run `apexcn topic view <thread_id> --json`, then pass `--yes --force --confirm-title "<exact title>"`.
 - Before deleting a reply, confirm the target post id belongs to the intended thread, then pass `--yes --force`.
@@ -70,6 +71,7 @@ apexcn auth set-token \
 apexcn search "APEX" --page-size 5 --json
 apexcn ask "Oracle APEX 如何调用 REST API？" --top-k 3 --json
 apexcn topic view 30549 --json
+apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --preview
 apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --json
 generator | apexcn topic create --category-id 4 --title "标题" --content-file - --json
 apexcn topic edit 30549 --content-file ./updated.md --json
