@@ -79,19 +79,26 @@ describe("release version check", () => {
 
       expect(output).toContain("Release artifact check passed for");
       expect(entries).toEqual(expect.arrayContaining([
-        "package.json",
-        "package-lock.json",
-        "dist/index.js",
-        "dist/version.js",
-        "node_modules/commander/package.json",
-        "agent-skill/SKILL.md",
-        "docs/quickstart.md",
-        "scripts/install-agent.ps1",
-        "scripts/install-agent.sh"
+        "package/package.json",
+        "package/dist/index.js",
+        "package/dist/version.js",
+        "package/node_modules/commander/package.json",
+        "package/agent-skill/SKILL.md",
+        "package/docs/quickstart.md",
+        "package/scripts/install-agent.ps1",
+        "package/scripts/install-agent.sh"
       ]));
-      expect(entries.some((entry) => entry.startsWith(".github/"))).toBe(false);
-      expect(entries.some((entry) => entry.startsWith("artifacts/"))).toBe(false);
-      expect(entries.some((entry) => entry.startsWith("coverage/"))).toBe(false);
+      expect(entries.some((entry) => entry.startsWith("package/.github/"))).toBe(false);
+      expect(entries.some((entry) => entry.startsWith("package/artifacts/"))).toBe(false);
+      expect(entries.some((entry) => entry.startsWith("package/coverage/"))).toBe(false);
+      expect(entries.some((entry) => entry.startsWith("package/src/"))).toBe(false);
+      expect(entries.some((entry) => entry.startsWith("package/test/"))).toBe(false);
+      expect(entries).not.toEqual(expect.arrayContaining([
+        "package/scripts/check-release-version.mjs",
+        "package/scripts/check-release-artifacts.mjs",
+        "package/tsconfig.json",
+        "package/vitest.config.ts"
+      ]));
     } finally {
       rmSync(join(repoRoot, artifactsDir), { recursive: true, force: true });
     }

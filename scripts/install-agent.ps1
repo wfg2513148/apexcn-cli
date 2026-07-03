@@ -4,7 +4,7 @@ param(
   [switch]$InstallCodexSkill,
   [switch]$InstallAgentSkills,
   [string]$SourceDir = "",
-  [string]$PackageUrl = $(if ($env:APEXCN_CLI_PACKAGE_URL) { $env:APEXCN_CLI_PACKAGE_URL } else { "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.14.0/apexcn-cli.tgz" }),
+  [string]$PackageUrl = $(if ($env:APEXCN_CLI_PACKAGE_URL) { $env:APEXCN_CLI_PACKAGE_URL } else { "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.15.0/apexcn-cli.tgz" }),
   [string]$Repo = $(if ($env:APEXCN_CLI_REPO) { $env:APEXCN_CLI_REPO } else { "" }),
   [string]$Ref = $(if ($env:APEXCN_CLI_REF) { $env:APEXCN_CLI_REF } else { "main" }),
   [string]$InstallRoot = $(if ($env:APEXCN_CLI_INSTALL_ROOT) { $env:APEXCN_CLI_INSTALL_ROOT } else { Join-Path $env:LOCALAPPDATA "apexcn\tools\apexcn-cli" }),
@@ -168,6 +168,13 @@ function Build-Cli {
   if ($DryRun) {
     Write-Step "DRY-RUN: cd $cliRoot && npm ci"
     Write-Step "DRY-RUN: cd $cliRoot && npm run build"
+    return
+  }
+
+  $entry = Join-Path $cliRoot "dist\index.js"
+  $commander = Join-Path $cliRoot "node_modules\commander"
+  if ((-not $SourceDir) -and (-not $UseGit) -and (Test-Path $entry) -and (Test-Path $commander)) {
+    Write-Step "Using bundled prebuilt apexcn-cli package."
     return
   }
 

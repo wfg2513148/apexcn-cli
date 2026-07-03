@@ -1,7 +1,7 @@
 import { chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { describe, expect, test } from 'vitest';
 
 const repoRoot = join(__dirname, '..');
@@ -19,7 +19,7 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('--install-agent-skills');
     expect(script).toContain('APEXCN_API_KEY');
     expect(script).toContain('https://oracleapex.cn/ords/api');
-    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.14.0/apexcn-cli.tgz');
+    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.15.0/apexcn-cli.tgz');
     expect(script).toContain('--package-url');
     expect(script).toContain('Downloading apexcn-cli package');
     expect(script).toContain('cli_root');
@@ -63,7 +63,7 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('InstallAgentSkills');
     expect(script).toContain('APEXCN_API_KEY');
     expect(script).toContain('https://oracleapex.cn/ords/api');
-    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.14.0/apexcn-cli.tgz');
+    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.15.0/apexcn-cli.tgz');
     expect(script).toContain('PackageUrl');
     expect(script).toContain('Downloading apexcn-cli package');
     expect(script).toContain('Get-CliRoot');
@@ -72,6 +72,7 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('Test-LauncherFileLooksLikeApexcnCli');
     expect(script).toContain('auth set-token');
     expect(script).toContain('npm run build');
+    expect(script).toContain('Using bundled prebuilt apexcn-cli package.');
     expect(script).toContain('else { "main" }');
     expect(script).not.toContain('feature/apexcn-cli-ords-api');
   });
@@ -408,7 +409,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         env: { ...process.env, HOME: join(tempRoot, 'home') },
         encoding: 'utf8',
       });
-      expect(version).toBe('0.14.0\n');
+      expect(version).toBe('0.15.0\n');
       expect(readFileSync(join(installRoot, 'dist', 'index.js'), 'utf8')).not.toContain('stale');
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
@@ -423,7 +424,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         cwd: repoRoot,
         encoding: 'utf8',
       });
-      const archive = join(tempRoot, 'apexcn-cli-0.14.0.tgz');
+      const archive = join(tempRoot, 'apexcn-cli-0.15.0.tgz');
 
       const output = execFileSync(
         'bash',
@@ -449,7 +450,60 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         env: { ...process.env, HOME: join(tempRoot, 'home') },
         encoding: 'utf8',
       });
-      expect(version).toBe('0.14.0\n');
+      expect(version).toBe('0.15.0\n');
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  }, 30000);
+
+  test('Windows installer can install the npm package tarball layout when pwsh is available', () => {
+    const pwsh = process.env.PWSH_BIN ?? 'pwsh';
+    const probe = spawnSync(pwsh, ['-NoProfile', '-Command', '$PSVersionTable.PSVersion.ToString()'], {
+      encoding: 'utf8',
+    });
+    if (probe.status !== 0) {
+      console.warn('Skipping PowerShell installer tarball test because pwsh is unavailable.');
+      return;
+    }
+
+    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-pwsh-package-install-'));
+
+    try {
+      execFileSync('npm', ['pack', '--pack-destination', tempRoot], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+      });
+      const archive = join(tempRoot, 'apexcn-cli-0.15.0.tgz');
+
+      const output = execFileSync(
+        pwsh,
+        [
+          '-NoProfile',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-File',
+          join(repoRoot, 'scripts/install-agent.ps1'),
+          '-PackageUrl',
+          `file://${archive}`,
+          '-InstallRoot',
+          join(tempRoot, 'install'),
+          '-BinDir',
+          join(tempRoot, 'bin'),
+          '-Yes',
+        ],
+        {
+          cwd: repoRoot,
+          env: { ...process.env, USERPROFILE: join(tempRoot, 'home') },
+          encoding: 'utf8',
+        },
+      );
+      expect(output).toContain('Using bundled prebuilt apexcn-cli package.');
+
+      const version = execFileSync(join(tempRoot, 'bin', 'apexcn.cmd'), ['--version'], {
+        env: { ...process.env, USERPROFILE: join(tempRoot, 'home') },
+        encoding: 'utf8',
+      });
+      expect(version).toBe('0.15.0\n');
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
@@ -545,8 +599,8 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
     expect(doc).toContain('APEXCN_CLI_INSTALL_AGENT_SKILLS');
     expect(doc).toContain('--install-agent-skills');
     expect(doc).toContain('当前用户运行该命令的 AI 工具全局 Skills 目录');
-    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.14.0/install-agent.sh');
-    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.14.0/install-agent.ps1');
+    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.15.0/install-agent.sh');
+    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.15.0/install-agent.ps1');
     expect(doc).not.toContain('wfg2513148/apexcn-forums/main/cli/install-agent.sh');
     expect(doc).not.toContain('wfg2513148/apexcn-forums/main/cli/install-agent.ps1');
     expect(doc).not.toContain('feature/apexcn-cli-ords-api');

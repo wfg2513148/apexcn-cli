@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -9,7 +9,6 @@ const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const args = parseArgs(process.argv.slice(2));
 const expectedVersion = args.expectedVersion ?? readJson("package.json").version;
 const artifactsDir = args.artifactsDir ? join(repoRoot, args.artifactsDir) : mkdtempSync(join(tmpdir(), "apexcn-release-"));
-const packageDir = join(artifactsDir, "package");
 const archivePath = join(artifactsDir, "apexcn-cli.tgz");
 
 buildArtifacts();
@@ -43,42 +42,29 @@ function parseArgs(values) {
 
 function buildArtifacts() {
   rmSync(artifactsDir, { recursive: true, force: true });
-  mkdirSync(packageDir, { recursive: true });
-
-  for (const path of trackedReleaseFiles()) {
-    const source = join(repoRoot, path);
-    const target = join(packageDir, path);
-    mkdirSync(dirname(target), { recursive: true });
-    cpSync(source, target, { recursive: true, dereference: false });
-  }
-  copyRequired("dist", "dist");
-  copyRequired("node_modules/commander", "node_modules/commander");
-
-  execFileSync("tar", ["-czf", archivePath, "-C", packageDir, "."], { cwd: repoRoot });
+  mkdirSync(artifactsDir, { recursive: true });
+  const pack = runNpmPack();
+  renameSync(join(artifactsDir, pack.filename), archivePath);
   cpSync(join(repoRoot, "scripts/install-agent.sh"), join(artifactsDir, "install-agent.sh"));
   cpSync(join(repoRoot, "scripts/install-agent.ps1"), join(artifactsDir, "install-agent.ps1"));
 }
 
-function copyRequired(sourcePath, targetPath) {
-  const source = join(repoRoot, sourcePath);
-  const target = join(packageDir, targetPath);
-  mkdirSync(dirname(target), { recursive: true });
+function runNpmPack() {
   try {
-    cpSync(source, target, { recursive: true, dereference: false });
+    const output = execFileSync("npm", ["pack", "--json", "--pack-destination", artifactsDir], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    const pack = JSON.parse(output)[0];
+    const expectedFilename = `apexcn-cli-${expectedVersion}.tgz`;
+    if (pack.filename !== expectedFilename) {
+      throw new Error(`npm pack filename: expected ${expectedFilename}, got ${String(pack.filename)}`);
+    }
+    return pack;
   } catch (error) {
-    throw new Error(`Unable to copy ${sourcePath}. Run npm ci and npm run build before release checks. ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Unable to build release package with npm pack. Run npm ci and npm run build before release checks. ${error instanceof Error ? error.message : String(error)}`);
   }
-}
-
-function trackedReleaseFiles() {
-  const output = execFileSync("git", ["ls-files", "-z"], { cwd: repoRoot });
-  return output.toString("utf8").split("\0").filter((path) =>
-    path.length > 0 &&
-    !path.startsWith(".github/") &&
-    !path.startsWith("artifacts/") &&
-    !path.startsWith("coverage/") &&
-    !path.includes("/.DS_Store")
-  );
 }
 
 function verifyArtifacts() {
@@ -93,15 +79,14 @@ function verifyArtifacts() {
     .map((entry) => entry.replace(/^\.\//, "")));
 
   const requiredFiles = [
-    "package.json",
-    "package-lock.json",
-    "agent-skill/SKILL.md",
-    "docs/quickstart.md",
-    "dist/index.js",
-    "dist/version.js",
-    "node_modules/commander/package.json",
-    "scripts/install-agent.sh",
-    "scripts/install-agent.ps1"
+    "package/package.json",
+    "package/agent-skill/SKILL.md",
+    "package/docs/quickstart.md",
+    "package/dist/index.js",
+    "package/dist/version.js",
+    "package/node_modules/commander/package.json",
+    "package/scripts/install-agent.sh",
+    "package/scripts/install-agent.ps1"
   ];
   for (const file of requiredFiles) {
     if (!entries.has(file)) {
@@ -109,14 +94,23 @@ function verifyArtifacts() {
     }
   }
 
-  const forbiddenPrefixes = [".git/", ".github/", "artifacts/", "coverage/"];
+  const forbiddenPrefixes = ["package/.git/", "package/.github/", "package/artifacts/", "package/coverage/", "package/src/", "package/test/"];
+  const forbiddenFiles = [
+    "package/scripts/check-release-version.mjs",
+    "package/scripts/check-release-artifacts.mjs",
+    "package/tsconfig.json",
+    "package/vitest.config.ts"
+  ];
   for (const entry of entries) {
     if (forbiddenPrefixes.some((prefix) => entry.startsWith(prefix))) {
       throw new Error(`release package contains forbidden path ${entry}`);
     }
+    if (forbiddenFiles.includes(entry)) {
+      throw new Error(`release package contains forbidden file ${entry}`);
+    }
   }
 
-  const packageJson = JSON.parse(execFileSync("tar", ["-xOzf", archivePath, "./package.json"], {
+  const packageJson = JSON.parse(execFileSync("tar", ["-xOzf", archivePath, "package/package.json"], {
     cwd: repoRoot,
     encoding: "utf8"
   }));
