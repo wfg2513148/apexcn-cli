@@ -51,6 +51,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   program.addCommand(createRelationCommand("favorite", commandOptions));
   program.addCommand(createRelationCommand("subscription", commandOptions));
   program.addCommand(createAskCommand(commandOptions));
+  program.addCommand(createCommandsCommand(program, io));
   configureCommandOutput(program, io);
   const parseAsync = program.parseAsync.bind(program);
   program.parseAsync = async (argv, parseOptions) => {
@@ -63,6 +64,70 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
     }
   };
   return program;
+}
+
+type CommandManifest = {
+  version: string;
+  commands: Array<{
+    path: string;
+    aliases: string[];
+    description: string;
+    options: string[];
+  }>;
+};
+
+function createCommandsCommand(root: Command, io: CommandIo): Command {
+  return new Command("commands")
+    .description("print a machine-readable command manifest")
+    .option("--json", "pretty-print JSON")
+    .action((options: { json?: boolean }) => {
+      const manifest = commandManifest(root);
+      if (options.json) {
+        io.stdout(`${JSON.stringify(manifest, null, 2)}\n`);
+        return;
+      }
+      io.stdout(manifest.commands.map((command) => {
+        const optionsText = command.options.length > 0 ? `\t${command.options.join(" ")}` : "";
+        return `${command.path}${optionsText}`;
+      }).join("\n") + "\n");
+    });
+}
+
+function commandManifest(root: Command): CommandManifest {
+  return {
+    version: CLI_VERSION,
+    commands: root.commands.flatMap((child) => leafCommands(child)).map((item) => ({
+      path: item.path.join(" "),
+      aliases: aliasPaths(item.path, item.aliases).map((path) => path.join(" ")),
+      description: item.command.description(),
+      options: item.command.options.filter((option) => !option.hidden).map((option) => option.flags)
+    })).sort((left, right) => left.path.localeCompare(right.path))
+  };
+}
+
+function leafCommands(command: Command, path: string[] = [], aliases: string[][] = []): Array<{ command: Command; path: string[]; aliases: string[][] }> {
+  const nextPath = [...path, command.name()];
+  const nextAliases = [...aliases, command.aliases()];
+  if (command.commands.length === 0) {
+    return [{ command, path: nextPath, aliases: nextAliases }];
+  }
+  return command.commands.flatMap((child) => leafCommands(child, nextPath, nextAliases));
+}
+
+function aliasPaths(path: string[], aliases: string[][]): string[][] {
+  const results: string[][] = [[]];
+  path.forEach((part, index) => {
+    const alternatives = [part, ...(aliases[index] ?? [])];
+    const next: string[][] = [];
+    for (const result of results) {
+      for (const alternative of alternatives) {
+        next.push([...result, alternative]);
+      }
+    }
+    results.splice(0, results.length, ...next);
+  });
+  const canonical = path.join(" ");
+  return results.filter((result) => result.join(" ") !== canonical);
 }
 
 function parseConfigPath(value: string): string {

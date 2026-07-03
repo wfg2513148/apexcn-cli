@@ -37,6 +37,7 @@ apexcn --help
 apexcn doctor --json
 apexcn auth show --json
 apexcn me --json
+apexcn commands --json
 ```
 
 不要输出完整 API key。Do not output the full API key. If auth is missing and `APEXCN_API_KEY` is available, configure it:
@@ -51,6 +52,7 @@ apexcn auth set-token \
 ## Agent Rules
 
 - Always pass `--json` for machine-readability.
+- Use `apexcn commands --json` to inspect available commands and options instead of parsing help text.
 - Prefer `--content-file` for long posts or replies. Use `--content-file -` when piping generated content through stdin.
 - Never pass both `--content` and `--content-file`; choose one body source.
 - Before creating a topic, run `apexcn category list --json` and use a valid `--category-id`.
@@ -70,6 +72,7 @@ apexcn auth set-token \
 
 ```bash
 apexcn search "APEX" --page-size 5 --json
+apexcn commands --json
 apexcn ask "Oracle APEX 如何调用 REST API？" --top-k 3 --json
 apexcn topic view 30549 --json
 apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --preview

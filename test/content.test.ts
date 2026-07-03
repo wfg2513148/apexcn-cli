@@ -97,6 +97,7 @@ const neverApiDryRunCommands = [
   "auth remove",
   "auth show",
   "auth logout",
+  "commands",
   "doctor",
   "me",
   "category list",
