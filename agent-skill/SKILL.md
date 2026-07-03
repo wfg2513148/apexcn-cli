@@ -55,6 +55,7 @@ apexcn auth set-token \
 - `apexcn draft question` is local-only and does not require auth preflight when you are only drafting content; run auth checks before API reads or writes.
 - Use `apexcn draft reply --format text` to prepare a local Markdown reply before `reply create --content-file`.
 - Use `apexcn review topic` before `topic create --preview` when you have a local Markdown draft or question-draft JSON. It is local-only, detects placeholders and possible secrets, and never publishes.
+- Use `apexcn workflow plan` when you need a machine-readable sequence of local, preview, and execute steps. It only plans; it never executes commands.
 - Use `apexcn commands --json` to inspect available commands, purposes, safety metadata, examples, and options instead of parsing help text.
 - This skill supports manifest `schemaVersion === 1`. If `schemaVersion` is missing or unsupported, do not consume structured `safety` or `examples`; upgrade `apexcn-cli` or ask the user before continuing.
 - Prefer manifest `examples[].command` for command shape, check `examples[].mode`, and inspect `safety.effects`, `safety.preview`, and `safety.confirmation` before writes or destructive actions.
@@ -82,6 +83,7 @@ apexcn research "REST API" --limit 3 --json
 apexcn draft question --title "标题" --problem "问题描述" --research-file ./research.json --format text
 apexcn draft reply --topic-id 30549 --answer "回复建议" --format text
 apexcn review topic --title "标题" --content-file ./question.md --category-id 4 --json
+apexcn workflow plan --goal ask-question --keyword "REST API" --title "标题" --problem "问题描述" --category-id 4 --json
 apexcn commands --json
 apexcn ask "Oracle APEX 如何调用 REST API？" --top-k 3 --json
 apexcn topic view 30549 --json

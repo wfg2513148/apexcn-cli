@@ -16,6 +16,7 @@ import {
 import { createDraftCommand } from "./commands/draft.js";
 import { createMeCommand } from "./commands/me.js";
 import { createReviewCommand } from "./commands/review.js";
+import { createWorkflowCommand } from "./commands/workflow.js";
 import { CLI_VERSION } from "./version.js";
 
 export type CreateProgramOptions = Partial<CommandIo> & {
@@ -49,6 +50,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   program.addCommand(createDraftCommand(commandOptions));
   program.addCommand(createMeCommand(commandOptions));
   program.addCommand(createReviewCommand(commandOptions));
+  program.addCommand(createWorkflowCommand(commandOptions));
   program.addCommand(createCategoryCommand(commandOptions));
   program.addCommand(createSearchCommand(commandOptions));
   program.addCommand(createResearchCommand(commandOptions));
@@ -183,7 +185,8 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "topic create": "create a community topic",
   "topic delete": "delete a topic after explicit confirmation",
   "topic update": "update an existing topic",
-  "topic view": "view a community topic"
+  "topic view": "view a community topic",
+  "workflow plan": "plan a local, reviewable APEX Chinese Community workflow"
 };
 
 const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
@@ -324,6 +327,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "topic view": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn topic view 30549 --json", mode: "read" }]
+  },
+  "workflow plan": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: 'apexcn workflow plan --goal ask-question --keyword "REST API" --title "标题" --problem "问题描述" --category-id 4 --json', mode: "read" }]
   }
 };
 

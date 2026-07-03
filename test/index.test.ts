@@ -17,7 +17,7 @@ describe("CLI entrypoint detection", () => {
 
     await expect(program.parseAsync(["node", "apexcn", "--version"])).rejects.toMatchObject({ code: "commander.version" });
 
-    expect(output.join("")).toBe("4.0.0\n");
+    expect(output.join("")).toBe("5.0.0\n");
   });
 
   test("prints a machine-readable command manifest", async () => {
@@ -31,7 +31,7 @@ describe("CLI entrypoint detection", () => {
 
     const manifest = JSON.parse(output.join(""));
     expect(manifest.schemaVersion).toBe(1);
-    expect(manifest.version).toBe("4.0.0");
+    expect(manifest.version).toBe("5.0.0");
     expect(manifest.schema).toEqual({
       safetyEffects: ["read", "api-write", "destructive", "config-read", "config-write", "auth", "secret", "diagnostic", "manifest"],
       previewPolicies: ["required", "available", "none"],
@@ -94,6 +94,14 @@ describe("CLI entrypoint detection", () => {
         examples: expect.arrayContaining([
           expect.objectContaining({ command: 'apexcn review topic --title "标题" --content-file ./question.md --category-id 4 --json', mode: "read" })
         ])
+      }),
+      expect.objectContaining({
+        path: "workflow plan",
+        options: expect.arrayContaining(["--goal <goal>", "--problem <text>", "--answer <text>", "--content-file <path>", "--include-execute", "--format <format>"]),
+        safety: expect.objectContaining({ effects: ["read"], preview: "none" }),
+        examples: expect.arrayContaining([
+          expect.objectContaining({ command: 'apexcn workflow plan --goal ask-question --keyword "REST API" --title "标题" --problem "问题描述" --category-id 4 --json', mode: "read" })
+        ])
       })
     ]));
   });
@@ -126,6 +134,7 @@ describe("CLI entrypoint detection", () => {
       expect.objectContaining({ path: "draft question", description: "draft a local community question from structured inputs and research links" }),
       expect.objectContaining({ path: "draft reply", description: "draft a local community reply from structured inputs and references" }),
       expect.objectContaining({ path: "review topic", description: "review a local topic draft before API preview or publish" }),
+      expect.objectContaining({ path: "workflow plan", description: "plan a local, reviewable APEX Chinese Community workflow" }),
       expect.objectContaining({ path: "search", description: "search community topics" }),
       expect.objectContaining({ path: "topic create", description: "create a community topic" }),
       expect.objectContaining({ path: "reply delete", description: "delete a reply after explicit confirmation" })

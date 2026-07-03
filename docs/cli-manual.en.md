@@ -191,6 +191,25 @@ JSON output always contains `kind`, `schemaVersion`, `ok`, `issues`, `warnings`,
 
 `suggestedCommand` is generated only when the input came from a reusable Markdown file. For stdin or draft JSON input, the command does not inline content into the shell and does not treat draft JSON as `--content-file`; `suggestedCommand` is `null`, and you should save the Markdown body to a file before running `topic create --content-file`. `review topic` does not replace `topic create --preview`; it is a local quality and safety gate before API preview.
 
+## workflow
+
+Generate an auditable local execution plan. This command does not read auth config, call the API, or execute any planned command:
+
+```bash
+apexcn workflow plan \
+  --goal ask-question \
+  --keyword "REST API" \
+  --title "APEX REST API returns 403" \
+  --problem "A page process gets 403 when calling a REST API." \
+  --category-id 4 \
+  --output-dir work \
+  --json
+```
+
+`--goal` accepts `ask-question`, `reply`, `research-only`, and `publish-topic`. JSON output always contains `kind: "workflow-plan"`, `schemaVersion: 1`, `goal`, `steps`, `checkpoints`, `files`, and `safetySummary`. Missing required inputs do not fail the command; they are listed in `checkpoints.missingInputs[]`. `ask-question` needs `--keyword`, `--title`, `--problem`, and `--category-id`; `reply` needs `--topic-id` and `--answer`; `publish-topic` needs `--title`, `--category-id`, and the only body source, `--content-file`.
+
+Plans use file paths only and never generate commands that inline long content or secrets. `ask-question` plans `research -> draft question -> review topic -> topic create --preview`; `reply` plans `topic view -> draft reply -> reply create --preview`; `publish-topic` plans `review topic -> topic create --preview`. Real API execute steps appear only with `--include-execute`, and those steps are marked `requiresConfirmation: true`.
+
 ## topic / thread
 
 `thread` is an alias of `topic`.
