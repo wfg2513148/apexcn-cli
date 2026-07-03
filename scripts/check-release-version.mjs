@@ -167,6 +167,14 @@ function checkReleaseWorkflow() {
 function checkCiWorkflow() {
   const path = ".github/workflows/ci.yml";
   const text = readText(path);
+  const testIndex = text.indexOf("npm test");
+  const releaseCheckIndex = text.indexOf("npm run check:release");
+  if (releaseCheckIndex === -1) {
+    failures.push(`${path}: missing npm run check:release`);
+  }
+  if (testIndex !== -1 && releaseCheckIndex !== -1 && releaseCheckIndex < testIndex) {
+    failures.push(`${path}: npm run check:release must run after npm test`);
+  }
   if (!text.includes("windows-latest")) {
     failures.push(`${path}: missing windows-latest installer coverage`);
   }

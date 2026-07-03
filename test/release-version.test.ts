@@ -115,6 +115,15 @@ describe("release version check", () => {
     expect(workflow).toContain("test/install-agent.test.ts test/release-version.test.ts");
   });
 
+  test("CI runs release checks after the full test suite", () => {
+    const workflow = readRepoFile(".github/workflows/ci.yml");
+    const testIndex = workflow.indexOf("npm test");
+    const releaseCheckIndex = workflow.indexOf("npm run check:release");
+
+    expect(testIndex).toBeGreaterThan(-1);
+    expect(releaseCheckIndex).toBeGreaterThan(testIndex);
+  });
+
   test("readonly e2e script skips when no API key is configured", () => {
     const result = spawnSync("bash", ["scripts/e2e-readonly.sh"], {
       cwd: repoRoot,
