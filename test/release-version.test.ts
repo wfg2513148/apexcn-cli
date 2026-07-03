@@ -30,4 +30,35 @@ describe("release version check", () => {
     expect(result.stderr).toContain("docs/quickstart.md release URL tag");
     expect(result.stderr).toContain("npm pack filename: expected apexcn-cli-0.0.0.tgz");
   }, 30000);
+
+  test("npm package contains only runtime and user-facing assets", () => {
+    const output = execFileSync("npm", ["pack", "--dry-run", "--json"], {
+      cwd: repoRoot,
+      encoding: "utf8"
+    });
+    const files = JSON.parse(output)[0].files.map((file: { path: string }) => file.path).sort();
+
+    expect(files).toEqual(expect.arrayContaining([
+      "README.md",
+      "agent-skill/SKILL.md",
+      "dist/index.js",
+      "docs/cli-manual.zh.md",
+      "docs/user-guide.en.md",
+      "node_modules/commander/package.json",
+      "package.json",
+      "scripts/install-agent.ps1",
+      "scripts/install-agent.sh"
+    ]));
+    expect(files).not.toEqual(expect.arrayContaining([
+      ".github/workflows/ci.yml",
+      "scripts/check-release-version.mjs",
+      "src/index.ts",
+      "test/content.test.ts",
+      "tsconfig.json",
+      "vitest.config.ts"
+    ]));
+    expect(files.some((path: string) => path.startsWith("src/"))).toBe(false);
+    expect(files.some((path: string) => path.startsWith("test/"))).toBe(false);
+    expect(files.some((path: string) => path.startsWith(".github/"))).toBe(false);
+  }, 30000);
 });
