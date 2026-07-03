@@ -24,6 +24,7 @@ checkPowerShellInstallerDefaultUrl("scripts/install-agent.ps1");
 checkMarkdownReleaseUrls(trackedMarkdownFiles());
 checkReleaseWorkflow();
 checkNpmPackFilename();
+checkReleaseArtifacts();
 
 if (failures.length > 0) {
   console.error(`Release version check failed for expected version ${expectedVersion}:`);
@@ -122,15 +123,22 @@ function checkReleaseWorkflow() {
   const path = ".github/workflows/release.yml";
   const text = readText(path);
   const checkIndex = text.indexOf("npm run check:release");
+  const artifactIndex = text.indexOf("scripts/check-release-artifacts.mjs");
   const releaseIndex = text.indexOf('gh release create "$GITHUB_REF_NAME"');
   if (checkIndex === -1) {
     failures.push(`${path}: missing npm run check:release`);
+  }
+  if (artifactIndex === -1) {
+    failures.push(`${path}: missing scripts/check-release-artifacts.mjs`);
   }
   if (releaseIndex === -1) {
     failures.push(`${path}: missing gh release create "$GITHUB_REF_NAME"`);
   }
   if (checkIndex !== -1 && releaseIndex !== -1 && checkIndex > releaseIndex) {
     failures.push(`${path}: npm run check:release must run before gh release create`);
+  }
+  if (artifactIndex !== -1 && releaseIndex !== -1 && artifactIndex > releaseIndex) {
+    failures.push(`${path}: release artifacts must be checked before gh release create`);
   }
 
   const releaseCommand = /gh release create "\$GITHUB_REF_NAME" \\\n([\s\S]*?)\n\s*--title/.exec(text);
@@ -171,5 +179,17 @@ function checkNpmPackFilename() {
   const pack = JSON.parse(output)[0];
   if (pack.filename !== expected) {
     failures.push(`npm pack filename: expected ${expected}, got ${String(pack.filename)}`);
+  }
+}
+
+function checkReleaseArtifacts() {
+  try {
+    execFileSync("node", ["scripts/check-release-artifacts.mjs", "--expected-version", expectedVersion], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (error) {
+    failures.push(`release artifact check failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }

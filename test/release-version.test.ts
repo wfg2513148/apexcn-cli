@@ -1,9 +1,11 @@
 import { execFileSync, spawnSync } from "node:child_process";
+import { rmSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
 const repoRoot = join(__dirname, "..");
 const script = join(repoRoot, "scripts/check-release-version.mjs");
+const artifactScript = join(repoRoot, "scripts/check-release-artifacts.mjs");
 
 describe("release version check", () => {
   test("passes for the current repository version", () => {
@@ -61,6 +63,38 @@ describe("release version check", () => {
     expect(files.some((path: string) => path.startsWith("src/"))).toBe(false);
     expect(files.some((path: string) => path.startsWith("test/"))).toBe(false);
     expect(files.some((path: string) => path.startsWith(".github/"))).toBe(false);
+  }, 30000);
+
+  test("release artifact check builds installable GitHub assets", () => {
+    const artifactsDir = `artifacts/test-release-${process.pid}`;
+    try {
+      const output = execFileSync("node", [artifactScript, "--artifacts-dir", artifactsDir], {
+        cwd: repoRoot,
+        encoding: "utf8"
+      });
+      const entries = execFileSync("tar", ["-tzf", join(artifactsDir, "apexcn-cli.tgz")], {
+        cwd: repoRoot,
+        encoding: "utf8"
+      }).split("\n").filter(Boolean).map((entry) => entry.replace(/^\.\//, ""));
+
+      expect(output).toContain("Release artifact check passed for");
+      expect(entries).toEqual(expect.arrayContaining([
+        "package.json",
+        "package-lock.json",
+        "dist/index.js",
+        "dist/version.js",
+        "node_modules/commander/package.json",
+        "agent-skill/SKILL.md",
+        "docs/quickstart.md",
+        "scripts/install-agent.ps1",
+        "scripts/install-agent.sh"
+      ]));
+      expect(entries.some((entry) => entry.startsWith(".github/"))).toBe(false);
+      expect(entries.some((entry) => entry.startsWith("artifacts/"))).toBe(false);
+      expect(entries.some((entry) => entry.startsWith("coverage/"))).toBe(false);
+    } finally {
+      rmSync(join(repoRoot, artifactsDir), { recursive: true, force: true });
+    }
   }, 30000);
 
   test("readonly e2e script skips when no API key is configured", () => {

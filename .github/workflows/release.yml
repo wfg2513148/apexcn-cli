@@ -23,19 +23,7 @@ jobs:
       - run: npm run check:release
       - name: Build release package
         run: |
-          mkdir -p artifacts/package
-          rsync -a \
-            --exclude .git \
-            --exclude .github \
-            --exclude artifacts \
-            --exclude node_modules \
-            --exclude dist \
-            --exclude coverage \
-            --exclude .DS_Store \
-            ./ artifacts/package/
-          tar -czf artifacts/apexcn-cli.tgz -C artifacts/package .
-          cp scripts/install-agent.sh artifacts/install-agent.sh
-          cp scripts/install-agent.ps1 artifacts/install-agent.ps1
+          node scripts/check-release-artifacts.mjs --expected-version "${GITHUB_REF_NAME#v}" --artifacts-dir artifacts
       - name: Publish GitHub release assets
         env:
           GH_TOKEN: ${{ github.token }}
