@@ -4,6 +4,7 @@ import { HttpError, joinUrl, NetworkError, redactSecret, requestJson, TimeoutErr
 describe("http", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    delete process.env.APEXCN_HTTP_TIMEOUT_MS;
   });
 
   test("joinUrl appends API paths without dropping the ORDS prefix", () => {
@@ -46,7 +47,7 @@ describe("http", () => {
       headers: {
         Authorization: "Bearer abc123",
         "X-APEXCN-API-Key": "abc123",
-        "User-Agent": "apexcn-cli/0.7.0",
+        "User-Agent": "apexcn-cli/0.8.0",
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ title: "Hello" })
@@ -54,6 +55,37 @@ describe("http", () => {
   });
 
   test("requestJson can set a request timeout signal", async () => {
+    const fetch = vi.fn(async () => Response.json({ ok: true }));
+    vi.stubGlobal("fetch", fetch);
+
+    await requestJson("https://oracleapex.cn/ords/dev", "/api/v1/me", {
+      token: "abc123",
+      timeoutMs: 1000
+    });
+
+    expect(fetch).toHaveBeenCalledWith("https://oracleapex.cn/ords/dev/api/v1/me", {
+      headers: expect.any(Object),
+      signal: expect.any(AbortSignal)
+    });
+  });
+
+  test("requestJson can use the default timeout from the environment", async () => {
+    process.env.APEXCN_HTTP_TIMEOUT_MS = "2500";
+    const fetch = vi.fn(async () => Response.json({ ok: true }));
+    vi.stubGlobal("fetch", fetch);
+
+    await requestJson("https://oracleapex.cn/ords/dev", "/api/v1/me", {
+      token: "abc123"
+    });
+
+    expect(fetch).toHaveBeenCalledWith("https://oracleapex.cn/ords/dev/api/v1/me", {
+      headers: expect.any(Object),
+      signal: expect.any(AbortSignal)
+    });
+  });
+
+  test("explicit timeout overrides invalid environment defaults", async () => {
+    process.env.APEXCN_HTTP_TIMEOUT_MS = "nope";
     const fetch = vi.fn(async () => Response.json({ ok: true }));
     vi.stubGlobal("fetch", fetch);
 

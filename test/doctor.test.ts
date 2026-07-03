@@ -48,6 +48,7 @@ describe("doctor command", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     process.exitCode = undefined;
+    delete process.env.APEXCN_HTTP_TIMEOUT_MS;
   });
 
   test("checks profile, account, categories, and search without exposing token", async () => {
@@ -67,8 +68,8 @@ describe("doctor command", () => {
     const data = JSON.parse(stdout.join(""));
     expect(data.ok).toBe(true);
     expect(data.diagnostics).toEqual(expect.objectContaining({
-      cliVersion: "0.7.0",
-      userAgent: "apexcn-cli/0.7.0",
+      cliVersion: "0.8.0",
+      userAgent: "apexcn-cli/0.8.0",
       configPath: expect.stringContaining("config.json"),
       nodeVersion: expect.stringMatching(/^v\d+/),
       platform: process.platform,
@@ -205,8 +206,8 @@ describe("doctor command", () => {
     await program.parseAsync(["node", "apexcn", "doctor", "--format", "text"]);
 
     expect(stdout.join("")).toContain("apexcn doctor: ok\n");
-    expect(stdout.join("")).toContain("CLI Version: 0.7.0\n");
-    expect(stdout.join("")).toContain("User Agent: apexcn-cli/0.7.0\n");
+    expect(stdout.join("")).toContain("CLI Version: 0.8.0\n");
+    expect(stdout.join("")).toContain("User Agent: apexcn-cli/0.8.0\n");
     expect(stdout.join("")).toContain("Config Path: ");
     expect(stdout.join("")).toContain("OK search requestId=req-search\n");
   });
@@ -228,7 +229,7 @@ describe("doctor command", () => {
       await program.parseAsync(argv);
 
       expect(stdout.join("")).toContain("apexcn doctor: ok\n");
-      expect(stdout.join("")).toContain("CLI Version: 0.7.0\n");
+      expect(stdout.join("")).toContain("CLI Version: 0.8.0\n");
       expect(() => JSON.parse(stdout.join(""))).toThrow();
       vi.unstubAllGlobals();
     }
@@ -385,6 +386,49 @@ describe("doctor command", () => {
     ]);
     expect(fetch).toHaveBeenCalledTimes(3);
     expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("uses the default HTTP timeout from the environment", async () => {
+    process.env.APEXCN_HTTP_TIMEOUT_MS = "7";
+    const timeout = new Error("timed out");
+    timeout.name = "TimeoutError";
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () => {
+      throw timeout;
+    });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "--json"]);
+
+    const data = JSON.parse(stdout.join(""));
+    expect(data.ok).toBe(false);
+    expect(data.checks).toEqual([
+      { name: "profile", ok: true },
+      { name: "me", ok: false, message: "Request timed out after 7ms: https://oracleapex.cn/ords/test/api/v1/me" },
+      { name: "categories", ok: false, message: "Request timed out after 7ms: https://oracleapex.cn/ords/test/api/v1/categories" },
+      { name: "search", ok: false, message: "Request timed out after 7ms: https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&pageSize=1" }
+    ]);
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("explicit doctor timeout overrides the default HTTP timeout", async () => {
+    process.env.APEXCN_HTTP_TIMEOUT_MS = "2500";
+    const timeout = new Error("timed out");
+    timeout.name = "TimeoutError";
+    const { program, stdout, stderr } = await configuredProgram(async () => {
+      throw timeout;
+    });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "--timeout-ms", "5", "--json"]);
+
+    const data = JSON.parse(stdout.join(""));
+    expect(data.checks).toEqual(expect.arrayContaining([
+      { name: "me", ok: false, message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/me" }
+    ]));
+    expect(stdout.join("")).not.toContain("2500ms");
     expect(stderr.join("")).toBe("");
     expect(process.exitCode).toBe(1);
   });

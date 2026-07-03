@@ -76,14 +76,15 @@ export async function requestJson<T = unknown>(
   path: string,
   options: RequestJsonOptions
 ): Promise<T> {
+  const timeoutMs = options.timeoutMs ?? timeoutMsFromEnv();
   const headers: Record<string, string> = {
     Authorization: `Bearer ${options.token}`,
     "X-APEXCN-API-Key": options.token,
     "User-Agent": options.userAgent ?? DEFAULT_USER_AGENT
   };
   const init: RequestInit = { headers };
-  if (options.timeoutMs !== undefined) {
-    init.signal = AbortSignal.timeout(options.timeoutMs);
+  if (timeoutMs !== undefined) {
+    init.signal = AbortSignal.timeout(timeoutMs);
   }
 
   if (options.method) {
@@ -99,8 +100,8 @@ export async function requestJson<T = unknown>(
   try {
     response = await fetch(url, init);
   } catch (error) {
-    if (options.timeoutMs !== undefined && isAbortError(error)) {
-      throw new TimeoutError(url, options.timeoutMs);
+    if (timeoutMs !== undefined && isAbortError(error)) {
+      throw new TimeoutError(url, timeoutMs);
     }
     throw new NetworkError(url, error);
   }
@@ -162,6 +163,18 @@ export function redactSecret(text: string, secret?: string): string {
     return text;
   }
   return text.split(secret).join("[redacted]");
+}
+
+function timeoutMsFromEnv(): number | undefined {
+  const value = process.env.APEXCN_HTTP_TIMEOUT_MS;
+  if (!value || value.trim().length === 0) {
+    return undefined;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    return undefined;
+  }
+  return parsed;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

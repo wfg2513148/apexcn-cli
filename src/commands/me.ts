@@ -1,6 +1,6 @@
 import { Command, Option } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
-import { HttpError, NetworkError, redactSecret, requestJson } from "../http.js";
+import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { fieldText, isRecord, outputFormat, parseOutputFormat, printData, validateFormatOptions, type FormatOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
 
@@ -48,6 +48,11 @@ export function createMeCommand(options: MeCommandOptions): Command {
           return;
         }
         if (error instanceof NetworkError) {
+          options.stderr(`${error.message}\n`);
+          process.exitCode = 1;
+          return;
+        }
+        if (error instanceof TimeoutError) {
           options.stderr(`${error.message}\n`);
           process.exitCode = 1;
           return;

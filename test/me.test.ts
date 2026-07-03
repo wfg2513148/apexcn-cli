@@ -13,6 +13,7 @@ describe("me command", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     process.exitCode = undefined;
+    delete process.env.APEXCN_HTTP_TIMEOUT_MS;
   });
 
   test("prints the authenticated user JSON", async () => {
@@ -175,6 +176,32 @@ describe("me command", () => {
 
     expect(stdout.join("")).toBe("");
     expect(stderr.join("")).toBe("HTTP 403: token [redacted] is not allowed requestId=req-token\n");
+    expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("reports timeout failures from the default HTTP timeout", async () => {
+    process.env.APEXCN_HTTP_TIMEOUT_MS = "5";
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const timeout = new Error("timed out");
+    timeout.name = "TimeoutError";
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw timeout;
+    }));
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toBe("Request timed out after 5ms: https://oracleapex.cn/ords/api/api/v1/me\n");
     expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(process.exitCode).toBe(1);
   });

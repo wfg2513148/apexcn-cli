@@ -3,7 +3,7 @@ import { stdin as processStdin, stdout as processStdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { Command, InvalidArgumentError, Option } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
-import { HttpError, NetworkError, redactSecret, requestJson } from "../http.js";
+import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { blockText, fieldText, isRecord, itemsFromData, outputFormat, parseOutputFormat, printData, validateFormatOptions, type FormatOption, type JsonOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
 
@@ -456,6 +456,11 @@ async function runApi(options: ApiCommandOptions, callback: (session: Session) =
       return;
     }
     if (error instanceof NetworkError) {
+      options.stderr(`${error.message}\n`);
+      process.exitCode = 1;
+      return;
+    }
+    if (error instanceof TimeoutError) {
       options.stderr(`${error.message}\n`);
       process.exitCode = 1;
       return;

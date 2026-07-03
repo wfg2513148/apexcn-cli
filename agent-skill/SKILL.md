@@ -63,6 +63,7 @@ apexcn auth set-token \
 - Do not infer an exact total from search results. If `page.hasMore` is true, report a lower bound such as "at least N results" and suggest narrowing by category or date.
 - Treat `401` as auth/token failure, `403` as permission/config denial, `409` as state conflict, and `429` as rate limiting.
 - Preserve stderr and `requestId` in logs for troubleshooting.
+- If community API calls hang or the network is unstable, set `APEXCN_HTTP_TIMEOUT_MS` to a positive millisecond value before rerunning.
 - Do not output full API key, local config file contents, or other secrets.
 
 ## Common Commands

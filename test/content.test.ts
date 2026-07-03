@@ -110,6 +110,7 @@ describe("content commands", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     process.exitCode = undefined;
+    delete process.env.APEXCN_HTTP_TIMEOUT_MS;
   });
 
   test("category list prints categories as JSON", async () => {
@@ -213,6 +214,23 @@ describe("content commands", () => {
     expect(stderr.join("")).not.toContain("TypeError");
     expect(stderr.join("")).not.toContain("fetch failed");
     expect(stderr.join("")).not.toContain("src/");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("category list reports timeout failures from the default HTTP timeout", async () => {
+    process.env.APEXCN_HTTP_TIMEOUT_MS = "5";
+    const timeout = new Error("timed out");
+    timeout.name = "TimeoutError";
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () => {
+      throw timeout;
+    });
+
+    await program.parseAsync(["node", "apexcn", "category", "list"]);
+
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toBe("Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/categories\n");
+    expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(process.exitCode).toBe(1);
   });
 
