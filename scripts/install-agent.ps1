@@ -226,6 +226,17 @@ exit /b 127
 "@ | Set-Content -Path $LauncherPath -Encoding ASCII
 }
 
+function Invoke-Apexcn {
+  param([string[]]$Arguments)
+  if ($IsWindows -or $PSVersionTable.PSEdition -eq "Desktop") {
+    $apexcn = Join-Path $BinDir "apexcn.cmd"
+    & $apexcn @Arguments
+    return
+  }
+  $entry = Join-Path (Get-CliRoot) "dist/index.js"
+  & node $entry @Arguments
+}
+
 function Install-CodexSkill {
   if (-not $InstallCodexSkill) { return }
   $codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $HOME ".codex" }
@@ -431,7 +442,7 @@ function Configure-Auth {
     Write-Step "DRY-RUN: $apexcn auth set-token --profile $Profile --base-url $BaseUrl --token [redacted]"
     return
   }
-  & $apexcn auth set-token --profile $Profile --base-url $BaseUrl --token $Token | Out-Null
+  Invoke-Apexcn @("auth", "set-token", "--profile", $Profile, "--base-url", $BaseUrl, "--token", $Token) | Out-Null
 }
 
 function Verify-Install {
@@ -443,12 +454,12 @@ function Verify-Install {
     if ($Token) { Write-Step "DRY-RUN: would run $apexcn me --json" }
     return
   }
-  & $apexcn --help | Out-Null
+  Invoke-Apexcn @("--help") | Out-Null
   Repair-ShellLauncher
   Test-ShellLauncher
   if ($Token) {
-    & $apexcn auth show --json | Out-Null
-    & $apexcn me --json 2>$null | Out-Null
+    Invoke-Apexcn @("auth", "show", "--json") | Out-Null
+    Invoke-Apexcn @("me", "--json") 2>$null | Out-Null
     if ($LASTEXITCODE -ne 0) {
       Write-Step "Auth profile saved, but account check failed. Run: apexcn me --json"
     }
