@@ -417,7 +417,32 @@ describe("workflow commands", () => {
       "--json"
     ]);
     expect(first.fetch).toHaveBeenCalledTimes(2);
+    expect((await readJson(join(runDir, "run.json"))).nextAction).toContain("workflow approve");
     await writeFile(join(runDir, "question.md"), "MUTATED AFTER PREVIEW", "utf8");
+
+    const blockedFetch = vi.fn();
+    vi.stubGlobal("fetch", blockedFetch);
+    const blocked = workflowProgram({ configPath: "/tmp/apexcn-workflow-missing-config.json" });
+    await blocked.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+    expect(blocked.stderr.join("")).toContain("Workflow approval not found");
+    expect(blockedFetch).not.toHaveBeenCalled();
+    process.exitCode = undefined;
+
+    const approveFetch = vi.fn();
+    vi.stubGlobal("fetch", approveFetch);
+    const approvalCommand = workflowProgram({ configPath: "/tmp/apexcn-workflow-missing-config.json" });
+    await approvalCommand.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--approved-by", "reviewer", "--note", "looks good", "--json"]);
+    expect(approveFetch).not.toHaveBeenCalled();
+    const approval = JSON.parse(approvalCommand.stdout.join(""));
+    expect(approval).toEqual(expect.objectContaining({
+      kind: "workflow-approval",
+      schemaVersion: 1,
+      approvedBy: "reviewer",
+      note: "looks good",
+      request: expect.objectContaining({ method: "POST", path: "/api/v1/topics" })
+    }));
+    expect(approval.previewHash).toMatch(/^[a-f0-9]{64}$/);
+    expect((await readJson(join(runDir, "run.json"))).nextAction).toContain("--execute --yes");
 
     const second = await configuredWorkflowProgram(async (input, init) => {
       expect(String(input)).toBe("https://oracleapex.cn/ords/test/api/v1/topics");
@@ -436,6 +461,131 @@ describe("workflow commands", () => {
       request: expect.objectContaining({ method: "POST", path: "/api/v1/topics" })
     }));
     expect((await readJson(join(runDir, "run.json"))).status).toBe("completed");
+  });
+
+  test("workflow approval hash mismatch blocks execution before config or network", async () => {
+    const runDir = await tempPath("approval-mismatch");
+    const env = await configuredWorkflowProgram(async (input) => {
+      const url = String(input);
+      if (url.includes("/api/v1/search")) {
+        return Response.json({ requestId: "search-1", items: [] });
+      }
+      return Response.json({ error: "unexpected" }, { status: 500 });
+    });
+    await env.program.parseAsync([
+      "node",
+      "apexcn",
+      "workflow",
+      "run",
+      "--goal",
+      "ask-question",
+      "--keyword",
+      "REST API",
+      "--title",
+      "APEX REST API returns 403",
+      "--problem",
+      "Page process gets 403 when calling REST API.",
+      "--category-id",
+      "4",
+      "--output-dir",
+      runDir
+    ]);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+
+    const preview = await readJson(join(runDir, "preview.json"));
+    if (typeof preview.request === "object" && preview.request !== null && "body" in preview.request) {
+      (preview.request as { body: { title?: string } }).body.title = "Changed after approval";
+    }
+    await writeFile(join(runDir, "preview.json"), `${JSON.stringify(preview, null, 2)}\n`, "utf8");
+
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const execute = workflowProgram({ configPath: "/tmp/apexcn-workflow-missing-config.json" });
+    await execute.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes"]);
+
+    expect(execute.stderr.join("")).toContain("hash mismatch");
+    expect(fetch).not.toHaveBeenCalled();
+    expect((await readJson(join(runDir, "run.json"))).nextAction).toContain("workflow approve");
+  });
+
+  test("workflow approval runId mismatch blocks execution", async () => {
+    const runDir = await tempPath("approval-runid");
+    const env = await configuredWorkflowProgram(async () =>
+      Response.json({ requestId: "search-1", items: [] })
+    );
+    await env.program.parseAsync([
+      "node",
+      "apexcn",
+      "workflow",
+      "run",
+      "--goal",
+      "ask-question",
+      "--keyword",
+      "REST API",
+      "--title",
+      "APEX REST API returns 403",
+      "--problem",
+      "Page process gets 403 when calling REST API.",
+      "--category-id",
+      "4",
+      "--output-dir",
+      runDir
+    ]);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir]);
+    const approval = await readJson(join(runDir, "approval.json"));
+    approval.runId = "other-run";
+    await writeFile(join(runDir, "approval.json"), `${JSON.stringify(approval, null, 2)}\n`, "utf8");
+
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const execute = workflowProgram({ configPath: "/tmp/apexcn-workflow-missing-config.json" });
+    await execute.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes"]);
+
+    expect(execute.stderr.join("")).toContain("runId");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("workflow approve rejects non-preview-ready and missing preview runs locally", async () => {
+    const runDir = await tempPath("approval-invalid");
+    await mkdir(runDir, { recursive: true });
+    const state = {
+      kind: "workflow-run",
+      schemaVersion: 1,
+      runId: "run-invalid",
+      goal: "reply",
+      inputs: { topicId: 1, answer: "ok" },
+      status: "failed",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      steps: [],
+      artifacts: {
+        state: join(runDir, "run.json"),
+        topic: join(runDir, "topic.json"),
+        reply: join(runDir, "reply.md"),
+        preview: join(runDir, "preview.json"),
+        approval: join(runDir, "approval.json"),
+        execute: join(runDir, "execute.json")
+      },
+      nextAction: "failed"
+    };
+    await writeFile(join(runDir, "run.json"), `${JSON.stringify(state, null, 2)}\n`, "utf8");
+
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const failed = workflowProgram({ configPath: "/tmp/apexcn-workflow-missing-config.json" });
+    await failed.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir]);
+    expect(failed.stderr.join("")).toContain("preview-ready");
+    expect(fetch).not.toHaveBeenCalled();
+
+    process.exitCode = undefined;
+    state.status = "preview-ready";
+    await writeFile(join(runDir, "run.json"), `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    const missingPreview = workflowProgram({ configPath: "/tmp/apexcn-workflow-missing-config.json" });
+    await missingPreview.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir]);
+    expect(missingPreview.stderr.join("")).toContain("Invalid workflow preview artifact");
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   test("workflow run resume reruns a completed step when its artifact is missing", async () => {

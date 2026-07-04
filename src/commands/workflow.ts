@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { Command, InvalidArgumentError, Option } from "commander";
@@ -39,6 +40,13 @@ type WorkflowRunOptions = FormatOption & {
   outputDir?: string;
   execute?: boolean;
   yes?: boolean;
+};
+
+type WorkflowApproveOptions = {
+  runDir: string;
+  approvedBy?: string;
+  note?: string;
+  json?: boolean;
 };
 
 type WorkflowStep = {
@@ -111,6 +119,23 @@ type WorkflowRunState = {
   nextAction: string;
 };
 
+type WorkflowApproval = {
+  kind: "workflow-approval";
+  schemaVersion: 1;
+  runId: string;
+  approvedAt: string;
+  approvedBy: string;
+  note?: string;
+  previewHash: string;
+  request: WorkflowPreviewRequest;
+};
+
+type WorkflowPreviewRequest = {
+  method: "POST";
+  path: string;
+  body: unknown;
+};
+
 export function createWorkflowCommand(options: WorkflowCommandOptions): Command {
   const workflow = new Command("workflow");
 
@@ -157,7 +182,56 @@ export function createWorkflowCommand(options: WorkflowCommandOptions): Command 
       await runWorkflow(options, commandOptions);
     });
 
+  workflow
+    .command("approve")
+    .requiredOption("--run-dir <run-dir>", "workflow run directory to approve")
+    .option("--approved-by <name>", "name recorded in approval artifact")
+    .option("--note <text>", "approval note")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: WorkflowApproveOptions) => {
+      await approveWorkflow(options, commandOptions);
+    });
+
   return workflow;
+}
+
+async function approveWorkflow(io: CommandIo, options: WorkflowApproveOptions): Promise<void> {
+  const loaded = await loadWorkflowRun(options.runDir);
+  if (!loaded) {
+    printError(io, { type: "validation", message: `Workflow run not found: ${options.runDir}` });
+    process.exitCode = 1;
+    return;
+  }
+  const { state, runDir } = loaded;
+  if (state.status !== "preview-ready") {
+    printError(io, { type: "validation", message: `Workflow run must be preview-ready before approval; current status is ${state.status}` });
+    process.exitCode = 1;
+    return;
+  }
+
+  let request: WorkflowPreviewRequest;
+  try {
+    request = await workflowPreviewRequest(state.artifacts.preview);
+  } catch (error) {
+    printError(io, { type: "validation", message: errorMessage(error) });
+    process.exitCode = 1;
+    return;
+  }
+
+  const approval: WorkflowApproval = compactObject({
+    kind: "workflow-approval",
+    schemaVersion: 1,
+    runId: state.runId,
+    approvedAt: now(),
+    approvedBy: fieldText(options.approvedBy).trim() || process.env.USER || "unknown",
+    note: fieldText(options.note).trim() || undefined,
+    previewHash: workflowPreviewHash(request),
+    request
+  }) as WorkflowApproval;
+  await writeJson(state.artifacts.approval, approval);
+  state.nextAction = `Run apexcn workflow run --resume ${shellArg(runDir)} --execute --yes --json to publish the approved preview.`;
+  await writeRunState(runDir, state);
+  printData(io, approval, options.json === true);
 }
 
 async function runWorkflow(io: WorkflowCommandOptions, options: WorkflowRunOptions): Promise<void> {
@@ -194,6 +268,18 @@ async function runWorkflow(io: WorkflowCommandOptions, options: WorkflowRunOptio
     process.exitCode = 1;
     return;
   }
+  if (options.execute && loaded) {
+    const approvalError = await workflowApprovalError(loaded.state);
+    if (approvalError) {
+      loaded.state.nextAction = approvalError.includes("hash mismatch")
+        ? `Review ${loaded.state.artifacts.preview} and rerun apexcn workflow approve --run-dir ${shellArg(loaded.runDir)} --json.`
+        : `Run apexcn workflow approve --run-dir ${shellArg(loaded.runDir)} --json before executing.`;
+      await writeRunState(loaded.runDir, loaded.state);
+      printError(io, { type: "validation", message: approvalError });
+      process.exitCode = 1;
+      return;
+    }
+  }
   const session = await loadSession(io);
   if (!session) {
     return;
@@ -214,7 +300,7 @@ async function runWorkflow(io: WorkflowCommandOptions, options: WorkflowRunOptio
     return;
   }
   state.status = options.execute ? "completed" : "preview-ready";
-  state.nextAction = options.execute ? "Workflow completed." : `Review ${state.artifacts.preview} and rerun with --resume ${shellArg(runDir)} --execute --yes to publish.`;
+  state.nextAction = options.execute ? "Workflow completed." : `Review ${state.artifacts.preview} and approve it with apexcn workflow approve --run-dir ${shellArg(runDir)} --json.`;
   await writeRunState(runDir, state);
   printData(io, state, outputFormat(options), formatWorkflowRunText);
 }
@@ -496,6 +582,7 @@ function runArtifacts(goal: WorkflowRunGoal, runDir: string): Record<string, str
       question: join(runDir, "question.md"),
       review: join(runDir, "review.json"),
       preview: join(runDir, "preview.json"),
+      approval: join(runDir, "approval.json"),
       execute: join(runDir, "execute.json")
     };
   }
@@ -504,6 +591,7 @@ function runArtifacts(goal: WorkflowRunGoal, runDir: string): Record<string, str
     topic: join(runDir, "topic.json"),
     reply: join(runDir, "reply.md"),
     preview: join(runDir, "preview.json"),
+    approval: join(runDir, "approval.json"),
     execute: join(runDir, "execute.json")
   };
 }
@@ -553,6 +641,7 @@ async function loadWorkflowRun(runDir: string): Promise<{ runDir: string; state:
     }
     const state = data as WorkflowRunState;
     state.inputs ??= {};
+    state.artifacts = { ...runArtifacts(state.goal, runDir), ...state.artifacts };
     return { runDir, state };
   } catch (error) {
     if (isNodeError(error) && error.code === "ENOENT") {
@@ -706,17 +795,78 @@ async function readJson(path: string): Promise<unknown> {
   return JSON.parse(await readFile(path, "utf8")) as unknown;
 }
 
-async function previewRequest(path: string, expectedPath: string): Promise<{ path: string; body: unknown }> {
-  const preview = await readJson(path);
+async function workflowApprovalError(state: WorkflowRunState): Promise<string | undefined> {
+  let approvalData: unknown;
+  try {
+    approvalData = await readJson(state.artifacts.approval);
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      return `Workflow approval not found: ${state.artifacts.approval}`;
+    }
+    throw error;
+  }
+  if (!isRecord(approvalData) || approvalData.kind !== "workflow-approval" || approvalData.schemaVersion !== 1) {
+    return `Invalid workflow approval artifact: ${state.artifacts.approval}`;
+  }
+  if (approvalData.runId !== state.runId) {
+    return "Workflow approval runId does not match this run.";
+  }
+  if (typeof approvalData.previewHash !== "string") {
+    return `Invalid workflow approval artifact: ${state.artifacts.approval}`;
+  }
+  const request = await workflowPreviewRequest(state.artifacts.preview);
+  const currentHash = workflowPreviewHash(request);
+  if (approvalData.previewHash !== currentHash) {
+    return "Workflow approval hash mismatch; review and approve the current preview again.";
+  }
+  return undefined;
+}
+
+async function previewRequest(path: string, expectedPath: string): Promise<WorkflowPreviewRequest> {
+  const request = await workflowPreviewRequest(path);
+  if (request.path !== expectedPath) {
+    throw new Error(`Workflow preview artifact does not match expected POST ${expectedPath}.`);
+  }
+  return request;
+}
+
+async function workflowPreviewRequest(path: string): Promise<WorkflowPreviewRequest> {
+  let preview: unknown;
+  try {
+    preview = await readJson(path);
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      throw new Error(`Invalid workflow preview artifact: ${path}`);
+    }
+    throw error;
+  }
   if (!isRecord(preview) || preview.kind !== "workflow-preview" || !isRecord(preview.request)) {
     throw new Error(`Invalid workflow preview artifact: ${path}`);
   }
   const method = preview.request.method;
   const requestPath = preview.request.path;
-  if (method !== "POST" || requestPath !== expectedPath) {
-    throw new Error(`Workflow preview artifact does not match expected POST ${expectedPath}.`);
+  if (method !== "POST" || typeof requestPath !== "string") {
+    throw new Error(`Invalid workflow preview artifact: ${path}`);
   }
-  return { path: requestPath, body: preview.request.body };
+  return { method, path: requestPath, body: preview.request.body };
+}
+
+function workflowPreviewHash(request: WorkflowPreviewRequest): string {
+  return createHash("sha256").update(canonicalJson(request), "utf8").digest("hex");
+}
+
+function canonicalJson(value: unknown): string {
+  return JSON.stringify(canonicalValue(value));
+}
+
+function canonicalValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(canonicalValue);
+  }
+  if (isRecord(value)) {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalValue(value[key])]));
+  }
+  return value;
 }
 
 async function fileExists(path: string): Promise<boolean> {

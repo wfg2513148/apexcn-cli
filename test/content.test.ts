@@ -109,6 +109,7 @@ const neverApiDryRunCommands = [
   "topic view",
   "thread view",
   "ask",
+  "workflow approve",
   "workflow plan",
   "workflow run"
 ].sort();
