@@ -66,6 +66,7 @@ apexcn auth set-token \
 - Use `apexcn workflow verify-bundle --bundle <file> --json` when reviewing a portable workflow bundle without access to the original run directory.
 - Use `apexcn collection build --query <keyword> --topic-id <id> --output-dir <dir> --json` when the user needs a reusable offline knowledge collection from multiple searches or explicit topics.
 - Use `apexcn collection verify --dir <dir> --json` before relying on a saved collection in an AI workflow.
+- Use `apexcn topic recent --since-hours 48 --json` when the user asks for recently updated or latest community posts. If `page.hasMore` is true, report that the result is limited to the newest returned window.
 - Use `apexcn commands --json` to inspect available commands, purposes, safety metadata, examples, and options instead of parsing help text.
 - Use `apexcn auth audit --json` before API workflows when you need a local-only check for missing active profile, invalid base URLs, missing tokens, duplicate base URLs, or insecure HTTP profiles.
 - Use `apexcn doctor snapshot --json` before sharing diagnostics with a user or support channel. It is local-only and reports config/env/agent-skill state without exposing full tokens or API key values.
@@ -93,6 +94,7 @@ apexcn auth set-token \
 apexcn search "APEX" --page-size 5 --json
 apexcn auth audit --json
 apexcn doctor snapshot --json
+apexcn topic recent --since-hours 48 --page-size 10 --json
 apexcn research "REST API" --limit 3 --json
 apexcn collection build --query "REST API" --query "ORDS" --topic-id 30549 --output-dir ./collection --json
 apexcn collection verify --dir ./collection --json

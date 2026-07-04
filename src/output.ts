@@ -16,6 +16,7 @@ export type ErrorPayload = {
   message: string;
   status?: number;
   requestId?: string;
+  exitCode?: number;
 };
 
 export function parseOutputFormat(value: string): OutputFormat {
@@ -27,7 +28,7 @@ export function parseOutputFormat(value: string): OutputFormat {
 
 export function validateFormatOptions(options: CommandIo, commandOptions: FormatOption): boolean {
   if (commandOptions.json && commandOptions.format && commandOptions.format !== "pretty") {
-    printError(options, { type: "validation", message: "--json can only be combined with --format pretty" });
+    printError(options, { type: "validation", message: "--json can only be combined with --format pretty", exitCode: 1 }, undefined, commandOptions.json);
     process.exitCode = 1;
     return false;
   }
@@ -51,8 +52,8 @@ export function printData(options: CommandIo, data: unknown, formatOrJson?: Outp
   options.stdout(`${JSON.stringify(data, null, format === "pretty" ? 2 : 0)}\n`);
 }
 
-export function printError(options: CommandIo, error: ErrorPayload, fallbackText?: string): void {
-  if (process.env.APEXCN_ERROR_FORMAT === "json") {
+export function printError(options: CommandIo, error: ErrorPayload, fallbackText?: string, json?: boolean): void {
+  if (json || process.env.APEXCN_ERROR_FORMAT === "json") {
     options.stderr(`${JSON.stringify({ ok: false, error: withoutUndefined(error) })}\n`);
     return;
   }

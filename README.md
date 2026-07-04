@@ -56,6 +56,8 @@ $env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; irm "https://gith
 
 > 查一下 APEX 中文社区有没有 JSON_TABLE 的新手示例，按适合阅读的顺序列出来。
 
+> 总结最近 48 小时更新的 APEX 中文社区帖子，按主题归纳并带上链接。
+
 ### 查看和整理帖子
 
 > 打开社区帖子 30549，帮我总结主要内容、关键步骤、注意事项和真实链接。

@@ -191,6 +191,7 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "subscription remove": "unsubscribe from a community topic",
   "topic create": "create a community topic",
   "topic delete": "delete a topic after explicit confirmation",
+  "topic recent": "list recently updated community topics",
   "topic update": "update an existing topic",
   "topic view": "view a community topic",
   "workflow approve": "approve a workflow preview for audited execution",
@@ -348,6 +349,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
       { command: 'apexcn topic delete 30549 --yes --force --confirm-title "精确标题" --preview', mode: "preview" },
       { command: 'apexcn topic delete 30549 --yes --force --confirm-title "精确标题" --json', mode: "execute" }
     ]
+  },
+  "topic recent": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn topic recent --since-hours 48 --page-size 10 --json", mode: "read" }]
   },
   "topic update": {
     safety: { effects: ["api-write"], preview: "available", confirmation: [] },

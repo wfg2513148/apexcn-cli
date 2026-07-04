@@ -24,6 +24,10 @@ type DryRunOption = {
   preview?: boolean;
 };
 
+type ErrorFormatOption = {
+  json?: boolean;
+};
+
 type ApiRequestPlan = {
   method: string;
   path: string;
@@ -41,7 +45,7 @@ export function createCategoryCommand(options: ApiCommandOptions): Command {
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
-      await runApi(options, async (session) => {
+      await runApi(options, commandOptions, async (session) => {
         const data = await requestJson(session.baseUrl, "/api/v1/categories", { token: session.token });
         printData(options, data, outputFormat(commandOptions), formatCategoryListText);
       });
@@ -54,7 +58,7 @@ export function createSearchCommand(options: ApiCommandOptions): Command {
     .argument("<keyword>")
     .option("--category-id <id>", "category id", parsePositiveInteger)
     .option("--page-size <n>", "page size, 1-50", parseSearchPageSize)
-    .addOption(new Option("--offset <n>", "unsupported; current search API ignores offset").argParser(rejectUnsupportedOffset).hideHelp())
+    .addOption(new Option("--offset <n>", "unsupported; current search API ignores offset").hideHelp())
     .option("--from-date <date>", "inclusive updated-from date, YYYY-MM-DD", parseSearchDate)
     .option("--to-date <date>", "inclusive updated-to date, YYYY-MM-DD", parseSearchDate)
     .option("--json", "pretty-print JSON")
@@ -63,22 +67,31 @@ export function createSearchCommand(options: ApiCommandOptions): Command {
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
-      if (!validateSearchDateRange(options, commandOptions.fromDate, commandOptions.toDate)) {
+      if (!validateSearchDateRange(options, commandOptions.fromDate, commandOptions.toDate, commandOptions)) {
         return;
       }
-      await runApi(options, async (session) => {
+      const normalizedKeyword = normalizeSearchKeyword(keyword);
+      if (commandOptions.offset !== undefined) {
+        printError(options, {
+          type: "validation",
+          message: "Current search API does not support offset pagination. Narrow results with --category-id, --from-date, or --to-date instead.",
+          exitCode: 1
+        }, undefined, commandOptions.json);
+        process.exitCode = 1;
+        return;
+      }
+      await runApi(options, commandOptions, async (session) => {
         const data = await requestJson(session.baseUrl, "/api/v1/search", {
           token: session.token,
           query: {
-            keyword,
+            keyword: normalizedKeyword,
             categoryId: commandOptions.categoryId,
             pageSize: commandOptions.pageSize,
-            offset: commandOptions.offset,
             fromDate: commandOptions.fromDate,
             toDate: commandOptions.toDate
           }
         });
-        printData(options, data, outputFormat(commandOptions), formatSearchText);
+        printData(options, searchOutput(data, keyword, normalizedKeyword), outputFormat(commandOptions), formatSearchText);
       });
     });
 }
@@ -96,15 +109,16 @@ export function createResearchCommand(options: ApiCommandOptions): Command {
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
-      if (!validateSearchDateRange(options, commandOptions.fromDate, commandOptions.toDate)) {
+      if (!validateSearchDateRange(options, commandOptions.fromDate, commandOptions.toDate, commandOptions)) {
         return;
       }
-      await runApi(options, async (session) => {
+      const normalizedKeyword = normalizeSearchKeyword(keyword);
+      await runApi(options, commandOptions, async (session) => {
         const limit = commandOptions.limit ?? 3;
         const search = await requestJson(session.baseUrl, "/api/v1/search", {
           token: session.token,
           query: {
-            keyword,
+            keyword: normalizedKeyword,
             pageSize: limit,
             categoryId: commandOptions.categoryId,
             fromDate: commandOptions.fromDate,
@@ -132,6 +146,7 @@ export function createResearchCommand(options: ApiCommandOptions): Command {
         const data = {
           query: compactBody({
             keyword,
+            normalizedKeyword: normalizedKeyword === keyword ? undefined : normalizedKeyword,
             limit,
             categoryId: commandOptions.categoryId,
             fromDate: commandOptions.fromDate,
@@ -158,6 +173,28 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
   const topic = new Command("topic").alias("thread");
 
   topic
+    .command("recent")
+    .option("--page-size <n>", "page size, 1-50", parseSearchPageSize)
+    .option("--category-id <id>", "category id", parsePositiveInteger)
+    .option("--since-hours <n>", "updated within the last N hours", parsePositiveInteger)
+    .option("--from-date <date>", "inclusive updated-from date, YYYY-MM-DD", parseSearchDate)
+    .option("--to-date <date>", "inclusive updated-to date, YYYY-MM-DD", parseSearchDate)
+    .option("--json", "pretty-print JSON")
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async (commandOptions: FormatOption & { pageSize?: number; categoryId?: number; sinceHours?: number; fromDate?: string; toDate?: string }) => {
+      if (!validateFormatOptions(options, commandOptions)) {
+        return;
+      }
+      if (!validateSearchDateRange(options, commandOptions.fromDate, commandOptions.toDate, commandOptions)) {
+        return;
+      }
+      await runApi(options, commandOptions, async (session) => {
+        const recent = await recentTopics(session, commandOptions);
+        printData(options, recent, outputFormat(commandOptions), formatRecentTopicsText);
+      });
+    });
+
+  topic
     .command("view")
     .argument("<id>", "topic id", parsePositiveInteger)
     .option("--json", "pretty-print JSON")
@@ -166,7 +203,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
-      await runApi(options, async (session) => {
+      await runApi(options, commandOptions, async (session) => {
         const data = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
         printData(options, data, outputFormat(commandOptions), formatTopicText);
       });
@@ -183,9 +220,9 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
     .option("--dry-run", "print the API request without sending it")
     .option("--preview", "preview the API request without sending it")
     .action(async (commandOptions: JsonOption & DryRunOption & TopicWriteOptions & { categoryId?: number }) => {
-      await runApi(options, async (session) => {
+      await runApi(options, commandOptions, async (session) => {
         if (isRequestPreview(commandOptions) && commandOptions.categoryId === undefined) {
-          printError(options, { type: "validation", message: `Missing --category-id in ${requestPreviewMode(commandOptions)} mode` });
+          printError(options, { type: "validation", message: `Missing --category-id in ${requestPreviewMode(commandOptions)} mode`, exitCode: 1 }, undefined, commandOptions.json);
           process.exitCode = 1;
           return;
         }
@@ -204,7 +241,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
           })
         };
         if (isRequestPreview(commandOptions)) {
-          printDryRun(options, session, request, commandOptions.json);
+          printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
           return;
         }
         const data = await requestJson(session.baseUrl, request.path, {
@@ -229,7 +266,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
     .option("--dry-run", "print the API request without sending it")
     .option("--preview", "preview the API request without sending it")
     .action(async (id: number, commandOptions: JsonOption & DryRunOption & TopicWriteOptions & { categoryId?: number }) => {
-      await runApi(options, async (session) => {
+      await runApi(options, commandOptions, async (session) => {
         const request = {
           method: "POST",
           path: `/api/v1/topics/${id}`,
@@ -241,7 +278,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
           })
         };
         if (isRequestPreview(commandOptions)) {
-          printDryRun(options, session, request, commandOptions.json);
+          printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
           return;
         }
         const data = await requestJson(session.baseUrl, request.path, {
@@ -265,18 +302,18 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
     .action(async (id: number, commandOptions: JsonOption & DryRunOption & { yes?: boolean; force?: boolean; confirmTitle?: string }) => {
       if (!commandOptions.yes || !commandOptions.force || !commandOptions.confirmTitle) {
         if (isRequestPreview(commandOptions)) {
-          printError(options, { type: "safety", message: "Refusing to delete topic without --yes --force --confirm-title" });
+          printError(options, { type: "safety", message: "Refusing to delete topic without --yes --force --confirm-title", exitCode: 1 }, undefined, commandOptions.json);
           process.exitCode = 1;
           return;
         }
         if (processStdin.isTTY === true && !commandOptions.yes && !commandOptions.force) {
-          await runApi(options, async (session) => {
+          await runApi(options, commandOptions, async (session) => {
             const topic = await requestJson<{ topic?: { title?: string; createdByName?: string; categoryName?: string } }>(session.baseUrl, `/api/v1/topics/${id}`, {
               token: session.token
             });
             const title = topic.topic?.title;
             if (!title) {
-              printError(options, { type: "validation", message: "Unable to load topic for confirmation" });
+              printError(options, { type: "validation", message: "Unable to load topic for confirmation", exitCode: 1 }, undefined, commandOptions.json);
               process.exitCode = 1;
               return;
             }
@@ -289,7 +326,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
             }
             const confirmed = await promptText(`Type the full topic title to delete: `);
             if (confirmed !== title) {
-              printError(options, { type: "safety", message: "Delete cancelled" });
+              printError(options, { type: "safety", message: "Delete cancelled", exitCode: 1 }, undefined, commandOptions.json);
               process.exitCode = 1;
               return;
             }
@@ -298,21 +335,21 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
           });
           return;
         }
-        printError(options, { type: "safety", message: "Refusing to delete topic without --yes --force --confirm-title" });
+        printError(options, { type: "safety", message: "Refusing to delete topic without --yes --force --confirm-title", exitCode: 1 }, undefined, commandOptions.json);
         process.exitCode = 1;
         return;
       }
-      await runApi(options, async (session) => {
+      await runApi(options, commandOptions, async (session) => {
         const request = { method: "DELETE", path: `/api/v1/topics/${id}` };
         if (isRequestPreview(commandOptions)) {
-          printDryRun(options, session, request, commandOptions.json);
+          printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
           return;
         }
         const topic = await requestJson<{ topic?: { title?: string } }>(session.baseUrl, `/api/v1/topics/${id}`, {
           token: session.token
         });
         if (topic.topic?.title !== commandOptions.confirmTitle) {
-          printError(options, { type: "safety", message: "Refusing to delete topic because --confirm-title does not match" });
+          printError(options, { type: "safety", message: "Refusing to delete topic because --confirm-title does not match", exitCode: 1 }, undefined, commandOptions.json);
           process.exitCode = 1;
           return;
         }
@@ -337,7 +374,7 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
     .option("--dry-run", "print the API request without sending it")
     .option("--preview", "preview the API request without sending it")
     .action(async (topicId: number, commandOptions: JsonOption & DryRunOption & ReplyWriteOptions) => {
-      await runApi(options, async (session) => {
+      await runApi(options, commandOptions, async (session) => {
         const request = {
           method: "POST",
           path: `/api/v1/topics/${topicId}/replies`,
@@ -347,7 +384,7 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
           })
         };
         if (isRequestPreview(commandOptions)) {
-          printDryRun(options, session, request, commandOptions.json);
+          printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
           return;
         }
         const data = await requestJson(session.baseUrl, request.path, {
@@ -369,14 +406,14 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
     .option("--dry-run", "print the API request without sending it")
     .option("--preview", "preview the API request without sending it")
     .action(async (id: number, commandOptions: JsonOption & DryRunOption & ReplyWriteOptions) => {
-      await runApi(options, async (session) => {
+      await runApi(options, commandOptions, async (session) => {
         const request = {
           method: "POST",
           path: `/api/v1/replies/${id}`,
           body: { content: await contentFromOptions(commandOptions, options) }
         };
         if (isRequestPreview(commandOptions)) {
-          printDryRun(options, session, request, commandOptions.json);
+          printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
           return;
         }
         const data = await requestJson(session.baseUrl, request.path, {
@@ -399,31 +436,31 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
     .action(async (id: number, commandOptions: JsonOption & DryRunOption & { yes?: boolean; force?: boolean }) => {
       if (!commandOptions.yes || !commandOptions.force) {
         if (isRequestPreview(commandOptions)) {
-          printError(options, { type: "safety", message: "Refusing to delete reply without --yes --force" });
+          printError(options, { type: "safety", message: "Refusing to delete reply without --yes --force", exitCode: 1 }, undefined, commandOptions.json);
           process.exitCode = 1;
           return;
         }
         if (processStdin.isTTY === true && !commandOptions.yes && !commandOptions.force) {
           const confirmed = await promptText("Type delete to delete this reply: ");
           if (confirmed !== "delete") {
-            printError(options, { type: "safety", message: "Delete cancelled" });
+            printError(options, { type: "safety", message: "Delete cancelled", exitCode: 1 }, undefined, commandOptions.json);
             process.exitCode = 1;
             return;
           }
-          await runApi(options, async (session) => {
+          await runApi(options, commandOptions, async (session) => {
             const data = await requestJson(session.baseUrl, `/api/v1/replies/${id}`, { token: session.token, method: "DELETE" });
             printData(options, data, commandOptions.json);
           });
           return;
         }
-        printError(options, { type: "safety", message: "Refusing to delete reply without --yes --force" });
+        printError(options, { type: "safety", message: "Refusing to delete reply without --yes --force", exitCode: 1 }, undefined, commandOptions.json);
         process.exitCode = 1;
         return;
       }
-      await runApi(options, async (session) => {
+      await runApi(options, commandOptions, async (session) => {
         const request = { method: "DELETE", path: `/api/v1/replies/${id}` };
         if (isRequestPreview(commandOptions)) {
-          printDryRun(options, session, request, commandOptions.json);
+          printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
           return;
         }
         const data = await requestJson(session.baseUrl, request.path, { token: session.token, method: request.method });
@@ -444,13 +481,13 @@ export function createRelationCommand(name: "favorite" | "subscription", options
       .option("--dry-run", "print the API request without sending it")
       .option("--preview", "preview the API request without sending it")
       .action(async (topicId: number, commandOptions: JsonOption & DryRunOption) => {
-        await runApi(options, async (session) => {
+        await runApi(options, commandOptions, async (session) => {
           const request = {
             path: `/api/v1/topics/${topicId}/${name}`,
             method: action === "add" ? "POST" : "DELETE"
           };
           if (isRequestPreview(commandOptions)) {
-            printDryRun(options, session, request, commandOptions.json);
+            printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
             return;
           }
           const data = await requestJson(session.baseUrl, request.path, {
@@ -474,13 +511,13 @@ export function createAskCommand(options: ApiCommandOptions): Command {
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
-      await runApi(options, async (session) => {
+      await runApi(options, commandOptions, async (session) => {
         const data = await requestJson(session.baseUrl, "/api/v1/ask", {
           token: session.token,
           method: "POST",
           body: compactBody({ question, topK: commandOptions.topK })
         });
-        printData(options, data, outputFormat(commandOptions), formatAskText);
+        printData(options, enrichAskReferences(data), outputFormat(commandOptions), formatAskText);
       });
     });
 }
@@ -501,10 +538,10 @@ type ReplyWriteOptions = {
 class CliValidationError extends Error {
 }
 
-async function runApi(options: ApiCommandOptions, callback: (session: Session) => Promise<void>): Promise<void> {
+async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOption, callback: (session: Session) => Promise<void>): Promise<void> {
   let session: Session | undefined;
   try {
-    session = await loadSession(options);
+    session = await loadSession(options, commandOptions);
     if (!session) {
       return;
     }
@@ -516,28 +553,29 @@ async function runApi(options: ApiCommandOptions, callback: (session: Session) =
         type: "http",
         message: redactSecret(error.message, session?.token),
         status: error.status,
-        requestId: error.requestId
-      }, `HTTP ${error.status}: ${redactSecret(error.message, session?.token)}${requestId}\n`);
+        requestId: error.requestId,
+        exitCode: 1
+      }, `HTTP ${error.status}: ${redactSecret(error.message, session?.token)}${requestId}\n`, commandOptions.json);
       process.exitCode = 1;
       return;
     }
     if (error instanceof CliValidationError) {
-      printError(options, { type: "validation", message: error.message });
+      printError(options, { type: "validation", message: error.message, exitCode: 1 }, undefined, commandOptions.json);
       process.exitCode = 1;
       return;
     }
     if (error instanceof ConfigFileError) {
-      printError(options, { type: "config", message: error.message });
+      printError(options, { type: "config", message: error.message, exitCode: 1 }, undefined, commandOptions.json);
       process.exitCode = 1;
       return;
     }
     if (error instanceof NetworkError) {
-      printError(options, { type: "network", message: error.message });
+      printError(options, { type: "network", message: error.message, exitCode: 1 }, undefined, commandOptions.json);
       process.exitCode = 1;
       return;
     }
     if (error instanceof TimeoutError) {
-      printError(options, { type: "timeout", message: error.message });
+      printError(options, { type: "timeout", message: error.message, exitCode: 1 }, undefined, commandOptions.json);
       process.exitCode = 1;
       return;
     }
@@ -545,21 +583,23 @@ async function runApi(options: ApiCommandOptions, callback: (session: Session) =
   }
 }
 
-async function loadSession(options: ApiCommandOptions): Promise<Session | undefined> {
+async function loadSession(options: ApiCommandOptions, commandOptions: ErrorFormatOption): Promise<Session | undefined> {
   const config = await loadConfig(options.configPath);
   const profile = config.current;
   const current = profile ? config.profiles[profile] : undefined;
   if (!profile || !current) {
-    printError(options, { type: "no-profile", message: "No active profile" });
+    printError(options, { type: "no-profile", message: "No active profile", exitCode: 1 }, undefined, commandOptions.json);
     process.exitCode = 1;
     return undefined;
   }
   return { profile, ...current };
 }
 
-function printDryRun(options: CommandIo, session: Session, request: ApiRequestPlan, json?: boolean): void {
+function printDryRun(options: CommandIo, session: Session, request: ApiRequestPlan, mode: "dry-run" | "preview", json?: boolean): void {
   printData(options, compactBody({
     dryRun: true,
+    preview: mode === "preview",
+    mode,
     profile: session.profile,
     baseUrl: session.baseUrl,
     method: request.method,
@@ -658,6 +698,17 @@ function formatSearchText(data: unknown): string {
   return items.map((item) => `${fieldText(item.id)}\t${fieldText(item.title)}\t${fieldText(item.url)}`).join("\n");
 }
 
+function formatRecentTopicsText(data: unknown): string {
+  const items = itemsFromData(data);
+  return items.map((item) => [
+    fieldText(item.id),
+    fieldText(item.title),
+    fieldText(item.updatedDate),
+    fieldText(item.createdDate),
+    fieldText(item.url ?? item.threadUrl)
+  ].join("\t")).join("\n");
+}
+
 function formatResearchText(data: unknown): string {
   if (!isRecord(data) || !isRecord(data.query) || !Array.isArray(data.topics)) {
     return "";
@@ -679,6 +730,84 @@ function formatResearchText(data: unknown): string {
     errorLines.length > 0 ? "Errors:" : undefined,
     ...errorLines
   ]);
+}
+
+function searchOutput(data: unknown, originalKeyword: string, normalizedKeyword: string): unknown {
+  if (originalKeyword === normalizedKeyword || !isRecord(data)) {
+    return data;
+  }
+  const query = isRecord(data.query) ? data.query : {};
+  return {
+    ...data,
+    query: compactBody({
+      ...query,
+      keyword: originalKeyword,
+      normalizedKeyword
+    })
+  };
+}
+
+async function recentTopics(
+  session: Session,
+  options: { pageSize?: number; categoryId?: number; sinceHours?: number; fromDate?: string; toDate?: string }
+): Promise<Record<string, unknown>> {
+  const pageSize = options.pageSize ?? 20;
+  const sinceHours = options.sinceHours ?? (!options.fromDate && !options.toDate ? 48 : undefined);
+  const since = sinceHours === undefined ? undefined : new Date(Date.now() - sinceHours * 60 * 60 * 1000);
+  const fromDate = options.fromDate ?? (since ? dateOnly(since) : undefined);
+  const search = await requestJson(session.baseUrl, "/api/v1/search", {
+    token: session.token,
+    query: {
+      keyword: "%",
+      pageSize,
+      categoryId: options.categoryId,
+      fromDate,
+      toDate: options.toDate
+    }
+  });
+  const items = itemsFromData(search).filter((item) => !since || isOnOrAfter(item.updatedDate, since));
+  const recentItems = [];
+  const topicRequestIds = [];
+  const errors = [];
+  for (const [sourceItemIndex, item] of items.entries()) {
+    const id = topicIdFromSearchItem(item);
+    if (id === undefined) {
+      recentItems.push(item);
+      continue;
+    }
+    try {
+      const topic = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
+      recentItems.push(recentTopicFromData(topic, item, sourceItemIndex));
+      if (isRecord(topic) && topic.requestId) {
+        topicRequestIds.push(topic.requestId);
+      }
+    } catch (error) {
+      errors.push(researchTopicError(error, id, sourceItemIndex, session));
+      recentItems.push(item);
+    }
+  }
+  if (errors.length > 0) {
+    process.exitCode = 1;
+  }
+  return {
+    kind: "topic-recent",
+    query: compactBody({
+      pageSize,
+      categoryId: options.categoryId,
+      sinceHours,
+      since: since?.toISOString(),
+      fromDate,
+      toDate: options.toDate,
+      searchKeyword: "%"
+    }),
+    items: recentItems,
+    page: isRecord(search) ? search.page : undefined,
+    requestIds: {
+      search: isRecord(search) ? search.requestId : undefined,
+      topics: topicRequestIds
+    },
+    errors
+  };
 }
 
 function formatTopicText(data: unknown): string {
@@ -740,6 +869,52 @@ function sourcesFromData(data: Record<string, unknown>): Array<Record<string, un
   return [];
 }
 
+function enrichAskReferences(data: unknown): unknown {
+  if (!isRecord(data)) {
+    return data;
+  }
+  const output = { ...data };
+  for (const key of ["sources", "citations", "items"]) {
+    const value = output[key];
+    if (Array.isArray(value)) {
+      output[key] = value.map((item) => isRecord(item) ? enrichAskReference(item) : item);
+    }
+  }
+  return output;
+}
+
+function enrichAskReference(source: Record<string, unknown>): Record<string, unknown> {
+  const topicId = topicIdFromAskReference(source);
+  const topicUrl = source.url ?? source.threadUrl ?? (topicId === undefined ? undefined : `https://oracleapex.cn/t/${topicId}`);
+  return compactBody({
+    ...source,
+    url: topicUrl,
+    threadUrl: source.threadUrl ?? topicUrl,
+    originalUrl: source.originalUrl ?? source.source_url
+  });
+}
+
+function topicIdFromAskReference(source: Record<string, unknown>): number | undefined {
+  const direct = topicIdFromSearchItem(source);
+  if (direct !== undefined) {
+    return direct;
+  }
+  for (const key of ["doc_id", "card_link"]) {
+    const value = source[key];
+    if (typeof value !== "string") {
+      continue;
+    }
+    const match = /(?:P14_THREAD_ID:|\/t\/)(\d+)/.exec(value);
+    if (match) {
+      return Number(match[1]);
+    }
+    if (/^\d+$/.test(value)) {
+      return Number(value);
+    }
+  }
+  return undefined;
+}
+
 function topicIdFromSearchItem(item: Record<string, unknown>): number | undefined {
   for (const key of ["id", "topicId", "threadId"]) {
     const value = item[key];
@@ -754,21 +929,24 @@ function topicIdFromSearchItem(item: Record<string, unknown>): number | undefine
 }
 
 function researchLinks(items: Array<Record<string, unknown>>, topics: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
-  const seen = new Set<string>();
-  const links = [...items, ...topics].map((item) => compactBody({
-    id: item.id ?? item.topicId ?? item.threadId,
-    title: item.title ?? item.topicTitle,
-    url: item.url ?? item.threadUrl,
-    originalUrl: item.originalUrl
-  })).filter((item) => Object.keys(item).length > 0);
-  return links.filter((link) => {
-    const key = [link.id, link.url, link.originalUrl].map(fieldText).join("|");
-    if (seen.has(key)) {
-      return false;
+  const merged = new Map<string, Record<string, unknown>>();
+  const fallbackKeys = new Set<string>();
+  for (const item of [...items, ...topics]) {
+    const link = compactBody({
+      id: item.id ?? item.topicId ?? item.threadId,
+      title: item.title ?? item.topicTitle,
+      url: item.url ?? item.threadUrl,
+      originalUrl: item.originalUrl,
+      createdDate: item.createdDate,
+      updatedDate: item.updatedDate
+    });
+    if (Object.keys(link).length === 0) {
+      continue;
     }
-    seen.add(key);
-    return true;
-  });
+    const key = linkKey(link, fallbackKeys);
+    merged.set(key, compactBody({ ...merged.get(key), ...link }));
+  }
+  return [...merged.values()];
 }
 
 function researchTopicFromData(data: unknown, sourceItemIndex: number): Record<string, unknown> {
@@ -780,10 +958,46 @@ function researchTopicFromData(data: unknown, sourceItemIndex: number): Record<s
     title: topic.title ?? topic.topicTitle,
     url: topic.url ?? topic.threadUrl,
     originalUrl: topic.originalUrl,
+    createdDate: topic.createdDate,
+    updatedDate: topic.updatedDate,
     content,
     excerpt: topic.summary ?? topic.excerpt ?? (content ? excerptText(content) : undefined),
     requestId: isRecord(data) ? data.requestId : undefined
   });
+}
+
+function recentTopicFromData(data: unknown, source: Record<string, unknown>, sourceItemIndex: number): Record<string, unknown> {
+  const topic = topicFromData(data) ?? {};
+  return compactBody({
+    ...source,
+    sourceItemIndex,
+    id: topic.id ?? source.id ?? source.topicId ?? source.threadId,
+    categoryId: topic.categoryId ?? source.categoryId,
+    categoryName: topic.categoryName ?? source.categoryName,
+    title: topic.title ?? source.title ?? source.topicTitle,
+    url: topic.url ?? topic.threadUrl ?? source.url ?? source.threadUrl,
+    threadUrl: topic.threadUrl ?? topic.url ?? source.threadUrl ?? source.url,
+    originalUrl: topic.originalUrl ?? source.originalUrl,
+    createdDate: topic.createdDate ?? source.createdDate,
+    updatedDate: topic.updatedDate ?? source.updatedDate,
+    viewCount: topic.viewCount ?? source.viewCount,
+    tags: topic.tags ?? source.tags,
+    requestId: isRecord(data) ? data.requestId : undefined
+  });
+}
+
+function linkKey(link: Record<string, unknown>, fallbackKeys: Set<string>): string {
+  const id = fieldText(link.id);
+  if (id) {
+    return `id:${id}`;
+  }
+  for (const key of [link.url, link.originalUrl].map(fieldText).filter(Boolean)) {
+    if (!fallbackKeys.has(key)) {
+      fallbackKeys.add(key);
+    }
+    return `url:${key}`;
+  }
+  return `anon:${fallbackKeys.size}`;
 }
 
 function researchTopicError(error: unknown, id: number, sourceItemIndex: number, session: Session): Record<string, unknown> {
@@ -896,10 +1110,6 @@ function parseNonNegativeInteger(value: string): number {
   return parsed;
 }
 
-function rejectUnsupportedOffset(): never {
-  throw new InvalidArgumentError("Current search API does not support offset pagination. Narrow results with --category-id, --from-date, or --to-date instead.");
-}
-
 function parseSearchDate(value: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) {
@@ -919,13 +1129,32 @@ function parseSearchDate(value: string): string {
   return value;
 }
 
-function validateSearchDateRange(options: CommandIo, fromDate?: string, toDate?: string): boolean {
+function validateSearchDateRange(options: CommandIo, fromDate?: string, toDate?: string, commandOptions?: ErrorFormatOption): boolean {
   if (fromDate && toDate && fromDate > toDate) {
-    printError(options, { type: "validation", message: "--from-date must be earlier than or equal to --to-date" });
+    printError(options, { type: "validation", message: "--from-date must be earlier than or equal to --to-date", exitCode: 1 }, undefined, commandOptions?.json);
     process.exitCode = 1;
     return false;
   }
   return true;
+}
+
+function dateOnly(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function isOnOrAfter(value: unknown, since: Date): boolean {
+  if (typeof value !== "string") {
+    return true;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return true;
+  }
+  return date.getTime() >= since.getTime();
+}
+
+function normalizeSearchKeyword(keyword: string): string {
+  return keyword.replace(/\bAPEX\s*Lang\b/gi, "ApexLang");
 }
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {

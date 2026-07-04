@@ -18,7 +18,7 @@ When an AI agent needs available commands, aliases, purposes, safety metadata, s
 
 For unstable networks, set `APEXCN_HTTP_TIMEOUT_MS` to provide a default timeout for community API requests. `doctor --timeout-ms` overrides this default. Blank or non-positive values are ignored.
 
-When scripts need parseable failures, set `APEXCN_ERROR_FORMAT=json`. Content and account API commands write one-line JSON errors to stderr; default output remains human-readable text.
+When scripts need parseable failures, prefer passing `--json` to the command. Content and account commands that support `--json` write validation, config, network, and API errors as one-line JSON to stderr. You can also set `APEXCN_ERROR_FORMAT=json` to force structured API-command errors; default output remains human-readable text.
 
 ## auth
 
@@ -120,7 +120,19 @@ Search by updated date range:
 apexcn search "JSON" --from-date 2026-01-01 --to-date 2026-12-31 --json
 ```
 
-`--page-size` accepts 1 to 50. The current search API does not support offset pagination. Narrow large result sets with `--category-id`, `--from-date`, and `--to-date`.
+`--page-size` accepts 1 to 50. Common variants `ApexLang`, `APEXLang`, and `APEX Lang` are normalized to `ApexLang` before searching; JSON output includes `query.normalizedKeyword` when normalization happens. The current search API does not support offset pagination. Narrow large result sets with `--category-id`, `--from-date`, and `--to-date`.
+
+## topic recent
+
+Read recently updated topics:
+
+```bash
+apexcn topic recent --json
+apexcn topic recent --since-hours 48 --page-size 10 --json
+apexcn topic recent --category-id 4 --from-date 2026-07-01 --to-date 2026-07-04 --format text
+```
+
+`topic recent` is read-only and defaults to topics updated in the last 48 hours. It uses the backend search wildcard capability to get the newest updated topics, then fetches topic details to add fields such as `createdDate`, `originalUrl`, `tags`, and `viewCount`. JSON output contains `kind: "topic-recent"`, `query`, `items`, `page`, `requestIds`, and `errors`. Because the current search API still does not support offset pagination, `page.hasMore: true` means the output only covers the newest items within the current `--page-size` window.
 
 ## research
 
@@ -131,7 +143,7 @@ apexcn research "REST API" --limit 3 --json
 apexcn research "ORDS" --category-id 4 --from-date 2026-01-01 --format text
 ```
 
-`--limit` accepts 1 to 10 and defaults to 3. JSON output always contains `query`, `items`, `topics`, `links`, `requestIds`, and `errors`. If one topic fetch fails, the command still prints the completed portion of the research bundle, records the failure in `errors`, and exits non-zero.
+`--limit` accepts 1 to 10 and defaults to 3. JSON output always contains `query`, `items`, `topics`, `links`, `requestIds`, and `errors`. `links` are deduplicated by topic id or URL and preserve `createdDate`, `updatedDate`, and `originalUrl` when the backend returns them. If one topic fetch fails, the command still prints the completed portion of the research bundle, records the failure in `errors`, and exits non-zero.
 
 ## collection
 
@@ -410,6 +422,8 @@ apexcn ask "How do I generate an ORDS OAuth2 Bearer token?" --top-k 3 --json
 apexcn ask "How do I call a REST API from Oracle APEX?" --format text
 ```
 
+Ask references try to derive clickable `https://oracleapex.cn/t/<id>` links from backend topic ids, `card_link`, `doc_id`, `url`, or `threadUrl`. Original backend URLs are preserved as `originalUrl`.
+
 ## Common Flows
 
 Readonly real-environment acceptance. The script skips when `APEXCN_API_KEY` is not set. With a key, it checks `doctor`, `me`, `category list`, `search`, and `ask`; write paths only run with `--preview`:
@@ -441,4 +455,4 @@ apexcn topic delete 30549 --yes --force --confirm-title "Full title" --json
 
 ## API write dry-run classification
 
-Installer `--dry-run` is separate from CLI API command preview. Installer dry-run checks installation actions; CLI API `--preview` / `--dry-run` prints the community API write request that would be sent without executing it. API write preview is available only for `topic create/update/edit/delete`, `reply create/update/edit/delete`, `favorite add/remove`, and `subscription add/remove`; aliases `thread` and `post` inherit the same classification. `ask` uses POST but is a read-like RAG command and is excluded. Preview does not require a prior `category list` or `topic view`; topic creation still requires `--category-id`, and topic deletion still requires `--yes --force --confirm-title`.
+Installer `--dry-run` is separate from CLI API command preview. Installer dry-run checks installation actions; CLI API `--preview` / `--dry-run` prints the community API write request that would be sent without executing it, including `dryRun`, `preview`, and `mode` so agents can distinguish preview from dry-run. API write preview is available only for `topic create/update/edit/delete`, `reply create/update/edit/delete`, `favorite add/remove`, and `subscription add/remove`; aliases `thread` and `post` inherit the same classification. `ask` uses POST but is a read-like RAG command and is excluded. Preview does not require a prior `category list` or `topic view`; topic creation still requires `--category-id`, and topic deletion still requires `--yes --force --confirm-title`.

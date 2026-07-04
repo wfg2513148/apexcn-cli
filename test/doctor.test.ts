@@ -286,7 +286,14 @@ describe("doctor command", () => {
         expect(stderr.join("")).toContain("Expected output format json, pretty, or text");
       } else {
         await program.parseAsync(argv);
-        expect(stderr.join("")).toBe("--json can only be combined with --format pretty\n");
+        expect(JSON.parse(stderr.join(""))).toEqual({
+          ok: false,
+          error: {
+            type: "validation",
+            message: "--json can only be combined with --format pretty",
+            exitCode: 1
+          }
+        });
         expect(process.exitCode).toBe(1);
         process.exitCode = undefined;
       }

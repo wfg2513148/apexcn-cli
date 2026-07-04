@@ -120,7 +120,14 @@ describe("me command", () => {
 
     expect(fetch).not.toHaveBeenCalled();
     expect(stdout.join("")).toBe("");
-    expect(stderr.join("")).toBe("--json can only be combined with --format pretty\n");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "validation",
+        message: "--json can only be combined with --format pretty",
+        exitCode: 1
+      }
+    });
     expect(process.exitCode).toBe(1);
   });
 
@@ -143,7 +150,8 @@ describe("me command", () => {
       ok: false,
       error: {
         type: "validation",
-        message: "--json can only be combined with --format pretty"
+        message: "--json can only be combined with --format pretty",
+        exitCode: 1
       }
     });
     expect(process.exitCode).toBe(1);

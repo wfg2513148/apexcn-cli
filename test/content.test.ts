@@ -119,7 +119,9 @@ const neverApiDryRunCommands = [
   "review reply",
   "review topic",
   "search",
+  "topic recent",
   "topic view",
+  "thread recent",
   "thread view",
   "ask",
   "workflow approve",
@@ -133,6 +135,7 @@ const neverApiDryRunCommands = [
 describe("content commands", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
     process.exitCode = undefined;
     delete process.env.APEXCN_HTTP_TIMEOUT_MS;
     delete process.env.APEXCN_ERROR_FORMAT;
@@ -245,7 +248,8 @@ describe("content commands", () => {
         type: "http",
         message: "token [redacted] is not allowed",
         status: 403,
-        requestId: "req-token"
+        requestId: "req-token",
+        exitCode: 1
       }
     });
     expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
@@ -271,7 +275,8 @@ describe("content commands", () => {
       ok: false,
       error: {
         type: "no-profile",
-        message: "No active profile"
+        message: "No active profile",
+        exitCode: 1
       }
     });
     expect(process.exitCode).toBe(1);
@@ -299,7 +304,8 @@ describe("content commands", () => {
       ok: false,
       error: {
         type: "config",
-        message: `Invalid config file: ${configPath}. Run apexcn auth set-token to reconfigure.`
+        message: `Invalid config file: ${configPath}. Run apexcn auth set-token to reconfigure.`,
+        exitCode: 1
       }
     });
     expect(stderr.join("")).not.toContain("SyntaxError");
@@ -336,7 +342,8 @@ describe("content commands", () => {
       ok: false,
       error: {
         type: "network",
-        message: "Network error: failed to reach https://oracleapex.cn/ords/test/api/v1/categories"
+        message: "Network error: failed to reach https://oracleapex.cn/ords/test/api/v1/categories",
+        exitCode: 1
       }
     });
     expect(stderr.join("")).not.toContain("TypeError");
@@ -378,7 +385,8 @@ describe("content commands", () => {
       ok: false,
       error: {
         type: "timeout",
-        message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/categories"
+        message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/categories",
+        exitCode: 1
       }
     });
     expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
@@ -397,6 +405,23 @@ describe("content commands", () => {
       expect.any(Object)
     );
     expect(JSON.parse(stdout.join("")).items[0].id).toBe(42);
+  });
+
+  test("search normalizes common ApexLang keyword variants", async () => {
+    const { program, stdout, fetch } = await configuredProgram(async () =>
+      Response.json({ items: [{ id: 42, title: "ApexLang topic" }], requestId: "req-search" })
+    );
+
+    await program.parseAsync(["node", "apexcn", "search", "APEX Lang", "--json"]);
+
+    expect(fetch).toHaveBeenLastCalledWith(
+      "https://oracleapex.cn/ords/test/api/v1/search?keyword=ApexLang",
+      expect.any(Object)
+    );
+    expect(JSON.parse(stdout.join("")).query).toEqual({
+      keyword: "APEX Lang",
+      normalizedKeyword: "ApexLang"
+    });
   });
 
   test("search supports explicit output formats", async () => {
@@ -481,14 +506,121 @@ describe("content commands", () => {
     }
   });
 
+  test("topic recent uses wildcard search and enriches recent topic details", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-04T08:27:20Z"));
+    const { program, stdout, fetch } = await configuredProgram(async (url: string | URL | Request) => {
+      const href = String(url);
+      if (href.includes("/api/v1/search")) {
+        return Response.json({
+          items: [
+            { id: 42, title: "Recent topic", updatedDate: "2026-07-04T08:00:00", url: "https://oracleapex.cn/t/42" },
+            { id: 43, title: "Old topic", updatedDate: "2026-07-01T08:00:00", url: "https://oracleapex.cn/t/43" }
+          ],
+          page: { limit: 5, count: 2, hasMore: false },
+          requestId: "req-search"
+        });
+      }
+      if (href.endsWith("/api/v1/topics/42")) {
+        return Response.json({
+          topic: {
+            id: 42,
+            title: "Recent topic",
+            createdDate: "2026-07-03T00:00:00",
+            updatedDate: "2026-07-04T08:00:00",
+            originalUrl: "https://example.com/original",
+            url: "https://oracleapex.cn/t/42"
+          },
+          requestId: "req-topic"
+        });
+      }
+      return Response.json({ error: { message: `unexpected url ${href}` } }, { status: 500 });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "recent", "--page-size", "5", "--json"]);
+
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      "https://oracleapex.cn/ords/test/api/v1/search?keyword=%25&pageSize=5&fromDate=2026-07-02",
+      expect.any(Object)
+    );
+    expect(fetch).toHaveBeenNthCalledWith(2, "https://oracleapex.cn/ords/test/api/v1/topics/42", expect.any(Object));
+    const data = JSON.parse(stdout.join(""));
+    expect(data).toEqual(expect.objectContaining({
+      kind: "topic-recent",
+      query: expect.objectContaining({
+        pageSize: 5,
+        sinceHours: 48,
+        fromDate: "2026-07-02",
+        searchKeyword: "%"
+      }),
+      page: { limit: 5, count: 2, hasMore: false },
+      requestIds: { search: "req-search", topics: ["req-topic"] },
+      errors: []
+    }));
+    expect(data.items).toEqual([
+      expect.objectContaining({
+        id: 42,
+        title: "Recent topic",
+        createdDate: "2026-07-03T00:00:00",
+        updatedDate: "2026-07-04T08:00:00",
+        originalUrl: "https://example.com/original"
+      })
+    ]);
+  });
+
+  test("topic recent supports explicit date filters and text output", async () => {
+    const { program, stdout, fetch } = await configuredProgram(async (url: string | URL | Request) => {
+      const href = String(url);
+      if (href.includes("/api/v1/search")) {
+        return Response.json({
+          items: [{ id: 42, title: "Recent topic", updatedDate: "2026-07-03T08:00:00", url: "https://oracleapex.cn/t/42" }],
+          requestId: "req-search"
+        });
+      }
+      return Response.json({
+        topic: {
+          id: 42,
+          title: "Recent topic",
+          createdDate: "2026-07-03T00:00:00",
+          updatedDate: "2026-07-03T08:00:00",
+          url: "https://oracleapex.cn/t/42"
+        },
+        requestId: "req-topic"
+      });
+    });
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "topic",
+      "recent",
+      "--category-id",
+      "4",
+      "--from-date",
+      "2026-07-01",
+      "--to-date",
+      "2026-07-04",
+      "--format",
+      "text"
+    ]);
+
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      "https://oracleapex.cn/ords/test/api/v1/search?keyword=%25&pageSize=20&categoryId=4&fromDate=2026-07-01&toDate=2026-07-04",
+      expect.any(Object)
+    );
+    expect(stdout.join("")).toBe("42\tRecent topic\t2026-07-03T08:00:00\t2026-07-03T00:00:00\thttps://oracleapex.cn/t/42\n");
+  });
+
   test("research searches and fetches topic details as a bundle", async () => {
     const fetchImpl = vi.fn(async (url: string | URL | Request) => {
       const href = String(url);
       if (href.includes("/api/v1/search")) {
         return Response.json({
           items: [
-            { id: 42, title: "REST API", url: "https://oracleapex.cn/t/42" },
-            { topicId: 43, title: "ORDS", threadUrl: "https://oracleapex.cn/t/43" },
+            { id: 42, title: "REST API", url: "https://oracleapex.cn/t/42", updatedDate: "2026-06-02" },
+            { topicId: 43, title: "ORDS", threadUrl: "https://oracleapex.cn/t/43", createdDate: "2026-06-03" },
             { id: 44, title: "Ignored" }
           ],
           requestId: "req-search"
@@ -501,6 +633,7 @@ describe("content commands", () => {
             title: "REST API",
             url: "https://oracleapex.cn/t/42",
             originalUrl: "https://oracleapex.cn/original/42",
+            createdDate: "2026-06-01",
             content: "Use REST Source modules."
           },
           requestId: "req-topic-42"
@@ -554,9 +687,16 @@ describe("content commands", () => {
     });
     expect(data.items).toHaveLength(2);
     expect(data.topics.map((topic: { id: number }) => topic.id)).toEqual([42, 43]);
+    expect(data.links).toHaveLength(2);
     expect(data.links).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: 42, url: "https://oracleapex.cn/t/42", originalUrl: "https://oracleapex.cn/original/42" }),
-      expect.objectContaining({ id: 43, url: "https://oracleapex.cn/t/43" })
+      expect.objectContaining({
+        id: 42,
+        url: "https://oracleapex.cn/t/42",
+        originalUrl: "https://oracleapex.cn/original/42",
+        createdDate: "2026-06-01",
+        updatedDate: "2026-06-02"
+      }),
+      expect.objectContaining({ id: 43, url: "https://oracleapex.cn/t/43", createdDate: "2026-06-03" })
     ]));
     expect(data.requestIds).toEqual({ search: "req-search", topics: ["req-topic-42", "req-topic-43"] });
   });
@@ -729,7 +869,8 @@ describe("content commands", () => {
       ok: false,
       error: {
         type: "validation",
-        message: "--from-date must be earlier than or equal to --to-date"
+        message: "--from-date must be earlier than or equal to --to-date",
+        exitCode: 1
       }
     });
     expect(process.exitCode).toBe(1);
@@ -739,15 +880,31 @@ describe("content commands", () => {
     const { program, stdout, stderr, fetch } = await configuredProgram(async () =>
       Response.json({ items: [], page: { limit: 5, offset: 0, count: 0, hasMore: false } })
     );
-    exitOverrideTree(program);
 
-    await expect(program.parseAsync(["node", "apexcn", "search", "APEX", "--offset", "5"])).rejects.toMatchObject({
-      code: "commander.invalidArgument"
-    });
+    await program.parseAsync(["node", "apexcn", "search", "APEX", "--offset", "5"]);
 
     expect(fetch).not.toHaveBeenCalled();
     expect(stdout.join("")).toBe("");
     expect(stderr.join("")).toContain("Current search API does not support offset pagination");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("search can print unsupported offset errors as JSON", async () => {
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ items: [] }));
+
+    await program.parseAsync(["node", "apexcn", "search", "APEX", "--offset", "5", "--json"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "validation",
+        message: "Current search API does not support offset pagination. Narrow results with --category-id, --from-date, or --to-date instead.",
+        exitCode: 1
+      }
+    });
+    expect(process.exitCode).toBe(1);
   });
 
   test("search help hides unsupported offset and describes json as pretty-print", () => {
@@ -764,7 +921,7 @@ describe("content commands", () => {
 
   test("format option is exposed only on read commands with text output", () => {
     const program = createProgram();
-    const formatCommands = ["doctor", "doctor snapshot", "draft reply", "draft question", "review reply", "review topic", "workflow plan", "me", "category list", "search", "research", "topic view", "thread view", "ask"];
+    const formatCommands = ["doctor", "doctor snapshot", "draft reply", "draft question", "review reply", "review topic", "workflow plan", "me", "category list", "search", "research", "topic recent", "topic view", "thread recent", "thread view", "ask"];
 
     for (const path of leafCommandPaths(program)) {
       if (formatCommands.includes(path)) {
@@ -779,6 +936,7 @@ describe("content commands", () => {
     const invalidCases = [
       ["node", "apexcn", "category", "list", "--format", "xml"],
       ["node", "apexcn", "search", "APEX", "--format", "yaml"],
+      ["node", "apexcn", "topic", "recent", "--format", "yaml"],
       ["node", "apexcn", "topic", "view", "42", "--format", "xml"],
       ["node", "apexcn", "me", "--format", "yaml"],
       ["node", "apexcn", "ask", "Q", "--format", "yaml"]
@@ -813,7 +971,14 @@ describe("content commands", () => {
 
       expect(fetch).not.toHaveBeenCalled();
       expect(stdout.join("")).toBe("");
-      expect(stderr.join("")).toBe("--json can only be combined with --format pretty\n");
+      expect(JSON.parse(stderr.join(""))).toEqual({
+        ok: false,
+        error: {
+          type: "validation",
+          message: "--json can only be combined with --format pretty",
+          exitCode: 1
+        }
+      });
       expect(process.exitCode).toBe(1);
       process.exitCode = undefined;
       vi.unstubAllGlobals();
@@ -839,7 +1004,8 @@ describe("content commands", () => {
       ok: false,
       error: {
         type: "validation",
-        message: "--json can only be combined with --format pretty"
+        message: "--json can only be combined with --format pretty",
+        exitCode: 1
       }
     });
     expect(process.exitCode).toBe(1);
@@ -1128,6 +1294,8 @@ describe("content commands", () => {
     expect(plans).toEqual([
       {
         dryRun: true,
+        preview: false,
+        mode: "dry-run",
         profile: "test@oci",
         baseUrl: "https://oracleapex.cn/ords/test",
         method: "POST",
@@ -1136,6 +1304,8 @@ describe("content commands", () => {
       },
       {
         dryRun: true,
+        preview: false,
+        mode: "dry-run",
         profile: "test@oci",
         baseUrl: "https://oracleapex.cn/ords/test",
         method: "POST",
@@ -1144,6 +1314,8 @@ describe("content commands", () => {
       },
       {
         dryRun: true,
+        preview: false,
+        mode: "dry-run",
         profile: "test@oci",
         baseUrl: "https://oracleapex.cn/ords/test",
         method: "DELETE",
@@ -1173,6 +1345,8 @@ describe("content commands", () => {
     expect(plans).toEqual([
       {
         dryRun: true,
+        preview: true,
+        mode: "preview",
         profile: "test@oci",
         baseUrl: "https://oracleapex.cn/ords/test",
         method: "POST",
@@ -1181,6 +1355,8 @@ describe("content commands", () => {
       },
       {
         dryRun: true,
+        preview: true,
+        mode: "preview",
         profile: "test@oci",
         baseUrl: "https://oracleapex.cn/ords/test",
         method: "POST",
@@ -1491,10 +1667,43 @@ describe("content commands", () => {
       "APEX 可以用 REST Data Source。",
       "Sources:",
       "1. REST Data - https://oracleapex.cn/t/42 | score 0.88 | 第一行 第二行",
-      "2. 43",
+      "2. 43 - https://oracleapex.cn/t/43",
       "requestId: req-ask",
       ""
     ].join("\n"));
+  });
+
+  test("ask enriches backend references with stable topic URLs", async () => {
+    const { program, stdout } = await configuredProgram(async () =>
+      Response.json({
+        answer: "APEXLang supports single page imports.",
+        sources: [
+          {
+            card_title: "APEXLang import",
+            card_link: "f?p=100:14:::::P14_THREAD_ID:29667",
+            source_url: "https://oracleapex.cn/ords/r/apex-cn/website/thread?session=abc"
+          }
+        ],
+        requestId: "req-ask"
+      })
+    );
+
+    await program.parseAsync(["node", "apexcn", "ask", "APEXLang supports single page imports?", "--json"]);
+
+    expect(JSON.parse(stdout.join(""))).toEqual({
+      answer: "APEXLang supports single page imports.",
+      sources: [
+        {
+          card_title: "APEXLang import",
+          card_link: "f?p=100:14:::::P14_THREAD_ID:29667",
+          source_url: "https://oracleapex.cn/ords/r/apex-cn/website/thread?session=abc",
+          url: "https://oracleapex.cn/t/29667",
+          threadUrl: "https://oracleapex.cn/t/29667",
+          originalUrl: "https://oracleapex.cn/ords/r/apex-cn/website/thread?session=abc"
+        }
+      ],
+      requestId: "req-ask"
+    });
   });
 
   test("reply and relation write commands can print dry-run plans without calling the API", async () => {
@@ -1515,6 +1724,8 @@ describe("content commands", () => {
     expect(plans).toEqual([
       {
         dryRun: true,
+        preview: false,
+        mode: "dry-run",
         profile: "test@oci",
         baseUrl: "https://oracleapex.cn/ords/test",
         method: "POST",
@@ -1523,6 +1734,8 @@ describe("content commands", () => {
       },
       {
         dryRun: true,
+        preview: false,
+        mode: "dry-run",
         profile: "test@oci",
         baseUrl: "https://oracleapex.cn/ords/test",
         method: "POST",
@@ -1531,6 +1744,8 @@ describe("content commands", () => {
       },
       {
         dryRun: true,
+        preview: false,
+        mode: "dry-run",
         profile: "test@oci",
         baseUrl: "https://oracleapex.cn/ords/test",
         method: "DELETE",
@@ -1538,6 +1753,8 @@ describe("content commands", () => {
       },
       {
         dryRun: true,
+        preview: false,
+        mode: "dry-run",
         profile: "test@oci",
         baseUrl: "https://oracleapex.cn/ords/test",
         method: "POST",
@@ -1545,6 +1762,8 @@ describe("content commands", () => {
       },
       {
         dryRun: true,
+        preview: false,
+        mode: "dry-run",
         profile: "test@oci",
         baseUrl: "https://oracleapex.cn/ords/test",
         method: "DELETE",
@@ -1562,6 +1781,8 @@ describe("content commands", () => {
     expect(stdout.join("")).toBe([
       "{",
       "  \"dryRun\": true,",
+      "  \"preview\": false,",
+      "  \"mode\": \"dry-run\",",
       "  \"profile\": \"test@oci\",",
       "  \"baseUrl\": \"https://oracleapex.cn/ords/test\",",
       "  \"method\": \"POST\",",
