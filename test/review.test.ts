@@ -32,6 +32,21 @@ const GOOD_CONTENT = [
   "1. REST API - https://oracleapex.cn/t/42"
 ].join("\n");
 
+const GOOD_REPLY = [
+  "## 简短回应",
+  "",
+  "这个 403 更像是认证或 Web Credential 配置问题，可以先确认 ORDS URL 和凭据映射。",
+  "",
+  "## 建议步骤",
+  "",
+  "1. 在 APEX 中确认 Web Credential 名称。",
+  "2. 用同一个 URL 单独测试接口权限。",
+  "",
+  "## 参考链接",
+  "",
+  "https://oracleapex.cn/t/42"
+].join("\n");
+
 async function tempPath(name: string): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), "apexcn-review-"));
   return join(dir, name);
@@ -262,5 +277,163 @@ describe("review commands", () => {
     expect(fetch).not.toHaveBeenCalled();
     expect(stderr.join("")).toBe("");
     expect(JSON.parse(stdout.join("")).ok).toBe(true);
+  });
+
+  test("review reply builds a local request plan for a Markdown file without calling the API", async () => {
+    const replyPath = await tempPath("reply.md");
+    await writeFile(replyPath, GOOD_REPLY);
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const { program, stdout, stderr } = reviewProgram();
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "review",
+      "reply",
+      "--topic-id",
+      "30549",
+      "--parent-post-id",
+      "201480",
+      "--content-file",
+      replyPath,
+      "--json"
+    ]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stderr.join("")).toBe("");
+    const data = JSON.parse(stdout.join(""));
+    expect(data).toEqual(expect.objectContaining({
+      kind: "reply-review",
+      schemaVersion: 1,
+      ok: true
+    }));
+    expect(data.issues).toEqual([]);
+    expect(data.requestPlan).toEqual({
+      method: "POST",
+      path: "/api/v1/topics/30549/replies",
+      body: {
+        content: GOOD_REPLY,
+        parentPostId: 201480
+      }
+    });
+    expect(data.suggestedCommand.command).toContain(`apexcn reply create 30549 --parent-post-id 201480 --content-file ${replyPath} --dry-run --json`);
+  });
+
+  test("review reply reads reply-draft JSON without suggesting a content-file command", async () => {
+    const draftPath = await tempPath("reply-draft.json");
+    await writeFile(draftPath, JSON.stringify({
+      kind: "reply-draft",
+      schemaVersion: 1,
+      topicId: 30549,
+      parentPostId: null,
+      content: GOOD_REPLY,
+      references: [],
+      metadata: { tone: "friendly" }
+    }));
+    const { program, stdout, stderr } = reviewProgram();
+
+    await program.parseAsync(["node", "apexcn", "review", "reply", "--draft-file", draftPath, "--format", "text"]);
+
+    expect(stderr.join("")).toBe("");
+    expect(stdout.join("")).toContain("Status: ok");
+    expect(stdout.join("")).toContain("unsaved-content-file");
+    expect(stdout.join("")).toContain("Suggested preview: unavailable until content is saved as Markdown");
+  });
+
+  test("review reply reports draft topic mismatches as schema issues", async () => {
+    const draftPath = await tempPath("reply-draft.json");
+    await writeFile(draftPath, JSON.stringify({
+      kind: "reply-draft",
+      schemaVersion: 1,
+      topicId: 30549,
+      parentPostId: 201480,
+      content: GOOD_REPLY,
+      references: [],
+      metadata: { tone: "friendly" }
+    }));
+    const { program, stdout, stderr } = reviewProgram();
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "review",
+      "reply",
+      "--topic-id",
+      "999",
+      "--parent-post-id",
+      "777",
+      "--draft-file",
+      draftPath
+    ]);
+
+    const data = JSON.parse(stdout.join(""));
+    expect(stderr.join("")).toBe("");
+    expect(data.ok).toBe(false);
+    expect(data.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "topic-id-mismatch", severity: "issue" }),
+      expect.objectContaining({ code: "parent-post-id-mismatch", severity: "issue" })
+    ]));
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("review reply reports input contract problems in reply-review JSON", async () => {
+    const { program, stdout, stderr } = reviewProgram();
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "review",
+      "reply",
+      "--topic-id",
+      "0",
+      "--content-file",
+      "reply.md",
+      "--draft-file",
+      "draft.json"
+    ]);
+
+    const data = JSON.parse(stdout.join(""));
+    expect(stderr.join("")).toBe("");
+    expect(data.kind).toBe("reply-review");
+    expect(data.ok).toBe(false);
+    expect(data.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "invalid-topic-id" }),
+      expect.objectContaining({ code: "input-conflict" }),
+      expect.objectContaining({ code: "blank-content" })
+    ]));
+    expect(data.requestPlan).toBeNull();
+    expect(data.suggestedCommand).toBeNull();
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("review reply redacts possible secrets from the request plan", async () => {
+    const content = `${GOOD_REPLY}\nAuthorization: Bearer abcdefghijklmnopqrstuvwxyz\ntoken=super-secret`;
+    const { program, stdout, stderr } = reviewProgram({
+      readStdin: async () => content
+    });
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "review",
+      "reply",
+      "--topic-id",
+      "30549",
+      "--content-file",
+      "-"
+    ]);
+
+    const data = JSON.parse(stdout.join(""));
+    expect(stderr.join("")).toBe("");
+    expect(data.ok).toBe(false);
+    expect(data.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "possible-secret", severity: "issue" })
+    ]));
+    expect(data.requestPlan.body.content).toContain("Authorization: Bearer [redacted]");
+    expect(data.requestPlan.body.content).toContain("token=[redacted]");
+    expect(data.requestPlan.body.content).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    expect(data.requestPlan.body.content).not.toContain("super-secret");
+    expect(process.exitCode).toBe(1);
   });
 });

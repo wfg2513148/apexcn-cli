@@ -212,6 +212,14 @@ JSON output always contains `kind`, `schemaVersion`, `ok`, `issues`, `warnings`,
 
 `suggestedCommand` is generated only when the input came from a reusable Markdown file. For stdin or draft JSON input, the command does not inline content into the shell and does not treat draft JSON as `--content-file`; `suggestedCommand` is `null`, and you should save the Markdown body to a file before running `topic create --content-file`. `review topic` does not replace `topic create --preview`; it is a local quality and safety gate before API preview.
 
+Replies have a separate local gate between `draft reply` and `reply create --dry-run`:
+
+```bash
+apexcn review reply --topic-id 30549 --content-file reply.md --json
+```
+
+`review reply` accepts `--content-file <path|->` or `--draft-file <path|->`. `--draft-file` only accepts draft JSON with `kind === "reply-draft"` and `schemaVersion === 1`; if explicit `--topic-id` or `--parent-post-id` values disagree with the draft, the mismatch is reported in `reply-review.issues[]`. Missing input, conflicting input, invalid topic ids, blank replies, too-short replies, placeholders, and possible secrets all produce stable `reply-review` JSON instead of sending an API request. `suggestedCommand` is generated only for normal Markdown file input and uses `apexcn reply create <topic-id> --content-file <file> --dry-run --json`.
+
 ## workflow
 
 Generate an auditable local execution plan. This command does not read auth config, call the API, or execute any planned command:

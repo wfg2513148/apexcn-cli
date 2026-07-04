@@ -56,6 +56,7 @@ apexcn auth set-token \
 - `apexcn draft question` is local-only and does not require auth preflight when you are only drafting content; run auth checks before API reads or writes.
 - Use `apexcn draft reply --format text` to prepare a local Markdown reply before `reply create --content-file`.
 - Use `apexcn review topic` before `topic create --preview` when you have a local Markdown draft or question-draft JSON. It is local-only, detects placeholders and possible secrets, and never publishes.
+- Use `apexcn review reply` before `reply create --dry-run` when you have a local Markdown reply or reply-draft JSON. It is local-only, validates topic/parent ids, detects weak replies and possible secrets, and never publishes.
 - Use `apexcn workflow plan` when you need a machine-readable sequence of local, preview, and execute steps. It only plans; it never executes commands.
 - Use `apexcn workflow run` when you need the CLI to run a resumable workflow with persisted artifacts. The default run reads API data and writes local `run.json`, draft files, review data, and `preview.json`; it does not publish.
 - Approve a workflow preview with `apexcn workflow approve --run-dir <run-dir> --json` after reviewing `preview.json`. This records a hash-bound approval artifact.
@@ -96,6 +97,7 @@ apexcn collection verify --dir ./collection --json
 apexcn draft question --title "标题" --problem "问题描述" --research-file ./research.json --format text
 apexcn draft reply --topic-id 30549 --answer "回复建议" --format text
 apexcn review topic --title "标题" --content-file ./question.md --category-id 4 --json
+apexcn review reply --topic-id 30549 --content-file ./reply.md --json
 apexcn workflow plan --goal ask-question --keyword "REST API" --title "标题" --problem "问题描述" --category-id 4 --json
 apexcn workflow run --goal ask-question --keyword "REST API" --title "标题" --problem "问题描述" --category-id 4 --output-dir ./run --json
 apexcn workflow approve --run-dir ./run --approved-by reviewer --note "preview reviewed" --json

@@ -183,6 +183,7 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "reply delete": "delete a reply after explicit confirmation",
   "reply update": "update an existing reply",
   "research": "build a research bundle from search results and topic content",
+  "review reply": "review a local reply draft before API preview or publish",
   "review topic": "review a local topic draft before API preview or publish",
   "search": "search community topics",
   "subscription add": "subscribe to a community topic",
@@ -306,6 +307,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "review topic": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: 'apexcn review topic --title "标题" --content-file ./question.md --category-id 4 --json', mode: "read" }]
+  },
+  "review reply": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn review reply --topic-id 30549 --content-file ./reply.md --json", mode: "read" }]
   },
   "search": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
