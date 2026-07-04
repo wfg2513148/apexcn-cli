@@ -66,6 +66,11 @@ function Download-File {
     Write-Step "DRY-RUN: would download $Url to $Target"
     return
   }
+  $uri = [System.Uri]::new($Url)
+  if ($uri.IsFile) {
+    Copy-Item -LiteralPath $uri.LocalPath -Destination $Target -Force
+    return
+  }
   Invoke-WebRequest -Uri $Url -OutFile $Target
 }
 
