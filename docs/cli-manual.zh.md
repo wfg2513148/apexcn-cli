@@ -74,11 +74,14 @@ apexcn doctor
 apexcn doctor --json
 apexcn doctor --format json
 apexcn doctor --format text
+apexcn doctor snapshot --json
 apexcn doctor --check-ask "Oracle APEX 如何调用 REST API？" --json
 apexcn doctor --timeout-ms 10000 --json
 ```
 
 `doctor` 默认输出文本。`--format json` 输出压缩 JSON；`--json` 和 `--format pretty` 输出格式化 JSON。JSON 输出包含 CLI 版本、User-Agent、配置文件路径、Node.js 版本、平台和架构等诊断信息。默认只检查 profile、账号、板块和搜索；只有显式传 `--check-ask <question>` 时才会额外检查 RAG 问答接口。`--timeout-ms` 可为每个检查设置毫秒级请求超时。
+
+`doctor snapshot` 是纯本地支持快照，不调用社区 API。它直读配置文件并输出 `kind: "doctor-snapshot"`、`schemaVersion: 1`、`diagnostics`、`environment`、`config`、`agentSkill` 和稳定 `checks[].code`。硬问题 code 包括 `config-unreadable`、`config-invalid-json`、`no-active-profile`、`missing-current-profile`、`invalid-base-url`、`invalid-timeout-env`；warning code 包括 `api-key-env-missing`、`missing-token`、`agent-skill-missing`。环境变量只输出是否存在或是否有效；token 只输出是否存在和脱敏长度，不输出完整值。
 
 ## category
 

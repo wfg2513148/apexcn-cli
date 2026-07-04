@@ -17,7 +17,7 @@ describe("CLI entrypoint detection", () => {
 
     await expect(program.parseAsync(["node", "apexcn", "--version"])).rejects.toMatchObject({ code: "commander.version" });
 
-    expect(output.join("")).toBe("13.0.0\n");
+    expect(output.join("")).toBe("14.0.0\n");
   });
 
   test("prints a machine-readable command manifest", async () => {
@@ -31,7 +31,7 @@ describe("CLI entrypoint detection", () => {
 
     const manifest = JSON.parse(output.join(""));
     expect(manifest.schemaVersion).toBe(1);
-    expect(manifest.version).toBe("13.0.0");
+    expect(manifest.version).toBe("14.0.0");
     expect(manifest.schema).toEqual({
       safetyEffects: ["read", "api-write", "destructive", "config-read", "config-write", "auth", "secret", "diagnostic", "manifest"],
       previewPolicies: ["required", "available", "none"],
@@ -271,10 +271,18 @@ describe("CLI entrypoint detection", () => {
 function leafCommandPaths(command: Command, prefix: string[] = [], includeCurrent = false): string[] {
   const names = [command.name()];
   const nextPrefixes = includeCurrent ? names.map((name) => [...prefix, name]) : [prefix];
+  const current = hasActionHandler(command) ? nextPrefixes.map((parts) => parts.join(" ")).filter(Boolean) : [];
   if (command.commands.length === 0) {
-    return nextPrefixes.map((parts) => parts.join(" ")).filter(Boolean);
+    return current.length > 0 ? current : nextPrefixes.map((parts) => parts.join(" ")).filter(Boolean);
   }
-  return nextPrefixes.flatMap((parts) => command.commands.flatMap((child) => leafCommandPaths(child, parts, true)));
+  return [
+    ...current,
+    ...nextPrefixes.flatMap((parts) => command.commands.flatMap((child) => leafCommandPaths(child, parts, true)))
+  ];
+}
+
+function hasActionHandler(command: Command): boolean {
+  return Boolean((command as unknown as { _actionHandler?: unknown })._actionHandler);
 }
 
 type ManifestCommand = {

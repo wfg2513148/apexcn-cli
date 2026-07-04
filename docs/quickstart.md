@@ -57,19 +57,19 @@ https://oracleapex.cn/ords/api
 macOS / Linux：
 
 ```bash
-curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v13.0.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
+curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v14.0.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v13.0.0/install-agent.ps1" | iex
+$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v14.0.0/install-agent.ps1" | iex
 ```
 
 安装脚本默认下载固定文件名的 CLI 包：
 
 ```bash
-https://github.com/wfg2513148/apexcn-cli/releases/download/v13.0.0/apexcn-cli.tgz
+https://github.com/wfg2513148/apexcn-cli/releases/download/v14.0.0/apexcn-cli.tgz
 ```
 
 即使 CLI 版本更新，上述 URL 和压缩包文件名也保持不变。
@@ -487,10 +487,11 @@ npm run test:e2e:readonly
 排障顺序：
 
 1. `apexcn auth show --json`
-2. `apexcn doctor --format json`
-3. `apexcn me --verbose --json`
+2. `apexcn doctor snapshot --json`
+3. `apexcn doctor --format json`
+4. `apexcn me --verbose --json`
 
-`doctor` 默认输出文本；`--format json` 适合脚本采集诊断字段，包括 CLI 版本、User-Agent、配置文件路径、Node.js 版本、平台和架构。默认只检查 profile、账号、板块和搜索；只有显式传 `--check-ask <question>` 时才会额外检查 RAG 问答接口。网络不稳定时可加 `--timeout-ms 10000` 设置每个检查的超时时间。
-4. 检查 stderr 中的 `HTTP <status>` 和 `requestId`
-5. 用 `requestId` 查服务端日志
-6. 必要时轮换 API key 后重新 `auth set-token`
+`doctor snapshot` 不联网，适合先采集本地配置、环境变量 presence/validity 和 agent skill 安装状态；它不会输出完整 token 或 `APEXCN_API_KEY`。`doctor` 默认输出文本；`--format json` 适合脚本采集诊断字段，包括 CLI 版本、User-Agent、配置文件路径、Node.js 版本、平台和架构。默认只检查 profile、账号、板块和搜索；只有显式传 `--check-ask <question>` 时才会额外检查 RAG 问答接口。网络不稳定时可加 `--timeout-ms 10000` 设置每个检查的超时时间。
+5. 检查 stderr 中的 `HTTP <status>` 和 `requestId`
+6. 用 `requestId` 查服务端日志
+7. 必要时轮换 API key 后重新 `auth set-token`

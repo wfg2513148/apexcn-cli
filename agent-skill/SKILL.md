@@ -68,6 +68,7 @@ apexcn auth set-token \
 - Use `apexcn collection verify --dir <dir> --json` before relying on a saved collection in an AI workflow.
 - Use `apexcn commands --json` to inspect available commands, purposes, safety metadata, examples, and options instead of parsing help text.
 - Use `apexcn auth audit --json` before API workflows when you need a local-only check for missing active profile, invalid base URLs, missing tokens, duplicate base URLs, or insecure HTTP profiles.
+- Use `apexcn doctor snapshot --json` before sharing diagnostics with a user or support channel. It is local-only and reports config/env/agent-skill state without exposing full tokens or API key values.
 - This skill supports manifest `schemaVersion === 1`. If `schemaVersion` is missing or unsupported, do not consume structured `safety` or `examples`; upgrade `apexcn-cli` or ask the user before continuing.
 - Prefer manifest `examples[].command` for command shape, check `examples[].mode`, and inspect `safety.effects`, `safety.preview`, and `safety.confirmation` before writes or destructive actions.
 - Prefer `--content-file` for long posts or replies. Use `--content-file -` when piping generated content through stdin.
@@ -91,6 +92,7 @@ apexcn auth set-token \
 ```bash
 apexcn search "APEX" --page-size 5 --json
 apexcn auth audit --json
+apexcn doctor snapshot --json
 apexcn research "REST API" --limit 3 --json
 apexcn collection build --query "REST API" --query "ORDS" --topic-id 30549 --output-dir ./collection --json
 apexcn collection verify --dir ./collection --json

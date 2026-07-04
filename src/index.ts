@@ -174,6 +174,7 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "collection verify": "verify a local knowledge collection",
   "commands": "print a machine-readable command manifest",
   "doctor": "check installation, auth, and API reachability",
+  "doctor snapshot": "print a local support snapshot without calling the API",
   "draft question": "draft a local community question from structured inputs and research links",
   "draft reply": "draft a local community reply from structured inputs and references",
   "favorite add": "favorite a community topic",
@@ -252,6 +253,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "doctor": {
     safety: { effects: ["diagnostic"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn doctor --json", mode: "read" }]
+  },
+  "doctor snapshot": {
+    safety: { effects: ["diagnostic", "config-read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn doctor snapshot --json", mode: "read" }]
   },
   "draft question": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
@@ -399,10 +404,18 @@ function manifestGuidance(path: string): CommandGuidance {
 function leafCommands(command: Command, path: string[] = [], aliases: string[][] = []): Array<{ command: Command; path: string[]; aliases: string[][] }> {
   const nextPath = [...path, command.name()];
   const nextAliases = [...aliases, command.aliases()];
+  const current = hasActionHandler(command) ? [{ command, path: nextPath, aliases: nextAliases }] : [];
   if (command.commands.length === 0) {
-    return [{ command, path: nextPath, aliases: nextAliases }];
+    return current.length > 0 ? current : [{ command, path: nextPath, aliases: nextAliases }];
   }
-  return command.commands.flatMap((child) => leafCommands(child, nextPath, nextAliases));
+  return [
+    ...current,
+    ...command.commands.flatMap((child) => leafCommands(child, nextPath, nextAliases))
+  ];
+}
+
+function hasActionHandler(command: Command): boolean {
+  return Boolean((command as unknown as { _actionHandler?: unknown })._actionHandler);
 }
 
 function aliasPaths(path: string[], aliases: string[][]): string[][] {

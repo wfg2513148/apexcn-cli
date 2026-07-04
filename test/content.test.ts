@@ -49,10 +49,18 @@ function leafCommandPaths(command: Command, prefix: string[] = [], includeCurren
   const aliases = command.aliases();
   const names = [command.name(), ...aliases];
   const nextPrefixes = includeCurrent ? names.map((name) => [...prefix, name]) : [prefix];
+  const current = hasActionHandler(command) ? nextPrefixes.map((parts) => parts.join(" ")).filter(Boolean) : [];
   if (command.commands.length === 0) {
-    return nextPrefixes.map((parts) => parts.join(" ")).filter(Boolean);
+    return current.length > 0 ? current : nextPrefixes.map((parts) => parts.join(" ")).filter(Boolean);
   }
-  return nextPrefixes.flatMap((parts) => command.commands.flatMap((child) => leafCommandPaths(child, parts, true)));
+  return [
+    ...current,
+    ...nextPrefixes.flatMap((parts) => command.commands.flatMap((child) => leafCommandPaths(child, parts, true)))
+  ];
+}
+
+function hasActionHandler(command: Command): boolean {
+  return Boolean((command as unknown as { _actionHandler?: unknown })._actionHandler);
 }
 
 function leafCommand(program: Command, path: string): Command {
@@ -102,6 +110,7 @@ const neverApiDryRunCommands = [
   "collection verify",
   "commands",
   "doctor",
+  "doctor snapshot",
   "draft reply",
   "draft question",
   "me",
@@ -755,7 +764,7 @@ describe("content commands", () => {
 
   test("format option is exposed only on read commands with text output", () => {
     const program = createProgram();
-    const formatCommands = ["doctor", "draft reply", "draft question", "review reply", "review topic", "workflow plan", "me", "category list", "search", "research", "topic view", "thread view", "ask"];
+    const formatCommands = ["doctor", "doctor snapshot", "draft reply", "draft question", "review reply", "review topic", "workflow plan", "me", "category list", "search", "research", "topic view", "thread view", "ask"];
 
     for (const path of leafCommandPaths(program)) {
       if (formatCommands.includes(path)) {

@@ -48,6 +48,8 @@ describe("doctor command", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     process.exitCode = undefined;
+    delete process.env.APEXCN_API_KEY;
+    delete process.env.APEXCN_CONFIG_PATH;
     delete process.env.APEXCN_HTTP_TIMEOUT_MS;
   });
 
@@ -68,8 +70,8 @@ describe("doctor command", () => {
     const data = JSON.parse(stdout.join(""));
     expect(data.ok).toBe(true);
     expect(data.diagnostics).toEqual(expect.objectContaining({
-      cliVersion: "13.0.0",
-      userAgent: "apexcn-cli/13.0.0",
+      cliVersion: "14.0.0",
+      userAgent: "apexcn-cli/14.0.0",
       configPath: expect.stringContaining("config.json"),
       nodeVersion: expect.stringMatching(/^v\d+/),
       platform: process.platform,
@@ -206,8 +208,8 @@ describe("doctor command", () => {
     await program.parseAsync(["node", "apexcn", "doctor", "--format", "text"]);
 
     expect(stdout.join("")).toContain("apexcn doctor: ok\n");
-    expect(stdout.join("")).toContain("CLI Version: 13.0.0\n");
-    expect(stdout.join("")).toContain("User Agent: apexcn-cli/13.0.0\n");
+    expect(stdout.join("")).toContain("CLI Version: 14.0.0\n");
+    expect(stdout.join("")).toContain("User Agent: apexcn-cli/14.0.0\n");
     expect(stdout.join("")).toContain("Config Path: ");
     expect(stdout.join("")).toContain("OK search requestId=req-search\n");
   });
@@ -229,7 +231,7 @@ describe("doctor command", () => {
       await program.parseAsync(argv);
 
       expect(stdout.join("")).toContain("apexcn doctor: ok\n");
-      expect(stdout.join("")).toContain("CLI Version: 13.0.0\n");
+      expect(stdout.join("")).toContain("CLI Version: 14.0.0\n");
       expect(() => JSON.parse(stdout.join(""))).toThrow();
       vi.unstubAllGlobals();
     }
@@ -411,6 +413,178 @@ describe("doctor command", () => {
     expect(fetch).toHaveBeenCalledTimes(3);
     expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("doctor snapshot reports local support state without calling the API or leaking secrets", async () => {
+    const configPath = await tempConfigPath();
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(configPath, JSON.stringify({
+      current: "prod",
+      profiles: {
+        prod: {
+          baseUrl: "https://oracleapex.cn/ords/api",
+          token: "abcdefghijklmnopqrstuvwxyz"
+        }
+      }
+    }));
+    process.env.APEXCN_API_KEY = "env-api-key-secret";
+    process.env.APEXCN_CONFIG_PATH = configPath;
+    process.env.APEXCN_HTTP_TIMEOUT_MS = "1000";
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn());
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "snapshot", "--json"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stderr.join("")).toBe("");
+    const data = JSON.parse(stdout.join(""));
+    expect(data).toEqual(expect.objectContaining({
+      kind: "doctor-snapshot",
+      schemaVersion: 1,
+      ok: true
+    }));
+    expect(data.config).toEqual(expect.objectContaining({
+      path: configPath,
+      exists: true,
+      readable: true,
+      validJson: true,
+      profileCount: 1,
+      currentProfile: "prod",
+      currentProfileExists: true,
+      activeProfile: {
+        baseUrl: "https://oracleapex.cn/ords/api",
+        baseUrlValid: true,
+        tokenPresent: true,
+        tokenRedactedLength: 11
+      }
+    }));
+    expect(data.environment.apexcnApiKey).toEqual({ present: true });
+    expect(data.environment.apexcnHttpTimeoutMs).toEqual({ present: true, valid: true });
+    expect(data.agentSkill.repoSkillPath).toContain("agent-skill");
+    expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    expect(stdout.join("")).not.toContain("env-api-key-secret");
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  test("doctor snapshot reports broken config JSON with stable issue codes", async () => {
+    const configPath = await tempConfigPath();
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(configPath, "{broken");
+    process.env.APEXCN_API_KEY = "env-api-key-secret";
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn());
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "snapshot", "--json"]);
+
+    const data = JSON.parse(stdout.join(""));
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stderr.join("")).toBe("");
+    expect(data.ok).toBe(false);
+    expect(data.config).toEqual(expect.objectContaining({ exists: true, readable: true, validJson: false }));
+    expect(data.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "config-invalid-json", severity: "issue", ok: false })
+    ]));
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("doctor snapshot reports invalid environment timeout without printing the value", async () => {
+    const configPath = await tempConfigPath();
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(configPath, JSON.stringify({
+      current: "prod",
+      profiles: {
+        prod: { baseUrl: "https://oracleapex.cn/ords/api", token: "abcdefghijklmnopqrstuvwxyz" }
+      }
+    }));
+    process.env.APEXCN_HTTP_TIMEOUT_MS = "not-a-number-secret";
+    process.env.APEXCN_API_KEY = "env-api-key-secret";
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn());
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "snapshot", "--json"]);
+
+    const data = JSON.parse(stdout.join(""));
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stderr.join("")).toBe("");
+    expect(data.ok).toBe(false);
+    expect(data.environment.apexcnHttpTimeoutMs).toEqual({ present: true, valid: false });
+    expect(data.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "invalid-timeout-env", severity: "issue", ok: false })
+    ]));
+    expect(stdout.join("")).not.toContain("not-a-number-secret");
+    expect(stdout.join("")).not.toContain("env-api-key-secret");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("doctor snapshot reports missing current profiles and missing tokens", async () => {
+    const configPath = await tempConfigPath();
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(configPath, JSON.stringify({
+      current: "missing",
+      profiles: {
+        prod: { baseUrl: "https://oracleapex.cn/ords/api", token: "" }
+      }
+    }));
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn());
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "snapshot", "--format", "json"]);
+
+    const data = JSON.parse(stdout.join(""));
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stderr.join("")).toBe("");
+    expect(data.ok).toBe(false);
+    expect(data.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "missing-current-profile", severity: "issue" }),
+      expect.objectContaining({ code: "api-key-env-missing", severity: "warning" })
+    ]));
+    expect(stdout.join("").includes("\n  \"")).toBe(false);
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("doctor snapshot supports text output", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn());
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "snapshot", "--format", "text"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stderr.join("")).toBe("");
+    expect(stdout.join("")).toContain("apexcn doctor snapshot: failed\n");
+    expect(stdout.join("")).toContain("ISSUE config-unreadable:");
+    expect(() => JSON.parse(stdout.join(""))).toThrow();
     expect(process.exitCode).toBe(1);
   });
 

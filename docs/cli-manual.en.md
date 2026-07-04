@@ -74,11 +74,14 @@ apexcn doctor
 apexcn doctor --json
 apexcn doctor --format json
 apexcn doctor --format text
+apexcn doctor snapshot --json
 apexcn doctor --check-ask "How do I call a REST API from Oracle APEX?" --json
 apexcn doctor --timeout-ms 10000 --json
 ```
 
 `doctor` defaults to text output. `--format json` prints compact JSON; `--json` and `--format pretty` print pretty JSON. JSON output includes diagnostics such as CLI version, user agent, config path, Node.js version, platform, and architecture. By default it checks only the profile, account, categories, and search. It checks the RAG ask endpoint only when you explicitly pass `--check-ask <question>`. `--timeout-ms` sets a per-check request timeout in milliseconds.
+
+`doctor snapshot` is a local-only support snapshot and does not call the community API. It reads the config file directly and outputs `kind: "doctor-snapshot"`, `schemaVersion: 1`, `diagnostics`, `environment`, `config`, `agentSkill`, and stable `checks[].code` values. Hard issue codes include `config-unreadable`, `config-invalid-json`, `no-active-profile`, `missing-current-profile`, `invalid-base-url`, and `invalid-timeout-env`; warning codes include `api-key-env-missing`, `missing-token`, and `agent-skill-missing`. Environment variables are reported only as present/valid, and tokens are reported only as presence plus redacted length.
 
 ## category
 
