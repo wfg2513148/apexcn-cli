@@ -127,6 +127,24 @@ apexcn research "ORDS" --category-id 4 --from-date 2026-01-01 --format text
 
 `--limit` 支持 1 到 10，默认 3。JSON 输出固定包含 `query`、`items`、`topics`、`links`、`requestIds` 和 `errors`。单个帖子抓取失败时，命令仍输出已完成的研究包并把失败写入 `errors`，同时返回非零退出码。
 
+## collection
+
+构建可离线复用的多来源资料库：
+
+```bash
+apexcn collection build \
+  --query "REST API" \
+  --query "ORDS" \
+  --topic-id 30549 \
+  --limit 3 \
+  --output-dir collection \
+  --json
+
+apexcn collection verify --dir collection --json
+```
+
+`collection build` 只读取 API，不执行写操作。它会按 query 输入顺序、每个 query 的搜索顺序、最后显式 `--topic-id` 的顺序聚合 topic，并按 `id/topicId/threadId` 去重。输出目录包含 `collection.json`、`index.md` 和 `topics/<id>.json`。每个 topic artifact 使用稳定包装：`kind: "collection-topic"`、`schemaVersion: 1`、`id`、`sources`、`request`、`requestId` 和 `result`。`collection.json.files` 记录 index 和 topic 文件的 `path`、`sha256`、`size`，供 `collection verify` 本地校验。单个 topic 拉取失败时会记录到 `errors`，保留已成功产物，并返回非零退出码。
+
 ## draft
 
 本地生成可审阅的问题草稿，不读取认证配置，不调用社区 API，也不会发布内容：

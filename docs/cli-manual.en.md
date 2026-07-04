@@ -127,6 +127,24 @@ apexcn research "ORDS" --category-id 4 --from-date 2026-01-01 --format text
 
 `--limit` accepts 1 to 10 and defaults to 3. JSON output always contains `query`, `items`, `topics`, `links`, `requestIds`, and `errors`. If one topic fetch fails, the command still prints the completed portion of the research bundle, records the failure in `errors`, and exits non-zero.
 
+## collection
+
+Build a reusable offline collection from multiple searches and explicit topics:
+
+```bash
+apexcn collection build \
+  --query "REST API" \
+  --query "ORDS" \
+  --topic-id 30549 \
+  --limit 3 \
+  --output-dir collection \
+  --json
+
+apexcn collection verify --dir collection --json
+```
+
+`collection build` is read-only and never performs API writes. It collects topics in query input order, search result order within each query, and explicit `--topic-id` order last, deduplicating by `id/topicId/threadId`. The output directory contains `collection.json`, `index.md`, and `topics/<id>.json`. Each topic artifact uses a stable wrapper: `kind: "collection-topic"`, `schemaVersion: 1`, `id`, `sources`, `request`, `requestId`, and `result`. `collection.json.files` records `path`, `sha256`, and `size` for the index and topic files so `collection verify` can validate the collection locally. If one topic fetch fails, the error is recorded in `errors`, successful artifacts are kept, and the command exits non-zero.
+
 ## draft
 
 Generate a local reviewable question draft. This command does not read auth config, call the community API, or publish content:

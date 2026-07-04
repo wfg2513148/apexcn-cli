@@ -62,6 +62,8 @@ apexcn auth set-token \
 - Use `apexcn workflow verify --run-dir <run-dir> --json` to locally verify workflow artifacts, approval hashes, and execute evidence. Add `--write-report` when the user needs `verification.json` for audit records.
 - Use `apexcn workflow export --run-dir <run-dir> --output <file> --json` when the user needs a portable single-file workflow evidence bundle for archival or external review.
 - Use `apexcn workflow verify-bundle --bundle <file> --json` when reviewing a portable workflow bundle without access to the original run directory.
+- Use `apexcn collection build --query <keyword> --topic-id <id> --output-dir <dir> --json` when the user needs a reusable offline knowledge collection from multiple searches or explicit topics.
+- Use `apexcn collection verify --dir <dir> --json` before relying on a saved collection in an AI workflow.
 - Use `apexcn commands --json` to inspect available commands, purposes, safety metadata, examples, and options instead of parsing help text.
 - This skill supports manifest `schemaVersion === 1`. If `schemaVersion` is missing or unsupported, do not consume structured `safety` or `examples`; upgrade `apexcn-cli` or ask the user before continuing.
 - Prefer manifest `examples[].command` for command shape, check `examples[].mode`, and inspect `safety.effects`, `safety.preview`, and `safety.confirmation` before writes or destructive actions.
@@ -86,6 +88,8 @@ apexcn auth set-token \
 ```bash
 apexcn search "APEX" --page-size 5 --json
 apexcn research "REST API" --limit 3 --json
+apexcn collection build --query "REST API" --query "ORDS" --topic-id 30549 --output-dir ./collection --json
+apexcn collection verify --dir ./collection --json
 apexcn draft question --title "标题" --problem "问题描述" --research-file ./research.json --format text
 apexcn draft reply --topic-id 30549 --answer "回复建议" --format text
 apexcn review topic --title "标题" --content-file ./question.md --category-id 4 --json

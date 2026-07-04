@@ -3,6 +3,7 @@ import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Command, InvalidArgumentError } from "commander";
 import { createAuthCommand, type CommandIo } from "./commands/auth.js";
+import { createCollectionCommand } from "./commands/collection.js";
 import { createDoctorCommand } from "./commands/doctor.js";
 import {
   createAskCommand,
@@ -51,6 +52,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   program.addCommand(createMeCommand(commandOptions));
   program.addCommand(createReviewCommand(commandOptions));
   program.addCommand(createWorkflowCommand(commandOptions));
+  program.addCommand(createCollectionCommand(commandOptions));
   program.addCommand(createCategoryCommand(commandOptions));
   program.addCommand(createSearchCommand(commandOptions));
   program.addCommand(createResearchCommand(commandOptions));
@@ -167,6 +169,8 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "auth show": "show the active auth profile with a redacted token",
   "auth use": "switch the active auth profile",
   "category list": "list community categories",
+  "collection build": "build a local multi-topic knowledge collection",
+  "collection verify": "verify a local knowledge collection",
   "commands": "print a machine-readable command manifest",
   "doctor": "check installation, auth, and API reachability",
   "draft question": "draft a local community question from structured inputs and research links",
@@ -226,6 +230,14 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "category list": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn category list --json", mode: "read" }]
+  },
+  "collection build": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: 'apexcn collection build --query "REST API" --topic-id 30549 --output-dir ./collection --json', mode: "read" }]
+  },
+  "collection verify": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn collection verify --dir ./collection --json", mode: "read" }]
   },
   "commands": {
     safety: { effects: ["manifest"], preview: "none", confirmation: [] },
