@@ -186,7 +186,8 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "topic delete": "delete a topic after explicit confirmation",
   "topic update": "update an existing topic",
   "topic view": "view a community topic",
-  "workflow plan": "plan a local, reviewable APEX Chinese Community workflow"
+  "workflow plan": "plan a local, reviewable APEX Chinese Community workflow",
+  "workflow run": "run a stateful APEX Chinese Community workflow with resumable local artifacts"
 };
 
 const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
@@ -331,6 +332,13 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "workflow plan": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: 'apexcn workflow plan --goal ask-question --keyword "REST API" --title "标题" --problem "问题描述" --category-id 4 --json', mode: "read" }]
+  },
+  "workflow run": {
+    safety: { effects: ["read", "api-write"], preview: "required", confirmation: ["--execute", "--yes"] },
+    examples: [
+      { command: 'apexcn workflow run --goal ask-question --keyword "REST API" --title "标题" --problem "问题描述" --category-id 4 --output-dir ./run --json', mode: "preview", note: "writes local artifacts and the final API request preview only" },
+      { command: "apexcn workflow run --resume ./run --execute --yes --json", mode: "execute", note: "executes only the final reviewed API write" }
+    ]
   }
 };
 

@@ -1,12 +1,17 @@
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createProgram } from "../src/index.js";
 
 async function tempPath(name: string): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), "apexcn-workflow-"));
   return join(dir, name);
+}
+
+async function tempConfigPath(): Promise<string> {
+  const dir = await mkdtemp(join(tmpdir(), "apexcn-workflow-"));
+  return join(dir, ".apexcn", "config.json");
 }
 
 function workflowProgram(options: { configPath?: string } = {}) {
@@ -18,6 +23,32 @@ function workflowProgram(options: { configPath?: string } = {}) {
     stderr: (text) => stderr.push(text)
   });
   return { program, stdout, stderr };
+}
+
+async function configuredWorkflowProgram(fetchImpl: typeof fetch) {
+  const configPath = await tempConfigPath();
+  vi.stubGlobal("fetch", vi.fn(fetchImpl));
+  const env = workflowProgram({ configPath });
+  await env.program.parseAsync([
+    "node",
+    "apexcn",
+    "auth",
+    "set-token",
+    "--token",
+    "abcdefghijklmnopqrstuvwxyz",
+    "--base-url",
+    "https://oracleapex.cn/ords/test",
+    "--profile",
+    "test@oci"
+  ]);
+  env.stdout.length = 0;
+  env.stderr.length = 0;
+  process.exitCode = undefined;
+  return { ...env, configPath, fetch: vi.mocked(fetch) };
+}
+
+async function readJson(path: string): Promise<Record<string, unknown>> {
+  return JSON.parse(await readFile(path, "utf8")) as Record<string, unknown>;
 }
 
 describe("workflow commands", () => {
@@ -198,5 +229,282 @@ describe("workflow commands", () => {
     const reply = workflowProgram();
     await reply.program.parseAsync(["node", "apexcn", "workflow", "plan", "--goal", "reply"]);
     expect(JSON.parse(reply.stdout.join("")).checkpoints.missingInputs).toEqual(["--topic-id", "--answer"]);
+  });
+
+  test("workflow run ask-question creates stateful preview artifacts without posting", async () => {
+    const runDir = await tempPath("run");
+    const { program, stdout, stderr, fetch } = await configuredWorkflowProgram(async (input) => {
+      const url = String(input);
+      if (url.includes("/api/v1/search")) {
+        return Response.json({ requestId: "search-1", items: [{ id: 42, title: "REST 403", url: "https://example.test/t/42" }] });
+      }
+      if (url.endsWith("/api/v1/topics/42")) {
+        return Response.json({ requestId: "topic-42", topic: { id: 42, title: "REST 403", url: "https://example.test/t/42" } });
+      }
+      return Response.json({ error: "unexpected" }, { status: 500 });
+    });
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "workflow",
+      "run",
+      "--goal",
+      "ask-question",
+      "--keyword",
+      "REST API",
+      "--title",
+      "APEX REST API returns 403",
+      "--problem",
+      "Page process gets 403 when calling REST API.",
+      "--category-id",
+      "4",
+      "--output-dir",
+      runDir,
+      "--json"
+    ]);
+
+    expect(stderr.join("")).toBe("");
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch.mock.calls.map((call) => (call[1] as RequestInit | undefined)?.method ?? "GET")).toEqual(["GET", "GET"]);
+    const state = JSON.parse(stdout.join(""));
+    expect(state).toEqual(expect.objectContaining({
+      kind: "workflow-run",
+      schemaVersion: 1,
+      goal: "ask-question",
+      status: "preview-ready",
+      inputs: expect.objectContaining({ keyword: "REST API", categoryId: 4 })
+    }));
+    expect((await readJson(join(runDir, "research.json"))).kind).toBe("workflow-research");
+    expect((await readJson(join(runDir, "review.json"))).kind).toBe("workflow-review");
+    expect(await readFile(join(runDir, "question.md"), "utf8")).toContain("# APEX REST API returns 403");
+    expect(await readJson(join(runDir, "preview.json"))).toEqual(expect.objectContaining({
+      kind: "workflow-preview",
+      request: expect.objectContaining({ method: "POST", path: "/api/v1/topics" }),
+      result: null
+    }));
+  });
+
+  test("workflow run reply creates a local preview without posting", async () => {
+    const runDir = await tempPath("reply-run");
+    const { program, fetch } = await configuredWorkflowProgram(async () =>
+      Response.json({ requestId: "topic-30549", topic: { id: 30549, title: "Wallet setup", url: "https://example.test/t/30549" } })
+    );
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "workflow",
+      "run",
+      "--goal",
+      "reply",
+      "--topic-id",
+      "30549",
+      "--answer",
+      "Check the Web Credential first.",
+      "--output-dir",
+      runDir,
+      "--json"
+    ]);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect((fetch.mock.calls[0][1] as RequestInit | undefined)?.method).toBeUndefined();
+    expect(await readJson(join(runDir, "topic.json"))).toEqual(expect.objectContaining({ kind: "workflow-topic" }));
+    expect(await readJson(join(runDir, "preview.json"))).toEqual(expect.objectContaining({
+      kind: "workflow-preview",
+      request: expect.objectContaining({ method: "POST", path: "/api/v1/topics/30549/replies" })
+    }));
+  });
+
+  test("workflow run ask-question empty research does not emit placeholder content", async () => {
+    const runDir = await tempPath("empty-research");
+    const { program } = await configuredWorkflowProgram(async () =>
+      Response.json({ requestId: "search-empty", items: [] })
+    );
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "workflow",
+      "run",
+      "--goal",
+      "ask-question",
+      "--keyword",
+      "NO_MATCH",
+      "--title",
+      "No matching REST result",
+      "--problem",
+      "Search did not find a matching thread.",
+      "--category-id",
+      "4",
+      "--output-dir",
+      runDir
+    ]);
+
+    const question = await readFile(join(runDir, "question.md"), "utf8");
+    expect(question).toContain("本次搜索没有返回可引用链接。");
+    expect(question).not.toContain("待补充");
+  });
+
+  test("workflow run execute requires a reviewed resume and explicit yes", async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+
+    const direct = workflowProgram({ configPath: await tempConfigPath() });
+    await direct.program.parseAsync(["node", "apexcn", "workflow", "run", "--goal", "reply", "--topic-id", "1", "--answer", "ok", "--execute", "--yes"]);
+    expect(direct.stderr.join("")).toContain("Use --resume <run-dir> --execute --yes");
+    expect(fetch).not.toHaveBeenCalled();
+
+    process.exitCode = undefined;
+    const runDir = await tempPath("resume-run");
+    await mkdir(dirname(join(runDir, "run.json")), { recursive: true });
+    await writeFile(join(runDir, "run.json"), JSON.stringify({
+      kind: "workflow-run",
+      schemaVersion: 1,
+      runId: "run-test",
+      goal: "reply",
+      inputs: { topicId: 1, answer: "ok" },
+      status: "preview-ready",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      steps: [],
+      artifacts: {
+        state: join(runDir, "run.json"),
+        topic: join(runDir, "topic.json"),
+        reply: join(runDir, "reply.md"),
+        preview: join(runDir, "preview.json"),
+        execute: join(runDir, "execute.json")
+      },
+      nextAction: "review"
+    }), "utf8");
+
+    const unsafe = workflowProgram({ configPath: await tempConfigPath() });
+    await unsafe.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute"]);
+    expect(unsafe.stderr.join("")).toContain("Refusing to execute workflow without --yes");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("workflow run resume skips completed reads and posts only the final request", async () => {
+    const runDir = await tempPath("resume-execute");
+    const first = await configuredWorkflowProgram(async (input) => {
+      const url = String(input);
+      if (url.includes("/api/v1/search")) {
+        return Response.json({ requestId: "search-1", items: [{ id: 42, title: "REST 403" }] });
+      }
+      if (url.endsWith("/api/v1/topics/42")) {
+        return Response.json({ requestId: "topic-42", topic: { id: 42, title: "REST 403" } });
+      }
+      return Response.json({ error: "unexpected" }, { status: 500 });
+    });
+
+    await first.program.parseAsync([
+      "node",
+      "apexcn",
+      "workflow",
+      "run",
+      "--goal",
+      "ask-question",
+      "--keyword",
+      "REST API",
+      "--title",
+      "APEX REST API returns 403",
+      "--problem",
+      "Page process gets 403 when calling REST API.",
+      "--category-id",
+      "4",
+      "--output-dir",
+      runDir,
+      "--json"
+    ]);
+    expect(first.fetch).toHaveBeenCalledTimes(2);
+    await writeFile(join(runDir, "question.md"), "MUTATED AFTER PREVIEW", "utf8");
+
+    const second = await configuredWorkflowProgram(async (input, init) => {
+      expect(String(input)).toBe("https://oracleapex.cn/ords/test/api/v1/topics");
+      expect(init?.method).toBe("POST");
+      expect(String(init?.body)).toContain("Page process gets 403");
+      expect(String(init?.body)).not.toContain("MUTATED AFTER PREVIEW");
+      return Response.json({ requestId: "created-1", id: 1001 });
+    });
+    await second.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+
+    expect(second.fetch).toHaveBeenCalledTimes(1);
+    const execute = await readJson(join(runDir, "execute.json"));
+    expect(execute).toEqual(expect.objectContaining({
+      kind: "workflow-execute",
+      requestId: "created-1",
+      request: expect.objectContaining({ method: "POST", path: "/api/v1/topics" })
+    }));
+    expect((await readJson(join(runDir, "run.json"))).status).toBe("completed");
+  });
+
+  test("workflow run resume reruns a completed step when its artifact is missing", async () => {
+    const runDir = await tempPath("rerun-missing");
+    const env = await configuredWorkflowProgram(async (input) => {
+      const url = String(input);
+      if (url.includes("/api/v1/search")) {
+        return Response.json({ requestId: "search", items: [{ id: 42, title: "REST 403" }] });
+      }
+      if (url.endsWith("/api/v1/topics/42")) {
+        return Response.json({ requestId: "topic", topic: { id: 42, title: "REST 403" } });
+      }
+      return Response.json({ error: "unexpected" }, { status: 500 });
+    });
+
+    await env.program.parseAsync([
+      "node",
+      "apexcn",
+      "workflow",
+      "run",
+      "--goal",
+      "ask-question",
+      "--keyword",
+      "REST API",
+      "--title",
+      "APEX REST API returns 403",
+      "--problem",
+      "Page process gets 403 when calling REST API.",
+      "--category-id",
+      "4",
+      "--output-dir",
+      runDir
+    ]);
+    await rm(join(runDir, "research.json"));
+    const resumed = workflowProgram({ configPath: env.configPath });
+    await resumed.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir]);
+
+    expect(env.fetch).toHaveBeenCalledTimes(4);
+    expect((await readJson(join(runDir, "research.json"))).kind).toBe("workflow-research");
+  });
+
+  test("workflow run failure records failed state with redacted secrets", async () => {
+    const runDir = await tempPath("failed-run");
+    const { program, stderr } = await configuredWorkflowProgram(async () =>
+      Response.json({ error: { message: "Bearer abcdefghijklmnopqrstuvwxyz rejected" } }, { status: 403 })
+    );
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "workflow",
+      "run",
+      "--goal",
+      "ask-question",
+      "--keyword",
+      "REST API",
+      "--title",
+      "APEX REST API returns 403",
+      "--problem",
+      "Page process gets 403 when calling REST API.",
+      "--category-id",
+      "4",
+      "--output-dir",
+      runDir
+    ]);
+
+    expect(stderr.join("")).toContain("HTTP 403");
+    const state = await readJson(join(runDir, "run.json"));
+    expect(state.status).toBe("failed");
+    expect(JSON.stringify(state)).not.toContain("abcdefghijklmnopqrstuvwxyz");
   });
 });

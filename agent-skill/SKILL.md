@@ -16,7 +16,7 @@ Use this skill for natural requests mentioning:
 - 在 APEX 中文社区搜索, 搜一下 APEX 中文社区, 查 oracleapex.cn, 总结 APEX 中文社区帖子
 - 发布到 APEX 中文社区, 在 oracleapex.cn 发帖, 在 oracleapex.cn 回帖, 查看社区帖子 ID
 - APEX 中文社区 RAG, 问一下 APEX 中文社区知识库
-- `apexcn search`, `apexcn ask`, `apexcn topic`
+- `apexcn search`, `apexcn ask`, `apexcn topic`, `apexcn workflow`
 
 Do not use this skill for:
 
@@ -56,6 +56,8 @@ apexcn auth set-token \
 - Use `apexcn draft reply --format text` to prepare a local Markdown reply before `reply create --content-file`.
 - Use `apexcn review topic` before `topic create --preview` when you have a local Markdown draft or question-draft JSON. It is local-only, detects placeholders and possible secrets, and never publishes.
 - Use `apexcn workflow plan` when you need a machine-readable sequence of local, preview, and execute steps. It only plans; it never executes commands.
+- Use `apexcn workflow run` when you need the CLI to run a resumable workflow with persisted artifacts. The default run reads API data and writes local `run.json`, draft files, review data, and `preview.json`; it does not publish.
+- Only execute a workflow after reviewing `preview.json`, and only with `apexcn workflow run --resume <run-dir> --execute --yes --json`. Execution reuses the reviewed preview request body for the final POST.
 - Use `apexcn commands --json` to inspect available commands, purposes, safety metadata, examples, and options instead of parsing help text.
 - This skill supports manifest `schemaVersion === 1`. If `schemaVersion` is missing or unsupported, do not consume structured `safety` or `examples`; upgrade `apexcn-cli` or ask the user before continuing.
 - Prefer manifest `examples[].command` for command shape, check `examples[].mode`, and inspect `safety.effects`, `safety.preview`, and `safety.confirmation` before writes or destructive actions.
@@ -84,6 +86,8 @@ apexcn draft question --title "标题" --problem "问题描述" --research-file 
 apexcn draft reply --topic-id 30549 --answer "回复建议" --format text
 apexcn review topic --title "标题" --content-file ./question.md --category-id 4 --json
 apexcn workflow plan --goal ask-question --keyword "REST API" --title "标题" --problem "问题描述" --category-id 4 --json
+apexcn workflow run --goal ask-question --keyword "REST API" --title "标题" --problem "问题描述" --category-id 4 --output-dir ./run --json
+apexcn workflow run --resume ./run --execute --yes --json
 apexcn commands --json
 apexcn ask "Oracle APEX 如何调用 REST API？" --top-k 3 --json
 apexcn topic view 30549 --json

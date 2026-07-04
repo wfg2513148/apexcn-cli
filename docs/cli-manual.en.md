@@ -208,6 +208,23 @@ apexcn workflow plan \
 
 `--goal` accepts `ask-question`, `reply`, `research-only`, and `publish-topic`. JSON output always contains `kind: "workflow-plan"`, `schemaVersion: 1`, `goal`, `steps`, `checkpoints`, `files`, and `safetySummary`. Missing required inputs do not fail the command; they are listed in `checkpoints.missingInputs[]`. `ask-question` needs `--keyword`, `--title`, `--problem`, and `--category-id`; `reply` needs `--topic-id` and `--answer`; `publish-topic` needs `--title`, `--category-id`, and the only body source, `--content-file`.
 
+Run a resumable workflow:
+
+```bash
+apexcn workflow run \
+  --goal ask-question \
+  --keyword "REST API" \
+  --title "APEX REST API returns 403" \
+  --problem "A page process gets 403 when calling a REST API." \
+  --category-id 4 \
+  --output-dir run \
+  --json
+
+apexcn workflow run --resume run --execute --yes --json
+```
+
+The default run reads the API, generates local Markdown drafts, and writes `run.json`, `research.json`, `review.json`, and `preview.json`; it does not send the final POST. After reviewing `preview.json`, only `--resume <run-dir> --execute --yes` performs the final write and records `execute.json`. Resume skips completed steps when their artifacts exist and reruns completed steps whose artifacts are missing.
+
 Plans use file paths only and never generate commands that inline long content or secrets. `ask-question` plans `research -> draft question -> review topic -> topic create --preview`; `reply` plans `topic view -> draft reply -> reply create --preview`; `publish-topic` plans `review topic -> topic create --preview`. Real API execute steps appear only with `--include-execute`, and those steps are marked `requiresConfirmation: true`.
 
 ## topic / thread

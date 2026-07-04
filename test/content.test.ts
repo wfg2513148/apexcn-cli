@@ -109,7 +109,8 @@ const neverApiDryRunCommands = [
   "topic view",
   "thread view",
   "ask",
-  "workflow plan"
+  "workflow plan",
+  "workflow run"
 ].sort();
 
 describe("content commands", () => {

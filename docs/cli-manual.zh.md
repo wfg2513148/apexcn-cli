@@ -208,6 +208,23 @@ apexcn workflow plan \
 
 `--goal` 支持 `ask-question`、`reply`、`research-only` 和 `publish-topic`。JSON 输出固定包含 `kind: "workflow-plan"`、`schemaVersion: 1`、`goal`、`steps`、`checkpoints`、`files` 和 `safetySummary`。缺少必要输入时命令不会失败，而是在 `checkpoints.missingInputs[]` 中列出。`ask-question` 需要 `--keyword`、`--title`、`--problem` 和 `--category-id`；`reply` 需要 `--topic-id` 和 `--answer`；`publish-topic` 需要 `--title`、`--category-id` 和唯一正文来源 `--content-file`。
 
+运行可恢复工作流：
+
+```bash
+apexcn workflow run \
+  --goal ask-question \
+  --keyword "REST API" \
+  --title "APEX 中调用 REST API 返回 403" \
+  --problem "页面进程调用 REST API 时返回 403。" \
+  --category-id 4 \
+  --output-dir run \
+  --json
+
+apexcn workflow run --resume run --execute --yes --json
+```
+
+默认运行只读取 API、生成 Markdown 草稿、写入 `run.json`、`research.json`、`review.json` 和 `preview.json`，不会发送最终 POST。确认 `preview.json` 后，只有 `--resume <run-dir> --execute --yes` 会执行最终写入，并写入 `execute.json`。如果已完成步骤的产物仍存在，resume 会跳过该步骤；如果产物缺失，会重新执行该步骤。
+
 计划只使用文件路径，不会生成内联长正文或密钥的命令。`ask-question` 会规划 `research -> draft question -> review topic -> topic create --preview`；`reply` 会规划 `topic view -> draft reply -> reply create --preview`；`publish-topic` 会规划 `review topic -> topic create --preview`。只有显式加 `--include-execute` 才会加入真正写入 API 的 execute 步骤，且该步骤会标记 `requiresConfirmation: true`。
 
 ## topic / thread
