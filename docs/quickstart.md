@@ -57,19 +57,19 @@ https://oracleapex.cn/ords/api
 macOS / Linux：
 
 ```bash
-curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v11.0.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
+curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v12.0.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v11.0.0/install-agent.ps1" | iex
+$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v12.0.0/install-agent.ps1" | iex
 ```
 
 安装脚本默认下载固定文件名的 CLI 包：
 
 ```bash
-https://github.com/wfg2513148/apexcn-cli/releases/download/v11.0.0/apexcn-cli.tgz
+https://github.com/wfg2513148/apexcn-cli/releases/download/v12.0.0/apexcn-cli.tgz
 ```
 
 即使 CLI 版本更新，上述 URL 和压缩包文件名也保持不变。
@@ -93,6 +93,7 @@ $env:APEXCN_CLI_DRY_RUN="1"
 ```bash
 command -v apexcn
 apexcn auth show --json
+apexcn auth audit --json
 apexcn me --json
 apexcn category list --json
 ```
@@ -150,8 +151,11 @@ apexcn auth set-token \
 ```bash
 apexcn auth show
 apexcn auth show --json
+apexcn auth audit --json
 apexcn auth list --json
 ```
+
+`auth audit` 是纯本地配置审计，不调用社区 API。它会检查 active profile、profile 是否存在、base URL 是否有效、token 是否缺失、是否使用 HTTP、以及多个 profile 是否复用同一 base URL；输出只包含脱敏 token。
 
 需要维护多个 API profile 时，可用 `auth set-token --no-switch` 保存但不切换当前 profile，用 `auth use <profile>` 切换，用 `auth remove <profile>` 删除。删除当前 profile 会清空 active profile，但不会自动切到其他账号。
 
@@ -431,6 +435,7 @@ apexcn search "APEX" --page-size 3 --json
 | --- | --- |
 | 保存 token | `apexcn auth set-token --base-url https://oracleapex.cn/ords/api --token "$APEXCN_API_KEY"` |
 | 查看配置 | `apexcn auth show --json` |
+| 配置审计 | `apexcn auth audit --json` |
 | 当前用户 | `apexcn me --json` |
 | 板块列表 | `apexcn category list --json` |
 | 搜索 | `apexcn search "APEX" --page-size 5 --json` |

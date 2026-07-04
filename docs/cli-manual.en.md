@@ -39,11 +39,14 @@ Show current profile:
 ```bash
 apexcn auth show
 apexcn auth show --json
+apexcn auth audit --json
 apexcn auth list
 apexcn auth list --json
 apexcn auth use agent-prod
 apexcn auth remove old-profile
 ```
+
+`auth audit` is a local-only configuration audit and does not call the API. It prints `auth-audit` and checks the active profile, profile references, base URLs, tokens, HTTP profiles, and duplicate base URLs. Full tokens are never printed.
 
 Log out:
 

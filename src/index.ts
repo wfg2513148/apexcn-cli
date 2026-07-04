@@ -162,6 +162,7 @@ function commandManifest(root: Command): CommandManifest {
 
 const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "ask": "answer a question using APEX Chinese Community content",
+  "auth audit": "audit local auth profile configuration",
   "auth list": "list configured auth profiles",
   "auth logout": "clear the active auth profile",
   "auth remove": "remove an auth profile",
@@ -202,6 +203,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "ask": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: 'apexcn ask "Oracle APEX 如何调用 REST API？" --top-k 3 --json', mode: "read" }]
+  },
+  "auth audit": {
+    safety: { effects: ["config-read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn auth audit --json", mode: "read" }]
   },
   "auth list": {
     safety: { effects: ["config-read"], preview: "none", confirmation: [] },

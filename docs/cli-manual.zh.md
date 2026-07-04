@@ -39,11 +39,14 @@ apexcn auth set-token \
 ```bash
 apexcn auth show
 apexcn auth show --json
+apexcn auth audit --json
 apexcn auth list
 apexcn auth list --json
 apexcn auth use agent-prod
 apexcn auth remove old-profile
 ```
+
+`auth audit` 是纯本地配置审计，不调用 API。它会输出 `auth-audit`，检查 active profile、profile 指向、base URL、token、HTTP profile 和重复 base URL。完整 token 不会出现在输出中。
 
 退出当前 profile：
 

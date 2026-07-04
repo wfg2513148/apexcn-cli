@@ -97,6 +97,7 @@ const neverApiDryRunCommands = [
   "auth remove",
   "auth show",
   "auth logout",
+  "auth audit",
   "collection build",
   "collection verify",
   "commands",

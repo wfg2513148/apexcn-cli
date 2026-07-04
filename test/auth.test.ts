@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { createProgram } from "../src/index.js";
 
 async function tempConfigPath() {
@@ -16,6 +16,7 @@ async function writeConfig(path: string, config: unknown) {
 
 describe("auth command", () => {
   afterEach(() => {
+    vi.unstubAllGlobals();
     process.exitCode = undefined;
   });
 
@@ -57,6 +58,136 @@ describe("auth command", () => {
     expect(stderr.join("")).not.toContain("SyntaxError");
     expect(stderr.join("")).not.toContain("src/config");
     expect(process.exitCode).toBe(1);
+  });
+
+  test("auth audit reports a valid config without leaking tokens or calling the API", async () => {
+    const configPath = await tempConfigPath();
+    await writeConfig(configPath, {
+      current: "prod",
+      profiles: {
+        prod: { baseUrl: "https://oracleapex.cn/ords/api", token: "abcdefghijklmnopqrstuvwxyz" }
+      }
+    });
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "audit", "--json"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stderr.join("")).toBe("");
+    const audit = JSON.parse(stdout.join(""));
+    expect(audit).toEqual(expect.objectContaining({
+      kind: "auth-audit",
+      schemaVersion: 1,
+      ok: true,
+      configPath,
+      current: "prod",
+      profileCount: 1,
+      issues: [],
+      warnings: []
+    }));
+    expect(audit.profiles[0].token).toEqual({ present: true, redacted: "abcd...wxyz", length: 26 });
+    expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+  });
+
+  test("auth audit reports config issues and malformed profiles", async () => {
+    const configPath = await tempConfigPath();
+    await writeConfig(configPath, {
+      current: "missing",
+      profiles: {
+        broken: "not-object",
+        invalidUrl: { baseUrl: "ftp://example.test", token: "" }
+      }
+    });
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "audit", "--json"]);
+
+    expect(stderr.join("")).toBe("");
+    const audit = JSON.parse(stdout.join(""));
+    expect(audit.ok).toBe(false);
+    expect(audit.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "missing-current-profile", profile: "missing" }),
+      expect.objectContaining({ code: "invalid-profile", profile: "broken" }),
+      expect.objectContaining({ code: "invalid-base-url", profile: "invalidUrl" }),
+      expect.objectContaining({ code: "missing-token", profile: "invalidUrl" })
+    ]));
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("auth audit treats http and duplicate base URLs as warnings", async () => {
+    const configPath = await tempConfigPath();
+    await writeConfig(configPath, {
+      current: "one",
+      profiles: {
+        one: { baseUrl: "http://127.0.0.1:9", token: "abcdefghijklmnopqrstuvwxyz" },
+        two: { baseUrl: "http://127.0.0.1:9", token: "zyxwvutsrqponmlkjihgfedcba" }
+      }
+    });
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "audit", "--json"]);
+
+    expect(stderr.join("")).toBe("");
+    const audit = JSON.parse(stdout.join(""));
+    expect(audit.ok).toBe(true);
+    expect(audit.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "insecure-base-url", profile: "one" }),
+      expect.objectContaining({ code: "insecure-base-url", profile: "two" }),
+      expect.objectContaining({ code: "duplicate-base-url", profile: "one" }),
+      expect.objectContaining({ code: "duplicate-base-url", profile: "two" })
+    ]));
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  test("auth audit reports missing profile state", async () => {
+    const cases = [
+      {
+        config: { profiles: {} },
+        codes: ["no-profiles", "no-active-profile"]
+      },
+      {
+        config: { current: "missing", profiles: {} },
+        codes: ["no-profiles", "missing-current-profile"]
+      }
+    ];
+
+    for (const item of cases) {
+      const configPath = await tempConfigPath();
+      await writeConfig(configPath, item.config);
+      const stdout: string[] = [];
+      const program = createProgram({
+        configPath,
+        stdout: (text) => stdout.push(text),
+        stderr: () => undefined
+      });
+
+      await program.parseAsync(["node", "apexcn", "auth", "audit", "--json"]);
+
+      const codes = JSON.parse(stdout.join("")).issues.map((issue: { code: string }) => issue.code);
+      expect(codes).toEqual(expect.arrayContaining(item.codes));
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+    }
   });
 
   test("auth set-token overwrites invalid config so the suggested recovery command works", async () => {

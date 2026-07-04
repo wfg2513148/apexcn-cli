@@ -3,6 +3,7 @@ import {
   ConfigFileError,
   DEFAULT_BASE_URL,
   clearCurrentProfile,
+  defaultConfigPath,
   loadConfig,
   removeProfile,
   setCurrentProfileName,
@@ -100,6 +101,36 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
     });
 
   auth
+    .command("audit")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: { json?: boolean }) => {
+      let config;
+      try {
+        config = await loadConfig(options.configPath);
+      } catch (error) {
+        if (printConfigError(error, options)) {
+          return;
+        }
+        throw error;
+      }
+      const audit = authAudit(config as unknown, options.configPath ?? defaultConfigPath());
+      if (!audit.ok) {
+        process.exitCode = 1;
+      }
+      if (commandOptions.json) {
+        options.stdout(`${JSON.stringify(audit, null, 2)}\n`);
+        return;
+      }
+      options.stdout(`${audit.ok ? "auth audit: ok" : "auth audit: issues found"}\n`);
+      for (const issue of audit.issues) {
+        options.stdout(`ISSUE ${issue.code}${issue.profile ? ` ${issue.profile}` : ""}: ${issue.message}\n`);
+      }
+      for (const warning of audit.warnings) {
+        options.stdout(`WARN ${warning.code}${warning.profile ? ` ${warning.profile}` : ""}: ${warning.message}\n`);
+      }
+    });
+
+  auth
     .command("use")
     .argument("<profile>")
     .action(async (profile: string) => {
@@ -192,6 +223,94 @@ export function redactToken(token: string): string {
   return `${token.slice(0, 4)}...${token.slice(-4)}`;
 }
 
+type AuthAuditFinding = {
+  code: string;
+  message: string;
+  profile?: string;
+};
+
+function authAudit(config: unknown, configPath: string): {
+  kind: "auth-audit";
+  schemaVersion: 1;
+  ok: boolean;
+  configPath: string;
+  current?: string;
+  profileCount: number;
+  issues: AuthAuditFinding[];
+  warnings: AuthAuditFinding[];
+  profiles: Array<Record<string, unknown>>;
+} {
+  const issues: AuthAuditFinding[] = [];
+  const warnings: AuthAuditFinding[] = [];
+  const root = isRecord(config) ? config : {};
+  const profilesRoot = isRecord(root.profiles) ? root.profiles : {};
+  const current = typeof root.current === "string" ? root.current : undefined;
+  const names = Object.keys(profilesRoot).sort();
+
+  if (names.length === 0) {
+    issues.push({ code: "no-profiles", message: "No auth profiles are configured." });
+  }
+  if (!current) {
+    issues.push({ code: "no-active-profile", message: "No active profile is configured." });
+  } else if (!Object.prototype.hasOwnProperty.call(profilesRoot, current)) {
+    issues.push({ code: "missing-current-profile", message: "The active profile is not present in profiles.", profile: current });
+  }
+
+  const baseUrlProfiles = new Map<string, string[]>();
+  const profiles = names.map((name) => {
+    const value = profilesRoot[name];
+    if (!isRecord(value)) {
+      issues.push({ code: "invalid-profile", message: "Profile entry must be an object.", profile: name });
+      return { name, current: name === current, valid: false };
+    }
+    const baseUrl = typeof value.baseUrl === "string" ? value.baseUrl : "";
+    const token = typeof value.token === "string" ? value.token : "";
+    if (!isValidBaseUrl(baseUrl)) {
+      issues.push({ code: "invalid-base-url", message: "Profile baseUrl must be an absolute http or https URL.", profile: name });
+    } else {
+      const items = baseUrlProfiles.get(baseUrl) ?? [];
+      items.push(name);
+      baseUrlProfiles.set(baseUrl, items);
+      if (baseUrl.startsWith("http://")) {
+        warnings.push({ code: "insecure-base-url", message: "Profile uses http instead of https.", profile: name });
+      }
+    }
+    if (!token.trim()) {
+      issues.push({ code: "missing-token", message: "Profile token is missing or blank.", profile: name });
+    }
+    return {
+      name,
+      current: name === current,
+      baseUrl,
+      token: {
+        present: token.trim().length > 0,
+        redacted: token ? redactToken(token) : "",
+        length: token.length
+      }
+    };
+  });
+
+  for (const [baseUrl, namesForUrl] of baseUrlProfiles) {
+    if (namesForUrl.length > 1) {
+      for (const name of namesForUrl) {
+        warnings.push({ code: "duplicate-base-url", message: `Multiple profiles use ${baseUrl}.`, profile: name });
+      }
+    }
+  }
+
+  return {
+    kind: "auth-audit",
+    schemaVersion: 1,
+    ok: issues.length === 0,
+    configPath,
+    current,
+    profileCount: names.length,
+    issues,
+    warnings,
+    profiles
+  };
+}
+
 function isValidBaseUrl(value: string): boolean {
   if (value.trim() !== value) {
     return false;
@@ -211,6 +330,10 @@ function isValidBaseUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function printConfigError(error: unknown, options: CommandIo): boolean {
