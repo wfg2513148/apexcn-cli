@@ -118,9 +118,10 @@ apexcn search "ORDS" --category-id 4 --page-size 10 --json
 
 ```bash
 apexcn search "JSON" --from-date 2026-01-01 --to-date 2026-12-31 --json
+apexcn search "ApexLang" --page-size 5 --cursor "next-cursor" --json
 ```
 
-`--page-size` 支持 1 到 50。常见写法 `ApexLang`、`APEXLang`、`APEX Lang` 会归一化为 `ApexLang` 发起搜索；JSON 输出会在发生归一化时包含 `query.normalizedKeyword`。当前搜索接口不支持 offset 翻页。需要缩小范围时，优先使用 `--category-id`、`--from-date` 和 `--to-date`。
+`--page-size` 支持 1 到 50。常见写法 `ApexLang`、`APEXLang`、`APEX Lang` 会归一化为 `ApexLang` 发起搜索；JSON 输出会在发生归一化时包含 `query.normalizedKeyword`。`--cursor` 使用服务端 `page.nextCursor` 读取下一页，是 0.2.0-candidate 起推荐的分页方式；`--offset` 保留为兼容参数。后端返回 `createdDate` 表示话题创建时间，`updatedDate` 表示最近更新时间。需要缩小范围时，优先使用 `--category-id`、`--from-date` 和 `--to-date`。
 
 ## topic recent
 
@@ -129,10 +130,10 @@ apexcn search "JSON" --from-date 2026-01-01 --to-date 2026-12-31 --json
 ```bash
 apexcn topic recent --json
 apexcn topic recent --since-hours 48 --page-size 10 --json
-apexcn topic recent --category-id 4 --from-date 2026-07-01 --to-date 2026-07-04 --format text
+apexcn topic recent --category-id 4 --from-date 2026-07-01 --to-date 2026-07-04 --cursor "next-cursor" --format text
 ```
 
-`topic recent` 是只读命令，默认读取最近 48 小时更新的话题。它使用服务端 search 的通配查询能力获取最新更新列表，再按 topic detail 补齐 `createdDate`、`originalUrl`、`tags`、`viewCount` 等字段。JSON 输出包含 `kind: "topic-recent"`、`query`、`items`、`page`、`requestIds` 和 `errors`。由于当前 search API 仍不支持 offset 翻页，如果 `page.hasMore` 为 `true`，结果只代表当前 `--page-size` 范围内的最新条目。
+`topic recent` 是只读命令，默认读取最近 48 小时更新的话题。它优先调用 0.2.0-candidate 的 `GET /api/v1/topics`，返回项应包含 `createdDate` 和 `updatedDate`；如果运行时服务端尚未 promotion 该接口，会自动降级为 search 通配查询并按 topic detail 尽量补齐 `createdDate`、`originalUrl`、`tags`、`viewCount` 等字段。JSON 输出包含 `kind: "topic-recent"`、`source`、`query`、`items`、`page`、`requestIds` 和 `errors`。如果 `page.hasMore` 为 `true`，继续使用 `page.nextCursor` 调用 `--cursor`。
 
 ## research
 

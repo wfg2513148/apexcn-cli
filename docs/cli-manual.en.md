@@ -118,9 +118,10 @@ Search by updated date range:
 
 ```bash
 apexcn search "JSON" --from-date 2026-01-01 --to-date 2026-12-31 --json
+apexcn search "ApexLang" --page-size 5 --cursor "next-cursor" --json
 ```
 
-`--page-size` accepts 1 to 50. Common variants `ApexLang`, `APEXLang`, and `APEX Lang` are normalized to `ApexLang` before searching; JSON output includes `query.normalizedKeyword` when normalization happens. The current search API does not support offset pagination. Narrow large result sets with `--category-id`, `--from-date`, and `--to-date`.
+`--page-size` accepts 1 to 50. Common variants `ApexLang`, `APEXLang`, and `APEX Lang` are normalized to `ApexLang` before searching; JSON output includes `query.normalizedKeyword` when normalization happens. `--cursor` uses the backend `page.nextCursor` and is the preferred pagination contract starting with 0.2.0-candidate; `--offset` remains available for compatibility. Backend `createdDate` is the original topic creation timestamp, and `updatedDate` is the latest update timestamp. Narrow large result sets with `--category-id`, `--from-date`, and `--to-date`.
 
 ## topic recent
 
@@ -129,10 +130,10 @@ Read recently updated topics:
 ```bash
 apexcn topic recent --json
 apexcn topic recent --since-hours 48 --page-size 10 --json
-apexcn topic recent --category-id 4 --from-date 2026-07-01 --to-date 2026-07-04 --format text
+apexcn topic recent --category-id 4 --from-date 2026-07-01 --to-date 2026-07-04 --cursor "next-cursor" --format text
 ```
 
-`topic recent` is read-only and defaults to topics updated in the last 48 hours. It uses the backend search wildcard capability to get the newest updated topics, then fetches topic details to add fields such as `createdDate`, `originalUrl`, `tags`, and `viewCount`. JSON output contains `kind: "topic-recent"`, `query`, `items`, `page`, `requestIds`, and `errors`. Because the current search API still does not support offset pagination, `page.hasMore: true` means the output only covers the newest items within the current `--page-size` window.
+`topic recent` is read-only and defaults to topics updated in the last 48 hours. It prefers the 0.2.0-candidate `GET /api/v1/topics` endpoint, whose items should include `createdDate` and `updatedDate`. If the runtime server has not promoted that endpoint yet, the command falls back to wildcard search and topic detail fetches to preserve fields such as `createdDate`, `originalUrl`, `tags`, and `viewCount` where possible. JSON output contains `kind: "topic-recent"`, `source`, `query`, `items`, `page`, `requestIds`, and `errors`. When `page.hasMore` is true, pass `page.nextCursor` back with `--cursor`.
 
 ## research
 

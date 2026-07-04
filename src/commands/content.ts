@@ -58,12 +58,13 @@ export function createSearchCommand(options: ApiCommandOptions): Command {
     .argument("<keyword>")
     .option("--category-id <id>", "category id", parsePositiveInteger)
     .option("--page-size <n>", "page size, 1-50", parseSearchPageSize)
-    .addOption(new Option("--offset <n>", "unsupported; current search API ignores offset").hideHelp())
+    .option("--cursor <cursor>", "cursor from page.nextCursor", parseCursor)
+    .option("--offset <n>", "backward-compatible numeric offset", parseNonNegativeInteger)
     .option("--from-date <date>", "inclusive updated-from date, YYYY-MM-DD", parseSearchDate)
     .option("--to-date <date>", "inclusive updated-to date, YYYY-MM-DD", parseSearchDate)
     .option("--json", "pretty-print JSON")
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
-    .action(async (keyword: string, commandOptions: FormatOption & { categoryId?: number; pageSize?: number; offset?: number; fromDate?: string; toDate?: string }) => {
+    .action(async (keyword: string, commandOptions: FormatOption & { categoryId?: number; pageSize?: number; cursor?: string; offset?: number; fromDate?: string; toDate?: string }) => {
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
@@ -71,15 +72,6 @@ export function createSearchCommand(options: ApiCommandOptions): Command {
         return;
       }
       const normalizedKeyword = normalizeSearchKeyword(keyword);
-      if (commandOptions.offset !== undefined) {
-        printError(options, {
-          type: "validation",
-          message: "Current search API does not support offset pagination. Narrow results with --category-id, --from-date, or --to-date instead.",
-          exitCode: 1
-        }, undefined, commandOptions.json);
-        process.exitCode = 1;
-        return;
-      }
       await runApi(options, commandOptions, async (session) => {
         const data = await requestJson(session.baseUrl, "/api/v1/search", {
           token: session.token,
@@ -87,6 +79,8 @@ export function createSearchCommand(options: ApiCommandOptions): Command {
             keyword: normalizedKeyword,
             categoryId: commandOptions.categoryId,
             pageSize: commandOptions.pageSize,
+            cursor: commandOptions.cursor,
+            offset: commandOptions.offset,
             fromDate: commandOptions.fromDate,
             toDate: commandOptions.toDate
           }
@@ -177,11 +171,12 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
     .option("--page-size <n>", "page size, 1-50", parseSearchPageSize)
     .option("--category-id <id>", "category id", parsePositiveInteger)
     .option("--since-hours <n>", "updated within the last N hours", parsePositiveInteger)
+    .option("--cursor <cursor>", "cursor from page.nextCursor", parseCursor)
     .option("--from-date <date>", "inclusive updated-from date, YYYY-MM-DD", parseSearchDate)
     .option("--to-date <date>", "inclusive updated-to date, YYYY-MM-DD", parseSearchDate)
     .option("--json", "pretty-print JSON")
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
-    .action(async (commandOptions: FormatOption & { pageSize?: number; categoryId?: number; sinceHours?: number; fromDate?: string; toDate?: string }) => {
+    .action(async (commandOptions: FormatOption & { pageSize?: number; categoryId?: number; sinceHours?: number; cursor?: string; fromDate?: string; toDate?: string }) => {
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
@@ -749,23 +744,75 @@ function searchOutput(data: unknown, originalKeyword: string, normalizedKeyword:
 
 async function recentTopics(
   session: Session,
-  options: { pageSize?: number; categoryId?: number; sinceHours?: number; fromDate?: string; toDate?: string }
+  options: { pageSize?: number; categoryId?: number; sinceHours?: number; cursor?: string; fromDate?: string; toDate?: string }
 ): Promise<Record<string, unknown>> {
   const pageSize = options.pageSize ?? 20;
   const sinceHours = options.sinceHours ?? (!options.fromDate && !options.toDate ? 48 : undefined);
   const since = sinceHours === undefined ? undefined : new Date(Date.now() - sinceHours * 60 * 60 * 1000);
   const fromDate = options.fromDate ?? (since ? dateOnly(since) : undefined);
+  const query = compactBody({
+    pageSize,
+    categoryId: options.categoryId,
+    sinceHours,
+    since: since?.toISOString(),
+    cursor: options.cursor,
+    fromDate,
+    toDate: options.toDate
+  });
+  try {
+    const topics = await requestJson(session.baseUrl, "/api/v1/topics", {
+      token: session.token,
+      query: {
+        pageSize,
+        categoryId: options.categoryId,
+        cursor: options.cursor,
+        fromDate,
+        toDate: options.toDate
+      }
+    });
+    return {
+      kind: "topic-recent",
+      source: "topics",
+      query,
+      items: itemsFromData(topics).filter((item) => !since || isOnOrAfter(item.updatedDate ?? item.createdDate, since)),
+      page: isRecord(topics) ? topics.page : undefined,
+      requestIds: {
+        topics: isRecord(topics) ? [topics.requestId].filter(Boolean) : []
+      },
+      errors: []
+    };
+  } catch (error) {
+    if (!isTopicsListUnsupported(error)) {
+      throw error;
+    }
+  }
+  return recentTopicsFromSearchFallback(session, {
+    pageSize,
+    categoryId: options.categoryId,
+    sinceHours,
+    since,
+    cursor: options.cursor,
+    fromDate,
+    toDate: options.toDate
+  });
+}
+
+async function recentTopicsFromSearchFallback(
+  session: Session,
+  options: { pageSize: number; categoryId?: number; sinceHours?: number; since?: Date; cursor?: string; fromDate?: string; toDate?: string }
+): Promise<Record<string, unknown>> {
   const search = await requestJson(session.baseUrl, "/api/v1/search", {
     token: session.token,
     query: {
       keyword: "%",
-      pageSize,
+      pageSize: options.pageSize,
       categoryId: options.categoryId,
-      fromDate,
+      cursor: options.cursor,
+      fromDate: options.fromDate,
       toDate: options.toDate
     }
   });
-  const items = itemsFromData(search).filter((item) => !since || isOnOrAfter(item.updatedDate, since));
+  const items = itemsFromData(search).filter((item) => !options.since || isOnOrAfter(item.updatedDate ?? item.createdDate, options.since));
   const recentItems = [];
   const topicRequestIds = [];
   const errors = [];
@@ -791,12 +838,14 @@ async function recentTopics(
   }
   return {
     kind: "topic-recent",
+    source: "search-fallback",
     query: compactBody({
-      pageSize,
+      pageSize: options.pageSize,
       categoryId: options.categoryId,
-      sinceHours,
-      since: since?.toISOString(),
-      fromDate,
+      sinceHours: options.sinceHours,
+      since: options.since?.toISOString(),
+      cursor: options.cursor,
+      fromDate: options.fromDate,
       toDate: options.toDate,
       searchKeyword: "%"
     }),
@@ -1020,6 +1069,10 @@ function researchTopicError(error: unknown, id: number, sourceItemIndex: number,
   throw error;
 }
 
+function isTopicsListUnsupported(error: unknown): boolean {
+  return error instanceof HttpError && [404, 405, 555].includes(error.status);
+}
+
 function excerptText(value: unknown): string {
   const text = blockText(value);
   return text.length > 1200 ? `${text.slice(0, 1200)}...` : text;
@@ -1108,6 +1161,14 @@ function parseNonNegativeInteger(value: string): number {
     throw new InvalidArgumentError(`Expected a non-negative integer: ${value}`);
   }
   return parsed;
+}
+
+function parseCursor(value: string): string {
+  const cursor = value.trim();
+  if (!cursor) {
+    throw new InvalidArgumentError("Expected a non-empty cursor");
+  }
+  return cursor;
 }
 
 function parseSearchDate(value: string): string {

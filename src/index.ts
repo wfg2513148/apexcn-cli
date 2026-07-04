@@ -320,7 +320,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   },
   "search": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
-    examples: [{ command: 'apexcn search "REST API" --page-size 5 --json', mode: "read" }]
+    examples: [
+      { command: 'apexcn search "REST API" --page-size 5 --json', mode: "read" },
+      { command: 'apexcn search "REST API" --cursor "<page.nextCursor>" --json', mode: "read" }
+    ]
   },
   "subscription add": {
     safety: { effects: ["api-write"], preview: "available", confirmation: [] },
@@ -352,7 +355,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   },
   "topic recent": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
-    examples: [{ command: "apexcn topic recent --since-hours 48 --page-size 10 --json", mode: "read" }]
+    examples: [
+      { command: "apexcn topic recent --since-hours 48 --page-size 10 --json", mode: "read" },
+      { command: 'apexcn topic recent --cursor "<page.nextCursor>" --json', mode: "read" }
+    ]
   },
   "topic update": {
     safety: { effects: ["api-write"], preview: "available", confirmation: [] },

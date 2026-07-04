@@ -61,7 +61,7 @@ describe("CLI entrypoint detection", () => {
       }),
       expect.objectContaining({
         path: "search",
-        options: expect.not.arrayContaining(["--offset <n>"]),
+        options: expect.arrayContaining(["--cursor <cursor>", "--offset <n>"]),
         examples: expect.arrayContaining([
           expect.objectContaining({ command: 'apexcn search "REST API" --page-size 5 --json', mode: "read" })
         ])

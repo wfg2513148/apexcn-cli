@@ -506,32 +506,19 @@ describe("content commands", () => {
     }
   });
 
-  test("topic recent uses wildcard search and enriches recent topic details", async () => {
+  test("topic recent uses the topics list API when available", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-04T08:27:20Z"));
     const { program, stdout, fetch } = await configuredProgram(async (url: string | URL | Request) => {
       const href = String(url);
-      if (href.includes("/api/v1/search")) {
+      if (href.includes("/api/v1/topics")) {
         return Response.json({
           items: [
-            { id: 42, title: "Recent topic", updatedDate: "2026-07-04T08:00:00", url: "https://oracleapex.cn/t/42" },
-            { id: 43, title: "Old topic", updatedDate: "2026-07-01T08:00:00", url: "https://oracleapex.cn/t/43" }
+            { id: 42, title: "Recent topic", createdDate: "2026-07-03T00:00:00", updatedDate: "2026-07-04T08:00:00", originalUrl: "https://example.com/original", url: "https://oracleapex.cn/t/42" },
+            { id: 43, title: "Old topic", createdDate: "2026-07-01T00:00:00", updatedDate: "2026-07-01T08:00:00", url: "https://oracleapex.cn/t/43" }
           ],
-          page: { limit: 5, count: 2, hasMore: false },
-          requestId: "req-search"
-        });
-      }
-      if (href.endsWith("/api/v1/topics/42")) {
-        return Response.json({
-          topic: {
-            id: 42,
-            title: "Recent topic",
-            createdDate: "2026-07-03T00:00:00",
-            updatedDate: "2026-07-04T08:00:00",
-            originalUrl: "https://example.com/original",
-            url: "https://oracleapex.cn/t/42"
-          },
-          requestId: "req-topic"
+          page: { limit: 5, count: 2, hasMore: true, nextCursor: "cursor-2" },
+          requestId: "req-topics"
         });
       }
       return Response.json({ error: { message: `unexpected url ${href}` } }, { status: 500 });
@@ -541,21 +528,21 @@ describe("content commands", () => {
 
     expect(fetch).toHaveBeenNthCalledWith(
       1,
-      "https://oracleapex.cn/ords/test/api/v1/search?keyword=%25&pageSize=5&fromDate=2026-07-02",
+      "https://oracleapex.cn/ords/test/api/v1/topics?pageSize=5&fromDate=2026-07-02",
       expect.any(Object)
     );
-    expect(fetch).toHaveBeenNthCalledWith(2, "https://oracleapex.cn/ords/test/api/v1/topics/42", expect.any(Object));
+    expect(fetch).toHaveBeenCalledOnce();
     const data = JSON.parse(stdout.join(""));
     expect(data).toEqual(expect.objectContaining({
       kind: "topic-recent",
+      source: "topics",
       query: expect.objectContaining({
         pageSize: 5,
         sinceHours: 48,
-        fromDate: "2026-07-02",
-        searchKeyword: "%"
+        fromDate: "2026-07-02"
       }),
-      page: { limit: 5, count: 2, hasMore: false },
-      requestIds: { search: "req-search", topics: ["req-topic"] },
+      page: { limit: 5, count: 2, hasMore: true, nextCursor: "cursor-2" },
+      requestIds: { topics: ["req-topics"] },
       errors: []
     }));
     expect(data.items).toEqual([
@@ -569,9 +556,12 @@ describe("content commands", () => {
     ]);
   });
 
-  test("topic recent supports explicit date filters and text output", async () => {
+  test("topic recent falls back to search and detail fetches on old servers", async () => {
     const { program, stdout, fetch } = await configuredProgram(async (url: string | URL | Request) => {
       const href = String(url);
+      if (href.includes("/api/v1/topics?")) {
+        return Response.json({ error: { message: "method not allowed" } }, { status: 405 });
+      }
       if (href.includes("/api/v1/search")) {
         return Response.json({
           items: [{ id: 42, title: "Recent topic", updatedDate: "2026-07-03T08:00:00", url: "https://oracleapex.cn/t/42" }],
@@ -597,6 +587,8 @@ describe("content commands", () => {
       "recent",
       "--category-id",
       "4",
+      "--cursor",
+      "cursor-1",
       "--from-date",
       "2026-07-01",
       "--to-date",
@@ -607,7 +599,12 @@ describe("content commands", () => {
 
     expect(fetch).toHaveBeenNthCalledWith(
       1,
-      "https://oracleapex.cn/ords/test/api/v1/search?keyword=%25&pageSize=20&categoryId=4&fromDate=2026-07-01&toDate=2026-07-04",
+      "https://oracleapex.cn/ords/test/api/v1/topics?pageSize=20&categoryId=4&cursor=cursor-1&fromDate=2026-07-01&toDate=2026-07-04",
+      expect.any(Object)
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      "https://oracleapex.cn/ords/test/api/v1/search?keyword=%25&pageSize=20&categoryId=4&cursor=cursor-1&fromDate=2026-07-01&toDate=2026-07-04",
       expect.any(Object)
     );
     expect(stdout.join("")).toBe("42\tRecent topic\t2026-07-03T08:00:00\t2026-07-03T00:00:00\thttps://oracleapex.cn/t/42\n");
@@ -876,43 +873,42 @@ describe("content commands", () => {
     expect(process.exitCode).toBe(1);
   });
 
-  test("search rejects offset because the current API ignores it", async () => {
+  test("search passes cursor and offset pagination parameters", async () => {
     const { program, stdout, stderr, fetch } = await configuredProgram(async () =>
-      Response.json({ items: [], page: { limit: 5, offset: 0, count: 0, hasMore: false } })
+      Response.json({ items: [{ id: 42, title: "Paged topic" }], page: { limit: 5, count: 1, hasMore: false }, requestId: "req-search" })
     );
 
-    await program.parseAsync(["node", "apexcn", "search", "APEX", "--offset", "5"]);
+    await program.parseAsync(["node", "apexcn", "search", "APEX", "--page-size", "5", "--cursor", "cursor-1", "--offset", "5", "--json"]);
 
-    expect(fetch).not.toHaveBeenCalled();
-    expect(stdout.join("")).toBe("");
-    expect(stderr.join("")).toContain("Current search API does not support offset pagination");
-    expect(process.exitCode).toBe(1);
+    expect(fetch).toHaveBeenLastCalledWith(
+      "https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&pageSize=5&cursor=cursor-1&offset=5",
+      expect.any(Object)
+    );
+    expect(stderr.join("")).toBe("");
+    expect(JSON.parse(stdout.join("")).items[0].id).toBe(42);
+    expect(process.exitCode).toBeUndefined();
   });
 
-  test("search can print unsupported offset errors as JSON", async () => {
+  test("search rejects empty cursors before making API requests", async () => {
     const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ items: [] }));
+    exitOverrideTree(program);
 
-    await program.parseAsync(["node", "apexcn", "search", "APEX", "--offset", "5", "--json"]);
+    await expect(program.parseAsync(["node", "apexcn", "search", "APEX", "--cursor", " "])).rejects.toMatchObject({
+      code: "commander.invalidArgument"
+    });
 
     expect(fetch).not.toHaveBeenCalled();
     expect(stdout.join("")).toBe("");
-    expect(JSON.parse(stderr.join(""))).toEqual({
-      ok: false,
-      error: {
-        type: "validation",
-        message: "Current search API does not support offset pagination. Narrow results with --category-id, --from-date, or --to-date instead.",
-        exitCode: 1
-      }
-    });
-    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toContain("Expected a non-empty cursor");
   });
 
-  test("search help hides unsupported offset and describes json as pretty-print", () => {
+  test("search help exposes pagination and describes json as pretty-print", () => {
     const program = createProgram();
     const search = program.commands.find((command) => command.name() === "search");
 
     expect(search).toBeDefined();
-    expect(search?.helpInformation()).not.toContain("--offset");
+    expect(search?.helpInformation()).toContain("--cursor");
+    expect(search?.helpInformation()).toContain("--offset");
     expect(search?.helpInformation()).toContain("--json");
     expect(search?.helpInformation()).toContain("--format");
     expect(search?.helpInformation()).toContain("page size, 1-50");

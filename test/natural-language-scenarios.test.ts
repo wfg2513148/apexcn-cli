@@ -123,7 +123,7 @@ const commonReadScenarios: Scenario[] = [
   scenario("thread view alias intent", "查看 thread 30549 的详情", "topic view", "read", ["read"], "none", ["--json"]),
   scenario("topic view apexlang article", "查看 ApexLang 文件结构解析那篇帖子", "topic view", "read", ["read"], "none", ["--json"]),
   scenario("topic view replies", "查看某个帖子以及下面的回复", "topic view", "read", ["read"], "none", ["--json"]),
-  scenario("topic recent 48 hours", "总结最近 48 小时更新的社区帖子", "topic recent", "read", ["read"], "none", ["--since-hours <n>", "--page-size <n>", "--json"]),
+  scenario("topic recent 48 hours", "总结最近 48 小时更新的社区帖子", "topic recent", "read", ["read"], "none", ["--since-hours <n>", "--page-size <n>", "--cursor <cursor>", "--json"]),
   scenario("research rest api", "帮我研究 REST API 相关帖子并整理参考链接", "research", "read", ["read"], "none", ["--limit <n>", "--json"]),
   scenario("research apexlang", "整理 ApexLang 最新文章都更新了什么", "research", "read", ["read"], "none", ["--limit <n>", "--json"]),
   scenario("research ords", "研究 ORDS 部署问题，最多取 5 篇帖子", "research", "read", ["read"], "none", ["--limit <n>", "--json"]),
@@ -251,23 +251,19 @@ const EXECUTABLE_NATURAL_LANGUAGE_SCENARIOS: ExecutableNaturalLanguageScenario[]
     }
   },
   {
-    name: "pagination request gets structured feedback",
+    name: "pagination request fetches next page",
     userSays: "继续看下一页 ApexLang 搜索结果。",
     commandPath: "search",
-    argv: ["node", "apexcn", "search", "ApexLang", "--page-size", "5", "--offset", "5", "--json"],
-    responseForUrl: () => Response.json({ items: [] }),
+    argv: ["node", "apexcn", "search", "ApexLang", "--page-size", "5", "--cursor", "cursor-2", "--json"],
+    responseForUrl: (url) => {
+      expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/search?keyword=ApexLang&pageSize=5&cursor=cursor-2");
+      return Response.json({ items: [{ id: 43, title: "ApexLang page 2", createdDate: "2026-07-01", updatedDate: "2026-07-02" }], page: { hasMore: false }, requestId: "req-search" });
+    },
     assertFeedback: ({ stdout, stderr, exitCode, fetch }) => {
-      expect(fetch).not.toHaveBeenCalled();
-      expect(stdout).toBe("");
-      expect(JSON.parse(stderr)).toEqual({
-        ok: false,
-        error: {
-          type: "validation",
-          message: "Current search API does not support offset pagination. Narrow results with --category-id, --from-date, or --to-date instead.",
-          exitCode: 1
-        }
-      });
-      expect(exitCode).toBe(1);
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(stderr).toBe("");
+      expect(JSON.parse(stdout).items[0]).toEqual(expect.objectContaining({ id: 43, createdDate: "2026-07-01", updatedDate: "2026-07-02" }));
+      expect(exitCode).toBeUndefined();
     }
   },
   {
@@ -362,29 +358,25 @@ const EXECUTABLE_NATURAL_LANGUAGE_SCENARIOS: ExecutableNaturalLanguageScenario[]
     },
     argv: ["node", "apexcn", "topic", "recent", "--since-hours", "48", "--page-size", "5", "--json"],
     responseForUrl: (url) => {
-      if (url.includes("/api/v1/search")) {
-        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/search?keyword=%25&pageSize=5&fromDate=2026-07-02");
+      if (url.includes("/api/v1/topics")) {
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/topics?pageSize=5&fromDate=2026-07-02");
         return Response.json({
-          items: [{ id: 42, title: "ORDS MCP", updatedDate: "2026-07-04T06:00:00", url: "https://oracleapex.cn/t/42" }],
+          items: [{
+            id: 42,
+            title: "ORDS MCP",
+            createdDate: "2026-07-02T16:39:24",
+            updatedDate: "2026-07-04T06:00:00",
+            originalUrl: "https://example.com/ords-mcp",
+            url: "https://oracleapex.cn/t/42"
+          }],
           page: { limit: 5, count: 1, hasMore: false },
-          requestId: "req-search"
+          requestId: "req-topics"
         });
       }
-      expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/topics/42");
-      return Response.json({
-        topic: {
-          id: 42,
-          title: "ORDS MCP",
-          createdDate: "2026-07-02T16:39:24",
-          updatedDate: "2026-07-04T06:00:00",
-          originalUrl: "https://example.com/ords-mcp",
-          url: "https://oracleapex.cn/t/42"
-        },
-        requestId: "req-topic"
-      });
+      return Response.json({ error: { message: `unexpected url ${url}` } }, { status: 500 });
     },
     assertFeedback: ({ stdout, stderr, fetch }) => {
-      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(fetch).toHaveBeenCalledOnce();
       expect(stderr).toBe("");
       const data = JSON.parse(stdout);
       expect(data.kind).toBe("topic-recent");

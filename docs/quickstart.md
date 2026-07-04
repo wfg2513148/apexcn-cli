@@ -231,7 +231,8 @@ apexcn workflow verify-bundle --bundle ./workflow-bundle.json --json
 apexcn workflow run --resume ./run --execute --yes --json
 ```
 
-`--page-size` 支持 1 到 50。当前搜索接口不支持 offset 翻页。需要缩小搜索范围时，用 `--category-id`、`--from-date` 和 `--to-date`。
+`--page-size` 支持 1 到 50。搜索结果如果返回 `page.nextCursor`，用 `apexcn search "<关键词>" --cursor "<nextCursor>" --json` 读取下一页；`--offset` 仅作为兼容参数保留。需要缩小搜索范围时，用 `--category-id`、`--from-date` 和 `--to-date`。
+需要查看最新帖子时，用 `apexcn topic recent --since-hours 48 --json`；CLI 会优先调用 `GET /api/v1/topics`，旧服务端会自动降级到搜索和帖子详情组合。
 需要给 AI agent 一次性整理可引用资料时，用 `research` 直接生成搜索结果和帖子详情组合的研究包。
 需要把多个搜索词和指定帖子整理成可离线复用的资料库时，用 `collection build`；使用前可用 `collection verify` 本地校验文件 hash 和 topic artifact。
 需要把问题信息和研究包整理成可发帖正文时，用本地 `draft question` 生成 Markdown 草稿。该命令不需要认证、不调用 API；`--format text` 输出可保存为 `question.md` 并传给 `topic create --content-file`。
