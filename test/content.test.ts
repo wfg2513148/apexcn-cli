@@ -113,7 +113,8 @@ const neverApiDryRunCommands = [
   "workflow export",
   "workflow plan",
   "workflow run",
-  "workflow verify"
+  "workflow verify",
+  "workflow verify-bundle"
 ].sort();
 
 describe("content commands", () => {

@@ -85,6 +85,17 @@ async function createQuestionPreview(runDir: string) {
   return env;
 }
 
+async function createCompletedBundle(runDir: string, bundlePath: string): Promise<Record<string, unknown>> {
+  await createQuestionPreview(runDir);
+  const approver = workflowProgram();
+  await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+  const executor = await configuredWorkflowProgram(async () => Response.json({ requestId: "created-1", id: 1001 }));
+  await executor.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+  const exporter = workflowProgram();
+  await exporter.program.parseAsync(["node", "apexcn", "workflow", "export", "--run-dir", runDir, "--output", bundlePath, "--json"]);
+  return readJson(bundlePath);
+}
+
 describe("workflow commands", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -718,6 +729,127 @@ describe("workflow commands", () => {
     expect(exporter.stderr.join("")).toContain("Workflow run not found or invalid");
     expect(fetch).not.toHaveBeenCalled();
     await expect(readFile(output, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  test("workflow verify-bundle accepts a valid exported bundle", async () => {
+    const runDir = await tempPath("bundle-valid");
+    const bundlePath = join(runDir, "bundle.json");
+    await createCompletedBundle(runDir, bundlePath);
+
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const verifier = workflowProgram({ configPath: "/tmp/apexcn-workflow-missing-config.json" });
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify-bundle", "--bundle", bundlePath, "--json"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    const report = JSON.parse(verifier.stdout.join(""));
+    expect(report).toEqual(expect.objectContaining({
+      kind: "workflow-bundle-verification",
+      schemaVersion: 1,
+      ok: true,
+      status: "completed"
+    }));
+    expect(report.artifacts).toEqual(expect.arrayContaining([expect.objectContaining({ key: "execute" })]));
+  });
+
+  test("workflow verify-bundle detects artifact metadata tampering", async () => {
+    const runDir = await tempPath("bundle-metadata");
+    const bundlePath = join(runDir, "bundle.json");
+    const bundle = await createCompletedBundle(runDir, bundlePath);
+    const artifacts = bundle.artifacts as Array<Record<string, unknown>>;
+    const preview = artifacts.find((artifact) => artifact.key === "preview");
+    if (!preview) {
+      throw new Error("preview artifact missing");
+    }
+    preview.content = `${String(preview.content)}\n`;
+    preview.size = 1;
+    await writeFile(bundlePath, `${JSON.stringify(bundle, null, 2)}\n`, "utf8");
+
+    const verifier = workflowProgram();
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify-bundle", "--bundle", bundlePath, "--json"]);
+
+    const report = JSON.parse(verifier.stdout.join(""));
+    expect(report.ok).toBe(false);
+    expect(report.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "bundle-artifact-hash-mismatch" }),
+      expect.objectContaining({ code: "bundle-artifact-size-mismatch" })
+    ]));
+  });
+
+  test("workflow verify-bundle detects internally consistent approval and execute tampering", async () => {
+    const runDir = await tempPath("bundle-chain");
+    const bundlePath = join(runDir, "bundle.json");
+    const bundle = await createCompletedBundle(runDir, bundlePath);
+    const artifacts = bundle.artifacts as Array<Record<string, unknown>>;
+    const verificationArtifacts = ((bundle.verification as Record<string, unknown>).artifacts ?? {}) as Record<string, Record<string, unknown>>;
+    const preview = artifacts.find((artifact) => artifact.key === "preview");
+    if (!preview || typeof preview.content !== "string") {
+      throw new Error("preview artifact missing");
+    }
+    const previewContent = JSON.parse(preview.content) as { request: { body: { title: string } } };
+    previewContent.request.body.title = "Tampered preview";
+    preview.content = `${JSON.stringify(previewContent, null, 2)}\n`;
+    preview.size = Buffer.byteLength(preview.content, "utf8");
+    preview.sha256 = createHash("sha256").update(preview.content, "utf8").digest("hex");
+    verificationArtifacts.preview.size = preview.size;
+    verificationArtifacts.preview.sha256 = preview.sha256;
+    await writeFile(bundlePath, `${JSON.stringify(bundle, null, 2)}\n`, "utf8");
+
+    const previewVerifier = workflowProgram();
+    await previewVerifier.program.parseAsync(["node", "apexcn", "workflow", "verify-bundle", "--bundle", bundlePath, "--json"]);
+    const previewReport = JSON.parse(previewVerifier.stdout.join(""));
+    expect(previewReport.ok).toBe(false);
+    expect(previewReport.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "approval-hash-mismatch" })]));
+    process.exitCode = undefined;
+
+    const freshBundle = await createCompletedBundle(await tempPath("bundle-chain-execute"), bundlePath);
+    const freshArtifacts = freshBundle.artifacts as Array<Record<string, unknown>>;
+    const freshVerificationArtifacts = ((freshBundle.verification as Record<string, unknown>).artifacts ?? {}) as Record<string, Record<string, unknown>>;
+    const execute = freshArtifacts.find((artifact) => artifact.key === "execute");
+    if (!execute || typeof execute.content !== "string") {
+      throw new Error("execute artifact missing");
+    }
+    const executeContent = JSON.parse(execute.content) as { request: { body: { title: string } } };
+    executeContent.request.body.title = "Tampered execute";
+    execute.content = `${JSON.stringify(executeContent, null, 2)}\n`;
+    execute.size = Buffer.byteLength(execute.content, "utf8");
+    execute.sha256 = createHash("sha256").update(execute.content, "utf8").digest("hex");
+    freshVerificationArtifacts.execute.size = execute.size;
+    freshVerificationArtifacts.execute.sha256 = execute.sha256;
+    await writeFile(bundlePath, `${JSON.stringify(freshBundle, null, 2)}\n`, "utf8");
+
+    const executeVerifier = workflowProgram();
+    await executeVerifier.program.parseAsync(["node", "apexcn", "workflow", "verify-bundle", "--bundle", bundlePath, "--json"]);
+    const executeReport = JSON.parse(executeVerifier.stdout.join(""));
+    expect(executeReport.ok).toBe(false);
+    expect(executeReport.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "execute-request-mismatch" })]));
+  });
+
+  test("workflow verify-bundle requires artifacts recorded by embedded verification", async () => {
+    const runDir = await tempPath("bundle-missing-artifact");
+    const bundlePath = join(runDir, "bundle.json");
+    const bundle = await createCompletedBundle(runDir, bundlePath);
+    bundle.artifacts = (bundle.artifacts as Array<Record<string, unknown>>).filter((artifact) => artifact.key !== "question");
+    await writeFile(bundlePath, `${JSON.stringify(bundle, null, 2)}\n`, "utf8");
+
+    const verifier = workflowProgram();
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify-bundle", "--bundle", bundlePath, "--json"]);
+
+    const report = JSON.parse(verifier.stdout.join(""));
+    expect(report.ok).toBe(false);
+    expect(report.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "missing-bundle-artifact" })]));
+  });
+
+  test("workflow verify-bundle missing bundle is local validation", async () => {
+    const bundlePath = join(await tempPath("missing-bundle"), "bundle.json");
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const verifier = workflowProgram({ configPath: "/tmp/apexcn-workflow-missing-config.json" });
+
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify-bundle", "--bundle", bundlePath, "--json"]);
+
+    expect(verifier.stderr.join("")).toContain("Invalid workflow bundle");
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   test("workflow approval runId mismatch blocks execution", async () => {

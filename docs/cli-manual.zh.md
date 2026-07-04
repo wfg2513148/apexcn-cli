@@ -223,6 +223,7 @@ apexcn workflow run \
 apexcn workflow approve --run-dir run --approved-by reviewer --note "preview reviewed" --json
 apexcn workflow verify --run-dir run --write-report --json
 apexcn workflow export --run-dir run --output workflow-bundle.json --json
+apexcn workflow verify-bundle --bundle workflow-bundle.json --json
 apexcn workflow run --resume run --execute --yes --json
 ```
 
@@ -231,6 +232,8 @@ apexcn workflow run --resume run --execute --yes --json
 `workflow verify` 是纯本地校验命令，会输出 `workflow-verification` 报告，检查 artifact 文件 hash、approval 与 preview 是否匹配、completed run 的 execute request 是否等于已批准 preview request。`--write-report` 会写入 `verification.json`，但不会修改 `run.json`。
 
 `workflow export` 是纯本地导出命令，会先运行同等 verification。默认只导出 `ok=true` 的工作流；需要归档失败证据时可加 `--allow-invalid`。普通输出文件会写入 `workflow-bundle`，stdout 返回导出摘要；`--output -` 会直接把完整 bundle 输出到 stdout。
+
+`workflow verify-bundle` 是纯本地 bundle 校验命令，不需要原始 run 目录。它会校验 bundle schema、artifact 内容 hash/size、embedded verification 是否匹配 artifact，并从 bundle 内的 preview、approval、execute 内容重新复核审批和执行链。
 
 计划只使用文件路径，不会生成内联长正文或密钥的命令。`ask-question` 会规划 `research -> draft question -> review topic -> topic create --preview`；`reply` 会规划 `topic view -> draft reply -> reply create --preview`；`publish-topic` 会规划 `review topic -> topic create --preview`。只有显式加 `--include-execute` 才会加入真正写入 API 的 execute 步骤，且该步骤会标记 `requiresConfirmation: true`。
 

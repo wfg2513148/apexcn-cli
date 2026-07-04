@@ -223,6 +223,7 @@ apexcn workflow run \
 apexcn workflow approve --run-dir run --approved-by reviewer --note "preview reviewed" --json
 apexcn workflow verify --run-dir run --write-report --json
 apexcn workflow export --run-dir run --output workflow-bundle.json --json
+apexcn workflow verify-bundle --bundle workflow-bundle.json --json
 apexcn workflow run --resume run --execute --yes --json
 ```
 
@@ -231,6 +232,8 @@ The default run reads the API, generates local Markdown drafts, and writes `run.
 `workflow verify` is a local-only verification command. It outputs a `workflow-verification` report that checks artifact file hashes, approval-to-preview consistency, and whether a completed run's execute request equals the approved preview request. `--write-report` writes `verification.json` without modifying `run.json`.
 
 `workflow export` is a local-only export command that runs the same verification first. By default it exports only `ok=true` workflows; use `--allow-invalid` when you need to archive failure evidence. A normal file output writes a `workflow-bundle` and prints an export summary to stdout; `--output -` prints the full bundle to stdout.
+
+`workflow verify-bundle` is a local-only bundle verification command and does not need the original run directory. It checks the bundle schema, artifact content hash/size, embedded verification-to-artifact consistency, and independently replays the preview, approval, and execute evidence chain from bundled content.
 
 Plans use file paths only and never generate commands that inline long content or secrets. `ask-question` plans `research -> draft question -> review topic -> topic create --preview`; `reply` plans `topic view -> draft reply -> reply create --preview`; `publish-topic` plans `review topic -> topic create --preview`. Real API execute steps appear only with `--include-execute`, and those steps are marked `requiresConfirmation: true`.
 

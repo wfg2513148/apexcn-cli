@@ -190,7 +190,8 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "workflow export": "export a portable workflow evidence bundle",
   "workflow plan": "plan a local, reviewable APEX Chinese Community workflow",
   "workflow run": "run a stateful APEX Chinese Community workflow with resumable local artifacts",
-  "workflow verify": "verify workflow artifacts and produce local audit evidence"
+  "workflow verify": "verify workflow artifacts and produce local audit evidence",
+  "workflow verify-bundle": "verify a portable workflow evidence bundle"
 };
 
 const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
@@ -354,6 +355,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "workflow verify": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn workflow verify --run-dir ./run --write-report --json", mode: "read" }]
+  },
+  "workflow verify-bundle": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn workflow verify-bundle --bundle ./workflow-bundle.json --json", mode: "read" }]
   }
 };
 

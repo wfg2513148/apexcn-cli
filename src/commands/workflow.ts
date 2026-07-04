@@ -62,6 +62,11 @@ type WorkflowExportOptions = {
   json?: boolean;
 };
 
+type WorkflowVerifyBundleOptions = {
+  bundle: string;
+  json?: boolean;
+};
+
 type WorkflowStep = {
   id: string;
   label: string;
@@ -230,7 +235,31 @@ export function createWorkflowCommand(options: WorkflowCommandOptions): Command 
       await exportWorkflow(options, commandOptions);
     });
 
+  workflow
+    .command("verify-bundle")
+    .requiredOption("--bundle <file>", "workflow bundle file to verify")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: WorkflowVerifyBundleOptions) => {
+      await verifyWorkflowBundle(options, commandOptions);
+    });
+
   return workflow;
+}
+
+async function verifyWorkflowBundle(io: CommandIo, options: WorkflowVerifyBundleOptions): Promise<void> {
+  let bundle: unknown;
+  try {
+    bundle = await readJson(options.bundle);
+  } catch (error) {
+    printError(io, { type: "validation", message: `Invalid workflow bundle: ${errorMessage(error)}` });
+    process.exitCode = 1;
+    return;
+  }
+  const report = workflowBundleVerification(options.bundle, bundle);
+  if (!report.ok) {
+    process.exitCode = 1;
+  }
+  printData(io, report, options.json === true);
 }
 
 async function exportWorkflow(io: CommandIo, options: WorkflowExportOptions): Promise<void> {
@@ -467,6 +496,173 @@ async function workflowVerificationReport(runDir: string, state: WorkflowRunStat
     approval: approvalSummary,
     execute: executeSummary
   };
+}
+
+function workflowBundleVerification(bundlePath: string, bundle: unknown): Record<string, unknown> & { ok: boolean } {
+  const issues: WorkflowVerificationIssue[] = [];
+  const warnings: WorkflowVerificationIssue[] = [];
+  const artifactSummaries: Array<Record<string, unknown>> = [];
+  if (!isRecord(bundle) || bundle.kind !== "workflow-bundle" || bundle.schemaVersion !== 1 || typeof bundle.runId !== "string" || typeof bundle.status !== "string" || !isRecord(bundle.verification) || !Array.isArray(bundle.artifacts)) {
+    issues.push({ code: "invalid-workflow-bundle", message: "Bundle schema is invalid.", path: bundlePath });
+    return {
+      kind: "workflow-bundle-verification",
+      schemaVersion: 1,
+      bundlePath,
+      ok: false,
+      issues,
+      warnings,
+      artifacts: artifactSummaries
+    };
+  }
+
+  const artifacts = new Map<string, Record<string, unknown>>();
+  for (const artifact of bundle.artifacts) {
+    if (!isRecord(artifact) || typeof artifact.key !== "string") {
+      issues.push({ code: "invalid-bundle-artifact", message: "Bundle artifact entry is invalid.", path: bundlePath });
+      continue;
+    }
+    if (artifacts.has(artifact.key)) {
+      issues.push({ code: "invalid-bundle-artifact", message: `Duplicate bundle artifact key: ${artifact.key}`, path: bundlePath });
+      continue;
+    }
+    artifacts.set(artifact.key, artifact);
+    artifactSummaries.push(verifyBundleArtifact(artifact, bundle.verification, issues));
+  }
+
+  if (bundle.verification.runId !== bundle.runId) {
+    issues.push({ code: "bundle-verification-runid-mismatch", message: "Embedded verification runId does not match bundle runId.", path: bundlePath });
+  }
+  verifyBundleVerificationCoverage(bundle.verification, artifacts, issues);
+  verifyBundleWorkflowChain(bundle.runId, bundle.status, artifacts, issues, warnings);
+
+  return {
+    kind: "workflow-bundle-verification",
+    schemaVersion: 1,
+    bundlePath,
+    runId: bundle.runId,
+    status: bundle.status,
+    ok: issues.length === 0,
+    issues,
+    warnings,
+    artifacts: artifactSummaries,
+    verification: {
+      ok: bundle.verification.ok,
+      issueCount: Array.isArray(bundle.verification.issues) ? bundle.verification.issues.length : undefined,
+      warningCount: Array.isArray(bundle.verification.warnings) ? bundle.verification.warnings.length : undefined
+    }
+  };
+}
+
+function verifyBundleVerificationCoverage(verification: Record<string, unknown>, artifacts: Map<string, Record<string, unknown>>, issues: WorkflowVerificationIssue[]): void {
+  const verificationArtifacts = isRecord(verification.artifacts) ? verification.artifacts : {};
+  for (const [key, value] of Object.entries(verificationArtifacts)) {
+    if (!isRecord(value) || value.exists !== true) {
+      continue;
+    }
+    const artifact = artifacts.get(key);
+    if (!artifact || artifact.exists !== true) {
+      issues.push({ code: "missing-bundle-artifact", message: `Bundle is missing artifact recorded by embedded verification: ${key}` });
+      continue;
+    }
+    if (artifact.sha256 !== value.sha256 || artifact.size !== value.size) {
+      issues.push({ code: "bundle-verification-artifact-mismatch", message: `Embedded verification artifact ${key} does not match bundle artifact.` });
+    }
+  }
+}
+
+function verifyBundleArtifact(artifact: Record<string, unknown>, verification: Record<string, unknown>, issues: WorkflowVerificationIssue[]): Record<string, unknown> {
+  const key = fieldText(artifact.key);
+  const summary: Record<string, unknown> = { key, exists: artifact.exists === true };
+  if (artifact.exists !== true) {
+    return summary;
+  }
+  if (artifact.encoding !== "utf8" || typeof artifact.content !== "string" || typeof artifact.sha256 !== "string" || typeof artifact.size !== "number") {
+    issues.push({ code: "invalid-bundle-artifact", message: `Bundle artifact ${key} has invalid content metadata.` });
+    return summary;
+  }
+  const content = Buffer.from(artifact.content, "utf8");
+  const sha256 = createHash("sha256").update(content).digest("hex");
+  summary.size = content.byteLength;
+  summary.sha256 = sha256;
+  if (artifact.size !== content.byteLength) {
+    issues.push({ code: "bundle-artifact-size-mismatch", message: `Bundle artifact ${key} size does not match content.` });
+  }
+  if (artifact.sha256 !== sha256) {
+    issues.push({ code: "bundle-artifact-hash-mismatch", message: `Bundle artifact ${key} hash does not match content.` });
+  }
+  const verificationArtifacts = isRecord(verification.artifacts) ? verification.artifacts : {};
+  const verificationArtifact = isRecord(verificationArtifacts[key]) ? verificationArtifacts[key] : undefined;
+  if (verificationArtifact && (verificationArtifact.sha256 !== artifact.sha256 || verificationArtifact.size !== artifact.size)) {
+    issues.push({ code: "bundle-verification-artifact-mismatch", message: `Embedded verification artifact ${key} does not match bundle artifact.` });
+  }
+  return summary;
+}
+
+function verifyBundleWorkflowChain(runId: string, status: string, artifacts: Map<string, Record<string, unknown>>, issues: WorkflowVerificationIssue[], warnings: WorkflowVerificationIssue[]): void {
+  const preview = bundleJsonArtifact(artifacts, "preview", issues, status === "preview-ready" || status === "completed");
+  const previewRequest = preview ? verificationPreviewRequest(preview, "bundle:preview", issues) : undefined;
+  const previewHash = previewRequest ? workflowPreviewHash(previewRequest) : undefined;
+  const approval = bundleJsonArtifact(artifacts, "approval", issues, status === "completed");
+  if (!approval && status === "preview-ready") {
+    warnings.push({ code: "approval-missing", message: "Bundle preview has not been approved." });
+  }
+  const approvedRequest = approval ? verifyBundleApproval(runId, approval, previewHash, issues) : undefined;
+  const execute = bundleJsonArtifact(artifacts, "execute", issues, status === "completed");
+  if (!execute && status !== "completed") {
+    warnings.push({ code: "execute-missing", message: "Bundle workflow has not executed yet." });
+  }
+  if (execute) {
+    verifyBundleExecute(execute, approvedRequest, issues);
+  }
+}
+
+function bundleJsonArtifact(artifacts: Map<string, Record<string, unknown>>, key: string, issues: WorkflowVerificationIssue[], required: boolean): unknown | undefined {
+  const artifact = artifacts.get(key);
+  if (!artifact || artifact.exists !== true) {
+    if (required) {
+      issues.push({ code: "missing-required-artifact", message: `Bundle is missing required artifact: ${key}` });
+    }
+    return undefined;
+  }
+  if (typeof artifact.content !== "string") {
+    issues.push({ code: "invalid-bundle-artifact", message: `Bundle artifact ${key} has no text content.` });
+    return undefined;
+  }
+  try {
+    return JSON.parse(artifact.content) as unknown;
+  } catch (error) {
+    issues.push({ code: `invalid-${key}`, message: `Bundle artifact ${key} is invalid JSON: ${errorMessage(error)}` });
+    return undefined;
+  }
+}
+
+function verifyBundleApproval(runId: string, approval: unknown, previewHash: string | undefined, issues: WorkflowVerificationIssue[]): WorkflowPreviewRequest | undefined {
+  if (!isRecord(approval) || approval.kind !== "workflow-approval" || approval.schemaVersion !== 1) {
+    issues.push({ code: "invalid-approval", message: "Bundle approval artifact has an invalid schema." });
+    return undefined;
+  }
+  if (approval.runId !== runId) {
+    issues.push({ code: "approval-runid-mismatch", message: "Bundle approval runId does not match bundle runId." });
+  }
+  if (typeof approval.previewHash !== "string" || approval.previewHash !== previewHash) {
+    issues.push({ code: "approval-hash-mismatch", message: "Bundle approval hash does not match bundled preview." });
+  }
+  const request = verificationApprovalRequest(approval.request);
+  if (!request || workflowPreviewHash(request) !== approval.previewHash) {
+    issues.push({ code: "approval-request-mismatch", message: "Bundle approval request does not match approval hash." });
+    return undefined;
+  }
+  return request;
+}
+
+function verifyBundleExecute(execute: unknown, approvedRequest: WorkflowPreviewRequest | undefined, issues: WorkflowVerificationIssue[]): void {
+  if (!isRecord(execute) || execute.kind !== "workflow-execute" || execute.schemaVersion !== 1 || !isRecord(execute.request)) {
+    issues.push({ code: "invalid-execute", message: "Bundle execute artifact has an invalid schema." });
+    return;
+  }
+  if (approvedRequest && canonicalJson(execute.request) !== canonicalJson(approvedRequest)) {
+    issues.push({ code: "execute-request-mismatch", message: "Bundle execute request does not match approved preview request." });
+  }
 }
 
 async function workflowArtifactEvidence(state: WorkflowRunState): Promise<Record<string, Record<string, unknown>>> {
