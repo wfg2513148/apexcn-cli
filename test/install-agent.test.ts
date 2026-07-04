@@ -499,7 +499,11 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
       );
       expect(output).toContain('Using bundled prebuilt apexcn-cli package.');
 
-      const version = execFileSync(join(tempRoot, 'bin', 'apexcn.cmd'), ['--version'], {
+      const command = process.platform === 'win32' ? join(tempRoot, 'bin', 'apexcn.cmd') : 'node';
+      const args = process.platform === 'win32'
+        ? ['--version']
+        : [join(tempRoot, 'install', 'package', 'dist', 'index.js'), '--version'];
+      const version = execFileSync(command, args, {
         env: { ...process.env, USERPROFILE: join(tempRoot, 'home') },
         encoding: 'utf8',
       });
