@@ -188,7 +188,8 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "topic view": "view a community topic",
   "workflow approve": "approve a workflow preview for audited execution",
   "workflow plan": "plan a local, reviewable APEX Chinese Community workflow",
-  "workflow run": "run a stateful APEX Chinese Community workflow with resumable local artifacts"
+  "workflow run": "run a stateful APEX Chinese Community workflow with resumable local artifacts",
+  "workflow verify": "verify workflow artifacts and produce local audit evidence"
 };
 
 const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
@@ -344,6 +345,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
       { command: 'apexcn workflow run --goal ask-question --keyword "REST API" --title "标题" --problem "问题描述" --category-id 4 --output-dir ./run --json', mode: "preview", note: "writes local artifacts and the final API request preview only" },
       { command: "apexcn workflow run --resume ./run --execute --yes --json", mode: "execute", note: "executes only the final reviewed API write" }
     ]
+  },
+  "workflow verify": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn workflow verify --run-dir ./run --write-report --json", mode: "read" }]
   }
 };
 

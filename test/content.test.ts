@@ -111,7 +111,8 @@ const neverApiDryRunCommands = [
   "ask",
   "workflow approve",
   "workflow plan",
-  "workflow run"
+  "workflow run",
+  "workflow verify"
 ].sort();
 
 describe("content commands", () => {

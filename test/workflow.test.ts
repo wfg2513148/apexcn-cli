@@ -51,6 +51,39 @@ async function readJson(path: string): Promise<Record<string, unknown>> {
   return JSON.parse(await readFile(path, "utf8")) as Record<string, unknown>;
 }
 
+async function createQuestionPreview(runDir: string) {
+  const env = await configuredWorkflowProgram(async (input) => {
+    const url = String(input);
+    if (url.includes("/api/v1/search")) {
+      return Response.json({ requestId: "search-1", items: [{ id: 42, title: "REST 403" }] });
+    }
+    if (url.endsWith("/api/v1/topics/42")) {
+      return Response.json({ requestId: "topic-42", topic: { id: 42, title: "REST 403" } });
+    }
+    return Response.json({ error: "unexpected" }, { status: 500 });
+  });
+  await env.program.parseAsync([
+    "node",
+    "apexcn",
+    "workflow",
+    "run",
+    "--goal",
+    "ask-question",
+    "--keyword",
+    "REST API",
+    "--title",
+    "APEX REST API returns 403",
+    "--problem",
+    "Page process gets 403 when calling REST API.",
+    "--category-id",
+    "4",
+    "--output-dir",
+    runDir,
+    "--json"
+  ]);
+  return env;
+}
+
 describe("workflow commands", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -507,6 +540,93 @@ describe("workflow commands", () => {
     expect(execute.stderr.join("")).toContain("hash mismatch");
     expect(fetch).not.toHaveBeenCalled();
     expect((await readJson(join(runDir, "run.json"))).nextAction).toContain("workflow approve");
+  });
+
+  test("workflow verify reports local evidence and writes report after approval", async () => {
+    const runDir = await tempPath("verify-preview");
+    await createQuestionPreview(runDir);
+
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const previewVerify = workflowProgram({ configPath: "/tmp/apexcn-workflow-missing-config.json" });
+    await previewVerify.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--json"]);
+    expect(fetch).not.toHaveBeenCalled();
+    const previewReport = JSON.parse(previewVerify.stdout.join(""));
+    expect(previewReport).toEqual(expect.objectContaining({
+      kind: "workflow-verification",
+      schemaVersion: 1,
+      status: "preview-ready",
+      ok: true,
+      previewHash: expect.stringMatching(/^[a-f0-9]{64}$/)
+    }));
+    expect(previewReport.warnings).toEqual(expect.arrayContaining([expect.objectContaining({ code: "approval-missing" })]));
+    await expect(readFile(join(runDir, "verification.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    const approvedVerify = workflowProgram();
+    await approvedVerify.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--write-report", "--json"]);
+    const approvedReport = JSON.parse(approvedVerify.stdout.join(""));
+    expect(approvedReport.ok).toBe(true);
+    expect(approvedReport.reportPath).toBe(join(runDir, "verification.json"));
+    expect(approvedReport.artifacts.preview.sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(approvedReport.artifacts.verification).toBeUndefined();
+    expect((await readJson(join(runDir, "verification.json"))).kind).toBe("workflow-verification");
+  });
+
+  test("workflow verify missing run is a local validation error", async () => {
+    const runDir = await tempPath("missing-verify");
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const verifier = workflowProgram({ configPath: "/tmp/apexcn-workflow-missing-config.json" });
+
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--write-report", "--json"]);
+
+    expect(verifier.stderr.join("")).toContain("Workflow run not found or invalid");
+    expect(fetch).not.toHaveBeenCalled();
+    await expect(readFile(join(runDir, "verification.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  test("workflow verify validates completed execute evidence and detects tampering", async () => {
+    const runDir = await tempPath("verify-completed");
+    await createQuestionPreview(runDir);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    const executor = await configuredWorkflowProgram(async () => Response.json({ requestId: "created-1", id: 1001 }));
+    await executor.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+
+    const completed = workflowProgram();
+    await completed.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--json"]);
+    const completedReport = JSON.parse(completed.stdout.join(""));
+    expect(completedReport).toEqual(expect.objectContaining({
+      status: "completed",
+      ok: true,
+      execute: expect.objectContaining({ requestId: "created-1" })
+    }));
+
+    const execute = await readJson(join(runDir, "execute.json"));
+    if (typeof execute.request === "object" && execute.request !== null && "body" in execute.request) {
+      (execute.request as { body: { title?: string } }).body.title = "Tampered execute";
+    }
+    await writeFile(join(runDir, "execute.json"), `${JSON.stringify(execute, null, 2)}\n`, "utf8");
+    const tamperedExecute = workflowProgram();
+    await tamperedExecute.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--json"]);
+    const tamperedExecuteReport = JSON.parse(tamperedExecute.stdout.join(""));
+    expect(tamperedExecuteReport.ok).toBe(false);
+    expect(tamperedExecuteReport.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "execute-request-mismatch" })]));
+    process.exitCode = undefined;
+
+    const approval = await readJson(join(runDir, "approval.json"));
+    approval.previewHash = "0".repeat(64);
+    await writeFile(join(runDir, "approval.json"), `${JSON.stringify(approval, null, 2)}\n`, "utf8");
+    const tamperedApproval = workflowProgram();
+    await tamperedApproval.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--json"]);
+    const tamperedApprovalReport = JSON.parse(tamperedApproval.stdout.join(""));
+    expect(tamperedApprovalReport.ok).toBe(false);
+    expect(tamperedApprovalReport.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "approval-hash-mismatch" }),
+      expect.objectContaining({ code: "approval-request-mismatch" })
+    ]));
   });
 
   test("workflow approval runId mismatch blocks execution", async () => {

@@ -49,6 +49,12 @@ type WorkflowApproveOptions = {
   json?: boolean;
 };
 
+type WorkflowVerifyOptions = {
+  runDir: string;
+  writeReport?: boolean;
+  json?: boolean;
+};
+
 type WorkflowStep = {
   id: string;
   label: string;
@@ -136,6 +142,12 @@ type WorkflowPreviewRequest = {
   body: unknown;
 };
 
+type WorkflowVerificationIssue = {
+  code: string;
+  message: string;
+  path?: string;
+};
+
 export function createWorkflowCommand(options: WorkflowCommandOptions): Command {
   const workflow = new Command("workflow");
 
@@ -192,7 +204,43 @@ export function createWorkflowCommand(options: WorkflowCommandOptions): Command 
       await approveWorkflow(options, commandOptions);
     });
 
+  workflow
+    .command("verify")
+    .requiredOption("--run-dir <run-dir>", "workflow run directory to verify")
+    .option("--write-report", "write verification.json in the run directory")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: WorkflowVerifyOptions) => {
+      await verifyWorkflow(options, commandOptions);
+    });
+
   return workflow;
+}
+
+async function verifyWorkflow(io: CommandIo, options: WorkflowVerifyOptions): Promise<void> {
+  let loaded: { runDir: string; state: WorkflowRunState } | undefined;
+  try {
+    loaded = await loadWorkflowRun(options.runDir);
+  } catch (error) {
+    printError(io, { type: "validation", message: `Invalid workflow run: ${errorMessage(error)}` });
+    process.exitCode = 1;
+    return;
+  }
+  if (!loaded) {
+    printError(io, { type: "validation", message: `Workflow run not found or invalid: ${options.runDir}` });
+    process.exitCode = 1;
+    return;
+  }
+
+  const report = await workflowVerificationReport(loaded.runDir, loaded.state);
+  if (options.writeReport) {
+    const reportPath = join(loaded.runDir, "verification.json");
+    await writeJson(reportPath, report);
+    report.reportPath = reportPath;
+  }
+  if (!report.ok) {
+    process.exitCode = 1;
+  }
+  printData(io, report, options.json === true);
 }
 
 async function approveWorkflow(io: CommandIo, options: WorkflowApproveOptions): Promise<void> {
@@ -322,6 +370,133 @@ function workflowPlan(options: WorkflowPlanOptions): WorkflowPlan {
     files,
     safetySummary: safetySummary(steps)
   };
+}
+
+async function workflowVerificationReport(runDir: string, state: WorkflowRunState): Promise<Record<string, unknown> & { ok: boolean; reportPath?: string }> {
+  const issues: WorkflowVerificationIssue[] = [];
+  const warnings: WorkflowVerificationIssue[] = [];
+  const artifacts = await workflowArtifactEvidence(state);
+  const preview = await readVerificationJson(state.artifacts.preview, issues, "invalid-preview", state.status === "preview-ready" || state.status === "completed");
+  const previewRequest = preview ? verificationPreviewRequest(preview, state.artifacts.preview, issues) : undefined;
+  const previewHash = previewRequest ? workflowPreviewHash(previewRequest) : undefined;
+
+  const approval = await readVerificationJson(state.artifacts.approval, issues, "invalid-approval", state.status === "completed");
+  if (!approval && state.status === "preview-ready") {
+    warnings.push({ code: "approval-missing", message: "Workflow preview has not been approved.", path: state.artifacts.approval });
+  }
+  const approvalSummary = approval ? verificationApproval(approval, state, previewHash, issues) : undefined;
+
+  const execute = await readVerificationJson(state.artifacts.execute, issues, "invalid-execute", state.status === "completed");
+  if (!execute && state.status !== "completed") {
+    warnings.push({ code: "execute-missing", message: "Workflow has not executed yet.", path: state.artifacts.execute });
+  }
+  const executeSummary = execute ? verificationExecute(execute, approvalSummary?.request, issues) : undefined;
+
+  return {
+    kind: "workflow-verification",
+    schemaVersion: 1,
+    runId: state.runId,
+    status: state.status,
+    ok: issues.length === 0,
+    issues,
+    warnings,
+    artifacts,
+    previewHash,
+    approval: approvalSummary,
+    execute: executeSummary
+  };
+}
+
+async function workflowArtifactEvidence(state: WorkflowRunState): Promise<Record<string, Record<string, unknown>>> {
+  const evidence: Record<string, Record<string, unknown>> = {};
+  for (const [key, path] of Object.entries(state.artifacts)) {
+    if (key === "verification") {
+      continue;
+    }
+    try {
+      const content = await readFile(path);
+      evidence[key] = {
+        path,
+        exists: true,
+        size: content.byteLength,
+        sha256: createHash("sha256").update(content).digest("hex")
+      };
+    } catch (error) {
+      if (isNodeError(error) && error.code === "ENOENT") {
+        evidence[key] = { path, exists: false };
+      } else {
+        throw error;
+      }
+    }
+  }
+  return evidence;
+}
+
+async function readVerificationJson(path: string, issues: WorkflowVerificationIssue[], invalidCode: string, required: boolean): Promise<unknown | undefined> {
+  try {
+    return await readJson(path);
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      if (required) {
+        issues.push({ code: "missing-required-artifact", message: `Required workflow artifact is missing: ${path}`, path });
+      }
+      return undefined;
+    }
+    issues.push({ code: invalidCode, message: `Invalid workflow artifact: ${errorMessage(error)}`, path });
+    return undefined;
+  }
+}
+
+function verificationPreviewRequest(preview: unknown, path: string, issues: WorkflowVerificationIssue[]): WorkflowPreviewRequest | undefined {
+  if (!isRecord(preview) || preview.kind !== "workflow-preview" || !isRecord(preview.request) || preview.request.method !== "POST" || typeof preview.request.path !== "string") {
+    issues.push({ code: "invalid-preview", message: "Preview artifact does not contain a valid POST request.", path });
+    return undefined;
+  }
+  return { method: "POST", path: preview.request.path, body: preview.request.body };
+}
+
+function verificationApproval(approval: unknown, state: WorkflowRunState, previewHash: string | undefined, issues: WorkflowVerificationIssue[]): { runId?: unknown; previewHash?: unknown; request?: WorkflowPreviewRequest } {
+  const summary: { runId?: unknown; previewHash?: unknown; request?: WorkflowPreviewRequest } = {};
+  if (!isRecord(approval) || approval.kind !== "workflow-approval" || approval.schemaVersion !== 1) {
+    issues.push({ code: "invalid-approval", message: "Approval artifact has an invalid schema.", path: state.artifacts.approval });
+    return summary;
+  }
+  summary.runId = approval.runId;
+  summary.previewHash = approval.previewHash;
+  if (approval.runId !== state.runId) {
+    issues.push({ code: "approval-runid-mismatch", message: "Approval runId does not match run.json.", path: state.artifacts.approval });
+  }
+  if (typeof approval.previewHash !== "string" || approval.previewHash !== previewHash) {
+    issues.push({ code: "approval-hash-mismatch", message: "Approval hash does not match current preview request.", path: state.artifacts.approval });
+  }
+  const request = verificationApprovalRequest(approval.request);
+  if (!request || workflowPreviewHash(request) !== approval.previewHash) {
+    issues.push({ code: "approval-request-mismatch", message: "Approval request does not match its recorded preview hash.", path: state.artifacts.approval });
+  } else {
+    summary.request = request;
+  }
+  return summary;
+}
+
+function verificationApprovalRequest(value: unknown): WorkflowPreviewRequest | undefined {
+  if (!isRecord(value) || value.method !== "POST" || typeof value.path !== "string") {
+    return undefined;
+  }
+  return { method: "POST", path: value.path, body: value.body };
+}
+
+function verificationExecute(execute: unknown, approvedRequest: WorkflowPreviewRequest | undefined, issues: WorkflowVerificationIssue[]): { request?: unknown; requestId?: unknown } {
+  const summary: { request?: unknown; requestId?: unknown } = {};
+  if (!isRecord(execute) || execute.kind !== "workflow-execute" || execute.schemaVersion !== 1 || !isRecord(execute.request)) {
+    issues.push({ code: "invalid-execute", message: "Execute artifact has an invalid schema." });
+    return summary;
+  }
+  summary.request = execute.request;
+  summary.requestId = execute.requestId;
+  if (approvedRequest && canonicalJson(execute.request) !== canonicalJson(approvedRequest)) {
+    issues.push({ code: "execute-request-mismatch", message: "Execute request does not match approved preview request." });
+  }
+  return summary;
 }
 
 async function executeRunSteps(state: WorkflowRunState, runDir: string, session: Session, options: WorkflowRunOptions): Promise<void> {

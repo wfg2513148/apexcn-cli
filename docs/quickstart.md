@@ -57,19 +57,19 @@ https://oracleapex.cn/ords/api
 macOS / Linux：
 
 ```bash
-curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v7.0.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
+curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v8.0.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v7.0.0/install-agent.ps1" | iex
+$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v8.0.0/install-agent.ps1" | iex
 ```
 
 安装脚本默认下载固定文件名的 CLI 包：
 
 ```bash
-https://github.com/wfg2513148/apexcn-cli/releases/download/v7.0.0/apexcn-cli.tgz
+https://github.com/wfg2513148/apexcn-cli/releases/download/v8.0.0/apexcn-cli.tgz
 ```
 
 即使 CLI 版本更新，上述 URL 和压缩包文件名也保持不变。
@@ -218,6 +218,7 @@ apexcn review topic --title "APEX 问题" --content-file question.md --category-
 apexcn workflow plan --goal ask-question --keyword "REST API" --title "APEX 问题" --problem "现象描述" --category-id 4 --json
 apexcn workflow run --goal ask-question --keyword "REST API" --title "APEX 问题" --problem "现象描述" --category-id 4 --output-dir ./run --json
 apexcn workflow approve --run-dir ./run --approved-by reviewer --note "preview reviewed" --json
+apexcn workflow verify --run-dir ./run --write-report --json
 apexcn workflow run --resume ./run --execute --yes --json
 ```
 
@@ -228,6 +229,7 @@ apexcn workflow run --resume ./run --execute --yes --json
 发布预览前，用本地 `review topic` 检查 Markdown 草稿是否仍含 `待补充`、过短正文或疑似密钥；该命令不替代 `topic create --preview`。
 需要让 AI agent 先给出完整可审计步骤时，用本地 `workflow plan` 生成机器可读计划；它只规划，不执行命令。
 需要让 CLI 直接执行可恢复工作流时，用 `workflow run`；默认只读取 API 并写入本地产物和 `preview.json`。审查后用 `workflow approve` 写入 hash 绑定的 `approval.json`，只有批准未过期时 `--resume <run-dir> --execute --yes` 才会发送最终 POST。
+需要归档或复核工作流证据时，用 `workflow verify` 本地校验 artifact 图、approval hash 和 execute 请求一致性；`--write-report` 会写入 `verification.json`。
 
 查看话题：
 
@@ -432,6 +434,7 @@ apexcn search "APEX" --page-size 3 --json
 | 工作流计划 | `apexcn workflow plan --goal ask-question --keyword <keyword> --title <title> --problem <text> --category-id <id> --json` |
 | 工作流运行 | `apexcn workflow run --goal ask-question --keyword <keyword> --title <title> --problem <text> --category-id <id> --output-dir <dir> --json` |
 | 工作流批准 | `apexcn workflow approve --run-dir <dir> --approved-by <name> --json` |
+| 工作流验证 | `apexcn workflow verify --run-dir <dir> --write-report --json` |
 | RAG 问答 | `apexcn ask "问题" --top-k 3 --json` |
 | 查看话题 | `apexcn topic view <thread_id> --json` |
 | 发帖 | `apexcn topic create --category-id <id> --title <title> --content-file <file> --json` |
