@@ -60,6 +60,7 @@ apexcn auth set-token \
 - Approve a workflow preview with `apexcn workflow approve --run-dir <run-dir> --json` after reviewing `preview.json`. This records a hash-bound approval artifact.
 - Only execute an approved workflow with `apexcn workflow run --resume <run-dir> --execute --yes --json`. Execution refuses missing or stale approvals and reuses the approved preview request body for the final POST.
 - Use `apexcn workflow verify --run-dir <run-dir> --json` to locally verify workflow artifacts, approval hashes, and execute evidence. Add `--write-report` when the user needs `verification.json` for audit records.
+- Use `apexcn workflow export --run-dir <run-dir> --output <file> --json` when the user needs a portable single-file workflow evidence bundle for archival or external review.
 - Use `apexcn commands --json` to inspect available commands, purposes, safety metadata, examples, and options instead of parsing help text.
 - This skill supports manifest `schemaVersion === 1`. If `schemaVersion` is missing or unsupported, do not consume structured `safety` or `examples`; upgrade `apexcn-cli` or ask the user before continuing.
 - Prefer manifest `examples[].command` for command shape, check `examples[].mode`, and inspect `safety.effects`, `safety.preview`, and `safety.confirmation` before writes or destructive actions.
@@ -91,6 +92,7 @@ apexcn workflow plan --goal ask-question --keyword "REST API" --title "标题" -
 apexcn workflow run --goal ask-question --keyword "REST API" --title "标题" --problem "问题描述" --category-id 4 --output-dir ./run --json
 apexcn workflow approve --run-dir ./run --approved-by reviewer --note "preview reviewed" --json
 apexcn workflow verify --run-dir ./run --write-report --json
+apexcn workflow export --run-dir ./run --output ./workflow-bundle.json --json
 apexcn workflow run --resume ./run --execute --yes --json
 apexcn commands --json
 apexcn ask "Oracle APEX 如何调用 REST API？" --top-k 3 --json

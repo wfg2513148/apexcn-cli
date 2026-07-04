@@ -110,6 +110,7 @@ const neverApiDryRunCommands = [
   "thread view",
   "ask",
   "workflow approve",
+  "workflow export",
   "workflow plan",
   "workflow run",
   "workflow verify"

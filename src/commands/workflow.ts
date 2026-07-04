@@ -55,6 +55,13 @@ type WorkflowVerifyOptions = {
   json?: boolean;
 };
 
+type WorkflowExportOptions = {
+  runDir: string;
+  output: string;
+  allowInvalid?: boolean;
+  json?: boolean;
+};
+
 type WorkflowStep = {
   id: string;
   label: string;
@@ -213,7 +220,62 @@ export function createWorkflowCommand(options: WorkflowCommandOptions): Command 
       await verifyWorkflow(options, commandOptions);
     });
 
+  workflow
+    .command("export")
+    .requiredOption("--run-dir <run-dir>", "workflow run directory to export")
+    .requiredOption("--output <file>", "bundle output path, or - for stdout")
+    .option("--allow-invalid", "export even when workflow verification fails")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: WorkflowExportOptions) => {
+      await exportWorkflow(options, commandOptions);
+    });
+
   return workflow;
+}
+
+async function exportWorkflow(io: CommandIo, options: WorkflowExportOptions): Promise<void> {
+  let loaded: { runDir: string; state: WorkflowRunState } | undefined;
+  try {
+    loaded = await loadWorkflowRun(options.runDir);
+  } catch (error) {
+    printError(io, { type: "validation", message: `Invalid workflow run: ${errorMessage(error)}` });
+    process.exitCode = 1;
+    return;
+  }
+  if (!loaded) {
+    printError(io, { type: "validation", message: `Workflow run not found or invalid: ${options.runDir}` });
+    process.exitCode = 1;
+    return;
+  }
+  const verification = await workflowVerificationReport(loaded.runDir, loaded.state);
+  if (!verification.ok && !options.allowInvalid) {
+    printError(io, { type: "validation", message: "Workflow verification failed; rerun with --allow-invalid to export anyway." });
+    process.exitCode = 1;
+    return;
+  }
+  const bundle = {
+    kind: "workflow-bundle",
+    schemaVersion: 1,
+    exportedAt: now(),
+    runId: loaded.state.runId,
+    status: loaded.state.status,
+    sourceRunDir: loaded.runDir,
+    verification,
+    artifacts: await workflowBundleArtifacts(loaded.state)
+  };
+  if (options.output === "-") {
+    printData(io, bundle, options.json === true);
+    return;
+  }
+  await writeJson(options.output, bundle);
+  printData(io, {
+    kind: "workflow-export",
+    schemaVersion: 1,
+    outputPath: options.output,
+    runId: loaded.state.runId,
+    ok: verification.ok,
+    artifactCount: bundle.artifacts.filter((artifact) => artifact.exists === true).length
+  }, options.json === true);
 }
 
 async function verifyWorkflow(io: CommandIo, options: WorkflowVerifyOptions): Promise<void> {
@@ -430,6 +492,34 @@ async function workflowArtifactEvidence(state: WorkflowRunState): Promise<Record
     }
   }
   return evidence;
+}
+
+async function workflowBundleArtifacts(state: WorkflowRunState): Promise<Array<Record<string, unknown>>> {
+  const artifacts = [];
+  for (const [key, path] of Object.entries(state.artifacts)) {
+    if (key === "verification" || key === "bundle") {
+      continue;
+    }
+    try {
+      const content = await readFile(path);
+      artifacts.push({
+        key,
+        path,
+        exists: true,
+        size: content.byteLength,
+        sha256: createHash("sha256").update(content).digest("hex"),
+        encoding: "utf8",
+        content: content.toString("utf8")
+      });
+    } catch (error) {
+      if (isNodeError(error) && error.code === "ENOENT") {
+        artifacts.push({ key, path, exists: false });
+      } else {
+        throw error;
+      }
+    }
+  }
+  return artifacts;
 }
 
 async function readVerificationJson(path: string, issues: WorkflowVerificationIssue[], invalidCode: string, required: boolean): Promise<unknown | undefined> {

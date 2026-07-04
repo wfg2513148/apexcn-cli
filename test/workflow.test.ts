@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -627,6 +628,96 @@ describe("workflow commands", () => {
       expect.objectContaining({ code: "approval-hash-mismatch" }),
       expect.objectContaining({ code: "approval-request-mismatch" })
     ]));
+  });
+
+  test("workflow export writes a portable bundle for a valid completed run", async () => {
+    const runDir = await tempPath("export-valid");
+    await createQuestionPreview(runDir);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    const executor = await configuredWorkflowProgram(async () => Response.json({ requestId: "created-1", id: 1001 }));
+    await executor.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+
+    const output = join(runDir, "nested", "bundle.json");
+    const exporter = workflowProgram();
+    await exporter.program.parseAsync(["node", "apexcn", "workflow", "export", "--run-dir", runDir, "--output", output, "--json"]);
+
+    const summary = JSON.parse(exporter.stdout.join(""));
+    expect(summary).toEqual(expect.objectContaining({
+      kind: "workflow-export",
+      outputPath: output,
+      ok: true
+    }));
+    const bundle = await readJson(output);
+    expect(bundle).toEqual(expect.objectContaining({
+      kind: "workflow-bundle",
+      schemaVersion: 1,
+      runId: summary.runId,
+      verification: expect.objectContaining({ ok: true })
+    }));
+    const artifacts = bundle.artifacts as Array<Record<string, unknown>>;
+    const execute = artifacts.find((artifact) => artifact.key === "execute");
+    expect(execute).toEqual(expect.objectContaining({
+      exists: true,
+      encoding: "utf8",
+      sha256: expect.stringMatching(/^[a-f0-9]{64}$/)
+    }));
+    expect(execute?.sha256).toBe(createHash("sha256").update(String(execute?.content), "utf8").digest("hex"));
+    expect(artifacts.some((artifact) => artifact.key === "verification")).toBe(false);
+  });
+
+  test("workflow export can print the bundle to stdout only", async () => {
+    const runDir = await tempPath("export-stdout");
+    await createQuestionPreview(runDir);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+
+    const exporter = workflowProgram();
+    await exporter.program.parseAsync(["node", "apexcn", "workflow", "export", "--run-dir", runDir, "--output", "-", "--json"]);
+
+    const bundle = JSON.parse(exporter.stdout.join(""));
+    expect(bundle.kind).toBe("workflow-bundle");
+    expect(bundle.verification.ok).toBe(true);
+    await expect(readFile(join(runDir, "-"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  test("workflow export refuses invalid runs unless explicitly allowed", async () => {
+    const runDir = await tempPath("export-invalid");
+    await createQuestionPreview(runDir);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    const approval = await readJson(join(runDir, "approval.json"));
+    approval.previewHash = "0".repeat(64);
+    await writeFile(join(runDir, "approval.json"), `${JSON.stringify(approval, null, 2)}\n`, "utf8");
+
+    const output = join(runDir, "bundle.json");
+    const refused = workflowProgram();
+    await refused.program.parseAsync(["node", "apexcn", "workflow", "export", "--run-dir", runDir, "--output", output, "--json"]);
+    expect(refused.stderr.join("")).toContain("Workflow verification failed");
+    await expect(readFile(output, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+
+    process.exitCode = undefined;
+    const allowed = workflowProgram();
+    await allowed.program.parseAsync(["node", "apexcn", "workflow", "export", "--run-dir", runDir, "--output", output, "--allow-invalid", "--json"]);
+    const bundle = await readJson(output);
+    expect(bundle.verification).toEqual(expect.objectContaining({ ok: false }));
+    expect((bundle.verification as { issues: Array<Record<string, unknown>> }).issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "approval-hash-mismatch" })
+    ]));
+  });
+
+  test("workflow export missing run is local validation and writes no output", async () => {
+    const runDir = await tempPath("export-missing");
+    const output = join(runDir, "out", "bundle.json");
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const exporter = workflowProgram({ configPath: "/tmp/apexcn-workflow-missing-config.json" });
+
+    await exporter.program.parseAsync(["node", "apexcn", "workflow", "export", "--run-dir", runDir, "--output", output, "--json"]);
+
+    expect(exporter.stderr.join("")).toContain("Workflow run not found or invalid");
+    expect(fetch).not.toHaveBeenCalled();
+    await expect(readFile(output, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   test("workflow approval runId mismatch blocks execution", async () => {

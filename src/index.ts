@@ -187,6 +187,7 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "topic update": "update an existing topic",
   "topic view": "view a community topic",
   "workflow approve": "approve a workflow preview for audited execution",
+  "workflow export": "export a portable workflow evidence bundle",
   "workflow plan": "plan a local, reviewable APEX Chinese Community workflow",
   "workflow run": "run a stateful APEX Chinese Community workflow with resumable local artifacts",
   "workflow verify": "verify workflow artifacts and produce local audit evidence"
@@ -338,6 +339,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "workflow approve": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn workflow approve --run-dir ./run --approved-by reviewer --note \"preview reviewed\" --json", mode: "read" }]
+  },
+  "workflow export": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn workflow export --run-dir ./run --output ./workflow-bundle.json --json", mode: "read" }]
   },
   "workflow run": {
     safety: { effects: ["read", "api-write"], preview: "required", confirmation: ["--execute", "--yes"] },
