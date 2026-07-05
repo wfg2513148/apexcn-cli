@@ -110,6 +110,7 @@ const neverApiDryRunCommands = [
   "collection build",
   "collection index",
   "collection query",
+  "collection stats",
   "collection verify",
   "commands",
   "doctor",
@@ -141,7 +142,10 @@ const neverApiDryRunCommands = [
   "thread view",
   "ask",
   "workflow approve",
+  "workflow audit-log",
+  "workflow diff",
   "workflow export",
+  "workflow policy init",
   "workflow plan",
   "workflow run",
   "workflow verify",
@@ -1113,7 +1117,7 @@ describe("content commands", () => {
 
   test("format option is exposed only on read commands with text output", () => {
     const program = createProgram();
-    const formatCommands = ["doctor", "doctor snapshot", "draft reply", "draft question", "review reply", "review topic", "workflow plan", "admin list", "me", "me favorites", "me replies", "me stats", "me subscriptions", "me topics", "category list", "search", "stats category", "stats tag", "stats topic", "research", "topic list", "topic recent", "topic view", "thread list", "thread recent", "thread view", "ask"];
+    const formatCommands = ["doctor", "doctor snapshot", "draft reply", "draft question", "review reply", "review topic", "workflow audit-log", "workflow plan", "admin list", "me", "me favorites", "me replies", "me stats", "me subscriptions", "me topics", "category list", "search", "stats category", "stats tag", "stats topic", "research", "topic list", "topic recent", "topic view", "thread list", "thread recent", "thread view", "ask"];
 
     for (const path of leafCommandPaths(program)) {
       if (formatCommands.includes(path)) {

@@ -96,11 +96,23 @@ If it is already installed, say:
 
 > Turn these posts into an “APEX REST API beginner roadmap”, ordered from basic to advanced.
 
-## 15. Change API Key or Reconfigure
+## 15. AI Agent / MCP
+
+If your AI tool supports MCP, use the local stdio server in readonly mode by default:
+
+> Check that apexcn-cli MCP is readonly and list the available tools.
+
+Preview-only write tools can generate requests with `willExecute: false`, but real publishing still goes through CLI workflow.
+
+For local offline search:
+
+> Build a BM25 index for my local collection, then query ORDS authentication failures with explain mode.
+
+## 16. Change API Key or Reconfigure
 
 > Help me reconfigure the apexcn-cli API key. I will provide the new key. Verify the account after configuration and do not print the full key.
 
-## 16. When Something Breaks
+## 17. When Something Breaks
 
 > apexcn-cli seems broken. Please run the built-in diagnostics first, then check the install location, login state, account info, category list, and search capability. Tell me exactly which step failed.
 

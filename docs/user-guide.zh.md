@@ -106,7 +106,13 @@
 
 > 请检查 apexcn-cli MCP 是否只读，并列出可用工具。
 
+> 请用本地 MCP readonly 模式搜索 ORDS 401 相关帖子，并返回引用链接。
+
 即使启用 preview-only 写工具，AI 也只能生成预览请求；真实发布仍需要你确认后走 CLI workflow。
+
+如果你需要本地离线检索：
+
+> 请为我的本地 collection 建立 BM25 索引，然后用 explain 模式查询 ORDS 认证失败。
 
 ## 16. 换 API key 或重新配置
 

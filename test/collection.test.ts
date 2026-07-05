@@ -255,21 +255,27 @@ describe("collection commands", () => {
 
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(stderr.join("")).toBe("");
-    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({ kind: "collection-index", topicCount: 1 }));
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({ kind: "collection-index", engine: "bm25", documentCount: 1 }));
     expect(await readFile(join(outputDir, "index.jsonl"), "utf8")).toContain("collection-index-record");
 
     stdout.length = 0;
-    await program.parseAsync(["node", "apexcn", "collection", "query", "ORDS 401", "--dir", outputDir, "--json"]);
+    await program.parseAsync(["node", "apexcn", "collection", "query", "ORDS 401", "--dir", outputDir, "--top-k", "5", "--explain", "--json"]);
 
     expect(fetch).toHaveBeenCalledTimes(2);
     const query = JSON.parse(stdout.join(""));
-    expect(query).toEqual(expect.objectContaining({ kind: "collection-query", resultCount: 1 }));
+    expect(query).toEqual(expect.objectContaining({ kind: "collection-query-result", engine: "bm25", resultCount: 1 }));
     expect(query.results[0]).toEqual(expect.objectContaining({
       topicId: 1,
       score: expect.any(Number),
       matchedTerms: expect.arrayContaining(["ords", "401"]),
+      sourcePath: "topics/1.json",
       excerpt: expect.stringContaining("ORDS 401")
     }));
+    expect(query.results[0].explanation).toEqual(expect.objectContaining({ ords: expect.any(Number) }));
+
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "collection", "stats", "--dir", outputDir, "--json"]);
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({ kind: "collection-index-stats", engine: "bm25", documentCount: 1 }));
   });
 
   test("collection index fails when collection paths are invalid", async () => {

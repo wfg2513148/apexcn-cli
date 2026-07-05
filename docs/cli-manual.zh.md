@@ -498,6 +498,33 @@ apexcn ask "Oracle APEX 如何调用 REST API？" --format text
 
 ## 常用组合
 
+契约和 MCP 清单：
+
+```bash
+apexcn commands --json
+apexcn commands --json-schema
+apexcn mcp tools --json
+apexcn mcp tools --json --allow-preview-write
+apexcn mcp inspect --json
+```
+
+本地资料包 BM25 检索：
+
+```bash
+apexcn collection index --dir ./collection --json
+apexcn collection query --dir ./collection "ORDS 认证失败" --top-k 5 --explain --json
+apexcn collection stats --dir ./collection --json
+```
+
+workflow policy、diff 和 audit log：
+
+```bash
+apexcn workflow policy init --output apexcn-policy.json
+apexcn workflow verify --run-dir ./run --policy apexcn-policy.json --json
+apexcn workflow diff --run-dir ./run --json
+apexcn workflow audit-log --run-dir ./run --format ndjson
+```
+
 只读真实环境验收。没有 `APEXCN_API_KEY` 时脚本会跳过；有 key 时会检查 `doctor`、`me`、`category list`、`search` 和 `ask`，写操作只做 `--preview`：
 
 ```bash

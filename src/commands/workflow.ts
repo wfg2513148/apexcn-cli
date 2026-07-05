@@ -51,8 +51,24 @@ type WorkflowApproveOptions = {
 
 type WorkflowVerifyOptions = {
   runDir: string;
+  policy?: string;
   writeReport?: boolean;
   json?: boolean;
+};
+
+type WorkflowPolicyInitOptions = {
+  output: string;
+  json?: boolean;
+};
+
+type WorkflowDiffOptions = {
+  runDir: string;
+  json?: boolean;
+};
+
+type WorkflowAuditLogOptions = {
+  runDir: string;
+  format?: "ndjson" | "json";
 };
 
 type WorkflowExportOptions = {
@@ -217,12 +233,39 @@ export function createWorkflowCommand(options: WorkflowCommandOptions): Command 
     });
 
   workflow
+    .command("policy")
+    .description("workflow policy helpers")
+    .command("init")
+    .requiredOption("--output <file>", "policy output path")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: WorkflowPolicyInitOptions) => {
+      await initWorkflowPolicy(options, commandOptions);
+    });
+
+  workflow
     .command("verify")
     .requiredOption("--run-dir <run-dir>", "workflow run directory to verify")
+    .option("--policy <file>", "JSON workflow policy file")
     .option("--write-report", "write verification.json in the run directory")
     .option("--json", "pretty-print JSON")
     .action(async (commandOptions: WorkflowVerifyOptions) => {
       await verifyWorkflow(options, commandOptions);
+    });
+
+  workflow
+    .command("diff")
+    .requiredOption("--run-dir <run-dir>", "workflow run directory to diff")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: WorkflowDiffOptions) => {
+      await diffWorkflow(options, commandOptions);
+    });
+
+  workflow
+    .command("audit-log")
+    .requiredOption("--run-dir <run-dir>", "workflow run directory")
+    .option("--format <format>", "output format: ndjson or json", parseAuditLogFormat, "ndjson")
+    .action(async (commandOptions: WorkflowAuditLogOptions) => {
+      await auditWorkflow(options, commandOptions);
     });
 
   workflow
@@ -244,6 +287,17 @@ export function createWorkflowCommand(options: WorkflowCommandOptions): Command 
     });
 
   return workflow;
+}
+
+async function initWorkflowPolicy(io: CommandIo, options: WorkflowPolicyInitOptions): Promise<void> {
+  const policy = defaultWorkflowPolicy();
+  await writeJson(options.output, policy);
+  printData(io, {
+    kind: "workflow-policy-init",
+    schemaVersion: 1,
+    output: options.output,
+    policy
+  }, options.json === true);
 }
 
 async function verifyWorkflowBundle(io: CommandIo, options: WorkflowVerifyBundleOptions): Promise<void> {
@@ -323,6 +377,13 @@ async function verifyWorkflow(io: CommandIo, options: WorkflowVerifyOptions): Pr
   }
 
   const report = await workflowVerificationReport(loaded.runDir, loaded.state);
+  if (options.policy) {
+    const policyResult = await verifyWorkflowPolicy(loaded.runDir, loaded.state, report, options.policy);
+    report.policy = policyResult;
+    if (!policyResult.ok) {
+      report.ok = false;
+    }
+  }
   if (options.writeReport) {
     const reportPath = join(loaded.runDir, "verification.json");
     await writeJson(reportPath, report);
@@ -332,6 +393,51 @@ async function verifyWorkflow(io: CommandIo, options: WorkflowVerifyOptions): Pr
     process.exitCode = 1;
   }
   printData(io, report, options.json === true);
+}
+
+async function diffWorkflow(io: CommandIo, options: WorkflowDiffOptions): Promise<void> {
+  const loaded = await loadWorkflowRun(options.runDir);
+  if (!loaded) {
+    printError(io, { type: "validation", message: `Workflow run not found: ${options.runDir}` });
+    process.exitCode = 1;
+    return;
+  }
+  const preview = await readOptionalJson(loaded.state.artifacts.preview);
+  const approval = await readOptionalJson(loaded.state.artifacts.approval);
+  const previewRequest = verificationPreviewRequest(preview, loaded.state.artifacts.preview, []);
+  const approvalRequest = isRecord(approval) && isRecord(approval.request) ? approval.request as WorkflowPreviewRequest : undefined;
+  const currentHash = previewRequest ? workflowPreviewHash(previewRequest) : undefined;
+  const approvalHash = isRecord(approval) && typeof approval.previewHash === "string" ? approval.previewHash : undefined;
+  const allowed = Boolean(currentHash && approvalHash && currentHash === approvalHash);
+  printData(io, {
+    kind: "workflow-diff",
+    schemaVersion: 1,
+    runId: loaded.state.runId,
+    previewRequest: previewRequest ?? null,
+    approvalRequest: approvalRequest ?? null,
+    approvalBoundRequestHash: approvalHash,
+    currentRequestHash: currentHash,
+    executionAllowed: allowed,
+    differences: requestDifferences(previewRequest, approvalRequest)
+  }, options.json === true);
+}
+
+async function auditWorkflow(io: CommandIo, options: WorkflowAuditLogOptions): Promise<void> {
+  const loaded = await loadWorkflowRun(options.runDir);
+  if (!loaded) {
+    printError(io, { type: "validation", message: `Workflow run not found: ${options.runDir}` });
+    process.exitCode = 1;
+    return;
+  }
+  const report = await workflowVerificationReport(loaded.runDir, loaded.state);
+  const events = workflowAuditEvents(loaded.state, report);
+  if (options.format === "json") {
+    printData(io, { kind: "workflow-audit-log", schemaVersion: 1, events }, true);
+    return;
+  }
+  for (const event of events) {
+    io.stdout(`${JSON.stringify(event)}\n`);
+  }
 }
 
 async function approveWorkflow(io: CommandIo, options: WorkflowApproveOptions): Promise<void> {
@@ -551,6 +657,171 @@ function workflowBundleVerification(bundlePath: string, bundle: unknown): Record
       warningCount: Array.isArray(bundle.verification.warnings) ? bundle.verification.warnings.length : undefined
     }
   };
+}
+
+type WorkflowPolicy = {
+  schemaVersion: 1;
+  defaults: {
+    requirePreview: boolean;
+    requireApproval: boolean;
+    approvalExpiresInMinutes: number;
+  };
+  commands: Record<string, Record<string, unknown>>;
+  mcp: {
+    allowExecute: false;
+  };
+};
+
+function defaultWorkflowPolicy(): WorkflowPolicy {
+  return {
+    schemaVersion: 1,
+    defaults: {
+      requirePreview: true,
+      requireApproval: true,
+      approvalExpiresInMinutes: 120
+    },
+    commands: {
+      "topic.create": { allowed: true, requireReview: true, minContentLength: 80 },
+      "topic.delete": { allowed: true, requireExactTitle: true, requireTwoReviewers: true },
+      "reply.delete": { allowed: true, requireExactTitle: false }
+    },
+    mcp: {
+      allowExecute: false
+    }
+  };
+}
+
+async function verifyWorkflowPolicy(runDir: string, state: WorkflowRunState, report: Record<string, unknown> & { ok: boolean }, policyPath: string): Promise<Record<string, unknown> & { ok: boolean }> {
+  const issues: WorkflowVerificationIssue[] = [];
+  const policy = await readJson(policyPath);
+  if (!isWorkflowPolicy(policy)) {
+    return { kind: "workflow-policy-verification", schemaVersion: 1, ok: false, policyPath, issues: [{ code: "invalid-policy", message: "Workflow policy schema is invalid.", path: policyPath }] };
+  }
+  if (policy.mcp.allowExecute !== false) {
+    issues.push({ code: "mcp-execute-enabled", message: "Policy must keep mcp.allowExecute=false.", path: policyPath });
+  }
+  const approval = await readOptionalJson(state.artifacts.approval);
+  if (policy.defaults.requireApproval && !approval) {
+    issues.push({ code: "policy-approval-required", message: "Policy requires approval.", path: state.artifacts.approval });
+  }
+  if (isRecord(approval) && typeof approval.approvedAt === "string") {
+    const ageMs = Date.now() - Date.parse(approval.approvedAt);
+    if (Number.isFinite(ageMs) && ageMs > policy.defaults.approvalExpiresInMinutes * 60_000) {
+      issues.push({ code: "policy-approval-expired", message: "Approval is expired.", path: state.artifacts.approval });
+    }
+  }
+  const approvalSummary = isRecord(report.approval) ? report.approval : undefined;
+  if (approvalSummary && approvalSummary.hashMatches === false) {
+    issues.push({ code: "policy-hash-mismatch", message: "Approval hash does not match preview request.", path: state.artifacts.approval });
+  }
+  const commandId = state.goal === "reply" ? "reply.create" : "topic.create";
+  const commandPolicy = policy.commands[commandId];
+  if (commandPolicy?.allowed === false) {
+    issues.push({ code: "policy-command-blocked", message: `Policy blocks ${commandId}.`, path: policyPath });
+  }
+  return {
+    kind: "workflow-policy-verification",
+    schemaVersion: 1,
+    ok: issues.length === 0,
+    policyPath,
+    runDir,
+    command: commandId,
+    issues
+  };
+}
+
+function isWorkflowPolicy(value: unknown): value is WorkflowPolicy {
+  return isRecord(value)
+    && value.schemaVersion === 1
+    && isRecord(value.defaults)
+    && typeof value.defaults.requirePreview === "boolean"
+    && typeof value.defaults.requireApproval === "boolean"
+    && typeof value.defaults.approvalExpiresInMinutes === "number"
+    && isRecord(value.commands)
+    && isRecord(value.mcp)
+    && value.mcp.allowExecute === false;
+}
+
+async function readOptionalJson(path: string | undefined): Promise<unknown | undefined> {
+  if (!path) {
+    return undefined;
+  }
+  try {
+    return await readJson(path);
+  } catch {
+    return undefined;
+  }
+}
+
+function requestDifferences(left: WorkflowPreviewRequest | undefined, right: WorkflowPreviewRequest | undefined): Array<Record<string, unknown>> {
+  if (!left || !right) {
+    return [{ path: "request", leftPresent: Boolean(left), rightPresent: Boolean(right) }];
+  }
+  const differences = [];
+  if (left.method !== right.method) {
+    differences.push({ path: "method", left: left.method, right: right.method });
+  }
+  if (left.path !== right.path) {
+    differences.push({ path: "path", left: left.path, right: right.path });
+  }
+  if (stableJson(left.body) !== stableJson(right.body)) {
+    differences.push({
+      path: "body",
+      leftHash: createHash("sha256").update(stableJson(left.body), "utf8").digest("hex"),
+      rightHash: createHash("sha256").update(stableJson(right.body), "utf8").digest("hex")
+    });
+  }
+  return differences;
+}
+
+function workflowAuditEvents(state: WorkflowRunState, report: Record<string, unknown>): Array<Record<string, unknown>> {
+  const time = state.updatedAt;
+  const command = state.goal === "reply" ? "reply.create" : "topic.create";
+  const previewHash = typeof report.previewHash === "string" ? report.previewHash : undefined;
+  const events = [
+    auditEvent(time, state.runId, "plan", command, previewHash, "ok", "workflow state exists"),
+    auditEvent(time, state.runId, "preview", command, previewHash, state.status === "preview-ready" || state.status === "completed" ? "ok" : "blocked", state.nextAction)
+  ];
+  if (isRecord(report.approval)) {
+    events.push(auditEvent(time, state.runId, "approve", command, previewHash, report.approval.hashMatches === false ? "failed" : "ok", "approval artifact present"));
+  }
+  events.push(auditEvent(time, state.runId, "verify", command, previewHash, report.ok === false ? "failed" : "ok", report.ok === false ? "verification issues found" : "verification passed"));
+  return events;
+}
+
+function auditEvent(time: string, runId: string, event: string, command: string, requestHash: string | undefined, result: string, reason: string): Record<string, unknown> {
+  return {
+    schemaVersion: 1,
+    time,
+    runId,
+    event,
+    command,
+    requestHash,
+    actor: "local-user",
+    result,
+    reason
+  };
+}
+
+function parseAuditLogFormat(value: string): "ndjson" | "json" {
+  if (value === "ndjson" || value === "json") {
+    return value;
+  }
+  throw new InvalidArgumentError(`Expected audit-log format ndjson or json: ${value}`);
+}
+
+function stableJson(value: unknown): string {
+  return JSON.stringify(sortJson(value));
+}
+
+function sortJson(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(sortJson);
+  }
+  if (isRecord(value)) {
+    return Object.fromEntries(Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, nested]) => [key, sortJson(nested)]));
+  }
+  return value;
 }
 
 function verifyBundleVerificationCoverage(verification: Record<string, unknown>, artifacts: Map<string, Record<string, unknown>>, issues: WorkflowVerificationIssue[]): void {

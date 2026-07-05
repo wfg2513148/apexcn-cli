@@ -149,7 +149,8 @@ const commonReadScenarios: Scenario[] = [
   scenario("collection build query and category", "按 ORDS 关键词和新手入门板块构建知识合集", "collection build", "read", ["read"], "none", ["--query <keyword>", "--category-id <id>", "--json"]),
   scenario("collection build date range", "构建 6 月份 APEXLang 相关文章合集", "collection build", "read", ["read"], "none", ["--from-date <date>", "--to-date <date>", "--json"]),
   scenario("collection index", "给这个本地知识合集建立离线检索索引", "collection index", "read", ["read"], "none", ["--dir <dir>", "--json"]),
-  scenario("collection query", "在本地知识合集里搜索 ORDS 401", "collection query", "read", ["read"], "none", ["--dir <dir>", "--json"]),
+  scenario("collection query", "在本地知识合集里搜索 ORDS 401", "collection query", "read", ["read"], "none", ["--dir <dir>", "--top-k <n>", "--explain", "--json"]),
+  scenario("collection stats", "查看本地知识合集索引统计信息", "collection stats", "read", ["read"], "none", ["--dir <dir>", "--json"]),
   scenario("collection verify", "验证这个本地知识合集是否完整可用", "collection verify", "read", ["read"], "none", ["--dir <dir>", "--json"]),
   scenario("mcp tools", "列出 apexcn-cli 暴露给 AI Agent 的 MCP 工具", "mcp tools", "read", ["manifest"], "none", ["--json"]),
   scenario("mcp inspect", "检查 apexcn-cli MCP 默认是否只读", "mcp inspect", "read", ["manifest"], "none", ["--json"]),
@@ -190,8 +191,12 @@ const workflowScenarios: Scenario[] = [
   scenario("workflow run reply preview", "运行一个回帖 workflow，只到 preview，不发布", "workflow run", "preview", ["read", "api-write"], "required", ["--goal <goal>", "--topic-id <id>", "--answer <text>"]),
   scenario("workflow approve", "我已看过 workflow preview，记录批准 artifact", "workflow approve", "read", ["read"], "none", ["--run-dir <run-dir>", "--json"]),
   scenario("workflow approve with note", "批准 workflow preview 并写一条审核备注", "workflow approve", "read", ["read"], "none", ["--approved-by <name>", "--note <text>"]),
+  scenario("workflow policy init", "生成一份 workflow policy 模板", "workflow policy init", "read", ["read"], "none", ["--output <file>", "--json"]),
   scenario("workflow verify", "验证 workflow run 目录里的证据和 approval hash", "workflow verify", "read", ["read"], "none", ["--run-dir <run-dir>", "--json"]),
+  scenario("workflow verify with policy", "按 workflow policy 验证 run 目录", "workflow verify", "read", ["read"], "none", ["--policy <file>", "--json"]),
   scenario("workflow verify write report", "验证 workflow 并写出 verification.json", "workflow verify", "read", ["read"], "none", ["--write-report", "--json"]),
+  scenario("workflow diff", "对比 workflow preview 和 approval 绑定请求", "workflow diff", "read", ["read"], "none", ["--run-dir <run-dir>", "--json"]),
+  scenario("workflow audit log", "导出 workflow 审计日志 NDJSON", "workflow audit-log", "read", ["read"], "none", ["--run-dir <run-dir>", "--format <format>"]),
   scenario("workflow export", "把 workflow 证据导出成单文件归档", "workflow export", "read", ["read"], "none", ["--run-dir <run-dir>", "--output <file>", "--json"]),
   scenario("workflow export allow invalid", "即使 workflow 校验不完整也导出证据包", "workflow export", "read", ["read"], "none", ["--allow-invalid", "--json"]),
   scenario("workflow verify bundle", "验证别人发来的 workflow bundle", "workflow verify-bundle", "read", ["read"], "none", ["--bundle <file>", "--json"]),
@@ -808,7 +813,25 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
       assertFeedback: ({ stdout, stderr, fetch }) => {
         expect(fetch).not.toHaveBeenCalled();
         expect(stderr).toBe("");
-        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "collection-query", resultCount: 1 }));
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "collection-query-result", resultCount: 1, engine: "bm25" }));
+      }
+    },
+    {
+      name: "collection stats summarizes local index",
+      userSays: "查看本地知识合集索引统计信息。",
+      commandPath: "collection stats",
+      prepare: async (context) => {
+        const dir = join(context.tmpDir, "collection");
+        await prepareCollection(context, dir);
+        await context.program.parseAsync(["node", "apexcn", "collection", "index", "--dir", dir, "--json"]);
+        context.stdout.length = 0;
+      },
+      argv: (context) => ["node", "apexcn", "collection", "stats", "--dir", join(context.tmpDir, "collection"), "--json"],
+      responseForUrl: collectionFetch,
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "collection-index-stats", engine: "bm25", documentCount: 1 }));
       }
     },
     {
@@ -962,6 +985,19 @@ function workflowExecutableScenarios(): ExecutableNaturalLanguageScenario[] {
       }
     },
     {
+      name: "workflow policy init writes template",
+      userSays: "生成一份 workflow policy 模板。",
+      commandPath: "workflow policy init",
+      configureAuth: false,
+      argv: (context) => ["node", "apexcn", "workflow", "policy", "init", "--output", join(context.tmpDir, "apexcn-policy.json"), "--json"],
+      assertFeedback: async ({ stdout, stderr, fetch, tmpDir }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "workflow-policy-init" }));
+        expect(JSON.parse(await readFile(join(tmpDir, "apexcn-policy.json"), "utf8"))).toEqual(expect.objectContaining({ schemaVersion: 1, mcp: { allowExecute: false } }));
+      }
+    },
+    {
       name: "workflow verify checks evidence",
       userSays: "验证 workflow run 目录里的证据和 approval hash。",
       commandPath: "workflow verify",
@@ -972,6 +1008,32 @@ function workflowExecutableScenarios(): ExecutableNaturalLanguageScenario[] {
         expect(fetch).not.toHaveBeenCalled();
         expect(stderr).toBe("");
         expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "workflow-verification", ok: true }));
+      }
+    },
+    {
+      name: "workflow diff compares preview and approval",
+      userSays: "对比 workflow preview 和 approval 绑定请求。",
+      commandPath: "workflow diff",
+      prepare: (context) => prepareApprovedWorkflow(context, join(context.tmpDir, "run")),
+      argv: (context) => ["node", "apexcn", "workflow", "diff", "--run-dir", join(context.tmpDir, "run"), "--json"],
+      responseForUrl: workflowFetch,
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "workflow-diff", executionAllowed: true }));
+      }
+    },
+    {
+      name: "workflow audit-log prints ndjson",
+      userSays: "导出 workflow 审计日志 NDJSON。",
+      commandPath: "workflow audit-log",
+      prepare: (context) => prepareApprovedWorkflow(context, join(context.tmpDir, "run")),
+      argv: (context) => ["node", "apexcn", "workflow", "audit-log", "--run-dir", join(context.tmpDir, "run"), "--format", "ndjson"],
+      responseForUrl: workflowFetch,
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(stdout.trim().split("\n").map((line) => JSON.parse(line))).toEqual(expect.arrayContaining([expect.objectContaining({ event: "verify" })]));
       }
     },
     {

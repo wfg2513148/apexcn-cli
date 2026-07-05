@@ -484,6 +484,33 @@ Ask references try to derive clickable `https://oracleapex.cn/t/<id>` links from
 
 ## Common Flows
 
+Contracts and MCP manifests:
+
+```bash
+apexcn commands --json
+apexcn commands --json-schema
+apexcn mcp tools --json
+apexcn mcp tools --json --allow-preview-write
+apexcn mcp inspect --json
+```
+
+Local collection BM25 search:
+
+```bash
+apexcn collection index --dir ./collection --json
+apexcn collection query --dir ./collection "ORDS auth failed" --top-k 5 --explain --json
+apexcn collection stats --dir ./collection --json
+```
+
+Workflow policy, diff, and audit log:
+
+```bash
+apexcn workflow policy init --output apexcn-policy.json
+apexcn workflow verify --run-dir ./run --policy apexcn-policy.json --json
+apexcn workflow diff --run-dir ./run --json
+apexcn workflow audit-log --run-dir ./run --format ndjson
+```
+
 Readonly real-environment acceptance. The script skips when `APEXCN_API_KEY` is not set. With a key, it checks `doctor`, `me`, `category list`, `search`, and `ask`; write paths only run with `--preview`:
 
 ```bash

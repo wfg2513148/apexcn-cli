@@ -6,7 +6,7 @@
 
 ## 当前阶段
 
-当前版本处于 `0.x` 产品化阶段：CLI 能力较完整，已覆盖搜索、查看、问答、研究、草稿、审核、workflow、收藏、订阅和诊断；正在补齐 JSON 契约、core service、MCP readonly、preview-only MCP 写工具、RAG eval 与 collection 本地索引。
+当前版本处于 `0.x` 产品化阶段：CLI 能力较完整，已覆盖搜索、查看、问答、研究、草稿、审核、workflow、收藏、订阅和诊断；正在把 release、schema、MCP、RAG eval、collection query 和 workflow policy 收口到可回归、可审计状态。
 
 ## v0.17 目标
 
@@ -17,22 +17,24 @@
 
 ## v0.18 目标
 
-- 持续抽象 core service，使 CLI 与 MCP 共享 API client 和安全策略。
-- 扩大 contract tests 覆盖到主要 read/write/workflow JSON。
-- 建立 RAG eval baseline。
-- 完成 collection 本地 index/query MVP。
+- 版本、README、release workflow 和安装链接一致。
+- release assets 生成 checksum，安装脚本默认校验 tgz。
+- `commands --json-schema` 与 MCP tools schema 可导出。
+- RAG eval 纳入 CI report-only。
+- collection query 使用 BM25，并支持 `--explain` 与 `collection stats`。
+- workflow policy init、verify --policy、diff、audit-log 起步可用。
 
 ## v0.19 目标
 
-- 提供 `apexcn mcp serve --readonly` 本地 stdio MCP Server。
-- 提供 `apexcn mcp tools --json` 与 `apexcn mcp inspect --json`。
-- readonly MCP 工具覆盖 search/topic/category/ask/research/doctor/workflow plan。
+- 扩大 core service 抽象覆盖，减少 CLI/MCP 适配层中的重复逻辑。
+- 为更多公开 JSON 输出补 runtime schema 和 contract tests。
+- 强化 MCP 客户端兼容测试与文档。
 
 ## v0.20 目标
 
-- 提供 MCP preview-only 写工具。
-- preview-only 工具明确 `willExecute: false`，不得发起真实 POST/PATCH/DELETE。
-- 强化 workflow policy、audit log 和 workflow diff。
+- 强化 workflow policy 表达能力。
+- 改进 RAG eval 的真实引用命中评测。
+- 评估 optional keychain store，不破坏 CI/跨平台安装。
 
 ## v1.0 GA 目标
 

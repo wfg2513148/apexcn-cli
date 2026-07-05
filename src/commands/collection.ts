@@ -4,6 +4,7 @@ import { isAbsolute, join, normalize, sep } from "node:path";
 import { Command, InvalidArgumentError } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
+import { buildIndexRecord, createIndexMeta, isCollectionIndexRecord, queryIndex, type CollectionIndexRecord } from "../core/knowledge/collection-index.js";
 import { fieldText, isRecord, itemsFromData, printData, printError } from "../output.js";
 import type { CommandIo } from "./auth.js";
 
@@ -39,6 +40,13 @@ type IndexOptions = {
 };
 
 type QueryOptions = {
+  dir: string;
+  topK?: number;
+  explain?: boolean;
+  json?: boolean;
+};
+
+type StatsOptions = {
   dir: string;
   json?: boolean;
 };
@@ -98,10 +106,24 @@ export function createCollectionCommand(options: CollectionCommandOptions): Comm
     .command("query")
     .argument("<query>", "local collection query")
     .requiredOption("--dir <dir>", "collection directory")
+    .option("--top-k <n>", "maximum results, 1-50", parseTopK)
+    .option("--explain", "include BM25 per-term score contribution")
     .option("--json", "pretty-print JSON")
     .action(async (query: string, commandOptions: QueryOptions) => {
       try {
         await queryCollection(options, query, commandOptions);
+      } catch (error) {
+        handleCollectionError(options, error);
+      }
+    });
+
+  collection
+    .command("stats")
+    .requiredOption("--dir <dir>", "collection directory")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: StatsOptions) => {
+      try {
+        await collectionStats(options, commandOptions);
       } catch (error) {
         handleCollectionError(options, error);
       }
@@ -265,35 +287,42 @@ async function verifyCollection(io: CommandIo, options: VerifyOptions): Promise<
 }
 
 async function indexCollection(io: CommandIo, options: IndexOptions): Promise<void> {
-  const collection = await readCollectionFile(io, options.dir);
-  if (!collection) {
+  const loaded = await readCollectionFile(io, options.dir);
+  if (!loaded) {
     return;
   }
+  const { collection, content } = loaded;
   const verification = await collectionVerificationReport(options.dir, collection);
   if (!verification.ok) {
     printError(io, { type: "validation", message: "Collection verification failed before indexing." }, undefined, options.json);
     process.exitCode = 1;
     return;
   }
-  const records = await collectionSearchRecords(options.dir, collection);
+  let records: CollectionSearchRecord[];
+  try {
+    records = await collectionSearchRecords(options.dir, collection);
+  } catch (error) {
+    printError(io, { type: "validation", message: `Invalid collection topic artifact: ${errorMessage(error)}` }, undefined, options.json);
+    process.exitCode = 1;
+    return;
+  }
   const jsonl = records.map((record) => JSON.stringify(record)).join("\n") + (records.length > 0 ? "\n" : "");
   const indexEvidence = await writeTextWithEvidence(join(options.dir, "index.jsonl"), jsonl);
-  const meta = {
-    kind: "collection-index-meta",
-    schemaVersion: 1,
-    dir: options.dir,
-    topicCount: records.length,
+  const meta = createIndexMeta({
     createdAt: new Date().toISOString(),
-    files: {
-      index: { path: "index.jsonl", size: indexEvidence.size, sha256: indexEvidence.sha256 }
-    }
-  };
+    records,
+    sourceCollectionContent: content,
+    indexFile: indexEvidence
+  });
   await writeJsonWithEvidence(join(options.dir, "index.meta.json"), meta);
   printData(io, {
     kind: "collection-index",
     schemaVersion: 1,
+    engine: "bm25",
     dir: options.dir,
     topicCount: records.length,
+    documentCount: records.length,
+    tokenCount: meta.tokenCount,
     files: {
       index: join(options.dir, "index.jsonl"),
       meta: join(options.dir, "index.meta.json")
@@ -316,19 +345,38 @@ async function queryCollection(io: CommandIo, query: string, options: QueryOptio
     process.exitCode = 1;
     return;
   }
-  const terms = tokenize(trimmed);
-  const results = records
-    .map((record) => scoreCollectionRecord(record, terms))
-    .filter((result) => result.score > 0)
-    .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title))
-    .slice(0, 10);
+  const results = queryIndex(records, trimmed, { topK: options.topK, explain: options.explain === true });
   printData(io, {
-    kind: "collection-query",
+    kind: "collection-query-result",
     schemaVersion: 1,
+    engine: "bm25",
     dir: options.dir,
     query: trimmed,
     resultCount: results.length,
     results
+  }, options.json === true);
+}
+
+async function collectionStats(io: CommandIo, options: StatsOptions): Promise<void> {
+  let records: CollectionSearchRecord[];
+  let meta: unknown;
+  try {
+    records = parseCollectionSearchRecords(await readFile(join(options.dir, "index.jsonl"), "utf8"));
+    meta = JSON.parse(await readFile(join(options.dir, "index.meta.json"), "utf8")) as unknown;
+  } catch (error) {
+    printError(io, { type: "validation", message: `Invalid collection index: ${errorMessage(error)}` });
+    process.exitCode = 1;
+    return;
+  }
+  printData(io, {
+    kind: "collection-index-stats",
+    schemaVersion: 1,
+    engine: "bm25",
+    dir: options.dir,
+    documentCount: records.length,
+    tokenCount: records.reduce((sum, record) => sum + record.documentLength, 0),
+    uniqueTermCount: new Set(records.flatMap((record) => Object.keys(record.terms))).size,
+    meta
   }, options.json === true);
 }
 
@@ -340,7 +388,11 @@ function parseCollectionSearchRecords(text: string): CollectionSearchRecord[] {
     .map((item) => {
       const parsed = JSON.parse(item.line) as unknown;
       if (!isCollectionSearchRecord(parsed)) {
-        throw new Error(`index.jsonl line ${item.index + 1} has an invalid schema`);
+        const legacy = legacyCollectionIndexRecord(parsed);
+        if (!legacy) {
+          throw new Error(`index.jsonl line ${item.index + 1} has an invalid schema`);
+        }
+        return legacy;
       }
       return parsed;
     });
@@ -367,21 +419,15 @@ async function collectionVerificationReport(dir: string, collection: unknown): P
   return verificationResult(dir, issues, evidence);
 }
 
-type CollectionSearchRecord = {
-  kind: "collection-index-record";
-  schemaVersion: 1;
-  topicId: number;
-  title: string;
-  url?: string;
-  terms: Record<string, number>;
-  excerpt: string;
-};
+type CollectionSearchRecord = CollectionIndexRecord;
 
-async function readCollectionFile(io: CommandIo, dir: string): Promise<ValidCollection | undefined> {
+async function readCollectionFile(io: CommandIo, dir: string): Promise<{ collection: ValidCollection; content: string } | undefined> {
   const collectionPath = join(dir, "collection.json");
   let collection: unknown;
+  let content: string;
   try {
-    collection = JSON.parse(await readFile(collectionPath, "utf8")) as unknown;
+    content = await readFile(collectionPath, "utf8");
+    collection = JSON.parse(content) as unknown;
   } catch (error) {
     printError(io, { type: "validation", message: `Invalid collection: ${errorMessage(error)}` });
     process.exitCode = 1;
@@ -392,7 +438,7 @@ async function readCollectionFile(io: CommandIo, dir: string): Promise<ValidColl
     process.exitCode = 1;
     return undefined;
   }
-  return collection;
+  return { collection, content };
 }
 
 async function collectionSearchRecords(dir: string, collection: ValidCollection): Promise<CollectionSearchRecord[]> {
@@ -403,25 +449,55 @@ async function collectionSearchRecords(dir: string, collection: ValidCollection)
     if (id === undefined || !file) {
       continue;
     }
-    const resolved = collectionFilePath(dir, file, "topic", []);
+    const issues: CollectionIssue[] = [];
+    const resolved = collectionFilePath(dir, file, "topic", issues);
     if (!resolved) {
-      continue;
+      throw new Error(issues[0]?.message ?? `Invalid topic file path for topic ${id}`);
     }
     const artifact = JSON.parse(await readFile(resolved.absolutePath, "utf8")) as unknown;
     const result = isRecord(artifact) ? artifact.result : undefined;
     const title = topicTitle(result) ?? fieldText(topic.title || `Topic ${id}`);
     const text = collectionRecordText(result, title);
-    records.push({
-      kind: "collection-index-record",
-      schemaVersion: 1,
+    records.push(buildIndexRecord({
       topicId: id,
       title,
-      url: topicUrl(result) ?? (fieldText(topic.url) || undefined),
-      terms: termFrequency(text),
-      excerpt: excerptText(text)
-    });
+      text,
+      sourcePath: file,
+      url: topicUrl(result) ?? (fieldText(topic.url) || undefined)
+    }));
   }
   return records;
+}
+
+function legacyCollectionIndexRecord(value: unknown): CollectionSearchRecord | undefined {
+  if (!isRecord(value)
+    || value.kind !== "collection-index-record"
+    || value.schemaVersion !== 1
+    || typeof value.topicId !== "number"
+    || typeof value.title !== "string"
+    || typeof value.url !== "string"
+    || typeof value.excerpt !== "string"
+    || !isRecord(value.terms)) {
+    return undefined;
+  }
+  const terms: Record<string, number> = {};
+  for (const [term, count] of Object.entries(value.terms)) {
+    if (typeof count === "number") {
+      terms[term] = count;
+    }
+  }
+  return {
+    kind: "collection-index-record",
+    schemaVersion: 1,
+    engine: "bm25",
+    topicId: value.topicId,
+    title: value.title,
+    url: value.url,
+    sourcePath: typeof value.sourcePath === "string" ? value.sourcePath : `topics/${value.topicId}.json`,
+    terms,
+    documentLength: Object.values(terms).reduce((sum, count) => sum + count, 0),
+    excerpt: value.excerpt
+  };
 }
 
 type ValidCollection = {
@@ -658,14 +734,7 @@ function requestIdFrom(data: unknown): string | undefined {
 }
 
 function isCollectionSearchRecord(value: unknown): value is CollectionSearchRecord {
-  return isRecord(value)
-    && value.kind === "collection-index-record"
-    && value.schemaVersion === 1
-    && typeof value.topicId === "number"
-    && typeof value.title === "string"
-    && isRecord(value.terms)
-    && Object.values(value.terms).every((count) => typeof count === "number")
-    && typeof value.excerpt === "string";
+  return isCollectionIndexRecord(value);
 }
 
 function collectionRecordText(result: unknown, fallbackTitle: string): string {
@@ -685,47 +754,6 @@ function collectionRecordText(result: unknown, fallbackTitle: string): string {
     }
   }
   return parts.map(fieldText).filter(Boolean).join(" ");
-}
-
-function termFrequency(text: string): Record<string, number> {
-  const terms: Record<string, number> = {};
-  for (const term of tokenize(text)) {
-    terms[term] = (terms[term] ?? 0) + 1;
-  }
-  return terms;
-}
-
-function tokenize(text: string): string[] {
-  return text
-    .toLowerCase()
-    .split(/[^\p{L}\p{N}_]+/u)
-    .map((term) => term.trim())
-    .filter((term) => term.length >= 2);
-}
-
-function scoreCollectionRecord(record: CollectionSearchRecord, queryTerms: string[]): {
-  topicId: number;
-  title: string;
-  score: number;
-  matchedTerms: string[];
-  excerpt: string;
-  url?: string;
-} {
-  const matchedTerms = [...new Set(queryTerms.filter((term) => record.terms[term] !== undefined))];
-  const score = matchedTerms.reduce((total, term) => total + record.terms[term], 0);
-  return {
-    topicId: record.topicId,
-    title: record.title,
-    score,
-    matchedTerms,
-    excerpt: record.excerpt,
-    url: record.url
-  };
-}
-
-function excerptText(text: string): string {
-  const normalized = fieldText(text).trim();
-  return normalized.length > 220 ? `${normalized.slice(0, 217)}...` : normalized;
 }
 
 function sourcesText(sources: Record<string, unknown>[]): string {
@@ -753,6 +781,14 @@ function parseCollectionLimit(value: string): number {
   const parsed = parsePositiveInteger(value);
   if (parsed > 10) {
     throw new InvalidArgumentError(`Expected a limit between 1 and 10: ${value}`);
+  }
+  return parsed;
+}
+
+function parseTopK(value: string): number {
+  const parsed = parsePositiveInteger(value);
+  if (parsed > 50) {
+    throw new InvalidArgumentError(`Expected --top-k between 1 and 50: ${value}`);
   }
   return parsed;
 }

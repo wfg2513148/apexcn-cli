@@ -26,10 +26,11 @@
 | `review topic/reply` | local | no-network | no | yes | no | no | none | low | 本地发布前审核。 |
 | `collection build` | read | api-read | yes | yes | no | no | none | medium | 构建离线资料包。 |
 | `collection verify` | local | no-network | no | yes | no | no | none | low | 校验资料包。 |
-| `collection index/query` | local | no-network | no | yes | no | no | none | low | 本地检索 MVP。 |
+| `collection index/query/stats` | local | no-network | no | yes | no | no | none | low | BM25 本地检索、解释和索引统计。 |
 | `workflow plan` | workflow | no-network | no | yes | no | no | readonly | medium | MCP 可生成 plan，不执行。 |
 | `workflow run` | workflow | api-write | yes | yes | required | no | blocked | high | 真实写执行继续走 CLI。 |
 | `workflow approve/verify/export/verify-bundle` | workflow | no-network | no | yes | no | no | none | medium | 本地审计与验证。 |
-| `commands --json` | local | no-network | no | yes | no | no | none | low | CLI manifest。 |
-| `mcp tools/inspect` | local | no-network | no | yes | no | no | none | low | MCP manifest 和策略。 |
+| `workflow policy init/diff/audit-log` | workflow | no-network | no | yes | no | no | none | medium | policy 模板、hash diff、NDJSON audit log。 |
+| `commands --json/--json-schema` | local | no-network | no | yes | no | no | none | low | CLI manifest 与 schema export。 |
+| `mcp tools/inspect` | local | no-network | no | yes | no | no | none | low | MCP manifest、schema 和策略。 |
 | `mcp serve` | local | no-network | no | no | no | no | none | medium | stdio server，默认 readonly。 |

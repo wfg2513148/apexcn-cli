@@ -4,11 +4,20 @@
 
 RAG 输出必须基于 APEX 中文社区资料，不应在资料不足时编造答案。第一版 eval 用于建立 baseline，而不是追求一次性高分。
 
-## Eval 数据
+## Eval 数据与命令
 
 - `eval/rag/questions.zh.jsonl`：中文问题集，至少 30 条。
 - `eval/rag/expected-references.jsonl`：期望命中主题或标签。
 - `scripts/eval-rag.mjs`：离线 baseline runner。
+
+```bash
+npm run eval:rag
+node scripts/eval-rag.mjs --report
+node scripts/eval-rag.mjs --strict
+node scripts/eval-rag.mjs --output reports/rag-eval.json
+```
+
+`--report` 是 report-only，适合 CI。`--strict` 会按当前 baseline 阈值失败；没有真实 API key 时仍使用离线 fixture/baseline 数据，不应访问真实写接口。
 
 ## 覆盖范围
 
