@@ -4,7 +4,7 @@ param(
   [switch]$InstallCodexSkill,
   [switch]$InstallAgentSkills,
   [string]$SourceDir = "",
-  [string]$PackageUrl = $(if ($env:APEXCN_CLI_PACKAGE_URL) { $env:APEXCN_CLI_PACKAGE_URL } else { "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.1/apexcn-cli.tgz" }),
+  [string]$PackageUrl = $(if ($env:APEXCN_CLI_PACKAGE_URL) { $env:APEXCN_CLI_PACKAGE_URL } else { "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.2/apexcn-cli.tgz" }),
   [string]$ChecksumsUrl = $(if ($env:APEXCN_CLI_CHECKSUMS_URL) { $env:APEXCN_CLI_CHECKSUMS_URL } else { "" }),
   [switch]$SkipChecksum,
   [string]$Repo = $(if ($env:APEXCN_CLI_REPO) { $env:APEXCN_CLI_REPO } else { "" }),

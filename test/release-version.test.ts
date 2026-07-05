@@ -48,15 +48,15 @@ describe("release version check", () => {
     expect(report).toEqual(expect.objectContaining({
       kind: "apexcn-baseline-report",
       schemaVersion: 1,
-      packageVersion: "0.18.1",
-      packageLockVersion: "0.18.1",
+      packageVersion: "0.18.2",
+      packageLockVersion: "0.18.2",
       releaseWorkflowUploadsChecksums: true,
       ciRunsRagEval: true,
       mcpExecuteWriteDisabled: true,
       issuesBacklogAccurate: true,
       problems: []
     }));
-    expect(report.readmeReleaseUrls).toEqual(["v0.18.1"]);
+    expect(report.readmeReleaseUrls).toEqual(["v0.18.2"]);
   });
 
   test("npm package contains only runtime and user-facing assets", () => {

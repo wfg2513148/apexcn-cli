@@ -9,6 +9,7 @@ const args = parseArgs(process.argv.slice(2));
 const expectedVersion = args.expectedVersion ?? readJson("package.json").version;
 const artifactsDir = args.artifactsDir ? resolveArtifactsDir(args.artifactsDir) : join(repoRoot, "artifacts");
 const archivePath = join(artifactsDir, "apexcn-cli.tgz");
+const npmBin = process.platform === "win32" ? "npm.cmd" : "npm";
 
 buildArtifacts();
 verifyArtifacts();
@@ -55,7 +56,7 @@ function buildArtifacts() {
 
 function runNpmPack() {
   try {
-    const output = execFileSync("npm", ["pack", "--json", "--pack-destination", artifactsDir], {
+    const output = execFileSync(npmBin, ["pack", "--json", "--pack-destination", artifactsDir], {
       cwd: repoRoot,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"]

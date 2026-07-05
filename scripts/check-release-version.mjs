@@ -11,6 +11,7 @@ const expectedVersion = parseExpectedVersion(args) ?? readJson("package.json").v
 const expectedTag = `v${expectedVersion}`;
 const releaseBase = "https://github.com/wfg2513148/apexcn-cli/releases/download";
 const expectedReleasePackageUrl = `${releaseBase}/${expectedTag}/apexcn-cli.tgz`;
+const npmBin = process.platform === "win32" ? "npm.cmd" : "npm";
 const allowedReleaseAssets = new Set([
   "apexcn-cli.tgz",
   "install-agent.sh",
@@ -153,7 +154,7 @@ function checkReleaseWorkflow() {
     failures.push(`${path}: release artifacts must be checked before gh release create`);
   }
 
-  const releaseCommand = /gh release create "\$GITHUB_REF_NAME" \\\n([\s\S]*?)\n\s*--title/.exec(text);
+  const releaseCommand = /gh release create "\$GITHUB_REF_NAME" \\\r?\n([\s\S]*?)\r?\n\s*--title/.exec(text);
   if (!releaseCommand) {
     failures.push(`${path}: unable to parse gh release create assets`);
     return;
@@ -236,7 +237,7 @@ function checkNpmPackFilename() {
   const expected = `apexcn-cli-${expectedVersion}.tgz`;
   let output;
   try {
-    output = execFileSync("npm", ["pack", "--dry-run", "--json"], {
+    output = execFileSync(npmBin, ["pack", "--dry-run", "--json"], {
       cwd: repoRoot,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"]
