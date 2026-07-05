@@ -6,9 +6,23 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { describe, expect, test } from 'vitest';
 
 const repoRoot = join(__dirname, '..');
+const posixExecutionTest = process.platform === 'win32' ? test.skip : test;
 
 function readRepoFile(relativePath: string): string {
   return readFileSync(join(repoRoot, relativePath), 'utf8');
+}
+
+function execNpm(args: string[], options: { encoding: BufferEncoding }): string {
+  if (process.env.npm_execpath) {
+    return execFileSync(process.execPath, [process.env.npm_execpath, ...args], {
+      cwd: repoRoot,
+      ...options,
+    });
+  }
+  return execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', args, {
+    cwd: repoRoot,
+    ...options,
+  });
 }
 
 function writeChecksums(dir: string, archiveName: string): void {
@@ -26,7 +40,7 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('--install-agent-skills');
     expect(script).toContain('APEXCN_API_KEY');
     expect(script).toContain('https://oracleapex.cn/ords/api');
-    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.2/apexcn-cli.tgz');
+    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.3/apexcn-cli.tgz');
     expect(script).toContain('APEXCN_CLI_SKIP_CHECKSUM');
     expect(script).toContain('checksums.txt');
     expect(script).toContain('Checksum verification failed');
@@ -73,7 +87,7 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('InstallAgentSkills');
     expect(script).toContain('APEXCN_API_KEY');
     expect(script).toContain('https://oracleapex.cn/ords/api');
-    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.2/apexcn-cli.tgz');
+    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.3/apexcn-cli.tgz');
     expect(script).toContain('APEXCN_CLI_SKIP_CHECKSUM');
     expect(script).toContain('checksums.txt');
     expect(script).toContain('Checksum verification failed');
@@ -114,7 +128,7 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('.qoder-cn');
   });
 
-  test('macOS/Linux installer defaults skill installation to the current AI tool', () => {
+  posixExecutionTest('macOS/Linux installer defaults skill installation to the current AI tool', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-agent-install-'));
     const home = join(tempRoot, 'home');
     mkdirSync(home);
@@ -152,7 +166,7 @@ describe('agent one-click installer assets', () => {
     }
   }, 30000);
 
-  test('macOS/Linux installer can opt out of current agent skill installation', () => {
+  posixExecutionTest('macOS/Linux installer can opt out of current agent skill installation', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-agent-opt-out-'));
     const home = join(tempRoot, 'home');
     mkdirSync(home);
@@ -192,7 +206,7 @@ describe('agent one-click installer assets', () => {
     }
   }, 30000);
 
-  test('macOS/Linux current agent opt-out preserves explicit broad skill installation', () => {
+  posixExecutionTest('macOS/Linux current agent opt-out preserves explicit broad skill installation', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-agent-broad-install-'));
     const home = join(tempRoot, 'home');
     const codexHome = join(home, '.codex');
@@ -232,7 +246,7 @@ describe('agent one-click installer assets', () => {
     }
   }, 30000);
 
-  test('macOS/Linux installer warns when another apexcn command shadows the launcher', () => {
+  posixExecutionTest('macOS/Linux installer warns when another apexcn command shadows the launcher', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-shadow-install-'));
     const fakeBin = join(tempRoot, 'fake-bin');
     mkdirSync(fakeBin, { recursive: true });
@@ -271,7 +285,7 @@ describe('agent one-click installer assets', () => {
     }
   }, 30000);
 
-  test('macOS/Linux installer can replace a shadowing apexcn symlink with --yes', () => {
+  posixExecutionTest('macOS/Linux installer can replace a shadowing apexcn symlink with --yes', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-shadow-repair-'));
     const fakeBin = join(tempRoot, 'fake-bin');
     mkdirSync(fakeBin, { recursive: true });
@@ -311,7 +325,7 @@ describe('agent one-click installer assets', () => {
     }
   }, 30000);
 
-  test('macOS/Linux installer can replace a stale shadowing apexcn-cli launcher file with --yes', () => {
+  posixExecutionTest('macOS/Linux installer can replace a stale shadowing apexcn-cli launcher file with --yes', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-shadow-file-repair-'));
     const fakeBin = join(tempRoot, 'fake-bin');
     const installRoot = join(tempRoot, 'tools', 'apexcn-cli');
@@ -359,7 +373,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
     }
   });
 
-  test('macOS/Linux installer writes a compact launcher for the resolved CLI root', () => {
+  posixExecutionTest('macOS/Linux installer writes a compact launcher for the resolved CLI root', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-launcher-install-'));
 
     try {
@@ -390,7 +404,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
     }
   }, 30000);
 
-  test('macOS/Linux source-dir install rebuilds instead of reusing stale dist', () => {
+  posixExecutionTest('macOS/Linux source-dir install rebuilds instead of reusing stale dist', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-source-rebuild-install-'));
     const installRoot = join(tempRoot, 'install');
     mkdirSync(join(installRoot, 'dist'), { recursive: true });
@@ -422,23 +436,22 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         env: { ...process.env, HOME: join(tempRoot, 'home') },
         encoding: 'utf8',
       });
-      expect(version).toBe('0.18.2\n');
+      expect(version).toBe('0.18.3\n');
       expect(readFileSync(join(installRoot, 'dist', 'index.js'), 'utf8')).not.toContain('stale');
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
   }, 30000);
 
-  test('macOS/Linux installer can install the npm package tarball layout', () => {
+  posixExecutionTest('macOS/Linux installer can install the npm package tarball layout', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-package-install-'));
 
     try {
-      execFileSync('npm', ['pack', '--pack-destination', tempRoot], {
-        cwd: repoRoot,
+      execNpm(['pack', '--pack-destination', tempRoot], {
         encoding: 'utf8',
       });
-      const archive = join(tempRoot, 'apexcn-cli-0.18.2.tgz');
-      writeChecksums(tempRoot, 'apexcn-cli-0.18.2.tgz');
+      const archive = join(tempRoot, 'apexcn-cli-0.18.3.tgz');
+      writeChecksums(tempRoot, 'apexcn-cli-0.18.3.tgz');
 
       const output = execFileSync(
         'bash',
@@ -464,7 +477,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         env: { ...process.env, HOME: join(tempRoot, 'home') },
         encoding: 'utf8',
       });
-      expect(version).toBe('0.18.2\n');
+      expect(version).toBe('0.18.3\n');
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
@@ -483,12 +496,11 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-pwsh-package-install-'));
 
     try {
-      execFileSync('npm', ['pack', '--pack-destination', tempRoot], {
-        cwd: repoRoot,
+      execNpm(['pack', '--pack-destination', tempRoot], {
         encoding: 'utf8',
       });
-      const archive = join(tempRoot, 'apexcn-cli-0.18.2.tgz');
-      writeChecksums(tempRoot, 'apexcn-cli-0.18.2.tgz');
+      const archive = join(tempRoot, 'apexcn-cli-0.18.3.tgz');
+      writeChecksums(tempRoot, 'apexcn-cli-0.18.3.tgz');
 
       const output = execFileSync(
         pwsh,
@@ -522,13 +534,13 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         env: { ...process.env, USERPROFILE: join(tempRoot, 'home') },
         encoding: 'utf8',
       });
-      expect(version).toBe('0.18.2\n');
+      expect(version).toBe('0.18.3\n');
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
   }, 30000);
 
-  test('macOS/Linux installer keeps the auth profile when account check fails', () => {
+  posixExecutionTest('macOS/Linux installer keeps the auth profile when account check fails', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-auth-install-'));
     const home = join(tempRoot, 'home');
     mkdirSync(home, { recursive: true });
@@ -618,8 +630,8 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
     expect(doc).toContain('APEXCN_CLI_INSTALL_AGENT_SKILLS');
     expect(doc).toContain('--install-agent-skills');
     expect(doc).toContain('当前用户运行该命令的 AI 工具全局 Skills 目录');
-    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.2/install-agent.sh');
-    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.2/install-agent.ps1');
+    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.3/install-agent.sh');
+    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.3/install-agent.ps1');
     expect(doc).not.toContain('wfg2513148/apexcn-forums/main/cli/install-agent.sh');
     expect(doc).not.toContain('wfg2513148/apexcn-forums/main/cli/install-agent.ps1');
     expect(doc).not.toContain('feature/apexcn-cli-ords-api');

@@ -9,7 +9,6 @@ const args = parseArgs(process.argv.slice(2));
 const expectedVersion = args.expectedVersion ?? readJson("package.json").version;
 const artifactsDir = args.artifactsDir ? resolveArtifactsDir(args.artifactsDir) : join(repoRoot, "artifacts");
 const archivePath = join(artifactsDir, "apexcn-cli.tgz");
-const npmBin = process.platform === "win32" ? "npm.cmd" : "npm";
 
 buildArtifacts();
 verifyArtifacts();
@@ -56,7 +55,7 @@ function buildArtifacts() {
 
 function runNpmPack() {
   try {
-    const output = execFileSync(npmBin, ["pack", "--json", "--pack-destination", artifactsDir], {
+    const output = execNpm(["pack", "--json", "--pack-destination", artifactsDir], {
       cwd: repoRoot,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"]
@@ -70,6 +69,13 @@ function runNpmPack() {
   } catch (error) {
     throw new Error(`Unable to build release package with npm pack. Run npm ci and npm run build before release checks. ${error instanceof Error ? error.message : String(error)}`);
   }
+}
+
+function execNpm(npmArgs, options) {
+  if (process.env.npm_execpath) {
+    return execFileSync(process.execPath, [process.env.npm_execpath, ...npmArgs], options);
+  }
+  return execFileSync(process.platform === "win32" ? "npm.cmd" : "npm", npmArgs, options);
 }
 
 function verifyArtifacts() {

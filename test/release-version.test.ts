@@ -13,6 +13,19 @@ function readRepoFile(relativePath: string): string {
   return readFileSync(join(repoRoot, relativePath), "utf8");
 }
 
+function execNpm(args: string[]): string {
+  if (process.env.npm_execpath) {
+    return execFileSync(process.execPath, [process.env.npm_execpath, ...args], {
+      cwd: repoRoot,
+      encoding: "utf8"
+    });
+  }
+  return execFileSync(process.platform === "win32" ? "npm.cmd" : "npm", args, {
+    cwd: repoRoot,
+    encoding: "utf8"
+  });
+}
+
 describe("release version check", () => {
   test("passes for the current repository version", () => {
     const output = execFileSync("node", [script], {
@@ -48,22 +61,19 @@ describe("release version check", () => {
     expect(report).toEqual(expect.objectContaining({
       kind: "apexcn-baseline-report",
       schemaVersion: 1,
-      packageVersion: "0.18.2",
-      packageLockVersion: "0.18.2",
+      packageVersion: "0.18.3",
+      packageLockVersion: "0.18.3",
       releaseWorkflowUploadsChecksums: true,
       ciRunsRagEval: true,
       mcpExecuteWriteDisabled: true,
       issuesBacklogAccurate: true,
       problems: []
     }));
-    expect(report.readmeReleaseUrls).toEqual(["v0.18.2"]);
+    expect(report.readmeReleaseUrls).toEqual(["v0.18.3"]);
   });
 
   test("npm package contains only runtime and user-facing assets", () => {
-    const output = execFileSync("npm", ["pack", "--dry-run", "--json"], {
-      cwd: repoRoot,
-      encoding: "utf8"
-    });
+    const output = execNpm(["pack", "--dry-run", "--json"]);
     const files = JSON.parse(output)[0].files.map((file: { path: string }) => file.path).sort();
 
     expect(files).toEqual(expect.arrayContaining([

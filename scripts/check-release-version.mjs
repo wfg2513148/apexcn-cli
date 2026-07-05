@@ -11,7 +11,6 @@ const expectedVersion = parseExpectedVersion(args) ?? readJson("package.json").v
 const expectedTag = `v${expectedVersion}`;
 const releaseBase = "https://github.com/wfg2513148/apexcn-cli/releases/download";
 const expectedReleasePackageUrl = `${releaseBase}/${expectedTag}/apexcn-cli.tgz`;
-const npmBin = process.platform === "win32" ? "npm.cmd" : "npm";
 const allowedReleaseAssets = new Set([
   "apexcn-cli.tgz",
   "install-agent.sh",
@@ -160,7 +159,7 @@ function checkReleaseWorkflow() {
     return;
   }
   const assets = releaseCommand[1]
-    .split("\\\n")
+    .split(/\\\r?\n/)
     .map((line) => line.trim().replace(/\s*\\$/, ""))
     .filter(Boolean);
   const expectedAssets = [
@@ -237,7 +236,7 @@ function checkNpmPackFilename() {
   const expected = `apexcn-cli-${expectedVersion}.tgz`;
   let output;
   try {
-    output = execFileSync(npmBin, ["pack", "--dry-run", "--json"], {
+    output = execNpm(["pack", "--dry-run", "--json"], {
       cwd: repoRoot,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"]
@@ -250,6 +249,13 @@ function checkNpmPackFilename() {
   if (pack.filename !== expected) {
     failures.push(`npm pack filename: expected ${expected}, got ${String(pack.filename)}`);
   }
+}
+
+function execNpm(npmArgs, options) {
+  if (process.env.npm_execpath) {
+    return execFileSync(process.execPath, [process.env.npm_execpath, ...npmArgs], options);
+  }
+  return execFileSync(process.platform === "win32" ? "npm.cmd" : "npm", npmArgs, options);
 }
 
 function checkReleaseArtifacts() {

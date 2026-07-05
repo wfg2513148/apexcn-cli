@@ -7,12 +7,27 @@ import { describe, expect, test } from "vitest";
 
 const repoRoot = join(__dirname, "..");
 
+function execNpm(args: string[]): string {
+  if (process.env.npm_execpath) {
+    return execFileSync(process.execPath, [process.env.npm_execpath, ...args], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      stdio: "pipe"
+    });
+  }
+  return execFileSync(process.platform === "win32" ? "npm.cmd" : "npm", args, {
+    cwd: repoRoot,
+    encoding: "utf8",
+    stdio: "pipe"
+  });
+}
+
 describe("install-agent checksum verification", () => {
   test("shell installer accepts a package when checksums.txt matches", () => {
     const dir = mkdtempSync(join(tmpdir(), "apexcn-install-checksum-ok-"));
     const packageJson = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as { version: string };
     const tarball = `apexcn-cli-${packageJson.version}.tgz`;
-    execFileSync("npm", ["pack", "--pack-destination", dir], { cwd: repoRoot, encoding: "utf8", stdio: "pipe" });
+    execNpm(["pack", "--pack-destination", dir]);
     const tgzPath = join(dir, tarball);
     cpSync(tgzPath, join(dir, "apexcn-cli.tgz"));
     const actual = createHash("sha256").update(readFileSync(join(dir, "apexcn-cli.tgz"))).digest("hex");
@@ -38,7 +53,7 @@ describe("install-agent checksum verification", () => {
     const dir = mkdtempSync(join(tmpdir(), "apexcn-install-checksum-missing-"));
     const packageJson = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as { version: string };
     const tarball = `apexcn-cli-${packageJson.version}.tgz`;
-    execFileSync("npm", ["pack", "--pack-destination", dir], { cwd: repoRoot, encoding: "utf8", stdio: "pipe" });
+    execNpm(["pack", "--pack-destination", dir]);
     cpSync(join(dir, tarball), join(dir, "apexcn-cli.tgz"));
     const missingChecksumsUrl = `file://${join(dir, "missing-checksums.txt")}`;
 
@@ -76,7 +91,7 @@ describe("install-agent checksum verification", () => {
     const dir = mkdtempSync(join(tmpdir(), "apexcn-install-checksum-"));
     const packageJson = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as { version: string };
     const tarball = `apexcn-cli-${packageJson.version}.tgz`;
-    execFileSync("npm", ["pack", "--pack-destination", dir], { cwd: repoRoot, encoding: "utf8", stdio: "pipe" });
+    execNpm(["pack", "--pack-destination", dir]);
     const tgzPath = join(dir, tarball);
     const actual = createHash("sha256").update(readFileSync(tgzPath)).digest("hex");
     const wrong = `${actual.slice(0, -1)}${actual.endsWith("0") ? "1" : "0"}`;

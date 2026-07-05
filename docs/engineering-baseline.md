@@ -13,20 +13,20 @@ Scan time: 2026-07-05T10:48:45Z.
 
 ## Version State
 
-- Package version: `0.18.2`.
-- README release links: `v0.18.2`.
-- docs/quickstart release links: `v0.18.2`.
-- Local latest tag: `v0.18.2`.
-- GitHub latest release observed via `gh release view`: `v0.18.2`.
+- Package version: `0.18.3`.
+- README release links: `v0.18.3`.
+- docs/quickstart release links: `v0.18.3`.
+- Local latest tag: `v0.18.3`.
+- GitHub latest release observed via `gh release view`: `v0.18.3`.
 
-Version decision for this iteration: keep `0.18.2` because this is post-release hardening at the same `0.x` capability level, not a new feature release.
+Version decision for this iteration: keep `0.18.3` because this is post-release hardening at the same `0.x` capability level, not a new feature release.
 
 ## Baseline Commands
 
 - `npm ci`: passed; npm reported the existing `fsevents` install-script allow-scripts warning.
 - `npm run build`: passed.
 - `npm test`: passed, 31 test files and 528 tests.
-- `npm run check:release`: passed for `0.18.2`.
+- `npm run check:release`: passed for `0.18.3`.
 - `npm run eval:rag`: passed in offline fixture mode with 30 questions and 30 expected references.
 - `npm run test:e2e:readonly`: skipped safely because `APEXCN_API_KEY` is not set.
 
