@@ -94,6 +94,7 @@ function verifyArtifacts() {
 
   const entries = new Set(execFileSync("tar", ["-tzf", archivePath], { cwd: repoRoot, encoding: "utf8" })
     .split("\n")
+    .map((entry) => entry.trim())
     .filter(Boolean)
     .map((entry) => entry.replace(/^\.\//, "").replaceAll("\\", "/")));
 
