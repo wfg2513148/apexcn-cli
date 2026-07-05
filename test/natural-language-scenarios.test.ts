@@ -101,6 +101,16 @@ const commonReadScenarios: Scenario[] = [
   scenario("doctor with ask check", "诊断 apexcn-cli，并顺便检查 RAG 问答接口能不能回答 REST API 问题", "doctor", "read", ["diagnostic"], "none", ["--check-ask <question>", "--json"]),
   scenario("doctor snapshot for support", "生成一份可发给支持人员的诊断快照，不要泄露 token", "doctor snapshot", "read", ["diagnostic", "config-read"], "none", ["--json"]),
   scenario("list categories", "列出 APEX 中文社区所有板块", "category list", "read", ["read"], "none", ["--json"]),
+  scenario("category stats", "统计 APEX 中文社区各板块的话题数和回复数", "stats category", "read", ["read"], "none", ["--json"]),
+  scenario("topic stats", "查看社区全局话题统计和标签分布", "stats topic", "read", ["read"], "none", ["--json"]),
+  scenario("topic stats by tag", "统计 ORDS 这个标签下有多少话题", "stats topic", "read", ["read"], "none", ["--tag <tag>", "--json"]),
+  scenario("tag stats", "列出社区标签使用次数", "stats tag", "read", ["read"], "none", ["--json"]),
+  scenario("admin list", "查看 APEX 中文社区管理员公开列表", "admin list", "read", ["read"], "none", ["--json"]),
+  scenario("my stats", "统计我在社区发了多少帖子、回复、收藏和订阅", "me stats", "read", ["read"], "none", ["--json"]),
+  scenario("my topics", "列出我发布过的社区帖子", "me topics", "read", ["read"], "none", ["--page-size <n>", "--json"]),
+  scenario("my replies", "列出我最近的社区回复", "me replies", "read", ["read"], "none", ["--page-size <n>", "--json"]),
+  scenario("my favorites", "查看我收藏过的话题", "me favorites", "read", ["read"], "none", ["--page-size <n>", "--json"]),
+  scenario("my subscriptions", "查看我订阅的话题列表", "me subscriptions", "read", ["read"], "none", ["--page-size <n>", "--json"]),
   scenario("search rest api", "在 APEX 中文社区搜索 REST API 相关帖子", "search", "read", ["read"], "none", ["--page-size <n>", "--json"]),
   scenario("search ords auth", "查找 ORDS 认证失败相关讨论", "search", "read", ["read"], "none", ["--page-size <n>", "--json"]),
   scenario("search json table", "搜一下 JSON_TABLE 的新手示例", "search", "read", ["read"], "none", ["--page-size <n>", "--json"]),
@@ -537,6 +547,141 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
         expect(fetch).toHaveBeenCalledOnce();
         expect(stderr).toBe("");
         expect(JSON.parse(stdout).items[0].id).toBe(4);
+      }
+    },
+    {
+      name: "stats category reads aggregate category counts",
+      userSays: "统计 APEX 中文社区各板块的话题数和回复数。",
+      commandPath: "stats category",
+      argv: ["node", "apexcn", "stats", "category", "--json"],
+      responseForUrl: (url) => {
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/category-stats");
+        return Response.json({ kind: "category-stats", items: [{ id: 4, name: "APEX 进阶技巧", topicCount: 12, replyCount: 34 }], requestId: "req-category-stats" });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "category-stats" }));
+      }
+    },
+    {
+      name: "stats topic reads global topic counts",
+      userSays: "查看社区全局话题统计和标签分布。",
+      commandPath: "stats topic",
+      argv: ["node", "apexcn", "stats", "topic", "--json"],
+      responseForUrl: (url) => {
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/topic-stats");
+        return Response.json({ kind: "topic-stats", topicCount: 1479, replyCount: 3200, tagCounts: [{ tag: "ORDS", topicCount: 9 }], requestId: "req-topic-stats" });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "topic-stats", topicCount: 1479 }));
+      }
+    },
+    {
+      name: "stats tag reads tag distribution",
+      userSays: "列出社区标签使用次数。",
+      commandPath: "stats tag",
+      argv: ["node", "apexcn", "stats", "tag", "--json"],
+      responseForUrl: (url) => {
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/tag-stats");
+        return Response.json({ kind: "tag-stats", items: [{ tag: "ORDS", topicCount: 9, matchMode: "exact" }], requestId: "req-tag-stats" });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout).items[0]).toEqual(expect.objectContaining({ tag: "ORDS", topicCount: 9 }));
+      }
+    },
+    {
+      name: "admin list reads public admin directory",
+      userSays: "查看 APEX 中文社区管理员公开列表。",
+      commandPath: "admin list",
+      argv: ["node", "apexcn", "admin", "list", "--json"],
+      responseForUrl: (url) => {
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/admin-list");
+        return Response.json({ kind: "admin-list", items: [{ id: 1, nickname: "Admin", roleName: "管理员", roleLevel: 10, publicContacts: ["apex@example.com"] }], requestId: "req-admin-list" });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout).items[0]).toEqual(expect.objectContaining({ nickname: "Admin", roleName: "管理员" }));
+      }
+    },
+    {
+      name: "me stats reads personal aggregate counts",
+      userSays: "统计我在社区发了多少帖子、回复、收藏和订阅。",
+      commandPath: "me stats",
+      argv: ["node", "apexcn", "me", "stats", "--json"],
+      responseForUrl: (url) => {
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/me/stats");
+        return Response.json({ kind: "me-stats", topicCount: 3, replyCount: 8, favoriteCount: 2, subscriptionCount: 4, requestId: "req-me-stats" });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "me-stats", topicCount: 3 }));
+      }
+    },
+    {
+      name: "me topics reads personal topic history",
+      userSays: "列出我发布过的社区帖子。",
+      commandPath: "me topics",
+      argv: ["node", "apexcn", "me", "topics", "--page-size", "2", "--json"],
+      responseForUrl: (url) => {
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/me/topics?pageSize=2");
+        return Response.json({ kind: "me-topics", items: [{ id: 42, title: "My topic" }], page: { limit: 2, count: 1 }, requestId: "req-me-topics" });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout).items[0]).toEqual(expect.objectContaining({ id: 42, title: "My topic" }));
+      }
+    },
+    {
+      name: "me replies reads personal replies",
+      userSays: "列出我最近的社区回复。",
+      commandPath: "me replies",
+      argv: ["node", "apexcn", "me", "replies", "--page-size", "2", "--json"],
+      responseForUrl: (url) => {
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/me/replies?pageSize=2");
+        return Response.json({ kind: "my-replies", items: [{ id: 201, topicId: 42, content: "Reply" }], page: { limit: 2, count: 1 }, requestId: "req-me-replies" });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout).items[0]).toEqual(expect.objectContaining({ id: 201, topicId: 42 }));
+      }
+    },
+    {
+      name: "me favorites reads personal favorite topics",
+      userSays: "查看我收藏过的话题。",
+      commandPath: "me favorites",
+      argv: ["node", "apexcn", "me", "favorites", "--page-size", "2", "--json"],
+      responseForUrl: (url) => {
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/me/favorites?pageSize=2");
+        return Response.json({ kind: "my-favorites", items: [{ topicId: 42, title: "Favorite topic" }], page: { limit: 2, count: 1 }, requestId: "req-me-favorites" });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout).items[0]).toEqual(expect.objectContaining({ topicId: 42, title: "Favorite topic" }));
+      }
+    },
+    {
+      name: "me subscriptions reads personal subscribed topics",
+      userSays: "查看我订阅的话题列表。",
+      commandPath: "me subscriptions",
+      argv: ["node", "apexcn", "me", "subscriptions", "--page-size", "2", "--json"],
+      responseForUrl: (url) => {
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/me/subscriptions?pageSize=2");
+        return Response.json({ kind: "my-subscriptions", items: [{ topicId: 42, title: "Subscribed topic" }], page: { limit: 2, count: 1 }, requestId: "req-me-subscriptions" });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout).items[0]).toEqual(expect.objectContaining({ topicId: 42, title: "Subscribed topic" }));
       }
     },
     {

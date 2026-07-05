@@ -105,6 +105,75 @@ describe("me command", () => {
     expect(stderr.join("")).toBe("GET https://oracleapex.cn/ords/test/api/v1/me\n");
   });
 
+  test("prints current user aggregate stats", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          kind: "me-stats",
+          user: { id: 11, nickname: "Tester" },
+          authoredTopicCount: 3,
+          authoredFeaturedTopicCount: 1,
+          authoredReplyCount: 5,
+          favoriteCount: 2,
+          subscriptionCount: 4,
+          requestId: "req-stats"
+        })
+      )
+    );
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz", "--base-url", "https://oracleapex.cn/ords/test", "--profile", "test@oci"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me", "stats", "--format", "text"]);
+
+    expect(fetch).toHaveBeenLastCalledWith("https://oracleapex.cn/ords/test/api/v1/me/stats", expect.any(Object));
+    expect(stdout.join("")).toContain("authoredTopicCount: 3\n");
+    expect(stdout.join("")).toContain("subscriptionCount: 4\n");
+    expect(stderr.join("")).toBe("");
+  });
+
+  test("prints current user activity lists with offset pagination", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const responses: Record<string, unknown> = {
+      "/api/v1/me/topics?pageSize=2&offset=4": { kind: "me-topics", items: [{ id: 42, title: "Topic", createdDate: "2026-07-01", updatedDate: "2026-07-02", url: "https://oracleapex.cn/t/42" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } },
+      "/api/v1/me/replies?pageSize=2&offset=4": { kind: "me-replies", items: [{ id: 90, topicId: 42, topic: { title: "Topic" }, createdDate: "2026-07-02", updatedDate: "2026-07-03", url: "https://oracleapex.cn/t/42#90" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } },
+      "/api/v1/me/favorites?pageSize=2&offset=4": { kind: "me-favorites", items: [{ topicId: 43, title: "Favorite", relationCreatedDate: "2026-07-04", updatedDate: "2026-07-05", url: "https://oracleapex.cn/t/43" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } },
+      "/api/v1/me/subscriptions?pageSize=2&offset=4": { kind: "me-subscriptions", items: [{ topicId: 44, title: "Subscription", relationCreatedDate: "2026-07-04", updatedDate: "2026-07-05", url: "https://oracleapex.cn/t/44" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } }
+    };
+    vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request) => {
+      const key = String(url).replace("https://oracleapex.cn/ords/test", "");
+      return Response.json(responses[key] ?? { error: { message: `unexpected ${key}` } }, { status: responses[key] ? 200 : 500 });
+    }));
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz", "--base-url", "https://oracleapex.cn/ords/test", "--profile", "test@oci"]);
+    for (const command of ["topics", "replies", "favorites", "subscriptions"]) {
+      stdout.length = 0;
+      await program.parseAsync(["node", "apexcn", "me", command, "--page-size", "2", "--offset", "4", "--format", "text"]);
+      expect(stdout.join("")).toContain("https://oracleapex.cn/t/");
+    }
+
+    expect(fetch).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/me/topics?pageSize=2&offset=4", expect.any(Object));
+    expect(fetch).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/me/replies?pageSize=2&offset=4", expect.any(Object));
+    expect(fetch).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/me/favorites?pageSize=2&offset=4", expect.any(Object));
+    expect(fetch).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/me/subscriptions?pageSize=2&offset=4", expect.any(Object));
+    expect(stderr.join("")).toBe("");
+  });
+
   test("rejects ambiguous format options before making API requests", async () => {
     const configPath = await tempConfigPath();
     const stdout: string[] = [];

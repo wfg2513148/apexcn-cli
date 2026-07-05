@@ -6,12 +6,14 @@ import { createAuthCommand, type CommandIo } from "./commands/auth.js";
 import { createCollectionCommand } from "./commands/collection.js";
 import { createDoctorCommand } from "./commands/doctor.js";
 import {
+  createAdminCommand,
   createAskCommand,
   createCategoryCommand,
   createRelationCommand,
   createReplyCommand,
   createResearchCommand,
   createSearchCommand,
+  createStatsCommand,
   createTopicCommand
 } from "./commands/content.js";
 import { createDraftCommand } from "./commands/draft.js";
@@ -53,7 +55,9 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   program.addCommand(createReviewCommand(commandOptions));
   program.addCommand(createWorkflowCommand(commandOptions));
   program.addCommand(createCollectionCommand(commandOptions));
+  program.addCommand(createAdminCommand(commandOptions));
   program.addCommand(createCategoryCommand(commandOptions));
+  program.addCommand(createStatsCommand(commandOptions));
   program.addCommand(createSearchCommand(commandOptions));
   program.addCommand(createResearchCommand(commandOptions));
   program.addCommand(createTopicCommand(commandOptions));
@@ -162,6 +166,7 @@ function commandManifest(root: Command): CommandManifest {
 
 const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "ask": "answer a question using APEX Chinese Community content",
+  "admin list": "list public community admins",
   "auth audit": "audit local auth profile configuration",
   "auth list": "list configured auth profiles",
   "auth logout": "clear the active auth profile",
@@ -180,6 +185,11 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "favorite add": "favorite a community topic",
   "favorite remove": "remove a topic from favorites",
   "me": "show the authenticated community account",
+  "me favorites": "list favorite topics for the authenticated account",
+  "me replies": "list replies by the authenticated account",
+  "me stats": "show aggregate activity statistics for the authenticated account",
+  "me subscriptions": "list subscribed topics for the authenticated account",
+  "me topics": "list topics authored by the authenticated account",
   "reply create": "create a reply on a topic",
   "reply delete": "delete a reply after explicit confirmation",
   "reply update": "update an existing reply",
@@ -187,6 +197,9 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "review reply": "review a local reply draft before API preview or publish",
   "review topic": "review a local topic draft before API preview or publish",
   "search": "search community topics",
+  "stats category": "show per-category topic, reply, and featured-topic counts",
+  "stats tag": "show exact tag usage counts",
+  "stats topic": "show global or exact-tag-filtered topic counts",
   "subscription add": "subscribe to a community topic",
   "subscription remove": "unsubscribe from a community topic",
   "topic create": "create a community topic",
@@ -203,6 +216,10 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
 };
 
 const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
+  "admin list": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn admin list --json", mode: "read" }]
+  },
   "ask": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: 'apexcn ask "Oracle APEX 如何调用 REST API？" --top-k 3 --json', mode: "read" }]
@@ -285,6 +302,26 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn me --json", mode: "read" }]
   },
+  "me favorites": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn me favorites --page-size 10 --json", mode: "read" }]
+  },
+  "me replies": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn me replies --page-size 10 --json", mode: "read" }]
+  },
+  "me stats": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn me stats --json", mode: "read" }]
+  },
+  "me subscriptions": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn me subscriptions --page-size 10 --json", mode: "read" }]
+  },
+  "me topics": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn me topics --page-size 10 --json", mode: "read" }]
+  },
   "reply create": {
     safety: { effects: ["api-write"], preview: "available", confirmation: [] },
     examples: [
@@ -337,6 +374,21 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     examples: [
       { command: "apexcn subscription remove 30549 --preview", mode: "preview" },
       { command: "apexcn subscription remove 30549 --json", mode: "execute" }
+    ]
+  },
+  "stats category": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn stats category --json", mode: "read" }]
+  },
+  "stats tag": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn stats tag --json", mode: "read" }]
+  },
+  "stats topic": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [
+      { command: "apexcn stats topic --json", mode: "read" },
+      { command: 'apexcn stats topic --tag "APEX" --json', mode: "read" }
     ]
   },
   "topic create": {

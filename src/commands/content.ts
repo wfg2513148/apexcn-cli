@@ -53,6 +53,80 @@ export function createCategoryCommand(options: ApiCommandOptions): Command {
   return category;
 }
 
+export function createStatsCommand(options: ApiCommandOptions): Command {
+  const stats = new Command("stats");
+
+  stats
+    .command("category")
+    .description("show per-category aggregate statistics")
+    .option("--json", "pretty-print JSON")
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async (commandOptions: FormatOption) => {
+      if (!validateFormatOptions(options, commandOptions)) {
+        return;
+      }
+      await runApi(options, commandOptions, async (session) => {
+        const data = await requestJson(session.baseUrl, "/api/v1/category-stats", { token: session.token });
+        printData(options, data, outputFormat(commandOptions), formatCategoryStatsText);
+      });
+    });
+
+  stats
+    .command("topic")
+    .description("show topic aggregate statistics")
+    .option("--tag <tag>", "exact tag name", parseNonBlankText)
+    .option("--json", "pretty-print JSON")
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async (commandOptions: FormatOption & { tag?: string }) => {
+      if (!validateFormatOptions(options, commandOptions)) {
+        return;
+      }
+      await runApi(options, commandOptions, async (session) => {
+        const data = await requestJson(session.baseUrl, "/api/v1/topic-stats", {
+          token: session.token,
+          query: { tag: commandOptions.tag }
+        });
+        printData(options, data, outputFormat(commandOptions), formatTopicStatsText);
+      });
+    });
+
+  stats
+    .command("tag")
+    .description("show exact tag usage statistics")
+    .option("--json", "pretty-print JSON")
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async (commandOptions: FormatOption) => {
+      if (!validateFormatOptions(options, commandOptions)) {
+        return;
+      }
+      await runApi(options, commandOptions, async (session) => {
+        const data = await requestJson(session.baseUrl, "/api/v1/tag-stats", { token: session.token });
+        printData(options, data, outputFormat(commandOptions), formatTagStatsText);
+      });
+    });
+
+  return stats;
+}
+
+export function createAdminCommand(options: ApiCommandOptions): Command {
+  const admin = new Command("admin");
+  admin
+    .command("list")
+    .description("list public community admins")
+    .option("--json", "pretty-print JSON")
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async (commandOptions: FormatOption) => {
+      if (!validateFormatOptions(options, commandOptions)) {
+        return;
+      }
+      await runApi(options, commandOptions, async (session) => {
+        const data = await requestJson(session.baseUrl, "/api/v1/admin-list", { token: session.token });
+        printData(options, data, outputFormat(commandOptions), formatAdminListText);
+      });
+    });
+  return admin;
+}
+
 export function createSearchCommand(options: ApiCommandOptions): Command {
   return new Command("search")
     .argument("<keyword>")
@@ -688,6 +762,54 @@ function formatCategoryListText(data: unknown): string {
   return items.map((item) => `${fieldText(item.id)}\t${fieldText(item.name)}`).join("\n");
 }
 
+function formatCategoryStatsText(data: unknown): string {
+  const items = itemsFromData(data);
+  return items.map((item) => [
+    fieldText(item.id),
+    fieldText(item.name),
+    fieldText(item.topicCount),
+    fieldText(item.replyCount),
+    fieldText(item.featuredCount)
+  ].join("\t")).join("\n");
+}
+
+function formatTopicStatsText(data: unknown): string {
+  if (!isRecord(data)) {
+    return "";
+  }
+  const tagCounts = Array.isArray(data.tagCounts) ? data.tagCounts.filter(isRecord) : [];
+  const summary = lines([
+    line("topicCount", data.topicCount),
+    line("featuredTopicCount", data.featuredTopicCount),
+    line("tag", data.tag),
+    line("includesLockedTopics", data.includesLockedTopics),
+    line("includesHiddenReplies", data.includesHiddenReplies),
+    line("requestId", data.requestId)
+  ]);
+  const tags = tagCounts.map((item) => `${fieldText(item.tag)}\t${fieldText(item.topicCount)}`).join("\n");
+  return [summary, tags ? `tagCounts:\n${tags}` : undefined].filter(Boolean).join("\n");
+}
+
+function formatTagStatsText(data: unknown): string {
+  const items = itemsFromData(data);
+  return items.map((item) => [
+    fieldText(item.tag),
+    fieldText(item.topicCount),
+    fieldText(item.matchMode)
+  ].join("\t")).join("\n");
+}
+
+function formatAdminListText(data: unknown): string {
+  const items = itemsFromData(data);
+  return items.map((item) => [
+    fieldText(item.id),
+    fieldText(item.nickname),
+    fieldText(item.roleName),
+    fieldText(item.roleLevel),
+    publicContactsText(item.publicContacts)
+  ].join("\t")).join("\n");
+}
+
 function formatSearchText(data: unknown): string {
   const items = itemsFromData(data);
   return items.map((item) => `${fieldText(item.id)}\t${fieldText(item.title)}\t${fieldText(item.url)}`).join("\n");
@@ -1171,6 +1293,14 @@ function parseCursor(value: string): string {
   return cursor;
 }
 
+function parseNonBlankText(value: string): string {
+  const text = value.trim();
+  if (!text) {
+    throw new InvalidArgumentError("Expected a non-empty value");
+  }
+  return text;
+}
+
 function parseSearchDate(value: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) {
@@ -1220,4 +1350,15 @@ function normalizeSearchKeyword(keyword: string): string {
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && "code" in error;
+}
+
+function publicContactsText(value: unknown): string {
+  if (!Array.isArray(value)) {
+    return "";
+  }
+  return value.filter(isRecord).map((contact) => {
+    const type = fieldText(contact.type ?? contact.kind ?? contact.name);
+    const label = fieldText(contact.label ?? contact.value ?? contact.url);
+    return [type, label].filter(Boolean).join(":");
+  }).filter(Boolean).join(",");
 }

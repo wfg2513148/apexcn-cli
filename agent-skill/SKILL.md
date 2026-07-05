@@ -66,6 +66,9 @@ apexcn auth set-token \
 - Use `apexcn workflow verify-bundle --bundle <file> --json` when reviewing a portable workflow bundle without access to the original run directory.
 - Use `apexcn collection build --query <keyword> --topic-id <id> --output-dir <dir> --json` when the user needs a reusable offline knowledge collection from multiple searches or explicit topics.
 - Use `apexcn collection verify --dir <dir> --json` before relying on a saved collection in an AI workflow.
+- Use `apexcn stats category --json`, `apexcn stats topic --json`, and `apexcn stats tag --json` when the user asks for aggregate community, category, topic, or tag counts.
+- Use `apexcn admin list --json` when the user asks who administers the community; only report public fields returned by the API.
+- Use `apexcn me stats --json`, `apexcn me topics --json`, `apexcn me replies --json`, `apexcn me favorites --json`, or `apexcn me subscriptions --json` when the user asks about their own activity.
 - Use `apexcn topic recent --since-hours 48 --json` when the user asks for recently updated or latest community posts. If `page.hasMore` is true and `page.nextCursor` is present, pass it back with `--cursor` to continue.
 - Use `apexcn search "<keyword>" --cursor <page.nextCursor> --json` when continuing a paginated search result. Prefer cursor pagination over `--offset`; keep `--offset` only for compatibility.
 - Use `apexcn commands --json` to inspect available commands, purposes, safety metadata, examples, and options instead of parsing help text.
@@ -95,6 +98,15 @@ apexcn auth set-token \
 apexcn search "APEX" --page-size 5 --json
 apexcn auth audit --json
 apexcn doctor snapshot --json
+apexcn stats category --json
+apexcn stats topic --json
+apexcn stats tag --json
+apexcn admin list --json
+apexcn me stats --json
+apexcn me topics --page-size 10 --json
+apexcn me replies --page-size 10 --json
+apexcn me favorites --page-size 10 --json
+apexcn me subscriptions --page-size 10 --json
 apexcn topic recent --since-hours 48 --page-size 10 --json
 apexcn research "REST API" --limit 3 --json
 apexcn collection build --query "REST API" --query "ORDS" --topic-id 30549 --output-dir ./collection --json

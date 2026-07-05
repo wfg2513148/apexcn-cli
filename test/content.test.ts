@@ -106,6 +106,7 @@ const neverApiDryRunCommands = [
   "auth show",
   "auth logout",
   "auth audit",
+  "admin list",
   "collection build",
   "collection verify",
   "commands",
@@ -114,11 +115,19 @@ const neverApiDryRunCommands = [
   "draft reply",
   "draft question",
   "me",
+  "me favorites",
+  "me replies",
+  "me stats",
+  "me subscriptions",
+  "me topics",
   "category list",
   "research",
   "review reply",
   "review topic",
   "search",
+  "stats category",
+  "stats tag",
+  "stats topic",
   "topic recent",
   "topic view",
   "thread recent",
@@ -191,6 +200,52 @@ describe("content commands", () => {
       expect(stdout.join("")).toBe(item.expected);
       vi.unstubAllGlobals();
     }
+  });
+
+  test("stats commands call aggregate API endpoints", async () => {
+    const responses: Record<string, unknown> = {
+      "/api/v1/category-stats": { kind: "category-stats", items: [{ id: 4, name: "APEX", topicCount: 2, replyCount: 3, featuredCount: 1 }], requestId: "req-cat-stats" },
+      "/api/v1/topic-stats": { kind: "topic-stats", topicCount: 10, featuredTopicCount: 2, tagCounts: [{ tag: "ORDS", topicCount: 3 }], requestId: "req-topic-stats" },
+      "/api/v1/topic-stats?tag=ORDS": { kind: "topic-stats", tag: "ORDS", topicCount: 3, featuredTopicCount: 1, requestId: "req-topic-tag" },
+      "/api/v1/tag-stats": { kind: "tag-stats", items: [{ tag: "ORDS", topicCount: 3, matchMode: "exact" }], requestId: "req-tag-stats" }
+    };
+    const fetchImpl = vi.fn(async (url: string | URL | Request) => {
+      const href = String(url);
+      const key = href.replace("https://oracleapex.cn/ords/test", "");
+      return Response.json(responses[key] ?? { error: { message: `unexpected ${key}` } }, { status: responses[key] ? 200 : 500 });
+    });
+
+    const category = await configuredProgram(fetchImpl as typeof fetch);
+    await category.program.parseAsync(["node", "apexcn", "stats", "category", "--format", "text"]);
+    expect(category.stdout.join("")).toBe("4\tAPEX\t2\t3\t1\n");
+
+    const topic = await configuredProgram(fetchImpl as typeof fetch);
+    await topic.program.parseAsync(["node", "apexcn", "stats", "topic", "--json"]);
+    expect(JSON.parse(topic.stdout.join("")).topicCount).toBe(10);
+
+    const topicTag = await configuredProgram(fetchImpl as typeof fetch);
+    await topicTag.program.parseAsync(["node", "apexcn", "stats", "topic", "--tag", "ORDS", "--json"]);
+    expect(JSON.parse(topicTag.stdout.join("")).tag).toBe("ORDS");
+
+    const tag = await configuredProgram(fetchImpl as typeof fetch);
+    await tag.program.parseAsync(["node", "apexcn", "stats", "tag", "--format", "text"]);
+    expect(tag.stdout.join("")).toBe("ORDS\t3\texact\n");
+
+    expect(fetchImpl).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/category-stats", expect.any(Object));
+    expect(fetchImpl).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/topic-stats", expect.any(Object));
+    expect(fetchImpl).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/topic-stats?tag=ORDS", expect.any(Object));
+    expect(fetchImpl).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/tag-stats", expect.any(Object));
+  });
+
+  test("admin list calls public admin directory endpoint", async () => {
+    const { program, stdout, fetch } = await configuredProgram(async () =>
+      Response.json({ kind: "admin-list", items: [{ id: 1, nickname: "Admin", roleName: "Administrator", roleLevel: 10, publicContacts: [{ type: "site", value: "https://example.com" }] }], requestId: "req-admin" })
+    );
+
+    await program.parseAsync(["node", "apexcn", "admin", "list", "--format", "text"]);
+
+    expect(fetch).toHaveBeenLastCalledWith("https://oracleapex.cn/ords/test/api/v1/admin-list", expect.any(Object));
+    expect(stdout.join("")).toBe("1\tAdmin\tAdministrator\t10\tsite:https://example.com\n");
   });
 
   test("category list prints clean errors for non-JSON API failures", async () => {
@@ -917,7 +972,7 @@ describe("content commands", () => {
 
   test("format option is exposed only on read commands with text output", () => {
     const program = createProgram();
-    const formatCommands = ["doctor", "doctor snapshot", "draft reply", "draft question", "review reply", "review topic", "workflow plan", "me", "category list", "search", "research", "topic recent", "topic view", "thread recent", "thread view", "ask"];
+    const formatCommands = ["doctor", "doctor snapshot", "draft reply", "draft question", "review reply", "review topic", "workflow plan", "admin list", "me", "me favorites", "me replies", "me stats", "me subscriptions", "me topics", "category list", "search", "stats category", "stats tag", "stats topic", "research", "topic recent", "topic view", "thread recent", "thread view", "ask"];
 
     for (const path of leafCommandPaths(program)) {
       if (formatCommands.includes(path)) {
@@ -935,6 +990,9 @@ describe("content commands", () => {
       ["node", "apexcn", "topic", "recent", "--format", "yaml"],
       ["node", "apexcn", "topic", "view", "42", "--format", "xml"],
       ["node", "apexcn", "me", "--format", "yaml"],
+      ["node", "apexcn", "me", "stats", "--format", "yaml"],
+      ["node", "apexcn", "stats", "topic", "--format", "yaml"],
+      ["node", "apexcn", "admin", "list", "--format", "yaml"],
       ["node", "apexcn", "ask", "Q", "--format", "yaml"]
     ];
 
@@ -957,6 +1015,8 @@ describe("content commands", () => {
       ["node", "apexcn", "search", "APEX", "--json", "--format", "json"],
       ["node", "apexcn", "topic", "view", "42", "--json", "--format", "text"],
       ["node", "apexcn", "me", "--json", "--format", "json"],
+      ["node", "apexcn", "me", "topics", "--json", "--format", "json"],
+      ["node", "apexcn", "stats", "category", "--json", "--format", "text"],
       ["node", "apexcn", "ask", "Q", "--json", "--format", "json"]
     ];
 

@@ -93,6 +93,44 @@ apexcn category list --json
 apexcn category list --format text
 ```
 
+## stats
+
+读取 0.3.0-candidate 聚合统计接口：
+
+```bash
+apexcn stats category --json
+apexcn stats topic --json
+apexcn stats topic --tag "ORDS" --json
+apexcn stats tag --format text
+```
+
+`stats category` 返回每个板块的话题数、回复数和精选话题数。`stats topic` 返回全局或精确 tag 过滤的话题统计，并在未指定 `--tag` 时包含 `tagCounts`。`stats tag` 返回精确 tag 使用次数。
+
+## admin
+
+读取公开管理员列表：
+
+```bash
+apexcn admin list --json
+apexcn admin list --format text
+```
+
+`admin list` 只返回服务端标记为公开的管理员信息和公开联系方式，不包含私有联系信息。
+
+## me activity
+
+读取当前登录账号的聚合统计和活动列表：
+
+```bash
+apexcn me stats --json
+apexcn me topics --page-size 10 --json
+apexcn me replies --page-size 10 --offset 10 --json
+apexcn me favorites --format text
+apexcn me subscriptions --json
+```
+
+`me topics`、`me replies`、`me favorites` 和 `me subscriptions` 使用数字 `offset` 分页；当 `page.hasMore` 为 `true` 时，用 `page.nextOffset` 继续读取下一页。
+
 ## search
 
 基础搜索：

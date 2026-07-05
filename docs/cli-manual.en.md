@@ -93,6 +93,44 @@ apexcn category list --json
 apexcn category list --format text
 ```
 
+## stats
+
+Read 0.3.0-candidate aggregate statistic endpoints:
+
+```bash
+apexcn stats category --json
+apexcn stats topic --json
+apexcn stats topic --tag "ORDS" --json
+apexcn stats tag --format text
+```
+
+`stats category` returns topic, reply, and featured-topic counts per category. `stats topic` returns global or exact-tag-filtered topic counts, and includes `tagCounts` when `--tag` is not provided. `stats tag` returns exact tag usage counts.
+
+## admin
+
+Read the public admin directory:
+
+```bash
+apexcn admin list --json
+apexcn admin list --format text
+```
+
+`admin list` returns only server-approved public admin fields and public contact entries; private contact data is not exposed.
+
+## me activity
+
+Read aggregate statistics and activity lists for the current account:
+
+```bash
+apexcn me stats --json
+apexcn me topics --page-size 10 --json
+apexcn me replies --page-size 10 --offset 10 --json
+apexcn me favorites --format text
+apexcn me subscriptions --json
+```
+
+`me topics`, `me replies`, `me favorites`, and `me subscriptions` use numeric `offset` pagination. When `page.hasMore` is true, continue with `page.nextOffset`.
+
 ## search
 
 Basic search:
