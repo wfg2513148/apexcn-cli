@@ -11,6 +11,30 @@ function read(path: string): string {
 }
 
 describe("documentation consistency", () => {
+  test("Markdown and workflow files stay multiline and maintainable", () => {
+    const minimumLines: Record<string, number> = {
+      "README.md": 30,
+      "docs/roadmap.md": 20,
+      "docs/api-contract.md": 20,
+      "docs/security-model.md": 20,
+      "docs/workflow-policy.md": 20
+    };
+
+    for (const [path, minLines] of Object.entries(minimumLines)) {
+      expect(read(path).trimEnd().split("\n").length, path).toBeGreaterThanOrEqual(minLines);
+    }
+
+    const ci = read(".github/workflows/ci.yml");
+    const release = read(".github/workflows/release.yml");
+    expect(ci).toMatch(/^name: CI$/m);
+    expect(ci).toMatch(/^on:$/m);
+    expect(ci).toMatch(/^jobs:$/m);
+    expect(release).toMatch(/^name: Release$/m);
+    expect(release).toMatch(/^on:$/m);
+    expect(release).toMatch(/^jobs:$/m);
+    expect(release).toMatch(/^\s+gh release create "\$GITHUB_REF_NAME" \\$/m);
+  });
+
   test("release URLs use the package version", () => {
     const version = JSON.parse(read("package.json")).version;
     const docs = ["README.md", "docs/quickstart.md", "scripts/install-agent.sh", "scripts/install-agent.ps1"].map(read).join("\n");

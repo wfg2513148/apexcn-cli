@@ -36,12 +36,12 @@ The checksum generator writes both aggregate `checksums.txt` and per-asset `.sha
 
 ## Publish
 
-Replace `v0.18.6` with the intended `0.x` version.
+Replace `v0.18.7` with the intended `0.x` version.
 
 ```bash
-git tag v0.18.6
-git push origin v0.18.6
-gh release view v0.18.6 || gh release create v0.18.6 \
+git tag v0.18.7
+git push origin v0.18.7
+gh release view v0.18.7 || gh release create v0.18.7 \
   artifacts/apexcn-cli.tgz \
   artifacts/install-agent.sh \
   artifacts/install-agent.ps1 \
@@ -49,8 +49,8 @@ gh release view v0.18.6 || gh release create v0.18.6 \
   artifacts/apexcn-cli.tgz.sha256 \
   artifacts/install-agent.sh.sha256 \
   artifacts/install-agent.ps1.sha256 \
-  --title v0.18.6 \
-  --notes "apexcn-cli release v0.18.6"
+  --title v0.18.7 \
+  --notes "apexcn-cli release v0.18.7"
 ```
 
 The normal path is to push the tag and let `.github/workflows/release.yml` build and publish the assets.
@@ -58,8 +58,8 @@ The normal path is to push the tag and let `.github/workflows/release.yml` build
 ## Post-Release Checks
 
 ```bash
-gh release view v0.18.6 --json tagName,isDraft,isPrerelease,assets,url
-curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.6/checksums.txt
+gh release view v0.18.7 --json tagName,isDraft,isPrerelease,assets,url
+curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.7/checksums.txt
 ```
 
 Confirm the release is not a draft, not a prerelease, and includes `checksums.txt` plus the three per-asset `.sha256` files.

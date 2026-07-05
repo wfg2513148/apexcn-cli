@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
@@ -53,6 +53,7 @@ describe("release version check", () => {
   }, 30000);
 
   test("baseline report exposes release consistency as stable JSON", () => {
+    const packageVersion = JSON.parse(readRepoFile("package.json")).version;
     const report = JSON.parse(execFileSync("node", [baselineScript], {
       cwd: repoRoot,
       encoding: "utf8"
@@ -61,15 +62,47 @@ describe("release version check", () => {
     expect(report).toEqual(expect.objectContaining({
       kind: "apexcn-baseline-report",
       schemaVersion: 1,
-      packageVersion: "0.18.6",
-      packageLockVersion: "0.18.6",
+      version: packageVersion,
+      packageVersion,
+      packageLockVersion: packageVersion,
       releaseWorkflowUploadsChecksums: true,
       ciRunsRagEval: true,
       mcpExecuteWriteDisabled: true,
       issuesBacklogAccurate: true,
-      problems: []
+      problems: [],
+      commands: expect.objectContaining({
+        total: expect.any(Number),
+        readonly: expect.any(Number),
+        previewOnly: expect.any(Number),
+        destructive: expect.any(Number)
+      }),
+      mcp: expect.objectContaining({
+        readonlyTools: expect.any(Number),
+        previewTools: expect.any(Number),
+        executeWriteSupported: false
+      }),
+      schemas: expect.arrayContaining(["src/schemas/mcp.ts", "src/schemas/workflow.ts"]),
+      releaseAssets: expect.arrayContaining(["apexcn-cli.tgz", "checksums.txt", "install-agent.ps1.sha256"])
     }));
-    expect(report.readmeReleaseUrls).toEqual(["v0.18.6"]);
+    expect(report.readmeReleaseUrls).toEqual([`v${packageVersion}`]);
+    expect(report.commands.total).toBeGreaterThan(40);
+    expect(report.git.sha).toMatch(/^[0-9a-f]{40}$/);
+  });
+
+  test("baseline report can be written to an output file", () => {
+    const dir = mkdtempSync(join(tmpdir(), "apexcn-baseline-output-"));
+    const outputPath = join(dir, "baseline.json");
+    try {
+      execFileSync("node", [baselineScript, "--output", outputPath], {
+        cwd: repoRoot,
+        encoding: "utf8"
+      });
+      expect(existsSync(outputPath)).toBe(true);
+      const report = JSON.parse(readFileSync(outputPath, "utf8"));
+      expect(report.kind).toBe("apexcn-baseline-report");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   test("npm package contains only runtime and user-facing assets", () => {
