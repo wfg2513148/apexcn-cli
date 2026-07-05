@@ -17,11 +17,17 @@ export type CollectionIndexRecord = {
 
 export type CollectionIndexMeta = {
   kind: "collection-index-meta";
-  schemaVersion: 1;
+  schemaVersion: 2;
   engine: "bm25";
   createdAt: string;
   documentCount: number;
   tokenCount: number;
+  averageDocumentLength: number;
+  fieldWeights: {
+    title: 3;
+    tags: 2;
+    content: 1;
+  };
   sourceCollectionHash: string;
   fields: string[];
   files: {
@@ -37,6 +43,9 @@ export type CollectionQueryResult = {
   sourcePath: string;
   excerpt: string;
   url?: string;
+  explain?: {
+    terms: Array<{ term: string; score: number }>;
+  };
   explanation?: Record<string, number>;
 };
 
@@ -83,6 +92,7 @@ export function queryIndex(records: CollectionIndexRecord[], query: string, opti
         sourcePath: record.sourcePath,
         excerpt: record.excerpt,
         url: record.url,
+        explain: options.explain ? { terms: Object.entries(score.contributions).map(([term, value]) => ({ term, score: value })) } : undefined,
         explanation: options.explain ? score.contributions : undefined
       };
     });
@@ -91,11 +101,19 @@ export function queryIndex(records: CollectionIndexRecord[], query: string, opti
 export function createIndexMeta(input: { createdAt: string; records: CollectionIndexRecord[]; sourceCollectionContent: string; indexFile: { size: number; sha256: string } }): CollectionIndexMeta {
   return {
     kind: "collection-index-meta",
-    schemaVersion: 1,
+    schemaVersion: 2,
     engine: "bm25",
     createdAt: input.createdAt,
     documentCount: input.records.length,
     tokenCount: input.records.reduce((sum, record) => sum + record.documentLength, 0),
+    averageDocumentLength: input.records.length === 0
+      ? 0
+      : Number((input.records.reduce((sum, record) => sum + record.documentLength, 0) / input.records.length).toFixed(2)),
+    fieldWeights: {
+      title: 3,
+      tags: 2,
+      content: 1
+    },
     sourceCollectionHash: `sha256:${sha256Hex(Buffer.from(input.sourceCollectionContent, "utf8"))}`,
     fields: ["title", "content", "tags", "category"],
     files: {

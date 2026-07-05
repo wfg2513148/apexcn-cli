@@ -27,4 +27,17 @@ describe("MCP CLI", () => {
       title: "apexcn-cli MCP tool manifest"
     }));
   });
+
+  test("mcp serve refuses execute-write", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const program = createProgram({ stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
+
+    await program.parseAsync(["node", "apexcn", "mcp", "serve", "--allow-execute-write"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toContain("MCP execute-write is disabled");
+    expect(process.exitCode).toBe(1);
+    process.exitCode = undefined;
+  });
 });

@@ -1,0 +1,1 @@
+{"kind":"mcp-tools","schemaVersion":1,"policy":{"mode":"readonly","transport":"stdio","allowPreviewWrite":false,"allowExecuteWrite":false},"tools":[{"name":"apexcn_search","description":"Search","exposure":"readonly","commandId":"search","inputSchema":{"type":"object"}}]}

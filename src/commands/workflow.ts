@@ -409,16 +409,20 @@ async function diffWorkflow(io: CommandIo, options: WorkflowDiffOptions): Promis
   const currentHash = previewRequest ? workflowPreviewHash(previewRequest) : undefined;
   const approvalHash = isRecord(approval) && typeof approval.previewHash === "string" ? approval.previewHash : undefined;
   const allowed = Boolean(currentHash && approvalHash && currentHash === approvalHash);
+  const differences = requestDifferences(previewRequest, approvalRequest);
   printData(io, {
     kind: "workflow-diff",
     schemaVersion: 1,
     runId: loaded.state.runId,
     previewRequest: previewRequest ?? null,
     approvalRequest: approvalRequest ?? null,
+    approvedRequestHash: approvalHash,
     approvalBoundRequestHash: approvalHash,
     currentRequestHash: currentHash,
+    hashMatches: allowed,
     executionAllowed: allowed,
-    differences: requestDifferences(previewRequest, approvalRequest)
+    changes: differences,
+    differences
   }, options.json === true);
 }
 

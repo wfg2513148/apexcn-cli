@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -24,6 +25,8 @@ checkPowerShellInstallerDefaultUrl("scripts/install-agent.ps1");
 checkMarkdownReleaseUrls(trackedMarkdownFiles());
 checkCiWorkflow();
 checkReleaseWorkflow();
+checkIssuesBacklog();
+checkPackageFiles();
 checkNpmPackFilename();
 checkReleaseArtifacts();
 
@@ -183,6 +186,36 @@ function checkCiWorkflow() {
   }
 }
 
+function checkIssuesBacklog() {
+  const path = "issues.md";
+  const text = readText(path);
+  if (/No open CLI backlog items\./.test(text)) {
+    failures.push(`${path}: backlog cannot claim there are no open CLI backlog items while roadmap tracks active hardening work`);
+  }
+}
+
+function checkPackageFiles() {
+  const packageJson = readJson("package.json");
+  const files = Array.isArray(packageJson.files) ? packageJson.files : [];
+  const required = [
+    "agent-skill/",
+    "dist/",
+    "docs/",
+    "eval/rag/",
+    "scripts/baseline-report.mjs",
+    "scripts/eval-rag.mjs",
+    "scripts/generate-release-checksums.mjs",
+    "scripts/install-agent.sh",
+    "scripts/install-agent.ps1",
+    "README.md"
+  ];
+  for (const file of required) {
+    if (!files.includes(file)) {
+      failures.push(`package.json files missing ${file}`);
+    }
+  }
+}
+
 function checkNpmPackFilename() {
   const expected = `apexcn-cli-${expectedVersion}.tgz`;
   let output;
@@ -203,13 +236,16 @@ function checkNpmPackFilename() {
 }
 
 function checkReleaseArtifacts() {
+  const tempArtifactsDir = mkdtempSync(join(tmpdir(), "apexcn-release-version-"));
   try {
-    execFileSync("node", ["scripts/check-release-artifacts.mjs", "--expected-version", expectedVersion], {
+    execFileSync("node", ["scripts/check-release-artifacts.mjs", "--expected-version", expectedVersion, "--artifacts-dir", tempArtifactsDir], {
       cwd: repoRoot,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"]
     });
   } catch (error) {
     failures.push(`release artifact check failed: ${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    rmSync(tempArtifactsDir, { recursive: true, force: true });
   }
 }

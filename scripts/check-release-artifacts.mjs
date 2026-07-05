@@ -1,22 +1,17 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { tmpdir } from "node:os";
+import { cpSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
+import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const args = parseArgs(process.argv.slice(2));
 const expectedVersion = args.expectedVersion ?? readJson("package.json").version;
-const artifactsDir = args.artifactsDir ? join(repoRoot, args.artifactsDir) : mkdtempSync(join(tmpdir(), "apexcn-release-"));
+const artifactsDir = args.artifactsDir ? resolveArtifactsDir(args.artifactsDir) : join(repoRoot, "artifacts");
 const archivePath = join(artifactsDir, "apexcn-cli.tgz");
 
 buildArtifacts();
 verifyArtifacts();
-
-if (!args.artifactsDir) {
-  rmSync(artifactsDir, { recursive: true, force: true });
-}
 
 console.log(`Release artifact check passed for ${expectedVersion}`);
 
@@ -38,6 +33,10 @@ function parseArgs(values) {
     process.exit(2);
   }
   return parsed;
+}
+
+function resolveArtifactsDir(path) {
+  return isAbsolute(path) ? path : join(repoRoot, path);
 }
 
 function buildArtifacts() {

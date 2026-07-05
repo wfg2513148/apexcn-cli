@@ -352,6 +352,7 @@ async function queryCollection(io: CommandIo, query: string, options: QueryOptio
     engine: "bm25",
     dir: options.dir,
     query: trimmed,
+    topK: options.topK ?? 10,
     resultCount: results.length,
     results
   }, options.json === true);
@@ -374,6 +375,9 @@ async function collectionStats(io: CommandIo, options: StatsOptions): Promise<vo
     engine: "bm25",
     dir: options.dir,
     documentCount: records.length,
+    averageDocumentLength: records.length === 0
+      ? 0
+      : Number((records.reduce((sum, record) => sum + record.documentLength, 0) / records.length).toFixed(2)),
     tokenCount: records.reduce((sum, record) => sum + record.documentLength, 0),
     uniqueTermCount: new Set(records.flatMap((record) => Object.keys(record.terms))).size,
     meta

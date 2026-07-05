@@ -67,6 +67,10 @@ log() {
   printf '[apexcn-cli] %s\n' "$*"
 }
 
+warn() {
+  printf '[apexcn-cli] WARNING: %s\n' "$*" >&2
+}
+
 die() {
   printf '[apexcn-cli] ERROR: %s\n' "$*" >&2
   exit 1
@@ -178,7 +182,7 @@ verify_package_checksum() {
   url="$(checksums_url_for_package)"
   if ! download_file "$url" "$checksums_path"; then
     if [[ "$skip_checksum" == "1" ]]; then
-      log "WARNING: skipping checksum verification because APEXCN_CLI_SKIP_CHECKSUM=1 and checksums.txt could not be downloaded."
+      warn "skipping checksum verification because APEXCN_CLI_SKIP_CHECKSUM=1 and checksums.txt could not be downloaded."
       return
     fi
     die "Unable to download checksums.txt from $url. Set APEXCN_CLI_SKIP_CHECKSUM=1 to skip explicitly."

@@ -34,6 +34,11 @@ function Write-Step {
   Write-Host "[apexcn-cli] $Message"
 }
 
+function Write-WarningStep {
+  param([string]$Message)
+  Write-Warning "[apexcn-cli] $Message"
+}
+
 function Invoke-AgentCommand {
   param([string[]]$Command)
   if ($DryRun) {
@@ -92,7 +97,7 @@ function Test-PackageChecksum {
     Download-File $url $checksumsPath
   } catch {
     if ($SkipChecksum) {
-      Write-Step "WARNING: skipping checksum verification because APEXCN_CLI_SKIP_CHECKSUM=1 and checksums.txt could not be downloaded."
+      Write-WarningStep "skipping checksum verification because APEXCN_CLI_SKIP_CHECKSUM=1 and checksums.txt could not be downloaded."
       return
     }
     throw "Unable to download checksums.txt from $url. Set APEXCN_CLI_SKIP_CHECKSUM=1 to skip explicitly."

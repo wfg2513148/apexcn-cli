@@ -11,6 +11,7 @@
     "docs/",
     "eval/rag/",
     "scripts/e2e-readonly.sh",
+    "scripts/baseline-report.mjs",
     "scripts/eval-rag.mjs",
     "scripts/generate-release-checksums.mjs",
     "scripts/install-agent.ps1",
@@ -18,6 +19,7 @@
     "README.md"
   ],
   "scripts": {
+    "baseline": "node scripts/baseline-report.mjs",
     "build": "tsc -p tsconfig.json",
     "check:release": "node scripts/check-release-version.mjs && node scripts/check-release-artifacts.mjs",
     "eval:rag": "node scripts/eval-rag.mjs --report",

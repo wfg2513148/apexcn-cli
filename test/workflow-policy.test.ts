@@ -87,7 +87,12 @@ describe("workflow policy, diff, and audit-log", () => {
 
     await program.parseAsync(["node", "apexcn", "workflow", "diff", "--run-dir", runDir, "--json"]);
 
-    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({ kind: "workflow-diff", executionAllowed: false }));
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
+      kind: "workflow-diff",
+      hashMatches: false,
+      executionAllowed: false,
+      changes: expect.any(Array)
+    }));
   });
 
   test("audit-log emits parseable NDJSON without secrets", async () => {

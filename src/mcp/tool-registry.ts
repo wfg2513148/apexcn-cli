@@ -106,7 +106,7 @@ const PREVIEW_TOOLS: McpToolDefinition[] = [
   previewTool("apexcn_topic_delete_preview", "topic.delete", "Preview topic deletion", ["topicId", "confirmTitle"]),
   previewTool("apexcn_reply_create_preview", "reply.create", "Preview reply creation", ["topicId", "content"]),
   previewTool("apexcn_reply_update_preview", "reply.update", "Preview reply update", ["replyId", "content"]),
-  previewTool("apexcn_reply_delete_preview", "reply.delete", "Preview reply deletion", ["replyId"]),
+  previewTool("apexcn_reply_delete_preview", "reply.delete", "Preview reply deletion", ["replyId", "confirmTitle"]),
   previewTool("apexcn_favorite_add_preview", "favorite.add", "Preview favorite add", ["topicId"]),
   previewTool("apexcn_favorite_remove_preview", "favorite.remove", "Preview favorite removal", ["topicId"]),
   previewTool("apexcn_subscription_add_preview", "subscription.add", "Preview subscription add", ["topicId"]),

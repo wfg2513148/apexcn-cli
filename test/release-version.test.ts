@@ -6,6 +6,7 @@ import { describe, expect, test } from "vitest";
 const repoRoot = join(__dirname, "..");
 const script = join(repoRoot, "scripts/check-release-version.mjs");
 const artifactScript = join(repoRoot, "scripts/check-release-artifacts.mjs");
+const baselineScript = join(repoRoot, "scripts/baseline-report.mjs");
 
 function readRepoFile(relativePath: string): string {
   return readFileSync(join(repoRoot, relativePath), "utf8");
@@ -37,6 +38,26 @@ describe("release version check", () => {
     expect(result.stderr).toContain("npm pack filename: expected apexcn-cli-0.0.0.tgz");
   }, 30000);
 
+  test("baseline report exposes release consistency as stable JSON", () => {
+    const report = JSON.parse(execFileSync("node", [baselineScript], {
+      cwd: repoRoot,
+      encoding: "utf8"
+    }));
+
+    expect(report).toEqual(expect.objectContaining({
+      kind: "apexcn-baseline-report",
+      schemaVersion: 1,
+      packageVersion: "0.18.0",
+      packageLockVersion: "0.18.0",
+      releaseWorkflowUploadsChecksums: true,
+      ciRunsRagEval: true,
+      mcpExecuteWriteDisabled: true,
+      issuesBacklogAccurate: true,
+      problems: []
+    }));
+    expect(report.readmeReleaseUrls).toEqual(["v0.18.0"]);
+  });
+
   test("npm package contains only runtime and user-facing assets", () => {
     const output = execFileSync("npm", ["pack", "--dry-run", "--json"], {
       cwd: repoRoot,
@@ -52,6 +73,7 @@ describe("release version check", () => {
       "docs/user-guide.en.md",
       "node_modules/commander/package.json",
       "package.json",
+      "scripts/baseline-report.mjs",
       "scripts/e2e-readonly.sh",
       "scripts/install-agent.ps1",
       "scripts/install-agent.sh"
@@ -89,6 +111,7 @@ describe("release version check", () => {
         "package/node_modules/commander/package.json",
         "package/agent-skill/SKILL.md",
         "package/docs/quickstart.md",
+        "package/scripts/baseline-report.mjs",
         "package/scripts/install-agent.ps1",
         "package/scripts/install-agent.sh"
       ]));

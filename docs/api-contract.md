@@ -34,16 +34,18 @@
 
 初版 schema 位于 `src/schemas/`，覆盖：
 
-- command manifest
-- search response
-- topic response
-- ask response
-- stable error envelope
-- research bundle
-- doctor snapshot
-- MCP tool manifest
-- workflow plan / preview
-- collection manifest / query result
+- `src/schemas/common.ts`: shared runtime assertions
+- `src/schemas/error.ts`: stable error envelope
+- `src/schemas/command-manifest.ts`: command manifest and JSON Schema export
+- `src/schemas/search.ts`: search response
+- `src/schemas/topic.ts`: topic response
+- `src/schemas/ask.ts`: ask response
+- `src/schemas/research.ts`: research bundle
+- `src/schemas/doctor.ts`: doctor snapshot
+- `src/schemas/workflow.ts`: workflow plan / preview
+- `src/schemas/collection.ts`: collection manifest / query result
+- `src/schemas/mcp.ts`: MCP tool manifest
+- `src/schemas/index.ts`: schema exports
 
 策略：宽进严出。服务端额外字段允许存在，关键字段必须可验证。
 

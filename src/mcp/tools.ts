@@ -95,7 +95,7 @@ function previewWriteTool(name: string, args: Record<string, unknown>): unknown 
     return previewPlan({ method: "PATCH", path: `/api/v1/replies/${requiredNumber(args, "replyId")}`, body: { content: requiredString(args, "content") } });
   }
   if (name === "apexcn_reply_delete_preview") {
-    return previewPlan({ method: "DELETE", path: `/api/v1/replies/${requiredNumber(args, "replyId")}` });
+    return previewPlan({ method: "DELETE", path: `/api/v1/replies/${requiredNumber(args, "replyId")}`, body: { confirmTitle: requiredString(args, "confirmTitle") } });
   }
   if (name === "apexcn_favorite_add_preview") {
     return previewPlan({ method: "POST", path: `/api/v1/topics/${requiredNumber(args, "topicId")}/favorite` });
