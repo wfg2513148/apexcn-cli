@@ -4,7 +4,9 @@ param(
   [switch]$InstallCodexSkill,
   [switch]$InstallAgentSkills,
   [string]$SourceDir = "",
-  [string]$PackageUrl = $(if ($env:APEXCN_CLI_PACKAGE_URL) { $env:APEXCN_CLI_PACKAGE_URL } else { "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.17.0/apexcn-cli.tgz" }),
+  [string]$PackageUrl = $(if ($env:APEXCN_CLI_PACKAGE_URL) { $env:APEXCN_CLI_PACKAGE_URL } else { "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/apexcn-cli.tgz" }),
+  [string]$ChecksumsUrl = $(if ($env:APEXCN_CLI_CHECKSUMS_URL) { $env:APEXCN_CLI_CHECKSUMS_URL } else { "" }),
+  [switch]$SkipChecksum,
   [string]$Repo = $(if ($env:APEXCN_CLI_REPO) { $env:APEXCN_CLI_REPO } else { "" }),
   [string]$Ref = $(if ($env:APEXCN_CLI_REF) { $env:APEXCN_CLI_REF } else { "main" }),
   [string]$InstallRoot = $(if ($env:APEXCN_CLI_INSTALL_ROOT) { $env:APEXCN_CLI_INSTALL_ROOT } else { Join-Path $env:LOCALAPPDATA "apexcn\tools\apexcn-cli" }),
@@ -21,6 +23,7 @@ if ($env:APEXCN_CLI_YES -eq "1") { $Yes = $true }
 if ($env:APEXCN_CLI_DRY_RUN -eq "1") { $DryRun = $true }
 if ($env:APEXCN_CLI_INSTALL_CODEX_SKILL -eq "1") { $InstallCodexSkill = $true }
 if ($env:APEXCN_CLI_INSTALL_AGENT_SKILLS -eq "1") { $InstallAgentSkills = $true }
+if ($env:APEXCN_CLI_SKIP_CHECKSUM -eq "1") { $SkipChecksum = $true }
 $UseGit = $false
 if ($env:APEXCN_CLI_REPO -or $env:APEXCN_CLI_REF) { $UseGit = $true }
 $InstalledAgentSkillDirs = @()
@@ -72,6 +75,36 @@ function Download-File {
     return
   }
   Invoke-WebRequest -Uri $Url -OutFile $Target
+}
+
+function Get-ChecksumsUrl {
+  if ($ChecksumsUrl) { return $ChecksumsUrl }
+  $index = $PackageUrl.LastIndexOf("/")
+  if ($index -lt 0) { throw "Unable to derive checksums.txt URL from PackageUrl." }
+  return $PackageUrl.Substring(0, $index + 1) + "checksums.txt"
+}
+
+function Test-PackageChecksum {
+  param([string]$ArchivePath, [string]$TempDir)
+  $checksumsPath = Join-Path $TempDir "checksums.txt"
+  $url = Get-ChecksumsUrl
+  try {
+    Download-File $url $checksumsPath
+  } catch {
+    if ($SkipChecksum) {
+      Write-Step "WARNING: skipping checksum verification because APEXCN_CLI_SKIP_CHECKSUM=1 and checksums.txt could not be downloaded."
+      return
+    }
+    throw "Unable to download checksums.txt from $url. Set APEXCN_CLI_SKIP_CHECKSUM=1 to skip explicitly."
+  }
+  $line = Get-Content -LiteralPath $checksumsPath | Where-Object { $_ -match "\s+apexcn-cli\.tgz$" } | Select-Object -First 1
+  if (-not $line) { throw "checksums.txt does not contain apexcn-cli.tgz" }
+  $expected = ($line -split "\s+")[0]
+  $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $ArchivePath).Hash.ToLowerInvariant()
+  if ($actual -ne $expected.ToLowerInvariant()) {
+    throw "Checksum verification failed for apexcn-cli.tgz"
+  }
+  Write-Step "Verified package checksum."
 }
 
 function Get-CliRoot {
@@ -137,6 +170,7 @@ function Prepare-Source {
     New-Item -ItemType Directory -Force -Path $parent | Out-Null
     New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
     Download-File $PackageUrl $archivePath
+    Test-PackageChecksum $archivePath $tempDir
     if (Test-Path $InstallRoot) { Remove-Item -Recurse -Force $InstallRoot }
     New-Item -ItemType Directory -Force -Path $InstallRoot | Out-Null
     & tar -xzf $archivePath -C $InstallRoot

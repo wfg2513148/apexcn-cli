@@ -19,13 +19,13 @@
 macOS / Linux：
 
 ```bash
-curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.17.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
+curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.17.0/install-agent.ps1" | iex
+$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/install-agent.ps1" | iex
 ```
 
 ### 只安装终端命令
@@ -35,13 +35,13 @@ $env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_I
 macOS / Linux：
 
 ```bash
-curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.17.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' bash -s -- --yes
+curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' bash -s -- --yes
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.17.0/install-agent.ps1" | iex
+$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/install-agent.ps1" | iex
 ```
 
 ## 安装后怎么用
@@ -107,6 +107,7 @@ apexcn stats category --json
 - 快速说明：[docs/quickstart.md](docs/quickstart.md)
 - 产品路线图：[docs/roadmap.md](docs/roadmap.md)
 - MCP Agent 接入：[docs/mcp.md](docs/mcp.md)
+- MCP 客户端兼容：[docs/mcp-client-compatibility.md](docs/mcp-client-compatibility.md)
 - JSON/API 契约：[docs/api-contract.md](docs/api-contract.md)
 - 安全模型：[docs/security-model.md](docs/security-model.md)
 
@@ -163,7 +164,10 @@ node dist/index.js ask "最近 ORDS API 有哪些更新？" --tag ORDS --from 20
 稳定安装文件：
 
 ```text
-https://github.com/wfg2513148/apexcn-cli/releases/download/v0.17.0/install-agent.sh
-https://github.com/wfg2513148/apexcn-cli/releases/download/v0.17.0/install-agent.ps1
-https://github.com/wfg2513148/apexcn-cli/releases/download/v0.17.0/apexcn-cli.tgz
+https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/install-agent.sh
+https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/install-agent.ps1
+https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/apexcn-cli.tgz
+https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/checksums.txt
 ```
+
+Release assets 使用 SHA-256 校验。安装脚本默认下载 `checksums.txt` 并校验 `apexcn-cli.tgz`；只有在显式设置 `APEXCN_CLI_SKIP_CHECKSUM=1` 时才跳过校验。

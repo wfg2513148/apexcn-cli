@@ -10,7 +10,7 @@ const expectedVersion = parseExpectedVersion(args) ?? readJson("package.json").v
 const expectedTag = `v${expectedVersion}`;
 const releaseBase = "https://github.com/wfg2513148/apexcn-cli/releases/download";
 const expectedReleasePackageUrl = `${releaseBase}/${expectedTag}/apexcn-cli.tgz`;
-const allowedReleaseAssets = new Set(["apexcn-cli.tgz", "install-agent.sh", "install-agent.ps1"]);
+const allowedReleaseAssets = new Set(["apexcn-cli.tgz", "install-agent.sh", "install-agent.ps1", "checksums.txt"]);
 const failures = [];
 
 checkJsonField("package.json", "version", expectedVersion);
@@ -151,7 +151,7 @@ function checkReleaseWorkflow() {
     .split("\\\n")
     .map((line) => line.trim().replace(/\s*\\$/, ""))
     .filter(Boolean);
-  const expectedAssets = ["artifacts/apexcn-cli.tgz", "artifacts/install-agent.sh", "artifacts/install-agent.ps1"];
+  const expectedAssets = ["artifacts/apexcn-cli.tgz", "artifacts/install-agent.sh", "artifacts/install-agent.ps1", "artifacts/checksums.txt"];
   for (const asset of expectedAssets) {
     if (!assets.includes(asset)) {
       failures.push(`${path}: release assets missing ${asset}`);

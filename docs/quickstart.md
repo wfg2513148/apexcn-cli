@@ -57,22 +57,23 @@ https://oracleapex.cn/ords/api
 macOS / Linux：
 
 ```bash
-curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.17.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
+curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.17.0/install-agent.ps1" | iex
+$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/install-agent.ps1" | iex
 ```
 
 安装脚本默认下载固定文件名的 CLI 包：
 
 ```bash
-https://github.com/wfg2513148/apexcn-cli/releases/download/v0.17.0/apexcn-cli.tgz
+https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/apexcn-cli.tgz
+https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/checksums.txt
 ```
 
-即使 CLI 版本更新，上述 URL 和压缩包文件名也保持不变。
+即使 CLI 版本更新，上述 URL 和压缩包文件名也保持不变。安装脚本默认用 `checksums.txt` 校验 `apexcn-cli.tgz`；只有显式设置 `APEXCN_CLI_SKIP_CHECKSUM=1` 时才跳过校验。
 
 如果只是让 agent 先检查会做什么，把 macOS / Linux 命令最后的 `--yes` 改为：
 
@@ -181,7 +182,11 @@ apexcn auth logout
 ```
 
 自动化测试或一次性脚本需要隔离配置时，可在根命令位置传 `--config <path>`，也可以设置 `APEXCN_CONFIG_PATH`。
-AI agent 需要生成命令时，应先读取 `apexcn commands --json`。当前支持 `schemaVersion === 1`；如果缺失或不支持，不要消费结构化的 `safety` 或 `examples` 字段，应升级 CLI 或请求用户确认。确认 schema 后，再使用其中的 `schema`、`safety.effects`、`safety.preview`、`safety.confirmation` 和 `examples[].mode` 判断命令风险与安全调用方式。
+AI agent 需要生成命令时，应先读取 `apexcn commands --json`。当前支持 `schemaVersion === 1` 和 additive `manifestVersion === 2`；如果缺失或不支持，不要消费结构化的 `safety` 或 `examples` 字段，应升级 CLI 或请求用户确认。确认 schema 后，再使用其中的 `schema`、`safety.effects`、`safety.preview`、`safety.confirmation` 和 `examples[].mode` 判断命令风险与安全调用方式。需要机器校验时可读取：
+
+```bash
+apexcn commands --json-schema
+```
 
 网络不稳定时，可设置默认请求超时：
 

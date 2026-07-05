@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-package_url="${APEXCN_CLI_PACKAGE_URL:-https://github.com/wfg2513148/apexcn-cli/releases/download/v0.17.0/apexcn-cli.tgz}"
+package_url="${APEXCN_CLI_PACKAGE_URL:-https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/apexcn-cli.tgz}"
+checksums_url="${APEXCN_CLI_CHECKSUMS_URL:-}"
+skip_checksum="${APEXCN_CLI_SKIP_CHECKSUM:-0}"
 repo_url="${APEXCN_CLI_REPO:-}"
 repo_ref="${APEXCN_CLI_REF:-main}"
 install_root="${APEXCN_CLI_INSTALL_ROOT:-$HOME/.apexcn/tools/apexcn-cli}"
@@ -56,6 +58,8 @@ Environment:
   APEXCN_CLI_CURRENT_AGENT    Optional current AI agent override for advanced integrations.
                               Set to none to disable current-agent auto skill installation.
   APEXCN_CLI_PACKAGE_URL      Override source package URL.
+  APEXCN_CLI_CHECKSUMS_URL    Override checksums.txt URL. Defaults to package URL directory.
+  APEXCN_CLI_SKIP_CHECKSUM=1  Explicitly skip release package checksum verification.
 USAGE
 }
 
@@ -139,6 +143,53 @@ download_file() {
     ensure_command curl curl
     run_cmd curl -fsSL "$url" -o "$target"
   fi
+}
+
+checksums_url_for_package() {
+  if [[ -n "$checksums_url" ]]; then
+    printf '%s\n' "$checksums_url"
+    return
+  fi
+  printf '%s\n' "${package_url%/*}/checksums.txt"
+}
+
+sha256_file() {
+  local path="$1"
+  if command_exists sha256sum; then
+    sha256sum "$path" | awk '{print $1}'
+    return
+  fi
+  if command_exists shasum; then
+    shasum -a 256 "$path" | awk '{print $1}'
+    return
+  fi
+  if command_exists openssl; then
+    openssl dgst -sha256 "$path" | awk '{print $NF}'
+    return
+  fi
+  die "No SHA-256 tool found. Install sha256sum, shasum, or openssl, or set APEXCN_CLI_SKIP_CHECKSUM=1 explicitly."
+}
+
+verify_package_checksum() {
+  local archive_path="$1"
+  local tmp_dir="$2"
+  local checksums_path="$tmp_dir/checksums.txt"
+  local url
+  url="$(checksums_url_for_package)"
+  if ! download_file "$url" "$checksums_path"; then
+    if [[ "$skip_checksum" == "1" ]]; then
+      log "WARNING: skipping checksum verification because APEXCN_CLI_SKIP_CHECKSUM=1 and checksums.txt could not be downloaded."
+      return
+    fi
+    die "Unable to download checksums.txt from $url. Set APEXCN_CLI_SKIP_CHECKSUM=1 to skip explicitly."
+  fi
+  local expected
+  expected="$(awk '$2 == "apexcn-cli.tgz" {print $1}' "$checksums_path" | head -1)"
+  [[ -n "$expected" ]] || die "checksums.txt does not contain apexcn-cli.tgz"
+  local actual
+  actual="$(sha256_file "$archive_path")"
+  [[ "$actual" == "$expected" ]] || die "Checksum verification failed for apexcn-cli.tgz"
+  log "Verified package checksum."
 }
 
 cli_root() {
@@ -284,6 +335,7 @@ prepare_source() {
     local archive_path="$tmp_dir/apexcn-cli.tgz"
     log "Downloading apexcn-cli package: $package_url"
     download_file "$package_url" "$archive_path"
+    verify_package_checksum "$archive_path" "$tmp_dir"
     run_cmd mkdir -p "$(dirname "$install_root")"
     [[ "$dry_run" == "1" ]] || rm -rf "$install_root"
     run_cmd mkdir -p "$install_root"

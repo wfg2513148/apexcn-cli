@@ -47,6 +47,11 @@ function buildArtifacts() {
   renameSync(join(artifactsDir, pack.filename), archivePath);
   cpSync(join(repoRoot, "scripts/install-agent.sh"), join(artifactsDir, "install-agent.sh"));
   cpSync(join(repoRoot, "scripts/install-agent.ps1"), join(artifactsDir, "install-agent.ps1"));
+  execFileSync("node", ["scripts/generate-release-checksums.mjs", artifactsDir], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
 }
 
 function runNpmPack() {
@@ -68,7 +73,7 @@ function runNpmPack() {
 }
 
 function verifyArtifacts() {
-  const requiredAssets = ["apexcn-cli.tgz", "install-agent.sh", "install-agent.ps1"];
+  const requiredAssets = ["apexcn-cli.tgz", "install-agent.sh", "install-agent.ps1", "checksums.txt"];
   for (const asset of requiredAssets) {
     readFileSync(join(artifactsDir, asset));
   }
@@ -88,6 +93,7 @@ function verifyArtifacts() {
     "package/dist/version.js",
     "package/node_modules/commander/package.json",
     "package/scripts/eval-rag.mjs",
+    "package/scripts/generate-release-checksums.mjs",
     "package/scripts/install-agent.sh",
     "package/scripts/install-agent.ps1"
   ];

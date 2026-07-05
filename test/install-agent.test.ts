@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -10,6 +11,12 @@ function readRepoFile(relativePath: string): string {
   return readFileSync(join(repoRoot, relativePath), 'utf8');
 }
 
+function writeChecksums(dir: string, archiveName: string): void {
+  const content = readFileSync(join(dir, archiveName));
+  const sha256 = createHash('sha256').update(content).digest('hex');
+  writeFileSync(join(dir, 'checksums.txt'), `${sha256}  apexcn-cli.tgz\n`);
+}
+
 describe('agent one-click installer assets', () => {
   test('macOS/Linux installer supports agent-safe automation', () => {
     const script = readRepoFile('scripts/install-agent.sh');
@@ -19,7 +26,10 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('--install-agent-skills');
     expect(script).toContain('APEXCN_API_KEY');
     expect(script).toContain('https://oracleapex.cn/ords/api');
-    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.17.0/apexcn-cli.tgz');
+    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/apexcn-cli.tgz');
+    expect(script).toContain('APEXCN_CLI_SKIP_CHECKSUM');
+    expect(script).toContain('checksums.txt');
+    expect(script).toContain('Checksum verification failed');
     expect(script).toContain('--package-url');
     expect(script).toContain('Downloading apexcn-cli package');
     expect(script).toContain('cli_root');
@@ -63,7 +73,10 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('InstallAgentSkills');
     expect(script).toContain('APEXCN_API_KEY');
     expect(script).toContain('https://oracleapex.cn/ords/api');
-    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.17.0/apexcn-cli.tgz');
+    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/apexcn-cli.tgz');
+    expect(script).toContain('APEXCN_CLI_SKIP_CHECKSUM');
+    expect(script).toContain('checksums.txt');
+    expect(script).toContain('Checksum verification failed');
     expect(script).toContain('PackageUrl');
     expect(script).toContain('Downloading apexcn-cli package');
     expect(script).toContain('Get-CliRoot');
@@ -409,7 +422,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         env: { ...process.env, HOME: join(tempRoot, 'home') },
         encoding: 'utf8',
       });
-      expect(version).toBe('0.17.0\n');
+      expect(version).toBe('0.18.0\n');
       expect(readFileSync(join(installRoot, 'dist', 'index.js'), 'utf8')).not.toContain('stale');
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
@@ -424,7 +437,8 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         cwd: repoRoot,
         encoding: 'utf8',
       });
-      const archive = join(tempRoot, 'apexcn-cli-0.17.0.tgz');
+      const archive = join(tempRoot, 'apexcn-cli-0.18.0.tgz');
+      writeChecksums(tempRoot, 'apexcn-cli-0.18.0.tgz');
 
       const output = execFileSync(
         'bash',
@@ -450,7 +464,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         env: { ...process.env, HOME: join(tempRoot, 'home') },
         encoding: 'utf8',
       });
-      expect(version).toBe('0.17.0\n');
+      expect(version).toBe('0.18.0\n');
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
@@ -473,7 +487,8 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         cwd: repoRoot,
         encoding: 'utf8',
       });
-      const archive = join(tempRoot, 'apexcn-cli-0.17.0.tgz');
+      const archive = join(tempRoot, 'apexcn-cli-0.18.0.tgz');
+      writeChecksums(tempRoot, 'apexcn-cli-0.18.0.tgz');
 
       const output = execFileSync(
         pwsh,
@@ -507,7 +522,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         env: { ...process.env, USERPROFILE: join(tempRoot, 'home') },
         encoding: 'utf8',
       });
-      expect(version).toBe('0.17.0\n');
+      expect(version).toBe('0.18.0\n');
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
@@ -603,8 +618,8 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
     expect(doc).toContain('APEXCN_CLI_INSTALL_AGENT_SKILLS');
     expect(doc).toContain('--install-agent-skills');
     expect(doc).toContain('当前用户运行该命令的 AI 工具全局 Skills 目录');
-    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.17.0/install-agent.sh');
-    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.17.0/install-agent.ps1');
+    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/install-agent.sh');
+    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/install-agent.ps1');
     expect(doc).not.toContain('wfg2513148/apexcn-forums/main/cli/install-agent.sh');
     expect(doc).not.toContain('wfg2513148/apexcn-forums/main/cli/install-agent.ps1');
     expect(doc).not.toContain('feature/apexcn-cli-ords-api');

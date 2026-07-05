@@ -32,5 +32,6 @@ jobs:
             artifacts/apexcn-cli.tgz \
             artifacts/install-agent.sh \
             artifacts/install-agent.ps1 \
+            artifacts/checksums.txt \
             --title "$GITHUB_REF_NAME" \
             --notes "apexcn-cli release $GITHUB_REF_NAME"
