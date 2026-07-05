@@ -57,6 +57,21 @@ describe("workflow policy, diff, and audit-log", () => {
     expect(JSON.parse(await readFile(join(dir, "policy.json"), "utf8"))).toEqual(expect.objectContaining({ schemaVersion: 1, mcp: { allowExecute: false } }));
   });
 
+  test("policy init supports default output for JSON smoke usage", async () => {
+    const dir = await tempDir();
+    const { program, stdout } = localProgram();
+    const previous = process.cwd();
+    process.chdir(dir);
+    try {
+      await program.parseAsync(["node", "apexcn", "workflow", "policy", "init", "--json"]);
+    } finally {
+      process.chdir(previous);
+    }
+
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({ output: "apexcn-policy.json" }));
+    expect(JSON.parse(await readFile(join(dir, "apexcn-policy.json"), "utf8"))).toEqual(expect.objectContaining({ mcp: { allowExecute: false } }));
+  });
+
   test("verify --policy attaches policy result", async () => {
     const dir = await tempDir();
     const runDir = join(dir, "run");
@@ -89,10 +104,12 @@ describe("workflow policy, diff, and audit-log", () => {
 
     expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
       kind: "workflow-diff",
+      ok: false,
       hashMatches: false,
       executionAllowed: false,
       changes: expect.any(Array)
     }));
+    expect(process.exitCode).toBe(1);
   });
 
   test("audit-log emits parseable NDJSON without secrets", async () => {

@@ -72,7 +72,15 @@ function runNpmPack() {
 }
 
 function verifyArtifacts() {
-  const requiredAssets = ["apexcn-cli.tgz", "install-agent.sh", "install-agent.ps1", "checksums.txt"];
+  const requiredAssets = [
+    "apexcn-cli.tgz",
+    "install-agent.sh",
+    "install-agent.ps1",
+    "checksums.txt",
+    "apexcn-cli.tgz.sha256",
+    "install-agent.sh.sha256",
+    "install-agent.ps1.sha256"
+  ];
   for (const asset of requiredAssets) {
     readFileSync(join(artifactsDir, asset));
   }

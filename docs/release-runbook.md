@@ -28,23 +28,29 @@ Required assets:
 - `artifacts/install-agent.sh`
 - `artifacts/install-agent.ps1`
 - `artifacts/checksums.txt`
+- `artifacts/apexcn-cli.tgz.sha256`
+- `artifacts/install-agent.sh.sha256`
+- `artifacts/install-agent.ps1.sha256`
 
-The checksum generator also writes per-asset `.sha256` files for local verification. The GitHub Release currently uploads the four required assets above.
+The checksum generator writes both aggregate `checksums.txt` and per-asset `.sha256` files. The GitHub Release uploads all checksum files.
 
 ## Publish
 
-Replace `v0.18.0` with the intended `0.x` version.
+Replace `v0.18.1` with the intended `0.x` version.
 
 ```bash
-git tag v0.18.0
-git push origin v0.18.0
-gh release view v0.18.0 || gh release create v0.18.0 \
+git tag v0.18.1
+git push origin v0.18.1
+gh release view v0.18.1 || gh release create v0.18.1 \
   artifacts/apexcn-cli.tgz \
   artifacts/install-agent.sh \
   artifacts/install-agent.ps1 \
   artifacts/checksums.txt \
-  --title v0.18.0 \
-  --notes "apexcn-cli release v0.18.0"
+  artifacts/apexcn-cli.tgz.sha256 \
+  artifacts/install-agent.sh.sha256 \
+  artifacts/install-agent.ps1.sha256 \
+  --title v0.18.1 \
+  --notes "apexcn-cli release v0.18.1"
 ```
 
 The normal path is to push the tag and let `.github/workflows/release.yml` build and publish the assets.
@@ -52,8 +58,8 @@ The normal path is to push the tag and let `.github/workflows/release.yml` build
 ## Post-Release Checks
 
 ```bash
-gh release view v0.18.0 --json tagName,isDraft,isPrerelease,assets,url
-curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.0/checksums.txt
+gh release view v0.18.1 --json tagName,isDraft,isPrerelease,assets,url
+curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.1/checksums.txt
 ```
 
-Confirm the release is not a draft, not a prerelease, and includes `checksums.txt`.
+Confirm the release is not a draft, not a prerelease, and includes `checksums.txt` plus the three per-asset `.sha256` files.

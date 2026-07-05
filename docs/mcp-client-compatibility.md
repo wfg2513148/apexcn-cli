@@ -2,7 +2,15 @@
 
 当前 MCP 适配层是本地 stdio server。CLI 仍是主产品；MCP 只为 AI Agent 暴露结构化工具。
 
+当前验证状态：
+
+- verified: `node dist/index.js mcp serve --readonly` 本地 stdio JSON-RPC smoke test。
+- not verified: Claude Desktop、Cursor、VS Code Agent 的真实客户端 UI 连接。
+- not supported: 远端 HTTP MCP Server、MCP execute-write。
+
 ## Claude Desktop
+
+Status: not verified template.
 
 Readonly:
 
@@ -33,6 +41,8 @@ Preview-only 写工具:
 ## Cursor / VS Code Agent
 
 使用同样的 stdio 配置：
+
+Status: not verified template.
 
 ```json
 {

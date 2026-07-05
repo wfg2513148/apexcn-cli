@@ -39,8 +39,9 @@ node scripts/eval-rag.mjs --output reports/rag-eval.json
 | answerability | 是否能基于社区资料回答 |
 | citationCoverage | 回答中可被引用支撑的比例 |
 | referenceHitRate | 是否命中期望参考资料 |
-| unsupportedClaimRate | 未被证据支持的断言比例 |
 | lowConfidenceBehavior | 资料不足时是否拒答或说明限制 |
+
+当前 `offline-fixture` 模式只测 fixture 完整性和期望引用覆盖，不调用 live API，也不测真实模型答案正确率、实时检索质量或 unsupported claim rate。报告中的 `notMeasured.unsupportedClaimRate` 会明确标记该指标未测量，避免把硬编码数值误读为真实低幻觉率。
 
 ## 低置信策略
 

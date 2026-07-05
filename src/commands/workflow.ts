@@ -57,7 +57,7 @@ type WorkflowVerifyOptions = {
 };
 
 type WorkflowPolicyInitOptions = {
-  output: string;
+  output?: string;
   json?: boolean;
 };
 
@@ -236,7 +236,7 @@ export function createWorkflowCommand(options: WorkflowCommandOptions): Command 
     .command("policy")
     .description("workflow policy helpers")
     .command("init")
-    .requiredOption("--output <file>", "policy output path")
+    .option("--output <file>", "policy output path", "apexcn-policy.json")
     .option("--json", "pretty-print JSON")
     .action(async (commandOptions: WorkflowPolicyInitOptions) => {
       await initWorkflowPolicy(options, commandOptions);
@@ -291,11 +291,12 @@ export function createWorkflowCommand(options: WorkflowCommandOptions): Command 
 
 async function initWorkflowPolicy(io: CommandIo, options: WorkflowPolicyInitOptions): Promise<void> {
   const policy = defaultWorkflowPolicy();
-  await writeJson(options.output, policy);
+  const output = options.output ?? "apexcn-policy.json";
+  await writeJson(output, policy);
   printData(io, {
     kind: "workflow-policy-init",
     schemaVersion: 1,
-    output: options.output,
+    output,
     policy
   }, options.json === true);
 }
@@ -410,12 +411,19 @@ async function diffWorkflow(io: CommandIo, options: WorkflowDiffOptions): Promis
   const approvalHash = isRecord(approval) && typeof approval.previewHash === "string" ? approval.previewHash : undefined;
   const allowed = Boolean(currentHash && approvalHash && currentHash === approvalHash);
   const differences = requestDifferences(previewRequest, approvalRequest);
+  if (!allowed) {
+    process.exitCode = 1;
+  }
   printData(io, {
     kind: "workflow-diff",
     schemaVersion: 1,
     runId: loaded.state.runId,
+    runDir: options.runDir,
+    ok: allowed,
     previewRequest: previewRequest ?? null,
     approvalRequest: approvalRequest ?? null,
+    previewHash: currentHash,
+    approvalHash,
     approvedRequestHash: approvalHash,
     approvalBoundRequestHash: approvalHash,
     currentRequestHash: currentHash,

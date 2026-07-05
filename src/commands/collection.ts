@@ -460,12 +460,12 @@ async function collectionSearchRecords(dir: string, collection: ValidCollection)
     }
     const artifact = JSON.parse(await readFile(resolved.absolutePath, "utf8")) as unknown;
     const result = isRecord(artifact) ? artifact.result : undefined;
+    const topicDataRecord = topicData(result);
     const title = topicTitle(result) ?? fieldText(topic.title || `Topic ${id}`);
-    const text = collectionRecordText(result, title);
     records.push(buildIndexRecord({
       topicId: id,
       title,
-      text,
+      fields: collectionRecordFields(topicDataRecord, title),
       sourcePath: file,
       url: topicUrl(result) ?? (fieldText(topic.url) || undefined)
     }));
@@ -741,23 +741,20 @@ function isCollectionSearchRecord(value: unknown): value is CollectionSearchReco
   return isCollectionIndexRecord(value);
 }
 
-function collectionRecordText(result: unknown, fallbackTitle: string): string {
-  const topic = topicData(result);
-  const parts = [
-    fallbackTitle,
-    topic.title,
-    topic.content,
-    topic.body,
-    topic.summary,
-    Array.isArray(topic.tags) ? topic.tags.join(" ") : undefined,
-    isRecord(topic.category) ? topic.category.name : topic.category
-  ];
+function collectionRecordFields(topic: Record<string, unknown>, fallbackTitle: string): { title: string; tags: string[]; category?: string; content: string; replies: string } {
+  const replies = [];
   if (Array.isArray(topic.replies)) {
     for (const reply of topic.replies.filter(isRecord)) {
-      parts.push(reply.content, reply.body);
+      replies.push(fieldText(reply.content), fieldText(reply.body));
     }
   }
-  return parts.map(fieldText).filter(Boolean).join(" ");
+  return {
+    title: fieldText(topic.title) || fallbackTitle,
+    tags: Array.isArray(topic.tags) ? topic.tags.map(fieldText).filter(Boolean) : [],
+    category: isRecord(topic.category) ? fieldText(topic.category.name) : fieldText(topic.category) || undefined,
+    content: [topic.content, topic.body, topic.summary].map(fieldText).filter(Boolean).join(" "),
+    replies: replies.filter(Boolean).join(" ")
+  };
 }
 
 function sourcesText(sources: Record<string, unknown>[]): string {

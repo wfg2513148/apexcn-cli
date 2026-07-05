@@ -49,8 +49,27 @@ export type CollectionQueryResult = {
   explanation?: Record<string, number>;
 };
 
-export function buildIndexRecord(input: { topicId: number; title: string; text: string; sourcePath: string; url?: string }): CollectionIndexRecord {
-  const tokens = tokenize(input.text);
+export const COLLECTION_FIELD_WEIGHTS = {
+  title: 3,
+  tags: 2,
+  content: 1
+} as const;
+
+export function buildIndexRecord(input: {
+  topicId: number;
+  title: string;
+  text?: string;
+  fields?: {
+    title?: string;
+    tags?: string[];
+    category?: string;
+    content?: string;
+    replies?: string;
+  };
+  sourcePath: string;
+  url?: string;
+}): CollectionIndexRecord {
+  const weightedTokens = weightedFieldTokens(input);
   return {
     kind: "collection-index-record",
     schemaVersion: 1,
@@ -59,9 +78,9 @@ export function buildIndexRecord(input: { topicId: number; title: string; text: 
     title: input.title,
     url: input.url,
     sourcePath: input.sourcePath,
-    terms: termFrequency(tokens),
-    documentLength: tokens.length,
-    excerpt: excerptText(input.text)
+    terms: termFrequency(weightedTokens),
+    documentLength: weightedTokens.length,
+    excerpt: excerptText([input.title, input.fields?.content ?? input.text].filter(Boolean).join(" "))
   };
 }
 
@@ -110,9 +129,7 @@ export function createIndexMeta(input: { createdAt: string; records: CollectionI
       ? 0
       : Number((input.records.reduce((sum, record) => sum + record.documentLength, 0) / input.records.length).toFixed(2)),
     fieldWeights: {
-      title: 3,
-      tags: 2,
-      content: 1
+      ...COLLECTION_FIELD_WEIGHTS
     },
     sourceCollectionHash: `sha256:${sha256Hex(Buffer.from(input.sourceCollectionContent, "utf8"))}`,
     fields: ["title", "content", "tags", "category"],
@@ -120,6 +137,34 @@ export function createIndexMeta(input: { createdAt: string; records: CollectionI
       index: { path: "index.jsonl", size: input.indexFile.size, sha256: input.indexFile.sha256 }
     }
   };
+}
+
+function weightedFieldTokens(input: {
+  title: string;
+  text?: string;
+  fields?: {
+    title?: string;
+    tags?: string[];
+    category?: string;
+    content?: string;
+    replies?: string;
+  };
+}): string[] {
+  if (!input.fields) {
+    return tokenize(input.text ?? input.title);
+  }
+  return [
+    ...repeatTokens(input.fields.title ?? input.title, COLLECTION_FIELD_WEIGHTS.title),
+    ...repeatTokens(input.fields.tags?.join(" ") ?? "", COLLECTION_FIELD_WEIGHTS.tags),
+    ...repeatTokens(input.fields.category ?? "", COLLECTION_FIELD_WEIGHTS.tags),
+    ...repeatTokens(input.fields.content ?? "", COLLECTION_FIELD_WEIGHTS.content),
+    ...repeatTokens(input.fields.replies ?? "", COLLECTION_FIELD_WEIGHTS.content)
+  ];
+}
+
+function repeatTokens(text: string, weight: number): string[] {
+  const tokens = tokenize(text);
+  return Array.from({ length: weight }).flatMap(() => tokens);
 }
 
 export function isCollectionIndexRecord(value: unknown): value is CollectionIndexRecord {

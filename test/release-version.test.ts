@@ -1,5 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
@@ -47,15 +48,15 @@ describe("release version check", () => {
     expect(report).toEqual(expect.objectContaining({
       kind: "apexcn-baseline-report",
       schemaVersion: 1,
-      packageVersion: "0.18.0",
-      packageLockVersion: "0.18.0",
+      packageVersion: "0.18.1",
+      packageLockVersion: "0.18.1",
       releaseWorkflowUploadsChecksums: true,
       ciRunsRagEval: true,
       mcpExecuteWriteDisabled: true,
       issuesBacklogAccurate: true,
       problems: []
     }));
-    expect(report.readmeReleaseUrls).toEqual(["v0.18.0"]);
+    expect(report.readmeReleaseUrls).toEqual(["v0.18.1"]);
   });
 
   test("npm package contains only runtime and user-facing assets", () => {
@@ -92,7 +93,7 @@ describe("release version check", () => {
   }, 30000);
 
   test("release artifact check builds installable GitHub assets", () => {
-    const artifactsDir = `artifacts/test-release-${process.pid}`;
+    const artifactsDir = mkdtempSync(join(tmpdir(), "apexcn-test-release-"));
     try {
       const output = execFileSync("node", [artifactScript, "--artifacts-dir", artifactsDir], {
         cwd: repoRoot,
@@ -127,7 +128,7 @@ describe("release version check", () => {
         "package/vitest.config.ts"
       ]));
     } finally {
-      rmSync(join(repoRoot, artifactsDir), { recursive: true, force: true });
+      rmSync(artifactsDir, { recursive: true, force: true });
     }
   }, 30000);
 

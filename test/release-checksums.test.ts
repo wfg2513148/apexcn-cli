@@ -51,12 +51,15 @@ describe("release checksums", () => {
   });
 
   test("release artifact check creates checksums.txt", () => {
-    const dir = `artifacts/checksum-test-${process.pid}`;
+    const dir = mkdtempSync(join(tmpdir(), "apexcn-checksum-test-"));
     try {
       execFileSync("node", ["scripts/check-release-artifacts.mjs", "--artifacts-dir", dir], { cwd: repoRoot, encoding: "utf8" });
-      expect(readFileSync(join(repoRoot, dir, "checksums.txt"), "utf8")).toContain("apexcn-cli.tgz");
+      expect(readFileSync(join(dir, "checksums.txt"), "utf8")).toContain("apexcn-cli.tgz");
+      expect(readFileSync(join(dir, "apexcn-cli.tgz.sha256"), "utf8")).toContain("apexcn-cli.tgz");
+      expect(readFileSync(join(dir, "install-agent.sh.sha256"), "utf8")).toContain("install-agent.sh");
+      expect(readFileSync(join(dir, "install-agent.ps1.sha256"), "utf8")).toContain("install-agent.ps1");
     } finally {
-      spawnSync("rm", ["-rf", join(repoRoot, dir)]);
+      spawnSync("rm", ["-rf", dir]);
     }
   }, 30000);
 });

@@ -1,46 +1,46 @@
 # Engineering Baseline
 
-Scan time: 2026-07-05T09:19:24Z.
+Scan time: 2026-07-05T10:48:45Z.
 
 ## Repository State
 
 - Branch at scan start: `main`.
-- Working branch for this iteration: `chore/release-quality-hardening`.
-- HEAD: `24d9462bce772b5222b203db6d9e4fa5da965edb`.
-- Last commit: `24d9462 feat: add mcp adapter and contract governance`.
+- Working branch for this iteration: `chore/post-018-hardening`.
+- HEAD: `315bedcdc1e57abb1dea5fb6fd4833ebd6cdf032`.
+- Last commit: `315bedc chore: harden v0.18 release quality gates`.
 - Node: `v26.0.0`.
 - npm: `11.18.0`.
 
 ## Version State
 
-- Package version: `0.17.0`.
-- README release links: `v0.17.0`.
-- docs/quickstart release links: `v0.17.0`.
-- Local latest tag: `v0.17.0`.
-- GitHub latest release observed via `gh release list`: `v0.17.0`.
+- Package version: `0.18.1`.
+- README release links: `v0.18.1`.
+- docs/quickstart release links: `v0.18.1`.
+- Local latest tag: `v0.18.1`.
+- GitHub latest release observed via `gh release view`: `v0.18.1`.
 
-Version decision for this iteration: use `0.18.0` because `0.17.0` already exists remotely and this iteration adds release checksums, schema export, BM25 collection search, workflow policy/diff/audit foundations, and CI/reporting hardening.
+Version decision for this iteration: keep `0.18.1` because this is post-release hardening at the same `0.x` capability level, not a new feature release.
 
 ## Baseline Commands
 
 - `npm ci`: passed; npm reported the existing `fsevents` install-script allow-scripts warning.
 - `npm run build`: passed.
-- `npm test`: passed, 22 test files and 482 tests.
-- `npm run check:release`: passed for `0.17.0`.
-- `npm run eval:rag`: passed in baseline mode with 30 questions and 30 expected references.
+- `npm test`: passed, 31 test files and 528 tests.
+- `npm run check:release`: passed for `0.18.1`.
+- `npm run eval:rag`: passed in offline fixture mode with 30 questions and 30 expected references.
 - `npm run test:e2e:readonly`: skipped safely because `APEXCN_API_KEY` is not set.
 
 ## Detected Capabilities
 
-- `commands --json`: `schemaVersion: 1`, `manifestVersion: 2`, 54 commands.
+- `commands --json`: `schemaVersion: 1`, `manifestVersion: 2`.
 - MCP commands detected: `mcp inspect`, `mcp serve`, `mcp tools`.
-- Collection commands detected: `collection build`, `collection index`, `collection query`, `collection verify`.
+- Collection commands detected: `collection build`, `collection index`, `collection query`, `collection stats`, `collection verify`.
 - RAG eval files detected: `eval/rag/questions.zh.jsonl`, `eval/rag/expected-references.jsonl`, `eval/rag/README.md`, `scripts/eval-rag.mjs`.
 
 ## Known Failures / Risks
 
 - No baseline command failed.
 - `test:e2e:readonly` requires a real read-only API key and is intentionally skipped when `APEXCN_API_KEY` is absent.
-- Release assets currently include digests in GitHub metadata, but the repo does not yet generate/upload a first-class `checksums.txt`.
-- RAG eval baseline reports dataset shape and placeholder quality metrics; it is not yet a strict answer-quality gate.
-- Collection query is currently term-frequency based and should be upgraded to BM25.
+- Release assets include `checksums.txt`; post-release hardening uploads per-asset `.sha256` files as well.
+- RAG eval is explicitly `offline-fixture`; it checks dataset/reference completeness and does not measure live answer correctness.
+- Collection query uses BM25; post-release hardening verifies declared field weights are reflected in index term weights.

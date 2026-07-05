@@ -33,5 +33,8 @@ jobs:
             artifacts/install-agent.sh \
             artifacts/install-agent.ps1 \
             artifacts/checksums.txt \
+            artifacts/apexcn-cli.tgz.sha256 \
+            artifacts/install-agent.sh.sha256 \
+            artifacts/install-agent.ps1.sha256 \
             --title "$GITHUB_REF_NAME" \
             --notes "apexcn-cli release $GITHUB_REF_NAME"
