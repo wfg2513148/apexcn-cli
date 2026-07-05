@@ -61,15 +61,15 @@ describe("release version check", () => {
     expect(report).toEqual(expect.objectContaining({
       kind: "apexcn-baseline-report",
       schemaVersion: 1,
-      packageVersion: "0.18.5",
-      packageLockVersion: "0.18.5",
+      packageVersion: "0.18.6",
+      packageLockVersion: "0.18.6",
       releaseWorkflowUploadsChecksums: true,
       ciRunsRagEval: true,
       mcpExecuteWriteDisabled: true,
       issuesBacklogAccurate: true,
       problems: []
     }));
-    expect(report.readmeReleaseUrls).toEqual(["v0.18.5"]);
+    expect(report.readmeReleaseUrls).toEqual(["v0.18.6"]);
   });
 
   test("npm package contains only runtime and user-facing assets", () => {
@@ -112,7 +112,7 @@ describe("release version check", () => {
       const entries = execFileSync("tar", ["-tzf", join(artifactsDir, "apexcn-cli.tgz")], {
         cwd: repoRoot,
         encoding: "utf8"
-      }).split("\n").filter(Boolean).map((entry) => entry.replace(/^\.\//, ""));
+      }).split("\n").map((entry) => entry.trim()).filter(Boolean).map((entry) => entry.replace(/^\.\//, ""));
 
       expect(output).toContain("Release artifact check passed for");
       expect(entries).toEqual(expect.arrayContaining([
