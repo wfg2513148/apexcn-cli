@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { printData, printError } from "../output.js";
 import { serveMcp } from "../mcp/server.js";
-import { assertMcpCommandRegistryCoverage, mcpPolicy, mcpToolManifest, mcpTools } from "../mcp/tool-registry.js";
+import { assertMcpCommandRegistryCoverage, MCP_TOOL_MANIFEST_JSON_SCHEMA, mcpPolicy, mcpToolManifest, mcpTools } from "../mcp/tool-registry.js";
 import type { CommandIo } from "./auth.js";
 
 type McpCommandOptions = CommandIo & {
@@ -22,8 +22,13 @@ export function createMcpCommand(options: McpCommandOptions): Command {
     .command("tools")
     .description("print the MCP tool manifest")
     .option("--json", "pretty-print JSON")
+    .option("--json-schema", "print the MCP tool manifest JSON Schema")
     .option("--allow-preview-write", "include preview-only write tools")
-    .action((commandOptions: McpModeOptions) => {
+    .action((commandOptions: McpModeOptions & { jsonSchema?: boolean }) => {
+      if (commandOptions.jsonSchema) {
+        printData(options, MCP_TOOL_MANIFEST_JSON_SCHEMA, true);
+        return;
+      }
       const policy = mcpPolicy(commandOptions.allowPreviewWrite === true);
       printData(options, mcpToolManifest(policy), commandOptions.json === true);
     });

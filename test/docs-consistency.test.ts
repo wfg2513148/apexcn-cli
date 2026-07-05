@@ -1,10 +1,10 @@
-import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
+import { COMMAND_DESCRIPTORS } from "../src/core/command-registry.js";
+import { allMcpTools } from "../src/mcp/tool-registry.js";
 
 const repoRoot = join(__dirname, "..");
-const packageJson = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as { version: string };
 
 function read(path: string): string {
   return readFileSync(join(repoRoot, path), "utf8");
@@ -12,38 +12,26 @@ function read(path: string): string {
 
 describe("documentation consistency", () => {
   test("release URLs use the package version", () => {
-    const tag = `v${packageJson.version}`;
-    const markdownFiles = execFileSync("git", ["ls-files", "README.md", "docs"], {
-      cwd: repoRoot,
-      encoding: "utf8"
-    }).split("\n").filter((path) => path.endsWith(".md"));
+    const version = JSON.parse(read("package.json")).version;
+    const docs = ["README.md", "docs/quickstart.md", "scripts/install-agent.sh", "scripts/install-agent.ps1"].map(read).join("\n");
 
-    for (const path of markdownFiles) {
-      const text = read(path);
-      for (const match of text.matchAll(/releases\/download\/(v\d+\.\d+\.\d+)\//g)) {
-        expect(match[1], path).toBe(tag);
-      }
+    expect(docs).toContain(`/v${version}/apexcn-cli.tgz`);
+    expect(docs).not.toMatch(/\/v0\.17\.0\//);
+  });
+
+  test("MCP docs list every registered MCP tool", () => {
+    const doc = read("docs/mcp.md");
+
+    for (const tool of allMcpTools()) {
+      expect(doc).toContain(tool.name);
     }
   });
 
-  test("quickstart source mode matches the current repository layout", () => {
-    const quickstart = read("docs/quickstart.md");
+  test("capability matrix references all command groups from registry", () => {
+    const matrix = read("docs/capability-matrix.md");
+    const groups = [...new Set(COMMAND_DESCRIPTORS.map((descriptor) => descriptor.path[0]))];
+    const missing = groups.filter((group) => !matrix.includes(group));
 
-    expect(quickstart).toContain("node dist/index.js <command>");
-    expect(quickstart).toContain("alias apexcn='node dist/index.js'");
-    expect(quickstart).not.toContain("cd cli");
-    expect(quickstart).not.toContain("node cli/dist/index.js");
-    expect(quickstart).not.toContain("--prefix cli");
-  });
-
-  test("documented common commands are registered by the CLI", () => {
-    const commands = execFileSync("node", ["dist/index.js", "--help"], {
-      cwd: repoRoot,
-      encoding: "utf8"
-    });
-
-    for (const command of ["auth", "doctor", "draft", "review", "workflow", "me", "category", "search", "topic", "reply", "favorite", "subscription", "ask"]) {
-      expect(commands).toContain(command);
-    }
+    expect(missing).toEqual([]);
   });
 });

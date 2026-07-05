@@ -17,6 +17,45 @@ export type McpPolicy = {
   allowExecuteWrite: false;
 };
 
+export const MCP_TOOL_MANIFEST_JSON_SCHEMA = {
+  $schema: "http://json-schema.org/draft-07/schema#",
+  $id: "https://github.com/wfg2513148/apexcn-cli/schemas/mcp-tools.schema.json",
+  title: "apexcn-cli MCP tool manifest",
+  type: "object",
+  required: ["kind", "schemaVersion", "policy", "tools"],
+  properties: {
+    kind: { const: "mcp-tools" },
+    schemaVersion: { const: 1 },
+    policy: {
+      type: "object",
+      required: ["mode", "transport", "allowPreviewWrite", "allowExecuteWrite"],
+      properties: {
+        mode: { enum: ["readonly", "preview-write"] },
+        transport: { const: "stdio" },
+        allowPreviewWrite: { type: "boolean" },
+        allowExecuteWrite: { const: false }
+      },
+      additionalProperties: true
+    },
+    tools: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["name", "description", "exposure", "commandId", "inputSchema"],
+        properties: {
+          name: { type: "string" },
+          description: { type: "string" },
+          exposure: { enum: ["readonly", "preview-only"] },
+          commandId: { type: "string" },
+          inputSchema: { type: "object" }
+        },
+        additionalProperties: true
+      }
+    }
+  },
+  additionalProperties: true
+} as const;
+
 const READONLY_TOOLS: McpToolDefinition[] = [
   readonlyTool("apexcn_search", "search", "Search community topics", {
     type: "object",

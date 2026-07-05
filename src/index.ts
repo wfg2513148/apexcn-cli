@@ -22,6 +22,7 @@ import { createMcpCommand } from "./commands/mcp.js";
 import { createReviewCommand } from "./commands/review.js";
 import { createWorkflowCommand } from "./commands/workflow.js";
 import { descriptorForPath } from "./core/command-registry.js";
+import { COMMAND_MANIFEST_JSON_SCHEMA } from "./schemas/command-manifest.js";
 import { CLI_VERSION } from "./version.js";
 
 export type CreateProgramOptions = Partial<CommandIo> & {
@@ -142,7 +143,12 @@ function createCommandsCommand(root: Command, io: CommandIo): Command {
   return new Command("commands")
     .description("print a machine-readable command manifest")
     .option("--json", "pretty-print JSON")
-    .action((options: { json?: boolean }) => {
+    .option("--json-schema", "print the command manifest JSON Schema")
+    .action((options: { json?: boolean; jsonSchema?: boolean }) => {
+      if (options.jsonSchema) {
+        io.stdout(`${JSON.stringify(COMMAND_MANIFEST_JSON_SCHEMA, null, 2)}\n`);
+        return;
+      }
       const manifest = commandManifest(root);
       if (options.json) {
         io.stdout(`${JSON.stringify(manifest, null, 2)}\n`);
@@ -206,6 +212,7 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "collection build": "build a local multi-topic knowledge collection",
   "collection index": "build a local search index for a collection",
   "collection query": "query a local collection search index",
+  "collection stats": "show local collection index statistics",
   "collection verify": "verify a local knowledge collection",
   "commands": "print a machine-readable command manifest",
   "doctor": "check installation, auth, and API reachability",
@@ -242,7 +249,10 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "topic update": "update an existing topic",
   "topic view": "view a community topic",
   "workflow approve": "approve a workflow preview for audited execution",
+  "workflow audit-log": "print workflow audit events as NDJSON",
+  "workflow diff": "compare workflow preview and approval-bound request hashes",
   "workflow export": "export a portable workflow evidence bundle",
+  "workflow policy init": "create a local workflow policy template",
   "workflow plan": "plan a local, reviewable APEX Chinese Community workflow",
   "workflow run": "run a stateful APEX Chinese Community workflow with resumable local artifacts",
   "workflow verify": "verify workflow artifacts and produce local audit evidence",
@@ -303,7 +313,11 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   },
   "collection query": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
-    examples: [{ command: 'apexcn collection query --dir ./collection "ORDS 401" --json', mode: "read" }]
+    examples: [{ command: 'apexcn collection query --dir ./collection "ORDS 401" --top-k 5 --explain --json', mode: "read" }]
+  },
+  "collection stats": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn collection stats --dir ./collection --json", mode: "read" }]
   },
   "collection verify": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
@@ -505,6 +519,18 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "workflow export": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn workflow export --run-dir ./run --output ./workflow-bundle.json --json", mode: "read" }]
+  },
+  "workflow policy init": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn workflow policy init --output ./apexcn-policy.json --json", mode: "read" }]
+  },
+  "workflow diff": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn workflow diff --run-dir ./run --json", mode: "read" }]
+  },
+  "workflow audit-log": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn workflow audit-log --run-dir ./run --format ndjson", mode: "read" }]
   },
   "workflow run": {
     safety: { effects: ["read", "api-write"], preview: "required", confirmation: ["--execute", "--yes"] },

@@ -26,6 +26,10 @@
 
 这些字段是 additive change，不删除旧字段。
 
+`apexcn commands --json-schema` 输出 command manifest 的 draft-07 JSON Schema。该命令用于 AI agent、CI 和文档一致性检查，不改变 `commands --json` 输出。
+
+`apexcn mcp tools --json-schema` 输出 MCP tool manifest schema。
+
 ## Runtime Schema
 
 初版 schema 位于 `src/schemas/`，覆盖：
@@ -35,6 +39,11 @@
 - topic response
 - ask response
 - stable error envelope
+- research bundle
+- doctor snapshot
+- MCP tool manifest
+- workflow plan / preview
+- collection manifest / query result
 
 策略：宽进严出。服务端额外字段允许存在，关键字段必须可验证。
 
@@ -59,4 +68,4 @@
 
 ## Contract Tests
 
-contract tests 位于 `test/contract/`。当前覆盖 command manifest、search ok/empty、topic ok、ask ok、error 401/429 等稳定形状。
+contract tests 位于 `test/contract/`。当前覆盖 command manifest、schema export、search ok/empty、topic ok、ask ok、error envelope 和 API contract 等稳定形状。
