@@ -148,7 +148,12 @@ const commonReadScenarios: Scenario[] = [
   scenario("collection build multiple topics", "把帖子 30549 和 30752 做成离线知识合集", "collection build", "read", ["read"], "none", ["--topic-id <id>", "--output-dir <dir>", "--json"]),
   scenario("collection build query and category", "按 ORDS 关键词和新手入门板块构建知识合集", "collection build", "read", ["read"], "none", ["--query <keyword>", "--category-id <id>", "--json"]),
   scenario("collection build date range", "构建 6 月份 APEXLang 相关文章合集", "collection build", "read", ["read"], "none", ["--from-date <date>", "--to-date <date>", "--json"]),
+  scenario("collection index", "给这个本地知识合集建立离线检索索引", "collection index", "read", ["read"], "none", ["--dir <dir>", "--json"]),
+  scenario("collection query", "在本地知识合集里搜索 ORDS 401", "collection query", "read", ["read"], "none", ["--dir <dir>", "--json"]),
   scenario("collection verify", "验证这个本地知识合集是否完整可用", "collection verify", "read", ["read"], "none", ["--dir <dir>", "--json"]),
+  scenario("mcp tools", "列出 apexcn-cli 暴露给 AI Agent 的 MCP 工具", "mcp tools", "read", ["manifest"], "none", ["--json"]),
+  scenario("mcp inspect", "检查 apexcn-cli MCP 默认是否只读", "mcp inspect", "read", ["manifest"], "none", ["--json"]),
+  scenario("mcp serve", "以只读模式启动 apexcn-cli 本地 MCP 服务", "mcp serve", "read", ["manifest"], "none", ["--readonly"]),
   scenario("me verbose", "显示当前社区账号的详细信息", "me", "read", ["read"], "none", ["--verbose", "--json"])
 ];
 
@@ -773,6 +778,74 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
         expect(fetch).not.toHaveBeenCalled();
         expect(stderr).toBe("");
         expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "collection-verification", ok: true }));
+      }
+    },
+    {
+      name: "collection index builds local search index",
+      userSays: "给这个本地知识合集建立离线检索索引。",
+      commandPath: "collection index",
+      prepare: (context) => prepareCollection(context, join(context.tmpDir, "collection")),
+      argv: (context) => ["node", "apexcn", "collection", "index", "--dir", join(context.tmpDir, "collection"), "--json"],
+      responseForUrl: collectionFetch,
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "collection-index", topicCount: 1 }));
+      }
+    },
+    {
+      name: "collection query searches local index",
+      userSays: "在本地知识合集里搜索 ORDS 401。",
+      commandPath: "collection query",
+      prepare: async (context) => {
+        const dir = join(context.tmpDir, "collection");
+        await prepareCollection(context, dir);
+        await context.program.parseAsync(["node", "apexcn", "collection", "index", "--dir", dir, "--json"]);
+        context.stdout.length = 0;
+      },
+      argv: (context) => ["node", "apexcn", "collection", "query", "REST", "--dir", join(context.tmpDir, "collection"), "--json"],
+      responseForUrl: collectionFetch,
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "collection-query", resultCount: 1 }));
+      }
+    },
+    {
+      name: "mcp tools prints readonly manifest",
+      userSays: "列出 apexcn-cli 暴露给 AI Agent 的 MCP 工具。",
+      commandPath: "mcp tools",
+      configureAuth: false,
+      argv: ["node", "apexcn", "mcp", "tools", "--json"],
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "mcp-tools" }));
+      }
+    },
+    {
+      name: "mcp inspect prints policy",
+      userSays: "检查 apexcn-cli MCP 默认是否只读。",
+      commandPath: "mcp inspect",
+      configureAuth: false,
+      argv: ["node", "apexcn", "mcp", "inspect", "--json"],
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "mcp-inspect", policy: expect.objectContaining({ allowExecuteWrite: false }) }));
+      }
+    },
+    {
+      name: "mcp serve rejects execute-write",
+      userSays: "以只读模式启动 apexcn-cli 本地 MCP 服务，不允许真实写入。",
+      commandPath: "mcp serve",
+      configureAuth: false,
+      argv: ["node", "apexcn", "mcp", "serve", "--allow-execute-write"],
+      assertFeedback: ({ stdout, stderr, fetch, exitCode }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stdout).toBe("");
+        expect(stderr).toContain("MCP execute-write is disabled");
+        expect(exitCode).toBe(1);
       }
     },
     {

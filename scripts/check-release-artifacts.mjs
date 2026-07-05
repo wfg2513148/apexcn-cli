@@ -82,9 +82,12 @@ function verifyArtifacts() {
     "package/package.json",
     "package/agent-skill/SKILL.md",
     "package/docs/quickstart.md",
+    "package/eval/rag/questions.zh.jsonl",
+    "package/eval/rag/expected-references.jsonl",
     "package/dist/index.js",
     "package/dist/version.js",
     "package/node_modules/commander/package.json",
+    "package/scripts/eval-rag.mjs",
     "package/scripts/install-agent.sh",
     "package/scripts/install-agent.ps1"
   ];

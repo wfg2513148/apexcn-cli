@@ -16,9 +16,23 @@ apexcn --config /tmp/apexcn-config.json auth show --json
 
 AI agent 需要判断命令、别名、用途、风险分类、安全示例和可用选项时，优先使用 `apexcn commands --json`，不要解析 `--help` 文本。当前结构化 manifest 契约为 `schemaVersion === 1`；如果缺失或不支持，不要消费结构化的 `safety` 或 `examples` 字段，应升级 CLI 或请求用户确认。manifest 中的 `schema` 列出可用枚举值；`safety.effects` 描述命令影响，`safety.preview` 描述是否支持或要求预览，`safety.confirmation` 列出显式确认参数，`examples[].mode` 区分读取、预览和执行示例。
 
+manifest 还包含 additive 的 `manifestVersion === 2` 字段：`capability`、`apiEffect`、`riskLevel`、`authRequired`、`supportsJson`、`supportsPreview`、`supportsDryRun`、`mcpExposure`。旧字段保持兼容。
+
 网络不稳定时，可设置 `APEXCN_HTTP_TIMEOUT_MS` 为所有社区 API 请求提供默认超时；`doctor --timeout-ms` 会覆盖这个默认值。空值或非正整数会被忽略。
 
 脚本需要解析失败原因时，优先在命令上加 `--json`；支持 `--json` 的 content/me 等命令会把验证、配置、网络和 API 错误写成单行 JSON 到 stderr。也可设置 `APEXCN_ERROR_FORMAT=json` 强制 API 命令输出结构化错误；默认仍输出人类可读文本。
+
+## MCP
+
+MCP 是可选 AI Agent 适配层，CLI 仍是主产品。默认只读：
+
+```bash
+apexcn mcp tools --json
+apexcn mcp inspect --json
+apexcn mcp serve --readonly
+```
+
+如需让 AI Agent 生成写操作预览，可使用 `apexcn mcp tools --allow-preview-write --json` 或 `apexcn mcp serve --allow-preview-write`。preview-only 工具不会执行真实写入，返回中必须包含 `willExecute: false`。真实写执行继续走 CLI workflow。
 
 ## auth
 

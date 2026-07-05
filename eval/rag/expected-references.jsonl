@@ -1,0 +1,30 @@
+{"id":"ords-401-001","expectedTags":["ORDS","REST","认证"],"minimumReferences":1}
+{"id":"ords-403-001","expectedTags":["ORDS","REST","权限"],"minimumReferences":1}
+{"id":"ords-config-001","expectedTags":["ORDS","配置"],"minimumReferences":1}
+{"id":"apex-install-001","expectedTags":["APEX","安装"],"minimumReferences":1}
+{"id":"apex-version-001","expectedTags":["APEX","ORDS","版本"],"minimumReferences":1}
+{"id":"rest-auth-001","expectedTags":["REST","认证"],"minimumReferences":1}
+{"id":"rest-source-001","expectedTags":["REST","调试"],"minimumReferences":1}
+{"id":"apex-mail-001","expectedTags":["APEX_MAIL","邮件"],"minimumReferences":1}
+{"id":"apex-mail-queue-001","expectedTags":["APEX_MAIL","队列"],"minimumReferences":1}
+{"id":"ig-001","expectedTags":["Interactive Grid"],"minimumReferences":1}
+{"id":"ig-js-001","expectedTags":["Interactive Grid","JavaScript"],"minimumReferences":1}
+{"id":"dynamic-action-001","expectedTags":["Dynamic Action"],"minimumReferences":1}
+{"id":"dynamic-action-js-001","expectedTags":["Dynamic Action","JavaScript"],"minimumReferences":1}
+{"id":"json-table-001","expectedTags":["JSON_TABLE","SQL"],"minimumReferences":1}
+{"id":"json-table-error-001","expectedTags":["JSON_TABLE"],"minimumReferences":1}
+{"id":"plsql-rest-001","expectedTags":["PLSQL","REST"],"minimumReferences":1}
+{"id":"sql-apex-001","expectedTags":["SQL","APEX"],"minimumReferences":1}
+{"id":"auth-session-001","expectedTags":["APEX","AJAX"],"minimumReferences":1}
+{"id":"acl-001","expectedTags":["ACL","REST"],"minimumReferences":1}
+{"id":"wallet-001","expectedTags":["Wallet","HTTPS"],"minimumReferences":1}
+{"id":"debug-001","expectedTags":["Debug","APEX"],"minimumReferences":1}
+{"id":"session-state-001","expectedTags":["Session State","APEX"],"minimumReferences":1}
+{"id":"authorization-001","expectedTags":["Authorization"],"minimumReferences":1}
+{"id":"authentication-001","expectedTags":["Authentication"],"minimumReferences":1}
+{"id":"plugin-001","expectedTags":["插件","升级"],"minimumReferences":1}
+{"id":"export-import-001","expectedTags":["导入导出","静态文件"],"minimumReferences":1}
+{"id":"performance-001","expectedTags":["性能","排查"],"minimumReferences":1}
+{"id":"api-ords-release-001","expectedTags":["ORDS","API Contract"],"minimumReferences":1}
+{"id":"mcp-safety-001","expectedTags":["MCP","安全"],"minimumReferences":1}
+{"id":"workflow-approval-001","expectedTags":["workflow","安全"],"minimumReferences":1}

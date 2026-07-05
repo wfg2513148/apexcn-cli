@@ -18,8 +18,10 @@ import {
 } from "./commands/content.js";
 import { createDraftCommand } from "./commands/draft.js";
 import { createMeCommand } from "./commands/me.js";
+import { createMcpCommand } from "./commands/mcp.js";
 import { createReviewCommand } from "./commands/review.js";
 import { createWorkflowCommand } from "./commands/workflow.js";
+import { descriptorForPath } from "./core/command-registry.js";
 import { CLI_VERSION } from "./version.js";
 
 export type CreateProgramOptions = Partial<CommandIo> & {
@@ -55,6 +57,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   program.addCommand(createReviewCommand(commandOptions));
   program.addCommand(createWorkflowCommand(commandOptions));
   program.addCommand(createCollectionCommand(commandOptions));
+  program.addCommand(createMcpCommand(commandOptions));
   program.addCommand(createAdminCommand(commandOptions));
   program.addCommand(createCategoryCommand(commandOptions));
   program.addCommand(createStatsCommand(commandOptions));
@@ -82,7 +85,10 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
 
 type CommandManifest = {
   schemaVersion: number;
+  manifestVersion: number;
+  product: "apexcn-cli";
   version: string;
+  generatedAt: string;
   schema: {
     safetyEffects: SafetyEffect[];
     previewPolicies: PreviewPolicy[];
@@ -94,6 +100,15 @@ type CommandManifest = {
     description: string;
     options: string[];
     safety: CommandSafety;
+    id?: string;
+    capability?: string;
+    apiEffect?: string;
+    riskLevel?: string;
+    authRequired?: boolean;
+    supportsJson?: boolean;
+    supportsPreview?: boolean;
+    supportsDryRun?: boolean;
+    mcpExposure?: string;
     examples: CommandExample[];
   }>;
 };
@@ -143,7 +158,10 @@ function createCommandsCommand(root: Command, io: CommandIo): Command {
 function commandManifest(root: Command): CommandManifest {
   return {
     schemaVersion: 1,
+    manifestVersion: 2,
+    product: "apexcn-cli",
     version: CLI_VERSION,
+    generatedAt: new Date(0).toISOString(),
     schema: {
       safetyEffects: [...SAFETY_EFFECTS],
       previewPolicies: [...PREVIEW_POLICIES],
@@ -152,12 +170,22 @@ function commandManifest(root: Command): CommandManifest {
     commands: root.commands.flatMap((child) => leafCommands(child)).map((item) => {
       const path = item.path.join(" ");
       const guidance = manifestGuidance(path);
+      const descriptor = descriptorForPath(path);
       return {
         path,
         aliases: aliasPaths(item.path, item.aliases).map((aliasPath) => aliasPath.join(" ")),
         description: manifestDescription(path, item.command.description()),
         options: item.command.options.filter((option) => !option.hidden).map((option) => option.flags),
         safety: guidance.safety,
+        id: descriptor?.id,
+        capability: descriptor?.capability,
+        apiEffect: descriptor?.apiEffect,
+        riskLevel: descriptor?.riskLevel,
+        authRequired: descriptor?.authRequired,
+        supportsJson: descriptor?.supportsJson,
+        supportsPreview: descriptor?.supportsPreview,
+        supportsDryRun: descriptor?.supportsDryRun,
+        mcpExposure: descriptor?.mcpExposure,
         examples: guidance.examples
       };
     }).sort((left, right) => left.path.localeCompare(right.path))
@@ -176,6 +204,8 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "auth use": "switch the active auth profile",
   "category list": "list community categories",
   "collection build": "build a local multi-topic knowledge collection",
+  "collection index": "build a local search index for a collection",
+  "collection query": "query a local collection search index",
   "collection verify": "verify a local knowledge collection",
   "commands": "print a machine-readable command manifest",
   "doctor": "check installation, auth, and API reachability",
@@ -190,6 +220,9 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "me stats": "show aggregate activity statistics for the authenticated account",
   "me subscriptions": "list subscribed topics for the authenticated account",
   "me topics": "list topics authored by the authenticated account",
+  "mcp inspect": "inspect local MCP mode, transport, and exposed tools",
+  "mcp serve": "serve local stdio MCP tools",
+  "mcp tools": "print the MCP tool manifest",
   "reply create": "create a reply on a topic",
   "reply delete": "delete a reply after explicit confirmation",
   "reply update": "update an existing reply",
@@ -264,6 +297,14 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: 'apexcn collection build --query "REST API" --topic-id 30549 --output-dir ./collection --json', mode: "read" }]
   },
+  "collection index": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn collection index --dir ./collection --json", mode: "read" }]
+  },
+  "collection query": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: 'apexcn collection query --dir ./collection "ORDS 401" --json', mode: "read" }]
+  },
   "collection verify": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn collection verify --dir ./collection --json", mode: "read" }]
@@ -325,6 +366,18 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "me topics": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn me topics --page-size 10 --json", mode: "read" }]
+  },
+  "mcp inspect": {
+    safety: { effects: ["manifest"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn mcp inspect --json", mode: "read" }]
+  },
+  "mcp serve": {
+    safety: { effects: ["manifest"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn mcp serve --readonly", mode: "read" }]
+  },
+  "mcp tools": {
+    safety: { effects: ["manifest"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn mcp tools --json", mode: "read" }]
   },
   "reply create": {
     safety: { effects: ["api-write"], preview: "available", confirmation: [] },

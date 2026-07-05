@@ -231,4 +231,90 @@ describe("collection commands", () => {
       expect.objectContaining({ code: "missing-topic-file-entry" })
     ]));
   });
+
+  test("collection index and query work offline", async () => {
+    const outputDir = await tempPath("indexed");
+    const { program, stdout, stderr, fetch } = await configuredProgram(async (input) => {
+      const url = String(input);
+      if (url.includes("/api/v1/search")) {
+        return Response.json({ requestId: "search", items: [{ id: 1, title: "ORDS 401" }] });
+      }
+      return Response.json({
+        requestId: "topic-1",
+        topic: {
+          id: 1,
+          title: "ORDS 401 troubleshooting",
+          content: "Check REST privilege, authentication scheme, and ORDS user mapping."
+        }
+      });
+    });
+
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--query", "ORDS", "--output-dir", outputDir, "--json"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "collection", "index", "--dir", outputDir, "--json"]);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(stderr.join("")).toBe("");
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({ kind: "collection-index", topicCount: 1 }));
+    expect(await readFile(join(outputDir, "index.jsonl"), "utf8")).toContain("collection-index-record");
+
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "collection", "query", "ORDS 401", "--dir", outputDir, "--json"]);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const query = JSON.parse(stdout.join(""));
+    expect(query).toEqual(expect.objectContaining({ kind: "collection-query", resultCount: 1 }));
+    expect(query.results[0]).toEqual(expect.objectContaining({
+      topicId: 1,
+      score: expect.any(Number),
+      matchedTerms: expect.arrayContaining(["ords", "401"]),
+      excerpt: expect.stringContaining("ORDS 401")
+    }));
+  });
+
+  test("collection index fails when collection paths are invalid", async () => {
+    const outputDir = await tempPath("index-invalid-path");
+    const { program, stdout, stderr } = await configuredProgram(async (input) => {
+      const url = String(input);
+      if (url.includes("/api/v1/search")) {
+        return Response.json({ requestId: "search", items: [{ id: 1 }] });
+      }
+      return Response.json({ requestId: "topic-1", topic: { id: 1, title: "Topic 1" } });
+    });
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--query", "REST", "--output-dir", outputDir]);
+    const collection = await readJson(join(outputDir, "collection.json"));
+    ((collection.files as { topics: Array<Record<string, unknown>> }).topics[0]).path = "../escape.json";
+    await writeFile(join(outputDir, "collection.json"), `${JSON.stringify(collection, null, 2)}\n`, "utf8");
+    stdout.length = 0;
+    stderr.length = 0;
+    process.exitCode = undefined;
+
+    await program.parseAsync(["node", "apexcn", "collection", "index", "--dir", outputDir, "--json"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toContain("Collection verification failed before indexing");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("collection query fails on malformed index records", async () => {
+    const outputDir = await tempPath("query-malformed");
+    const { program, stdout, stderr } = await configuredProgram(async (input) => {
+      const url = String(input);
+      if (url.includes("/api/v1/search")) {
+        return Response.json({ requestId: "search", items: [{ id: 1 }] });
+      }
+      return Response.json({ requestId: "topic-1", topic: { id: 1, title: "Topic 1" } });
+    });
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--query", "REST", "--output-dir", outputDir]);
+    await writeFile(join(outputDir, "index.jsonl"), "{\"kind\":\"broken\"}\n", "utf8");
+    stdout.length = 0;
+    stderr.length = 0;
+    process.exitCode = undefined;
+
+    await program.parseAsync(["node", "apexcn", "collection", "query", "REST", "--dir", outputDir, "--json"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(stderr.join("")).toContain("index.jsonl line 1 has an invalid schema");
+    expect(process.exitCode).toBe(1);
+  });
 });

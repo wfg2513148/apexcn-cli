@@ -1,0 +1,30 @@
+{"id":"ords-401-001","question":"ORDS REST 接口返回 401 通常应该从哪些方向排查？","tags":["ORDS","REST","认证"],"difficulty":"medium"}
+{"id":"ords-403-001","question":"APEX 页面进程调用 ORDS REST API 返回 403 应该检查什么？","tags":["ORDS","REST","权限"],"difficulty":"medium"}
+{"id":"ords-config-001","question":"ORDS standalone 模式配置数据库连接时有哪些常见错误？","tags":["ORDS","配置"],"difficulty":"medium"}
+{"id":"apex-install-001","question":"安装 Oracle APEX 后访问页面失败应该如何定位？","tags":["APEX","安装"],"difficulty":"easy"}
+{"id":"apex-version-001","question":"如何确认当前 APEX 和 ORDS 版本是否匹配？","tags":["APEX","ORDS","版本"],"difficulty":"easy"}
+{"id":"rest-auth-001","question":"APEX 调用外部 REST API 时 Web Credential 应该如何配置？","tags":["REST","认证","Web Credential"],"difficulty":"medium"}
+{"id":"rest-source-001","question":"REST Data Source 调试失败时应该收集哪些日志和响应信息？","tags":["REST","调试"],"difficulty":"medium"}
+{"id":"apex-mail-001","question":"APEX_MAIL 发送邮件失败通常应该检查哪些 SMTP 配置？","tags":["APEX_MAIL","邮件"],"difficulty":"medium"}
+{"id":"apex-mail-queue-001","question":"APEX_MAIL 邮件进入队列但没有发出时怎么排查？","tags":["APEX_MAIL","队列"],"difficulty":"medium"}
+{"id":"ig-001","question":"Interactive Grid 保存时报错但页面没有明显提示，如何排查？","tags":["Interactive Grid"],"difficulty":"medium"}
+{"id":"ig-js-001","question":"Interactive Grid 中用 JavaScript 获取当前行数据有哪些注意事项？","tags":["Interactive Grid","JavaScript"],"difficulty":"hard"}
+{"id":"dynamic-action-001","question":"Dynamic Action 没有触发时应该先检查哪些配置？","tags":["Dynamic Action"],"difficulty":"easy"}
+{"id":"dynamic-action-js-001","question":"Dynamic Action 执行 JavaScript 后页面状态不更新可能是什么原因？","tags":["Dynamic Action","JavaScript"],"difficulty":"medium"}
+{"id":"json-table-001","question":"APEX 中使用 JSON_TABLE 解析 REST 返回 JSON 时有哪些常见写法？","tags":["JSON_TABLE","SQL"],"difficulty":"medium"}
+{"id":"json-table-error-001","question":"JSON_TABLE 报路径不存在或类型不匹配时如何处理？","tags":["JSON_TABLE","错误排查"],"difficulty":"medium"}
+{"id":"plsql-rest-001","question":"PL/SQL 中调用 REST API 应该如何处理超时和错误响应？","tags":["PLSQL","REST"],"difficulty":"medium"}
+{"id":"sql-apex-001","question":"APEX 报 SQL 查询无效时应该如何逐步缩小问题？","tags":["SQL","APEX"],"difficulty":"easy"}
+{"id":"auth-session-001","question":"APEX 会话过期导致 AJAX 请求失败时如何判断？","tags":["APEX","认证","AJAX"],"difficulty":"medium"}
+{"id":"acl-001","question":"数据库 ACL 未配置会如何影响 APEX 外部 HTTP 调用？","tags":["ACL","REST"],"difficulty":"medium"}
+{"id":"wallet-001","question":"HTTPS REST 调用失败时 wallet 和证书应该如何排查？","tags":["Wallet","HTTPS","REST"],"difficulty":"hard"}
+{"id":"debug-001","question":"APEX Debug 日志应该如何打开并定位页面处理错误？","tags":["Debug","APEX"],"difficulty":"easy"}
+{"id":"session-state-001","question":"页面项 session state 与浏览器显示值不一致时怎么排查？","tags":["Session State","APEX"],"difficulty":"medium"}
+{"id":"authorization-001","question":"Authorization Scheme 配置错误会造成哪些现象？","tags":["Authorization","权限"],"difficulty":"medium"}
+{"id":"authentication-001","question":"自定义 Authentication Scheme 登录失败时应检查哪些回调？","tags":["Authentication"],"difficulty":"hard"}
+{"id":"plugin-001","question":"APEX 插件升级后页面报错应该如何回滚和定位？","tags":["插件","升级"],"difficulty":"medium"}
+{"id":"export-import-001","question":"APEX 应用导入到新环境后静态文件丢失怎么处理？","tags":["导入导出","静态文件"],"difficulty":"medium"}
+{"id":"performance-001","question":"APEX 页面加载慢时如何区分 SQL、网络和前端资源问题？","tags":["性能","排查"],"difficulty":"medium"}
+{"id":"api-ords-release-001","question":"ORDS REST API 行为变更后 CLI 应如何保持兼容？","tags":["ORDS","API Contract"],"difficulty":"medium"}
+{"id":"mcp-safety-001","question":"AI Agent 通过 MCP 操作社区内容时为什么默认应该只读？","tags":["MCP","安全"],"difficulty":"easy"}
+{"id":"workflow-approval-001","question":"发布社区帖子前使用 workflow approval 有什么安全价值？","tags":["workflow","安全"],"difficulty":"easy"}

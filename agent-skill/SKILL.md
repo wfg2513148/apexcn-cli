@@ -66,6 +66,9 @@ apexcn auth set-token \
 - Use `apexcn workflow verify-bundle --bundle <file> --json` when reviewing a portable workflow bundle without access to the original run directory.
 - Use `apexcn collection build --query <keyword> --topic-id <id> --output-dir <dir> --json` when the user needs a reusable offline knowledge collection from multiple searches or explicit topics.
 - Use `apexcn collection verify --dir <dir> --json` before relying on a saved collection in an AI workflow.
+- Use `apexcn collection index --dir <dir> --json` after building a collection when the user wants offline local search.
+- Use `apexcn collection query --dir <dir> "<query>" --json` when answering from an existing offline collection without network access.
+- Use `apexcn mcp tools --json` and `apexcn mcp inspect --json` to inspect the optional local stdio MCP adapter. MCP is readonly by default. Preview-only MCP write tools may generate requests with `willExecute: false`, but real write execution must continue through CLI workflow approval.
 - Use `apexcn stats category --json`, `apexcn stats topic --json`, and `apexcn stats tag --json` when the user asks for aggregate community, category, topic, or tag counts. Add `--from/--to` and `--top` when the user asks for a date window or top tag/topic list.
 - Use `apexcn admin list --json` when the user asks who administers the community; only report public fields returned by the API.
 - Use `apexcn me stats --json`, `apexcn me topics --json`, `apexcn me replies --json`, `apexcn me favorites --json`, or `apexcn me subscriptions --json` when the user asks about their own activity.

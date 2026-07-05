@@ -1,0 +1,152 @@
+import { mcpPreviewDescriptors, mcpReadonlyDescriptors, type CommandDescriptor } from "../core/command-registry.js";
+
+export type McpToolExposure = "readonly" | "preview-only";
+
+export type McpToolDefinition = {
+  name: string;
+  description: string;
+  exposure: McpToolExposure;
+  commandId: string;
+  inputSchema: Record<string, unknown>;
+};
+
+export type McpPolicy = {
+  mode: "readonly" | "preview-write";
+  transport: "stdio";
+  allowPreviewWrite: boolean;
+  allowExecuteWrite: false;
+};
+
+const READONLY_TOOLS: McpToolDefinition[] = [
+  readonlyTool("apexcn_search", "search", "Search community topics", {
+    type: "object",
+    properties: {
+      query: { type: "string" },
+      pageSize: { type: "number" },
+      categoryId: { type: "number" },
+      tag: { type: "string" },
+      author: { type: "string" },
+      from: { type: "string" },
+      to: { type: "string" }
+    },
+    required: ["query"]
+  }),
+  readonlyTool("apexcn_topic_view", "topic.view", "View a community topic", {
+    type: "object",
+    properties: { topicId: { type: "number" } },
+    required: ["topicId"]
+  }),
+  readonlyTool("apexcn_topic_recent", "topic.recent", "List recent community topics", {
+    type: "object",
+    properties: { hours: { type: "number" }, categoryId: { type: "number" }, pageSize: { type: "number" } }
+  }),
+  readonlyTool("apexcn_category_list", "category.list", "List community categories", { type: "object", properties: {} }),
+  readonlyTool("apexcn_ask", "ask", "Answer with community references", {
+    type: "object",
+    properties: { question: { type: "string" }, topK: { type: "number" }, categoryId: { type: "number" }, tag: { type: "string" } },
+    required: ["question"]
+  }),
+  readonlyTool("apexcn_research", "research", "Build a read-only research bundle", {
+    type: "object",
+    properties: { query: { type: "string" }, limit: { type: "number" }, categoryId: { type: "number" } },
+    required: ["query"]
+  }),
+  readonlyTool("apexcn_doctor_snapshot", "doctor.snapshot", "Return a redacted local diagnostic snapshot", {
+    type: "object",
+    properties: { includeNetwork: { type: "boolean" } }
+  }),
+  readonlyTool("apexcn_workflow_plan", "workflow.plan", "Create a local workflow plan preview", {
+    type: "object",
+    properties: { intent: { type: "string" }, topicId: { type: "number" }, title: { type: "string" }, content: { type: "string" } }
+  })
+];
+
+const PREVIEW_TOOLS: McpToolDefinition[] = [
+  previewTool("apexcn_topic_create_preview", "topic.create", "Preview topic creation", ["title", "content", "categoryId"]),
+  previewTool("apexcn_topic_update_preview", "topic.update", "Preview topic update", ["topicId"]),
+  previewTool("apexcn_topic_delete_preview", "topic.delete", "Preview topic deletion", ["topicId", "confirmTitle"]),
+  previewTool("apexcn_reply_create_preview", "reply.create", "Preview reply creation", ["topicId", "content"]),
+  previewTool("apexcn_reply_update_preview", "reply.update", "Preview reply update", ["replyId", "content"]),
+  previewTool("apexcn_reply_delete_preview", "reply.delete", "Preview reply deletion", ["replyId"]),
+  previewTool("apexcn_favorite_add_preview", "favorite.add", "Preview favorite add", ["topicId"]),
+  previewTool("apexcn_favorite_remove_preview", "favorite.remove", "Preview favorite removal", ["topicId"]),
+  previewTool("apexcn_subscription_add_preview", "subscription.add", "Preview subscription add", ["topicId"]),
+  previewTool("apexcn_subscription_remove_preview", "subscription.remove", "Preview subscription removal", ["topicId"])
+];
+
+export function mcpPolicy(allowPreviewWrite = false): McpPolicy {
+  return {
+    mode: allowPreviewWrite ? "preview-write" : "readonly",
+    transport: "stdio",
+    allowPreviewWrite,
+    allowExecuteWrite: false
+  };
+}
+
+export function mcpTools(policy: McpPolicy): McpToolDefinition[] {
+  return policy.allowPreviewWrite ? [...READONLY_TOOLS, ...PREVIEW_TOOLS] : [...READONLY_TOOLS];
+}
+
+export function allMcpTools(): McpToolDefinition[] {
+  return [...READONLY_TOOLS, ...PREVIEW_TOOLS];
+}
+
+export function mcpToolByName(name: string): McpToolDefinition | undefined {
+  return allMcpTools().find((tool) => tool.name === name);
+}
+
+export function mcpToolManifest(policy: McpPolicy): Record<string, unknown> {
+  return {
+    kind: "mcp-tools",
+    schemaVersion: 1,
+    policy,
+    tools: mcpTools(policy).map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      exposure: tool.exposure,
+      commandId: tool.commandId,
+      inputSchema: tool.inputSchema
+    }))
+  };
+}
+
+export function assertMcpCommandRegistryCoverage(): boolean {
+  const readonlyIds = new Set(mcpReadonlyDescriptors().map((descriptor) => descriptor.id));
+  const previewIds = new Set(mcpPreviewDescriptors().map((descriptor) => descriptor.id));
+  return READONLY_TOOLS.every((tool) => readonlyIds.has(tool.commandId))
+    && PREVIEW_TOOLS.every((tool) => previewIds.has(tool.commandId));
+}
+
+function readonlyTool(name: string, commandId: string, fallbackDescription: string, inputSchema: Record<string, unknown>): McpToolDefinition {
+  return tool(name, commandId, fallbackDescription, "readonly", inputSchema);
+}
+
+function previewTool(name: string, commandId: string, fallbackDescription: string, required: string[]): McpToolDefinition {
+  return tool(name, commandId, fallbackDescription, "preview-only", {
+    type: "object",
+    properties: {
+      topicId: { type: "number" },
+      replyId: { type: "number" },
+      title: { type: "string" },
+      content: { type: "string" },
+      categoryId: { type: "number" },
+      confirmTitle: { type: "string" }
+    },
+    required
+  });
+}
+
+function tool(name: string, commandId: string, fallbackDescription: string, exposure: McpToolExposure, inputSchema: Record<string, unknown>): McpToolDefinition {
+  const descriptor = descriptorById(commandId);
+  return {
+    name,
+    description: descriptor?.summary ?? fallbackDescription,
+    exposure,
+    commandId,
+    inputSchema
+  };
+}
+
+function descriptorById(id: string): CommandDescriptor | undefined {
+  return [...mcpReadonlyDescriptors(), ...mcpPreviewDescriptors()].find((descriptor) => descriptor.id === id);
+}

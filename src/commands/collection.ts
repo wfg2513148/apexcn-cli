@@ -33,6 +33,16 @@ type VerifyOptions = {
   json?: boolean;
 };
 
+type IndexOptions = {
+  dir: string;
+  json?: boolean;
+};
+
+type QueryOptions = {
+  dir: string;
+  json?: boolean;
+};
+
 type TopicSource = {
   type: "query" | "explicit";
   query?: string;
@@ -67,6 +77,31 @@ export function createCollectionCommand(options: CollectionCommandOptions): Comm
     .action(async (commandOptions: BuildOptions) => {
       try {
         await buildCollection(options, commandOptions);
+      } catch (error) {
+        handleCollectionError(options, error);
+      }
+    });
+
+  collection
+    .command("index")
+    .requiredOption("--dir <dir>", "collection directory")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: IndexOptions) => {
+      try {
+        await indexCollection(options, commandOptions);
+      } catch (error) {
+        handleCollectionError(options, error);
+      }
+    });
+
+  collection
+    .command("query")
+    .argument("<query>", "local collection query")
+    .requiredOption("--dir <dir>", "collection directory")
+    .option("--json", "pretty-print JSON")
+    .action(async (query: string, commandOptions: QueryOptions) => {
+      try {
+        await queryCollection(options, query, commandOptions);
       } catch (error) {
         handleCollectionError(options, error);
       }
@@ -229,6 +264,88 @@ async function verifyCollection(io: CommandIo, options: VerifyOptions): Promise<
   printData(io, report, options.json === true);
 }
 
+async function indexCollection(io: CommandIo, options: IndexOptions): Promise<void> {
+  const collection = await readCollectionFile(io, options.dir);
+  if (!collection) {
+    return;
+  }
+  const verification = await collectionVerificationReport(options.dir, collection);
+  if (!verification.ok) {
+    printError(io, { type: "validation", message: "Collection verification failed before indexing." }, undefined, options.json);
+    process.exitCode = 1;
+    return;
+  }
+  const records = await collectionSearchRecords(options.dir, collection);
+  const jsonl = records.map((record) => JSON.stringify(record)).join("\n") + (records.length > 0 ? "\n" : "");
+  const indexEvidence = await writeTextWithEvidence(join(options.dir, "index.jsonl"), jsonl);
+  const meta = {
+    kind: "collection-index-meta",
+    schemaVersion: 1,
+    dir: options.dir,
+    topicCount: records.length,
+    createdAt: new Date().toISOString(),
+    files: {
+      index: { path: "index.jsonl", size: indexEvidence.size, sha256: indexEvidence.sha256 }
+    }
+  };
+  await writeJsonWithEvidence(join(options.dir, "index.meta.json"), meta);
+  printData(io, {
+    kind: "collection-index",
+    schemaVersion: 1,
+    dir: options.dir,
+    topicCount: records.length,
+    files: {
+      index: join(options.dir, "index.jsonl"),
+      meta: join(options.dir, "index.meta.json")
+    }
+  }, options.json === true);
+}
+
+async function queryCollection(io: CommandIo, query: string, options: QueryOptions): Promise<void> {
+  const trimmed = query.trim();
+  if (trimmed.length === 0) {
+    printError(io, { type: "validation", message: "Query must not be blank." });
+    process.exitCode = 1;
+    return;
+  }
+  let records: CollectionSearchRecord[];
+  try {
+    records = parseCollectionSearchRecords(await readFile(join(options.dir, "index.jsonl"), "utf8"));
+  } catch (error) {
+    printError(io, { type: "validation", message: `Invalid collection index: ${errorMessage(error)}` });
+    process.exitCode = 1;
+    return;
+  }
+  const terms = tokenize(trimmed);
+  const results = records
+    .map((record) => scoreCollectionRecord(record, terms))
+    .filter((result) => result.score > 0)
+    .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title))
+    .slice(0, 10);
+  printData(io, {
+    kind: "collection-query",
+    schemaVersion: 1,
+    dir: options.dir,
+    query: trimmed,
+    resultCount: results.length,
+    results
+  }, options.json === true);
+}
+
+function parseCollectionSearchRecords(text: string): CollectionSearchRecord[] {
+  return text
+    .split("\n")
+    .map((line, index) => ({ line: line.trim(), index }))
+    .filter((item) => item.line.length > 0)
+    .map((item) => {
+      const parsed = JSON.parse(item.line) as unknown;
+      if (!isCollectionSearchRecord(parsed)) {
+        throw new Error(`index.jsonl line ${item.index + 1} has an invalid schema`);
+      }
+      return parsed;
+    });
+}
+
 async function collectionVerificationReport(dir: string, collection: unknown): Promise<Record<string, unknown> & { ok: boolean }> {
   const issues: CollectionIssue[] = [];
   if (!isValidCollectionSchema(collection)) {
@@ -250,7 +367,64 @@ async function collectionVerificationReport(dir: string, collection: unknown): P
   return verificationResult(dir, issues, evidence);
 }
 
-function isValidCollectionSchema(value: unknown): value is {
+type CollectionSearchRecord = {
+  kind: "collection-index-record";
+  schemaVersion: 1;
+  topicId: number;
+  title: string;
+  url?: string;
+  terms: Record<string, number>;
+  excerpt: string;
+};
+
+async function readCollectionFile(io: CommandIo, dir: string): Promise<ValidCollection | undefined> {
+  const collectionPath = join(dir, "collection.json");
+  let collection: unknown;
+  try {
+    collection = JSON.parse(await readFile(collectionPath, "utf8")) as unknown;
+  } catch (error) {
+    printError(io, { type: "validation", message: `Invalid collection: ${errorMessage(error)}` });
+    process.exitCode = 1;
+    return undefined;
+  }
+  if (!isValidCollectionSchema(collection)) {
+    printError(io, { type: "validation", message: "collection.json has an invalid schema." });
+    process.exitCode = 1;
+    return undefined;
+  }
+  return collection;
+}
+
+async function collectionSearchRecords(dir: string, collection: ValidCollection): Promise<CollectionSearchRecord[]> {
+  const records: CollectionSearchRecord[] = [];
+  for (const topic of collection.topics.filter(isRecord)) {
+    const id = typeof topic.id === "number" ? topic.id : undefined;
+    const file = fieldText(topic.file);
+    if (id === undefined || !file) {
+      continue;
+    }
+    const resolved = collectionFilePath(dir, file, "topic", []);
+    if (!resolved) {
+      continue;
+    }
+    const artifact = JSON.parse(await readFile(resolved.absolutePath, "utf8")) as unknown;
+    const result = isRecord(artifact) ? artifact.result : undefined;
+    const title = topicTitle(result) ?? fieldText(topic.title || `Topic ${id}`);
+    const text = collectionRecordText(result, title);
+    records.push({
+      kind: "collection-index-record",
+      schemaVersion: 1,
+      topicId: id,
+      title,
+      url: topicUrl(result) ?? (fieldText(topic.url) || undefined),
+      terms: termFrequency(text),
+      excerpt: excerptText(text)
+    });
+  }
+  return records;
+}
+
+type ValidCollection = {
   kind: "collection";
   schemaVersion: 1;
   createdAt: string;
@@ -259,7 +433,9 @@ function isValidCollectionSchema(value: unknown): value is {
   topics: unknown[];
   errors: unknown[];
   files: { index: Record<string, unknown>; topics: unknown[] };
-} {
+};
+
+function isValidCollectionSchema(value: unknown): value is ValidCollection {
   return isRecord(value)
     && value.kind === "collection"
     && value.schemaVersion === 1
@@ -479,6 +655,77 @@ function topicOriginalUrl(data: unknown): string | undefined {
 
 function requestIdFrom(data: unknown): string | undefined {
   return isRecord(data) && typeof data.requestId === "string" ? data.requestId : undefined;
+}
+
+function isCollectionSearchRecord(value: unknown): value is CollectionSearchRecord {
+  return isRecord(value)
+    && value.kind === "collection-index-record"
+    && value.schemaVersion === 1
+    && typeof value.topicId === "number"
+    && typeof value.title === "string"
+    && isRecord(value.terms)
+    && Object.values(value.terms).every((count) => typeof count === "number")
+    && typeof value.excerpt === "string";
+}
+
+function collectionRecordText(result: unknown, fallbackTitle: string): string {
+  const topic = topicData(result);
+  const parts = [
+    fallbackTitle,
+    topic.title,
+    topic.content,
+    topic.body,
+    topic.summary,
+    Array.isArray(topic.tags) ? topic.tags.join(" ") : undefined,
+    isRecord(topic.category) ? topic.category.name : topic.category
+  ];
+  if (Array.isArray(topic.replies)) {
+    for (const reply of topic.replies.filter(isRecord)) {
+      parts.push(reply.content, reply.body);
+    }
+  }
+  return parts.map(fieldText).filter(Boolean).join(" ");
+}
+
+function termFrequency(text: string): Record<string, number> {
+  const terms: Record<string, number> = {};
+  for (const term of tokenize(text)) {
+    terms[term] = (terms[term] ?? 0) + 1;
+  }
+  return terms;
+}
+
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}_]+/u)
+    .map((term) => term.trim())
+    .filter((term) => term.length >= 2);
+}
+
+function scoreCollectionRecord(record: CollectionSearchRecord, queryTerms: string[]): {
+  topicId: number;
+  title: string;
+  score: number;
+  matchedTerms: string[];
+  excerpt: string;
+  url?: string;
+} {
+  const matchedTerms = [...new Set(queryTerms.filter((term) => record.terms[term] !== undefined))];
+  const score = matchedTerms.reduce((total, term) => total + record.terms[term], 0);
+  return {
+    topicId: record.topicId,
+    title: record.title,
+    score,
+    matchedTerms,
+    excerpt: record.excerpt,
+    url: record.url
+  };
+}
+
+function excerptText(text: string): string {
+  const normalized = fieldText(text).trim();
+  return normalized.length > 220 ? `${normalized.slice(0, 217)}...` : normalized;
 }
 
 function sourcesText(sources: Record<string, unknown>[]): string {
