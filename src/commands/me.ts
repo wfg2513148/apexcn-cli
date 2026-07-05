@@ -107,8 +107,10 @@ async function runMeApi(options: MeCommandOptions, commandOptions: { json?: bool
         type: "http",
         message: redactSecret(error.message, token),
         status: error.status,
-        requestId: error.requestId
-      }, `HTTP ${error.status}: ${redactSecret(error.message, token)}${requestId}\n`, commandOptions.json);
+        requestId: error.requestId,
+        retryAfterSeconds: error.retryAfterSeconds,
+        windowSeconds: error.windowSeconds
+      }, httpErrorText(error, token, requestId), commandOptions.json);
       process.exitCode = 1;
       return;
     }
@@ -189,12 +191,20 @@ function formatReplyListText(data: unknown): string {
 
 function formatTopicRelationListText(data: unknown): string {
   return itemsFromData(data).map((item) => [
-    fieldText(item.id ?? item.topicId),
+    fieldText(item.id ?? item.topicId ?? item.targetId),
     fieldText(item.title),
     fieldText(item.relationCreatedDate),
     fieldText(item.updatedDate),
+    fieldText(item.unavailableReason),
     fieldText(item.url ?? item.threadUrl)
   ].join("\t")).join("\n");
+}
+
+function httpErrorText(error: HttpError, token: string | undefined, requestId: string): string {
+  const retry = error.retryAfterSeconds === undefined ? "" : ` retryAfterSeconds=${error.retryAfterSeconds}`;
+  const window = error.windowSeconds === undefined ? "" : ` windowSeconds=${error.windowSeconds}`;
+  const hint = error.status === 429 && error.retryAfterSeconds !== undefined ? ` Retry after ${error.retryAfterSeconds}s.` : "";
+  return `HTTP ${error.status}: ${redactSecret(error.message, token)}${requestId}${retry}${window}${hint}\n`;
 }
 
 function line(label: string, value: unknown): string | undefined {

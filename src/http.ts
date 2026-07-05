@@ -12,6 +12,8 @@ export class HttpError extends Error {
   readonly statusText: string;
   readonly requestId?: string;
   readonly body: unknown;
+  readonly retryAfterSeconds?: number;
+  readonly windowSeconds?: number;
 
   constructor(message: string, status: number, statusText: string, requestId: string | undefined, body: unknown) {
     super(message);
@@ -20,6 +22,9 @@ export class HttpError extends Error {
     this.statusText = statusText;
     this.requestId = requestId;
     this.body = body;
+    const rateLimit = rateLimitFrom(body);
+    this.retryAfterSeconds = rateLimit.retryAfterSeconds;
+    this.windowSeconds = rateLimit.windowSeconds;
   }
 }
 
@@ -152,6 +157,28 @@ function errorMessageFrom(body: unknown, response: Response): string {
     }
   }
   return response.statusText || `HTTP ${response.status}`;
+}
+
+function rateLimitFrom(body: unknown): { retryAfterSeconds?: number; windowSeconds?: number } {
+  if (!isRecord(body)) {
+    return {};
+  }
+  const source = isRecord(body.error) ? body.error : body;
+  return {
+    retryAfterSeconds: numberField(source.retryAfterSeconds),
+    windowSeconds: numberField(source.windowSeconds)
+  };
+}
+
+function numberField(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
 }
 
 function isAbortError(error: unknown): boolean {

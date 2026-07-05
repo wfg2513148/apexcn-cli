@@ -117,6 +117,7 @@ const commonReadScenarios: Scenario[] = [
   scenario("search apexlang", "apexlang 有哪些新文章", "search", "read", ["read"], "none", ["--page-size <n>", "--json"]),
   scenario("search by category", "只在进阶技巧板块里搜索性能优化", "search", "read", ["read"], "none", ["--category-id <id>", "--json"]),
   scenario("search by date window", "搜索 2026-06-01 到 2026-06-30 之间更新的 AI 相关文章", "search", "read", ["read"], "none", ["--from-date <date>", "--to-date <date>", "--json"]),
+  scenario("search by v040 filters", "搜索 ORDS 标签下来自外部来源且有有用回复的帖子", "search", "read", ["read"], "none", ["--tag <tag>", "--source-type <type>", "--has-useful-reply", "--json"]),
   scenario("search smaller page", "先搜前 3 条 APEX 安全相关帖子", "search", "read", ["read"], "none", ["--page-size <n>", "--json"]),
   scenario("search text output", "把搜索 APEX 的结果用纯文本列出来", "search", "read", ["read"], "none", ["--format <format>"]),
   scenario("search beginner category", "在新手入门板块查安装环境搭建问题", "search", "read", ["read"], "none", ["--category-id <id>", "--json"]),
@@ -128,11 +129,13 @@ const commonReadScenarios: Scenario[] = [
   scenario("ask apexlang single page", "APEXLang 支持单页面导入吗？", "ask", "read", ["read"], "none", ["--top-k <n>", "--json"]),
   scenario("ask interactive report", "APEX 26.1 交互式报表有哪些新 JavaScript API？", "ask", "read", ["read"], "none", ["--top-k <n>", "--json"]),
   scenario("ask blueprint", "APEX 蓝图脚手架适合什么场景？", "ask", "read", ["read"], "none", ["--top-k <n>", "--json"]),
+  scenario("ask filtered ords", "只基于 7 月 ORDS 标签内容回答最近 API 更新", "ask", "read", ["read"], "none", ["--tag <tag>", "--from <date>", "--to <date>", "--json"]),
   scenario("ask short answer", "用社区资料简短回答 APEX 如何做邮件发送", "ask", "read", ["read"], "none", ["--format <format>"]),
   scenario("topic view by id", "打开社区帖子 30549 并总结内容", "topic view", "read", ["read"], "none", ["--json"]),
   scenario("thread view alias intent", "查看 thread 30549 的详情", "topic view", "read", ["read"], "none", ["--json"]),
   scenario("topic view apexlang article", "查看 ApexLang 文件结构解析那篇帖子", "topic view", "read", ["read"], "none", ["--json"]),
   scenario("topic view replies", "查看某个帖子以及下面的回复", "topic view", "read", ["read"], "none", ["--json"]),
+  scenario("topic list unanswered", "列出社区里还没有回复的最新话题", "topic list", "read", ["read"], "none", ["--view <view>", "--page-size <n>", "--json"]),
   scenario("topic recent 48 hours", "总结最近 48 小时更新的社区帖子", "topic recent", "read", ["read"], "none", ["--since-hours <n>", "--page-size <n>", "--cursor <cursor>", "--json"]),
   scenario("research rest api", "帮我研究 REST API 相关帖子并整理参考链接", "research", "read", ["read"], "none", ["--limit <n>", "--json"]),
   scenario("research apexlang", "整理 ApexLang 最新文章都更新了什么", "research", "read", ["read"], "none", ["--limit <n>", "--json"]),
@@ -313,6 +316,38 @@ const EXECUTABLE_NATURAL_LANGUAGE_SCENARIOS: ExecutableNaturalLanguageScenario[]
       expect(JSON.parse(stdout).sources[0]).toEqual(expect.objectContaining({
         url: "https://oracleapex.cn/t/29667",
         threadUrl: "https://oracleapex.cn/t/29667"
+      }));
+    }
+  },
+  {
+    name: "filtered ask sends scoped retrieval filters",
+    userSays: "只基于 7 月 ORDS 标签内容回答最近 API 更新。",
+    commandPath: "ask",
+    argv: ["node", "apexcn", "ask", "最近 ORDS API 有哪些更新?", "--tag", "ORDS", "--from", "2026-07-01", "--to", "2026-07-05", "--top-k", "5", "--json"],
+    responseForUrl: (url, init) => {
+      expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/ask");
+      expect(init?.body).toBe(JSON.stringify({
+        question: "最近 ORDS API 有哪些更新?",
+        topK: 5,
+        fromDate: "2026-07-01",
+        toDate: "2026-07-05",
+        tag: "ORDS"
+      }));
+      return Response.json({
+        answer: "有 scoped references。",
+        filters: { fromDate: "2026-07-01", toDate: "2026-07-05", tag: "ORDS" },
+        confidence: "medium",
+        limitations: ["filtered retrieval"],
+        references: [{ topicId: 42 }],
+        requestId: "req-filtered-ask"
+      });
+    },
+    assertFeedback: ({ stdout, stderr, fetch }) => {
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(stderr).toBe("");
+      expect(JSON.parse(stdout)).toEqual(expect.objectContaining({
+        confidence: "medium",
+        filters: { fromDate: "2026-07-01", toDate: "2026-07-05", tag: "ORDS" }
       }));
     }
   },
@@ -697,6 +732,21 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
         expect(fetch).toHaveBeenCalledOnce();
         expect(stderr).toBe("");
         expect(JSON.parse(stdout).topic.id).toBe(30549);
+      }
+    },
+    {
+      name: "topic list reads filtered topic rows",
+      userSays: "列出社区里还没有回复的最新话题。",
+      commandPath: "topic list",
+      argv: ["node", "apexcn", "topic", "list", "--view", "unanswered", "--page-size", "20", "--json"],
+      responseForUrl: (url) => {
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/topics?pageSize=20&view=unanswered");
+        return Response.json({ items: [{ id: 51, title: "Unanswered" }], page: { hasMore: false }, requestId: "req-topics" });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout).items[0]).toEqual(expect.objectContaining({ id: 51, title: "Unanswered" }));
       }
     },
     {

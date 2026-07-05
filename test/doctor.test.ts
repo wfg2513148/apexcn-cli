@@ -70,8 +70,8 @@ describe("doctor command", () => {
     const data = JSON.parse(stdout.join(""));
     expect(data.ok).toBe(true);
     expect(data.diagnostics).toEqual(expect.objectContaining({
-      cliVersion: "0.15.0",
-      userAgent: "apexcn-cli/0.15.0",
+      cliVersion: "0.16.0",
+      userAgent: "apexcn-cli/0.16.0",
       configPath: expect.stringContaining("config.json"),
       nodeVersion: expect.stringMatching(/^v\d+/),
       platform: process.platform,
@@ -160,6 +160,35 @@ describe("doctor command", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("preserves rate-limit retry metadata in doctor failures", async () => {
+    const responses = [
+      Response.json({ error: { message: "Too many requests", requestId: "req-rate", retryAfterSeconds: 12, windowSeconds: 60 } }, { status: 429 }),
+      { items: [{ id: 4, name: "APEX 进阶技巧" }], requestId: "req-categories" },
+      { items: [{ id: 42, title: "APEX REST" }], requestId: "req-search" }
+    ];
+    const { program, stdout, stderr } = await configuredProgram(async () => {
+      const next = responses.shift();
+      return next instanceof Response ? next : Response.json(next);
+    });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "--json"]);
+
+    const data = JSON.parse(stdout.join(""));
+    expect(data.ok).toBe(false);
+    expect(data.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: "me",
+        ok: false,
+        status: 429,
+        requestId: "req-rate",
+        retryAfterSeconds: 12,
+        windowSeconds: 60
+      })
+    ]));
+    expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBe(1);
+  });
+
   test("checks ask only when explicitly requested", async () => {
     const responses = [
       { user: { id: 1, nickname: "Tester" }, requestId: "req-me" },
@@ -208,8 +237,8 @@ describe("doctor command", () => {
     await program.parseAsync(["node", "apexcn", "doctor", "--format", "text"]);
 
     expect(stdout.join("")).toContain("apexcn doctor: ok\n");
-    expect(stdout.join("")).toContain("CLI Version: 0.15.0\n");
-    expect(stdout.join("")).toContain("User Agent: apexcn-cli/0.15.0\n");
+    expect(stdout.join("")).toContain("CLI Version: 0.16.0\n");
+    expect(stdout.join("")).toContain("User Agent: apexcn-cli/0.16.0\n");
     expect(stdout.join("")).toContain("Config Path: ");
     expect(stdout.join("")).toContain("OK search requestId=req-search\n");
   });
@@ -231,7 +260,7 @@ describe("doctor command", () => {
       await program.parseAsync(argv);
 
       expect(stdout.join("")).toContain("apexcn doctor: ok\n");
-      expect(stdout.join("")).toContain("CLI Version: 0.15.0\n");
+      expect(stdout.join("")).toContain("CLI Version: 0.16.0\n");
       expect(() => JSON.parse(stdout.join(""))).toThrow();
       vi.unstubAllGlobals();
     }

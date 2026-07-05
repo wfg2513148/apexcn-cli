@@ -16,6 +16,8 @@ export type ErrorPayload = {
   message: string;
   status?: number;
   requestId?: string;
+  retryAfterSeconds?: number;
+  windowSeconds?: number;
   exitCode?: number;
 };
 

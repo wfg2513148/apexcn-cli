@@ -204,6 +204,7 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "subscription remove": "unsubscribe from a community topic",
   "topic create": "create a community topic",
   "topic delete": "delete a topic after explicit confirmation",
+  "topic list": "list community topics with server-side filters",
   "topic recent": "list recently updated community topics",
   "topic update": "update an existing topic",
   "topic view": "view a community topic",
@@ -222,7 +223,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   },
   "ask": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
-    examples: [{ command: 'apexcn ask "Oracle APEX 如何调用 REST API？" --top-k 3 --json', mode: "read" }]
+    examples: [
+      { command: 'apexcn ask "Oracle APEX 如何调用 REST API？" --top-k 3 --json', mode: "read" },
+      { command: 'apexcn ask "最近 ORDS API 有哪些更新？" --tag ORDS --from 2026-07-01 --top-k 5 --json', mode: "read" }
+    ]
   },
   "auth audit": {
     safety: { effects: ["config-read"], preview: "none", confirmation: [] },
@@ -359,7 +363,8 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [
       { command: 'apexcn search "REST API" --page-size 5 --json', mode: "read" },
-      { command: 'apexcn search "REST API" --cursor "<page.nextCursor>" --json', mode: "read" }
+      { command: 'apexcn search "REST API" --cursor "<page.nextCursor>" --json', mode: "read" },
+      { command: 'apexcn search "ORDS" --tags APEX,ORDS --has-useful-reply --source-type external --json', mode: "read" }
     ]
   },
   "subscription add": {
@@ -378,17 +383,23 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   },
   "stats category": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
-    examples: [{ command: "apexcn stats category --json", mode: "read" }]
+    examples: [
+      { command: "apexcn stats category --json", mode: "read" },
+      { command: "apexcn stats category --from 2026-07-01 --to 2026-07-05 --json", mode: "read" }
+    ]
   },
   "stats tag": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
-    examples: [{ command: "apexcn stats tag --json", mode: "read" }]
+    examples: [
+      { command: "apexcn stats tag --json", mode: "read" },
+      { command: "apexcn stats tag --from 2026-07-01 --top 20 --json", mode: "read" }
+    ]
   },
   "stats topic": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [
       { command: "apexcn stats topic --json", mode: "read" },
-      { command: 'apexcn stats topic --tag "APEX" --json', mode: "read" }
+      { command: 'apexcn stats topic --tag "APEX" --from 2026-07-01 --top 10 --json', mode: "read" }
     ]
   },
   "topic create": {
@@ -403,6 +414,13 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     examples: [
       { command: 'apexcn topic delete 30549 --yes --force --confirm-title "精确标题" --preview', mode: "preview" },
       { command: 'apexcn topic delete 30549 --yes --force --confirm-title "精确标题" --json', mode: "execute" }
+    ]
+  },
+  "topic list": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [
+      { command: "apexcn topic list --view unanswered --page-size 20 --json", mode: "read" },
+      { command: "apexcn topic list --source-domain example.com --sort updated --json", mode: "read" }
     ]
   },
   "topic recent": {

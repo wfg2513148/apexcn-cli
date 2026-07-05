@@ -57,19 +57,19 @@ https://oracleapex.cn/ords/api
 macOS / Linux：
 
 ```bash
-curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.15.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
+curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.16.0/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.15.0/install-agent.ps1" | iex
+$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/download/v0.16.0/install-agent.ps1" | iex
 ```
 
 安装脚本默认下载固定文件名的 CLI 包：
 
 ```bash
-https://github.com/wfg2513148/apexcn-cli/releases/download/v0.15.0/apexcn-cli.tgz
+https://github.com/wfg2513148/apexcn-cli/releases/download/v0.16.0/apexcn-cli.tgz
 ```
 
 即使 CLI 版本更新，上述 URL 和压缩包文件名也保持不变。
@@ -447,10 +447,13 @@ apexcn search "APEX" --page-size 3 --json
 | 我的订阅 | `apexcn me subscriptions --page-size 10 --json` |
 | 板块列表 | `apexcn category list --json` |
 | 板块统计 | `apexcn stats category --json` |
-| 话题统计 | `apexcn stats topic --json` |
-| 标签统计 | `apexcn stats tag --json` |
+| 板块统计日期窗 | `apexcn stats category --from 2026-07-01 --to 2026-07-05 --json` |
+| 话题统计 | `apexcn stats topic --tag ORDS --from 2026-07-01 --top 10 --json` |
+| 标签统计 | `apexcn stats tag --from 2026-07-01 --top 20 --json` |
 | 管理员列表 | `apexcn admin list --json` |
 | 搜索 | `apexcn search "APEX" --page-size 5 --json` |
+| 过滤搜索 | `apexcn search "ORDS" --tags APEX,ORDS --has-useful-reply --source-type external --json` |
+| 话题列表 | `apexcn topic list --view unanswered --page-size 20 --json` |
 | 研究包 | `apexcn research "REST API" --limit 3 --json` |
 | 资料库 | `apexcn collection build --query <keyword> --topic-id <id> --output-dir <dir> --json` |
 | 资料库校验 | `apexcn collection verify --dir <dir> --json` |
@@ -465,6 +468,7 @@ apexcn search "APEX" --page-size 3 --json
 | 工作流导出 | `apexcn workflow export --run-dir <dir> --output <file> --json` |
 | Bundle 验证 | `apexcn workflow verify-bundle --bundle <file> --json` |
 | RAG 问答 | `apexcn ask "问题" --top-k 3 --json` |
+| 范围问答 | `apexcn ask "问题" --tag ORDS --from 2026-07-01 --to 2026-07-05 --json` |
 | 查看话题 | `apexcn topic view <thread_id> --json` |
 | 发帖 | `apexcn topic create --category-id <id> --title <title> --content-file <file> --json` |
 | 编辑话题 | `apexcn topic edit <thread_id> --content-file <file> --json` |

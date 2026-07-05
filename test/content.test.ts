@@ -128,8 +128,10 @@ const neverApiDryRunCommands = [
   "stats category",
   "stats tag",
   "stats topic",
+  "topic list",
   "topic recent",
   "topic view",
+  "thread list",
   "thread recent",
   "thread view",
   "ask",
@@ -206,8 +208,8 @@ describe("content commands", () => {
     const responses: Record<string, unknown> = {
       "/api/v1/category-stats": { kind: "category-stats", items: [{ id: 4, name: "APEX", topicCount: 2, replyCount: 3, featuredCount: 1 }], requestId: "req-cat-stats" },
       "/api/v1/topic-stats": { kind: "topic-stats", topicCount: 10, featuredTopicCount: 2, tagCounts: [{ tag: "ORDS", topicCount: 3 }], requestId: "req-topic-stats" },
-      "/api/v1/topic-stats?tag=ORDS": { kind: "topic-stats", tag: "ORDS", topicCount: 3, featuredTopicCount: 1, requestId: "req-topic-tag" },
-      "/api/v1/tag-stats": { kind: "tag-stats", items: [{ tag: "ORDS", topicCount: 3, matchMode: "exact" }], requestId: "req-tag-stats" }
+      "/api/v1/topic-stats?tag=ORDS&fromDate=2026-07-01&top=10": { kind: "topic-stats", tag: "ORDS", topicCount: 3, featuredTopicCount: 1, requestId: "req-topic-tag" },
+      "/api/v1/tag-stats?fromDate=2026-07-01&toDate=2026-07-05&top=20": { kind: "tag-stats", items: [{ tag: "ORDS", topicCount: 3, matchMode: "exact" }], requestId: "req-tag-stats" }
     };
     const fetchImpl = vi.fn(async (url: string | URL | Request) => {
       const href = String(url);
@@ -224,17 +226,17 @@ describe("content commands", () => {
     expect(JSON.parse(topic.stdout.join("")).topicCount).toBe(10);
 
     const topicTag = await configuredProgram(fetchImpl as typeof fetch);
-    await topicTag.program.parseAsync(["node", "apexcn", "stats", "topic", "--tag", "ORDS", "--json"]);
+    await topicTag.program.parseAsync(["node", "apexcn", "stats", "topic", "--tag", "ORDS", "--from", "2026-07-01", "--top", "10", "--json"]);
     expect(JSON.parse(topicTag.stdout.join("")).tag).toBe("ORDS");
 
     const tag = await configuredProgram(fetchImpl as typeof fetch);
-    await tag.program.parseAsync(["node", "apexcn", "stats", "tag", "--format", "text"]);
+    await tag.program.parseAsync(["node", "apexcn", "stats", "tag", "--from-date", "2026-07-01", "--to-date", "2026-07-05", "--top", "20", "--format", "text"]);
     expect(tag.stdout.join("")).toBe("ORDS\t3\texact\n");
 
     expect(fetchImpl).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/category-stats", expect.any(Object));
     expect(fetchImpl).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/topic-stats", expect.any(Object));
-    expect(fetchImpl).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/topic-stats?tag=ORDS", expect.any(Object));
-    expect(fetchImpl).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/tag-stats", expect.any(Object));
+    expect(fetchImpl).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/topic-stats?tag=ORDS&fromDate=2026-07-01&top=10", expect.any(Object));
+    expect(fetchImpl).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/tag-stats?fromDate=2026-07-01&toDate=2026-07-05&top=20", expect.any(Object));
   });
 
   test("admin list calls public admin directory endpoint", async () => {
@@ -282,6 +284,40 @@ describe("content commands", () => {
     expect(stderr.join("")).toBe("HTTP 403: token [redacted] is not allowed requestId=req-token\n");
     expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(process.exitCode).toBe(1);
+  });
+
+  test("rate-limit errors include retry timing in text and JSON stderr", async () => {
+    const textCase = await configuredProgram(async () =>
+      Response.json({ error: { message: "Too many requests", requestId: "req-rate", retryAfterSeconds: 12, windowSeconds: 60 } }, { status: 429 })
+    );
+
+    await textCase.program.parseAsync(["node", "apexcn", "search", "APEX"]);
+
+    expect(textCase.stdout.join("")).toBe("");
+    expect(textCase.stderr.join("")).toBe("HTTP 429: Too many requests requestId=req-rate retryAfterSeconds=12 windowSeconds=60 Retry after 12s.\n");
+    expect(process.exitCode).toBe(1);
+
+    process.exitCode = undefined;
+    vi.unstubAllGlobals();
+
+    const jsonCase = await configuredProgram(async () =>
+      Response.json({ error: { message: "Too many requests", requestId: "req-rate", retryAfterSeconds: "9", windowSeconds: "30" } }, { status: 429 })
+    );
+
+    await jsonCase.program.parseAsync(["node", "apexcn", "search", "APEX", "--json"]);
+
+    expect(JSON.parse(jsonCase.stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "http",
+        message: "Too many requests",
+        status: 429,
+        requestId: "req-rate",
+        retryAfterSeconds: 9,
+        windowSeconds: 30,
+        exitCode: 1
+      }
+    });
   });
 
   test("category list can print API errors as JSON", async () => {
@@ -491,7 +527,14 @@ describe("content commands", () => {
     const cases = [
       { argv: ["node", "apexcn", "search", "APEX", "--format", "json"], expected: `${JSON.stringify(payload)}\n` },
       { argv: ["node", "apexcn", "search", "APEX", "--format", "pretty"], expected: `${JSON.stringify(payload, null, 2)}\n` },
-      { argv: ["node", "apexcn", "search", "APEX", "--format", "text"], expected: "42\tAPEX topic\thttps://oracleapex.cn/t/42\n43\tORDS topic\t\n" },
+      {
+        argv: ["node", "apexcn", "search", "APEX", "--format", "text"],
+        expected: [
+          ["42", "APEX topic", "", "", "", "", "", "", "", "", "", "https://oracleapex.cn/t/42"].join("\t"),
+          ["43", "ORDS topic", "", "", "", "", "", "", "", "", "", ""].join("\t"),
+          ""
+        ].join("\n")
+      },
       { argv: ["node", "apexcn", "search", "APEX", "--json", "--format", "pretty"], expected: `${JSON.stringify(payload, null, 2)}\n` }
     ];
 
@@ -510,7 +553,7 @@ describe("content commands", () => {
       { payload: { items: [] }, expected: "" },
       {
         payload: { items: [{ id: 42, title: "APEX\ttopic\none", url: "https://oracleapex.cn/t/42\nref" }] },
-        expected: "42\tAPEX topic one\thttps://oracleapex.cn/t/42 ref\n"
+        expected: `${["42", "APEX topic one", "", "", "", "", "", "", "", "", "", "https://oracleapex.cn/t/42 ref"].join("\t")}\n`
       }
     ];
 
@@ -662,7 +705,7 @@ describe("content commands", () => {
       "https://oracleapex.cn/ords/test/api/v1/search?keyword=%25&pageSize=20&categoryId=4&cursor=cursor-1&fromDate=2026-07-01&toDate=2026-07-04",
       expect.any(Object)
     );
-    expect(stdout.join("")).toBe("42\tRecent topic\t2026-07-03T08:00:00\t2026-07-03T00:00:00\thttps://oracleapex.cn/t/42\n");
+    expect(stdout.join("")).toBe(`${["42", "Recent topic", "", "", "2026-07-03T08:00:00", "", "", "", "", "", "", "https://oracleapex.cn/t/42"].join("\t")}\n`);
   });
 
   test("research searches and fetches topic details as a bundle", async () => {
@@ -944,6 +987,99 @@ describe("content commands", () => {
     expect(process.exitCode).toBeUndefined();
   });
 
+  test("search passes v0.4 server-side filters without renaming", async () => {
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () =>
+      Response.json({
+        items: [{
+          id: 42,
+          title: "Filtered topic",
+          categoryName: "APEX",
+          createdByName: "Author",
+          updatedDate: "2026-07-05",
+          sourceDomain: "example.com",
+          tags: "APEX,ORDS",
+          replyCount: 3,
+          usefulReplyCount: 1,
+          viewCount: 99,
+          isFeatured: true,
+          isPinned: true,
+          isLocked: true,
+          canonicalUrl: "https://oracleapex.cn/t/42"
+        }],
+        requestId: "req-search"
+      })
+    );
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "search",
+      "ORDS",
+      "--tag",
+      "APEX",
+      "--tags",
+      "APEX,ORDS",
+      "--author",
+      "Wang",
+      "--author-id",
+      "1",
+      "--source-domain",
+      "example.com",
+      "--original-url",
+      "docs",
+      "--content-type",
+      "article",
+      "--source-type",
+      "external",
+      "--status",
+      "useful",
+      "--view",
+      "popular",
+      "--sort",
+      "viewCount",
+      "--featured",
+      "--pinned",
+      "--locked",
+      "--unanswered",
+      "--has-useful-reply",
+      "--from",
+      "2026-07-01",
+      "--to",
+      "2026-07-05",
+      "--page-size",
+      "20",
+      "--cursor",
+      "cursor-1",
+      "--format",
+      "text"
+    ]);
+
+    expect(fetch).toHaveBeenLastCalledWith(
+      "https://oracleapex.cn/ords/test/api/v1/search?keyword=ORDS&pageSize=20&cursor=cursor-1&fromDate=2026-07-01&toDate=2026-07-05&tag=APEX&tags=APEX%2CORDS&author=Wang&authorId=1&sourceDomain=example.com&originalUrl=docs&contentType=article&sourceType=external&status=useful&view=popular&sort=viewCount&featured=true&pinned=true&locked=true&unanswered=true&hasUsefulReply=true",
+      expect.any(Object)
+    );
+    expect(stderr.join("")).toBe("");
+    expect(stdout.join("")).toContain("42\tFiltered topic\tAPEX\tAuthor\t2026-07-05\texample.com\tAPEX,ORDS\t3\t1\t99\tfeatured,pinned,locked\thttps://oracleapex.cn/t/42\n");
+  });
+
+  test("topic list calls topics endpoint with v0.4 filters", async () => {
+    const { program, stdout, fetch } = await configuredProgram(async () =>
+      Response.json({
+        items: [{ id: 51, title: "Unanswered", threadUrl: "https://oracleapex.cn/t/51" }],
+        page: { hasMore: true, nextCursor: "next-1" },
+        requestId: "req-topics"
+      })
+    );
+
+    await program.parseAsync(["node", "apexcn", "thread", "list", "--view", "unanswered", "--source-domain", "example.com", "--sort", "updated", "--page-size", "20", "--json"]);
+
+    expect(fetch).toHaveBeenLastCalledWith(
+      "https://oracleapex.cn/ords/test/api/v1/topics?pageSize=20&sourceDomain=example.com&view=unanswered&sort=updated",
+      expect.any(Object)
+    );
+    expect(JSON.parse(stdout.join("")).page.nextCursor).toBe("next-1");
+  });
+
   test("search rejects empty cursors before making API requests", async () => {
     const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ items: [] }));
     exitOverrideTree(program);
@@ -972,7 +1108,7 @@ describe("content commands", () => {
 
   test("format option is exposed only on read commands with text output", () => {
     const program = createProgram();
-    const formatCommands = ["doctor", "doctor snapshot", "draft reply", "draft question", "review reply", "review topic", "workflow plan", "admin list", "me", "me favorites", "me replies", "me stats", "me subscriptions", "me topics", "category list", "search", "stats category", "stats tag", "stats topic", "research", "topic recent", "topic view", "thread recent", "thread view", "ask"];
+    const formatCommands = ["doctor", "doctor snapshot", "draft reply", "draft question", "review reply", "review topic", "workflow plan", "admin list", "me", "me favorites", "me replies", "me stats", "me subscriptions", "me topics", "category list", "search", "stats category", "stats tag", "stats topic", "research", "topic list", "topic recent", "topic view", "thread list", "thread recent", "thread view", "ask"];
 
     for (const path of leafCommandPaths(program)) {
       if (formatCommands.includes(path)) {
@@ -987,6 +1123,7 @@ describe("content commands", () => {
     const invalidCases = [
       ["node", "apexcn", "category", "list", "--format", "xml"],
       ["node", "apexcn", "search", "APEX", "--format", "yaml"],
+      ["node", "apexcn", "topic", "list", "--format", "yaml"],
       ["node", "apexcn", "topic", "recent", "--format", "yaml"],
       ["node", "apexcn", "topic", "view", "42", "--format", "xml"],
       ["node", "apexcn", "me", "--format", "yaml"],
@@ -1013,6 +1150,7 @@ describe("content commands", () => {
     const ambiguousCases = [
       ["node", "apexcn", "category", "list", "--json", "--format", "text"],
       ["node", "apexcn", "search", "APEX", "--json", "--format", "json"],
+      ["node", "apexcn", "topic", "list", "--json", "--format", "text"],
       ["node", "apexcn", "topic", "view", "42", "--json", "--format", "text"],
       ["node", "apexcn", "me", "--json", "--format", "json"],
       ["node", "apexcn", "me", "topics", "--json", "--format", "json"],
@@ -1290,6 +1428,7 @@ describe("content commands", () => {
       "Author: 王方钢",
       "Category: APEX 进阶",
       "URL: https://oracleapex.cn/t/42",
+      "Thread URL: https://oracleapex.cn/t/42",
       "Content:",
       "第一行",
       "第二行",
@@ -1727,6 +1866,57 @@ describe("content commands", () => {
       "requestId: req-ask",
       ""
     ].join("\n"));
+  });
+
+  test("ask sends scoped filters and renders filtered reference metadata", async () => {
+    const { program, stdout, fetch } = await configuredProgram(async () =>
+      Response.json({
+        answer: "找到 2 条范围内参考。",
+        confidence: "medium",
+        limitations: ["filtered ask returns scoped references"],
+        filters: { categoryId: 4, fromDate: "2026-07-01", toDate: "2026-07-05", tag: "ORDS" },
+        references: [{ title: "ORDS update", topicId: 42, confidence: 0.7 }],
+        requestId: "req-filtered-ask"
+      })
+    );
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "ask",
+      "最近 ORDS API 有哪些更新?",
+      "--top-k",
+      "5",
+      "--category-id",
+      "4",
+      "--from",
+      "2026-07-01",
+      "--to",
+      "2026-07-05",
+      "--tag",
+      "ORDS",
+      "--format",
+      "text"
+    ]);
+
+    expect(fetch).toHaveBeenLastCalledWith(
+      "https://oracleapex.cn/ords/test/api/v1/ask",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          question: "最近 ORDS API 有哪些更新?",
+          topK: 5,
+          categoryId: 4,
+          fromDate: "2026-07-01",
+          toDate: "2026-07-05",
+          tag: "ORDS"
+        })
+      })
+    );
+    expect(stdout.join("")).toContain("Scoped Answer:\n找到 2 条范围内参考。\n");
+    expect(stdout.join("")).toContain("confidence: medium\n");
+    expect(stdout.join("")).toContain("limitations:\nfiltered ask returns scoped references\n");
+    expect(stdout.join("")).toContain("filters: categoryId=4 fromDate=2026-07-01 toDate=2026-07-05 tag=ORDS\n");
   });
 
   test("ask enriches backend references with stable topic URLs", async () => {

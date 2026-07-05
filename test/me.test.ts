@@ -174,6 +174,32 @@ describe("me command", () => {
     expect(stderr.join("")).toBe("");
   });
 
+  test("favorite and subscription lists tolerate unavailable targets", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      Response.json({
+        kind: "me-favorites",
+        items: [{ targetId: 404, unavailableReason: "TOPIC_NOT_FOUND", relationCreatedDate: "2026-07-04" }],
+        page: { pageSize: 10, offset: 0, count: 1, hasMore: false }
+      })
+    ));
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz", "--base-url", "https://oracleapex.cn/ords/test", "--profile", "test@oci"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me", "favorites", "--format", "text"]);
+
+    expect(stdout.join("")).toBe("404\t\t2026-07-04\t\tTOPIC_NOT_FOUND\t\n");
+    expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBeUndefined();
+  });
+
   test("rejects ambiguous format options before making API requests", async () => {
     const configPath = await tempConfigPath();
     const stdout: string[] = [];

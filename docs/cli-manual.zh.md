@@ -95,13 +95,15 @@ apexcn category list --format text
 
 ## stats
 
-读取 0.3.0-candidate 聚合统计接口：
+读取聚合统计接口。0.4.0-candidate 起支持日期窗口和 top 列表大小：
 
 ```bash
 apexcn stats category --json
+apexcn stats category --from 2026-07-01 --to 2026-07-05 --json
 apexcn stats topic --json
-apexcn stats topic --tag "ORDS" --json
+apexcn stats topic --tag "ORDS" --from 2026-07-01 --top 10 --json
 apexcn stats tag --format text
+apexcn stats tag --from 2026-07-01 --top 20 --json
 ```
 
 `stats category` 返回每个板块的话题数、回复数和精选话题数。`stats topic` 返回全局或精确 tag 过滤的话题统计，并在未指定 `--tag` 时包含 `tagCounts`。`stats tag` 返回精确 tag 使用次数。
@@ -138,6 +140,7 @@ apexcn me subscriptions --json
 ```bash
 apexcn search "Oracle APEX" --json
 apexcn search "Oracle APEX" --format text
+apexcn search "ORDS" --tags APEX,ORDS --has-useful-reply --source-type external --json
 ```
 
 限制数量：
@@ -147,6 +150,19 @@ apexcn search "REST API" --page-size 5 --json
 ```
 
 按板块搜索：
+
+```bash
+apexcn search "性能优化" --category-id 4 --json
+```
+
+列出话题并使用服务端筛选：
+
+```bash
+apexcn topic list --view unanswered --page-size 20 --json
+apexcn topic list --source-domain example.com --sort updated --json
+```
+
+`search` 和 `topic list` 支持服务端过滤：`--tag`、`--tags`、`--author`、`--author-id`、`--source-domain`、`--original-url`、`--content-type`、`--source-type`、`--status`、`--view`、`--sort`、`--featured`、`--pinned`、`--locked`、`--unanswered`、`--has-useful-reply`、`--from/--to`、`--from-date/--to-date`、`--category-id`、`--page-size`、`--cursor`、`--offset`。优先使用 `page.nextCursor` 继续分页，`--offset` 仅用于兼容。
 
 ```bash
 apexcn search "ORDS" --category-id 4 --page-size 10 --json
@@ -458,8 +474,11 @@ apexcn subscription remove 30549 --json
 ```bash
 apexcn ask "Oracle APEX 如何调用 REST API？" --json
 apexcn ask "ORDS OAuth2 Bearer token 怎么生成？" --top-k 3 --json
+apexcn ask "最近 ORDS API 有哪些更新？" --tag ORDS --from 2026-07-01 --to 2026-07-05 --top-k 5 --json
 apexcn ask "Oracle APEX 如何调用 REST API？" --format text
 ```
+
+带 `--category-id`、`--from/--to` 或 `--tag` 的 filtered ask 会按范围返回 scoped references、`confidence`、`limitations` 和 `filters`。在服务端契约变更前，不要把 filtered ask 当作完整 RAG 生成回答。
 
 问答引用会尽量从后端的 topic id、`card_link`、`doc_id`、`url` 或 `threadUrl` 补全可点击的 `https://oracleapex.cn/t/<id>` 链接；原始后端链接会保留为 `originalUrl`。
 

@@ -35,6 +35,53 @@ type ApiRequestPlan = {
   body?: unknown;
 };
 
+type TopicFilterOptions = {
+  categoryId?: number;
+  pageSize?: number;
+  cursor?: string;
+  offset?: number;
+  from?: string;
+  to?: string;
+  fromDate?: string;
+  toDate?: string;
+  tag?: string;
+  tags?: string;
+  author?: string;
+  authorId?: number;
+  sourceDomain?: string;
+  originalUrl?: string;
+  contentType?: string;
+  sourceType?: string;
+  status?: string;
+  view?: string;
+  sort?: string;
+  featured?: boolean;
+  pinned?: boolean;
+  locked?: boolean;
+  unanswered?: boolean;
+  hasUsefulReply?: boolean;
+};
+
+type StatsFilterOptions = {
+  from?: string;
+  to?: string;
+  fromDate?: string;
+  toDate?: string;
+  top?: number;
+  limit?: number;
+  pageSize?: number;
+};
+
+type AskFilterOptions = {
+  topK?: number;
+  categoryId?: number;
+  from?: string;
+  to?: string;
+  fromDate?: string;
+  toDate?: string;
+  tag?: string;
+};
+
 export function createCategoryCommand(options: ApiCommandOptions): Command {
   const category = new Command("category");
   category
@@ -59,14 +106,24 @@ export function createStatsCommand(options: ApiCommandOptions): Command {
   stats
     .command("category")
     .description("show per-category aggregate statistics")
+    .option("--from <date>", "inclusive activity-from date, YYYY-MM-DD", parseSearchDate)
+    .option("--to <date>", "inclusive activity-to date, YYYY-MM-DD", parseSearchDate)
+    .option("--from-date <date>", "inclusive activity-from date, YYYY-MM-DD", parseSearchDate)
+    .option("--to-date <date>", "inclusive activity-to date, YYYY-MM-DD", parseSearchDate)
     .option("--json", "pretty-print JSON")
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
-    .action(async (commandOptions: FormatOption) => {
+    .action(async (commandOptions: FormatOption & StatsFilterOptions) => {
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
+      if (!validateDateOptions(options, commandOptions, commandOptions)) {
+        return;
+      }
       await runApi(options, commandOptions, async (session) => {
-        const data = await requestJson(session.baseUrl, "/api/v1/category-stats", { token: session.token });
+        const data = await requestJson(session.baseUrl, "/api/v1/category-stats", {
+          token: session.token,
+          query: dateQuery(commandOptions)
+        });
         printData(options, data, outputFormat(commandOptions), formatCategoryStatsText);
       });
     });
@@ -75,16 +132,30 @@ export function createStatsCommand(options: ApiCommandOptions): Command {
     .command("topic")
     .description("show topic aggregate statistics")
     .option("--tag <tag>", "exact tag name", parseNonBlankText)
+    .option("--from <date>", "inclusive activity-from date, YYYY-MM-DD", parseSearchDate)
+    .option("--to <date>", "inclusive activity-to date, YYYY-MM-DD", parseSearchDate)
+    .option("--from-date <date>", "inclusive activity-from date, YYYY-MM-DD", parseSearchDate)
+    .option("--to-date <date>", "inclusive activity-to date, YYYY-MM-DD", parseSearchDate)
+    .option("--top <n>", "top tag count, 1-50", parseTopSize)
+    .option("--limit <n>", "top tag count alias, 1-50", parseTopSize)
+    .option("--page-size <n>", "top tag count compatibility alias, 1-50", parseTopSize)
     .option("--json", "pretty-print JSON")
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
-    .action(async (commandOptions: FormatOption & { tag?: string }) => {
+    .action(async (commandOptions: FormatOption & StatsFilterOptions & { tag?: string }) => {
       if (!validateFormatOptions(options, commandOptions)) {
+        return;
+      }
+      if (!validateDateOptions(options, commandOptions, commandOptions)) {
         return;
       }
       await runApi(options, commandOptions, async (session) => {
         const data = await requestJson(session.baseUrl, "/api/v1/topic-stats", {
           token: session.token,
-          query: { tag: commandOptions.tag }
+          query: {
+            tag: commandOptions.tag,
+            ...dateQuery(commandOptions),
+            ...statsTopQuery(commandOptions)
+          }
         });
         printData(options, data, outputFormat(commandOptions), formatTopicStatsText);
       });
@@ -93,14 +164,30 @@ export function createStatsCommand(options: ApiCommandOptions): Command {
   stats
     .command("tag")
     .description("show exact tag usage statistics")
+    .option("--from <date>", "inclusive activity-from date, YYYY-MM-DD", parseSearchDate)
+    .option("--to <date>", "inclusive activity-to date, YYYY-MM-DD", parseSearchDate)
+    .option("--from-date <date>", "inclusive activity-from date, YYYY-MM-DD", parseSearchDate)
+    .option("--to-date <date>", "inclusive activity-to date, YYYY-MM-DD", parseSearchDate)
+    .option("--top <n>", "top tag count, 1-50", parseTopSize)
+    .option("--limit <n>", "top tag count alias, 1-50", parseTopSize)
+    .option("--page-size <n>", "top tag count compatibility alias, 1-50", parseTopSize)
     .option("--json", "pretty-print JSON")
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
-    .action(async (commandOptions: FormatOption) => {
+    .action(async (commandOptions: FormatOption & StatsFilterOptions) => {
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
+      if (!validateDateOptions(options, commandOptions, commandOptions)) {
+        return;
+      }
       await runApi(options, commandOptions, async (session) => {
-        const data = await requestJson(session.baseUrl, "/api/v1/tag-stats", { token: session.token });
+        const data = await requestJson(session.baseUrl, "/api/v1/tag-stats", {
+          token: session.token,
+          query: {
+            ...dateQuery(commandOptions),
+            ...statsTopQuery(commandOptions)
+          }
+        });
         printData(options, data, outputFormat(commandOptions), formatTagStatsText);
       });
     });
@@ -128,21 +215,16 @@ export function createAdminCommand(options: ApiCommandOptions): Command {
 }
 
 export function createSearchCommand(options: ApiCommandOptions): Command {
-  return new Command("search")
+  const search = new Command("search")
     .argument("<keyword>")
-    .option("--category-id <id>", "category id", parsePositiveInteger)
-    .option("--page-size <n>", "page size, 1-50", parseSearchPageSize)
-    .option("--cursor <cursor>", "cursor from page.nextCursor", parseCursor)
-    .option("--offset <n>", "backward-compatible numeric offset", parseNonNegativeInteger)
-    .option("--from-date <date>", "inclusive updated-from date, YYYY-MM-DD", parseSearchDate)
-    .option("--to-date <date>", "inclusive updated-to date, YYYY-MM-DD", parseSearchDate)
     .option("--json", "pretty-print JSON")
-    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
-    .action(async (keyword: string, commandOptions: FormatOption & { categoryId?: number; pageSize?: number; cursor?: string; offset?: number; fromDate?: string; toDate?: string }) => {
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat));
+  addTopicFilterOptions(search);
+  return search.action(async (keyword: string, commandOptions: FormatOption & TopicFilterOptions) => {
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
-      if (!validateSearchDateRange(options, commandOptions.fromDate, commandOptions.toDate, commandOptions)) {
+      if (!validateDateOptions(options, commandOptions, commandOptions)) {
         return;
       }
       const normalizedKeyword = normalizeSearchKeyword(keyword);
@@ -151,12 +233,7 @@ export function createSearchCommand(options: ApiCommandOptions): Command {
           token: session.token,
           query: {
             keyword: normalizedKeyword,
-            categoryId: commandOptions.categoryId,
-            pageSize: commandOptions.pageSize,
-            cursor: commandOptions.cursor,
-            offset: commandOptions.offset,
-            fromDate: commandOptions.fromDate,
-            toDate: commandOptions.toDate
+            ...topicFilterQuery(commandOptions)
           }
         });
         printData(options, searchOutput(data, keyword, normalizedKeyword), outputFormat(commandOptions), formatSearchText);
@@ -239,6 +316,27 @@ export function createResearchCommand(options: ApiCommandOptions): Command {
 
 export function createTopicCommand(options: ApiCommandOptions): Command {
   const topic = new Command("topic").alias("thread");
+
+  const list = topic.command("list")
+    .description("list topics with server-side filters")
+    .option("--json", "pretty-print JSON")
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat));
+  addTopicFilterOptions(list);
+  list.action(async (commandOptions: FormatOption & TopicFilterOptions) => {
+    if (!validateFormatOptions(options, commandOptions)) {
+      return;
+    }
+    if (!validateDateOptions(options, commandOptions, commandOptions)) {
+      return;
+    }
+    await runApi(options, commandOptions, async (session) => {
+      const data = await requestJson(session.baseUrl, "/api/v1/topics", {
+        token: session.token,
+        query: topicFilterQuery(commandOptions)
+      });
+      printData(options, data, outputFormat(commandOptions), formatTopicListText);
+    });
+  });
 
   topic
     .command("recent")
@@ -574,17 +672,32 @@ export function createAskCommand(options: ApiCommandOptions): Command {
   return new Command("ask")
     .argument("<question>")
     .option("--top-k <n>", "number of chunks", parsePositiveInteger)
+    .option("--category-id <id>", "category id", parsePositiveInteger)
+    .option("--from <date>", "inclusive activity-from date, YYYY-MM-DD", parseSearchDate)
+    .option("--to <date>", "inclusive activity-to date, YYYY-MM-DD", parseSearchDate)
+    .option("--from-date <date>", "inclusive activity-from date, YYYY-MM-DD", parseSearchDate)
+    .option("--to-date <date>", "inclusive activity-to date, YYYY-MM-DD", parseSearchDate)
+    .option("--tag <tag>", "exact tag filter", parseNonBlankText)
     .option("--json", "pretty-print JSON")
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
-    .action(async (question: string, commandOptions: FormatOption & { topK?: number }) => {
+    .action(async (question: string, commandOptions: FormatOption & AskFilterOptions) => {
       if (!validateFormatOptions(options, commandOptions)) {
+        return;
+      }
+      if (!validateDateOptions(options, commandOptions, commandOptions)) {
         return;
       }
       await runApi(options, commandOptions, async (session) => {
         const data = await requestJson(session.baseUrl, "/api/v1/ask", {
           token: session.token,
           method: "POST",
-          body: compactBody({ question, topK: commandOptions.topK })
+          body: compactBody({
+            question,
+            topK: commandOptions.topK,
+            categoryId: commandOptions.categoryId,
+            ...dateQuery(commandOptions),
+            tag: commandOptions.tag
+          })
         });
         printData(options, enrichAskReferences(data), outputFormat(commandOptions), formatAskText);
       });
@@ -623,8 +736,10 @@ async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOpt
         message: redactSecret(error.message, session?.token),
         status: error.status,
         requestId: error.requestId,
+        retryAfterSeconds: error.retryAfterSeconds,
+        windowSeconds: error.windowSeconds,
         exitCode: 1
-      }, `HTTP ${error.status}: ${redactSecret(error.message, session?.token)}${requestId}\n`, commandOptions.json);
+      }, httpErrorText(error, session?.token, requestId), commandOptions.json);
       process.exitCode = 1;
       return;
     }
@@ -757,6 +872,103 @@ function compactBody(input: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined));
 }
 
+function addTopicFilterOptions(command: Command): Command {
+  return command
+    .option("--category-id <id>", "category id", parsePositiveInteger)
+    .option("--page-size <n>", "page size, 1-50", parseSearchPageSize)
+    .option("--cursor <cursor>", "cursor from page.nextCursor", parseCursor)
+    .option("--offset <n>", "backward-compatible numeric offset", parseNonNegativeInteger)
+    .option("--from <date>", "inclusive activity-from date, YYYY-MM-DD", parseSearchDate)
+    .option("--to <date>", "inclusive activity-to date, YYYY-MM-DD", parseSearchDate)
+    .option("--from-date <date>", "inclusive activity-from date, YYYY-MM-DD", parseSearchDate)
+    .option("--to-date <date>", "inclusive activity-to date, YYYY-MM-DD", parseSearchDate)
+    .option("--tag <tag>", "exact tag filter", parseNonBlankText)
+    .option("--tags <csv>", "comma-separated exact tags; all must match", parseNonBlankText)
+    .option("--author <text>", "author nickname substring or author id text", parseNonBlankText)
+    .option("--author-id <id>", "exact author id", parsePositiveInteger)
+    .option("--source-domain <domain>", "normalized original URL domain", parseNonBlankText)
+    .option("--original-url <text>", "original source URL substring", parseNonBlankText)
+    .option("--content-type <type>", "derived content type, such as article or topic", parseNonBlankText)
+    .option("--source-type <type>", "derived source type, such as external or community", parseNonBlankText)
+    .option("--status <status>", "topic status: locked, open, featured, pinned, unanswered, solved, useful", parseNonBlankText)
+    .option("--view <view>", "topic view: recent, featured, pinned, unanswered, hot, popular", parseNonBlankText)
+    .option("--sort <sort>", "sort mode: recent, updated, created, viewCount, replies, hot", parseNonBlankText)
+    .option("--featured", "only featured topics")
+    .option("--pinned", "only pinned topics")
+    .option("--locked", "only locked topics")
+    .option("--unanswered", "only unanswered topics")
+    .option("--has-useful-reply", "only topics with useful replies");
+}
+
+function topicFilterQuery(options: TopicFilterOptions): Record<string, string | number | boolean | undefined> {
+  return {
+    categoryId: options.categoryId,
+    pageSize: options.pageSize,
+    cursor: options.cursor,
+    offset: options.offset,
+    ...dateQuery(options),
+    tag: options.tag,
+    tags: options.tags,
+    author: options.author,
+    authorId: options.authorId,
+    sourceDomain: options.sourceDomain,
+    originalUrl: options.originalUrl,
+    contentType: options.contentType,
+    sourceType: options.sourceType,
+    status: options.status,
+    view: options.view,
+    sort: options.sort,
+    featured: options.featured,
+    pinned: options.pinned,
+    locked: options.locked,
+    unanswered: options.unanswered,
+    hasUsefulReply: options.hasUsefulReply
+  };
+}
+
+function dateQuery(options: { from?: string; to?: string; fromDate?: string; toDate?: string }): { fromDate?: string; toDate?: string } {
+  return {
+    fromDate: options.fromDate ?? options.from,
+    toDate: options.toDate ?? options.to
+  };
+}
+
+function statsTopQuery(options: StatsFilterOptions): { top?: number; limit?: number; pageSize?: number } {
+  if (options.top !== undefined) {
+    return { top: options.top };
+  }
+  if (options.limit !== undefined) {
+    return { limit: options.limit };
+  }
+  return { pageSize: options.pageSize };
+}
+
+function validateDateOptions(
+  options: CommandIo,
+  dates: { from?: string; to?: string; fromDate?: string; toDate?: string },
+  commandOptions?: ErrorFormatOption
+): boolean {
+  if (dates.from && dates.fromDate && dates.from !== dates.fromDate) {
+    printError(options, { type: "validation", message: "--from and --from-date must match when both are provided", exitCode: 1 }, undefined, commandOptions?.json);
+    process.exitCode = 1;
+    return false;
+  }
+  if (dates.to && dates.toDate && dates.to !== dates.toDate) {
+    printError(options, { type: "validation", message: "--to and --to-date must match when both are provided", exitCode: 1 }, undefined, commandOptions?.json);
+    process.exitCode = 1;
+    return false;
+  }
+  const query = dateQuery(dates);
+  return validateSearchDateRange(options, query.fromDate, query.toDate, commandOptions);
+}
+
+function httpErrorText(error: HttpError, token: string | undefined, requestId: string): string {
+  const retry = error.retryAfterSeconds === undefined ? "" : ` retryAfterSeconds=${error.retryAfterSeconds}`;
+  const window = error.windowSeconds === undefined ? "" : ` windowSeconds=${error.windowSeconds}`;
+  const hint = error.status === 429 && error.retryAfterSeconds !== undefined ? ` Retry after ${error.retryAfterSeconds}s.` : "";
+  return `HTTP ${error.status}: ${redactSecret(error.message, token)}${requestId}${retry}${window}${hint}\n`;
+}
+
 function formatCategoryListText(data: unknown): string {
   const items = itemsFromData(data);
   return items.map((item) => `${fieldText(item.id)}\t${fieldText(item.name)}`).join("\n");
@@ -811,19 +1023,34 @@ function formatAdminListText(data: unknown): string {
 }
 
 function formatSearchText(data: unknown): string {
+  return formatTopicListText(data);
+}
+
+function formatTopicListText(data: unknown): string {
   const items = itemsFromData(data);
-  return items.map((item) => `${fieldText(item.id)}\t${fieldText(item.title)}\t${fieldText(item.url)}`).join("\n");
+  return items.map(formatTopicSummaryRow).join("\n");
 }
 
 function formatRecentTopicsText(data: unknown): string {
   const items = itemsFromData(data);
-  return items.map((item) => [
-    fieldText(item.id),
+  return items.map(formatTopicSummaryRow).join("\n");
+}
+
+function formatTopicSummaryRow(item: Record<string, unknown>): string {
+  return [
+    fieldText(item.id ?? item.topicId),
     fieldText(item.title),
+    fieldText(item.categoryName ?? item.categoryId),
+    fieldText(item.createdByName ?? item.createdBy),
     fieldText(item.updatedDate),
-    fieldText(item.createdDate),
-    fieldText(item.url ?? item.threadUrl)
-  ].join("\t")).join("\n");
+    fieldText(item.sourceDomain),
+    tagsText(item.tags),
+    fieldText(item.replyCount),
+    fieldText(item.usefulReplyCount),
+    fieldText(item.viewCount),
+    topicFlagsText(item),
+    fieldText(item.canonicalUrl ?? item.threadUrl ?? item.url)
+  ].join("\t");
 }
 
 function formatResearchText(data: unknown): string {
@@ -991,8 +1218,15 @@ function formatTopicText(data: unknown): string {
     line("Title", topic.title),
     line("Author", topic.createdByName ?? topic.authorName ?? topic.createdBy),
     line("Category", topic.categoryName),
-    line("URL", topic.url ?? topic.threadUrl),
+    line("URL", topic.canonicalUrl ?? topic.threadUrl ?? topic.url),
+    line("Thread URL", topic.threadUrl),
     line("Original URL", topic.originalUrl),
+    line("Source", topic.sourceDomain),
+    line("Tags", tagsText(topic.tags)),
+    line("Replies", topic.replyCount),
+    line("Useful replies", topic.usefulReplyCount),
+    line("Views", topic.viewCount),
+    line("Flags", topicFlagsText(topic)),
     blockLine("Content", topic.content ?? topic.body ?? topic.summary ?? topic.excerpt),
     line("requestId", isRecord(data) ? data.requestId : undefined)
   ]);
@@ -1013,8 +1247,11 @@ function formatAskText(data: unknown): string {
     return details ? `${index + 1}. ${title} - ${details}` : `${index + 1}. ${title}`;
   });
   return lines([
-    blockLine("Answer", answer),
-    sourceLines.length > 0 ? "Sources:" : undefined,
+    blockLine(filtersText(data.filters) ? "Scoped Answer" : "Answer", answer),
+    line("confidence", data.confidence),
+    blockLine("limitations", limitationsText(data.limitations)),
+    line("filters", filtersText(data.filters)),
+    sourceLines.length > 0 ? (filtersText(data.filters) ? "Scoped references:" : "Sources:") : undefined,
     ...sourceLines,
     line("requestId", data.requestId)
   ]);
@@ -1031,7 +1268,7 @@ function topicFromData(data: unknown): Record<string, unknown> | undefined {
 }
 
 function sourcesFromData(data: Record<string, unknown>): Array<Record<string, unknown>> {
-  for (const key of ["sources", "citations", "items"]) {
+  for (const key of ["sources", "citations", "references", "items"]) {
     const value = data[key];
     if (Array.isArray(value)) {
       return value.filter(isRecord);
@@ -1045,7 +1282,7 @@ function enrichAskReferences(data: unknown): unknown {
     return data;
   }
   const output = { ...data };
-  for (const key of ["sources", "citations", "items"]) {
+  for (const key of ["sources", "citations", "references", "items"]) {
     const value = output[key];
     if (Array.isArray(value)) {
       output[key] = value.map((item) => isRecord(item) ? enrichAskReference(item) : item);
@@ -1269,6 +1506,14 @@ function parseSearchPageSize(value: string): number {
   return parsed;
 }
 
+function parseTopSize(value: string): number {
+  const parsed = parsePositiveInteger(value);
+  if (parsed > 50) {
+    throw new InvalidArgumentError("Expected top size to be between 1 and 50");
+  }
+  return parsed;
+}
+
 function parseResearchLimit(value: string): number {
   const parsed = parsePositiveInteger(value);
   if (parsed > 10) {
@@ -1361,4 +1606,36 @@ function publicContactsText(value: unknown): string {
     const label = fieldText(contact.label ?? contact.value ?? contact.url);
     return [type, label].filter(Boolean).join(":");
   }).filter(Boolean).join(",");
+}
+
+function tagsText(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map(fieldText).filter(Boolean).join(",");
+  }
+  return fieldText(value);
+}
+
+function topicFlagsText(item: Record<string, unknown>): string {
+  return [
+    item.isFeatured === true ? "featured" : undefined,
+    item.isPinned === true ? "pinned" : undefined,
+    item.isLocked === true ? "locked" : undefined
+  ].filter(Boolean).join(",");
+}
+
+function filtersText(value: unknown): string {
+  if (!isRecord(value)) {
+    return "";
+  }
+  return Object.entries(value)
+    .map(([key, filterValue]) => [key, fieldText(filterValue)].filter(Boolean).join("="))
+    .filter(Boolean)
+    .join(" ");
+}
+
+function limitationsText(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map(fieldText).filter(Boolean).join("\n");
+  }
+  return blockText(value);
 }

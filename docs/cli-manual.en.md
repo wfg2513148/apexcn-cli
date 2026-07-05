@@ -95,13 +95,15 @@ apexcn category list --format text
 
 ## stats
 
-Read 0.3.0-candidate aggregate statistic endpoints:
+Read aggregate statistic endpoints. Since 0.4.0-candidate, they support date windows and top-list sizing:
 
 ```bash
 apexcn stats category --json
+apexcn stats category --from 2026-07-01 --to 2026-07-05 --json
 apexcn stats topic --json
-apexcn stats topic --tag "ORDS" --json
+apexcn stats topic --tag "ORDS" --from 2026-07-01 --top 10 --json
 apexcn stats tag --format text
+apexcn stats tag --from 2026-07-01 --top 20 --json
 ```
 
 `stats category` returns topic, reply, and featured-topic counts per category. `stats topic` returns global or exact-tag-filtered topic counts, and includes `tagCounts` when `--tag` is not provided. `stats tag` returns exact tag usage counts.
@@ -138,6 +140,7 @@ Basic search:
 ```bash
 apexcn search "Oracle APEX" --json
 apexcn search "Oracle APEX" --format text
+apexcn search "ORDS" --tags APEX,ORDS --has-useful-reply --source-type external --json
 ```
 
 Limit result count:
@@ -147,6 +150,19 @@ apexcn search "REST API" --page-size 5 --json
 ```
 
 Search within a category:
+
+```bash
+apexcn search "performance" --category-id 4 --json
+```
+
+List topics with server-side filters:
+
+```bash
+apexcn topic list --view unanswered --page-size 20 --json
+apexcn topic list --source-domain example.com --sort updated --json
+```
+
+`search` and `topic list` support server-side filters: `--tag`, `--tags`, `--author`, `--author-id`, `--source-domain`, `--original-url`, `--content-type`, `--source-type`, `--status`, `--view`, `--sort`, `--featured`, `--pinned`, `--locked`, `--unanswered`, `--has-useful-reply`, `--from/--to`, `--from-date/--to-date`, `--category-id`, `--page-size`, `--cursor`, and `--offset`. Prefer `page.nextCursor` for pagination; keep `--offset` only for compatibility.
 
 ```bash
 apexcn search "ORDS" --category-id 4 --page-size 10 --json
@@ -458,8 +474,11 @@ Ask against community content:
 ```bash
 apexcn ask "How do I call a REST API from Oracle APEX?" --json
 apexcn ask "How do I generate an ORDS OAuth2 Bearer token?" --top-k 3 --json
+apexcn ask "What changed in the recent ORDS API?" --tag ORDS --from 2026-07-01 --to 2026-07-05 --top-k 5 --json
 apexcn ask "How do I call a REST API from Oracle APEX?" --format text
 ```
+
+Filtered ask requests with `--category-id`, `--from/--to`, or `--tag` return scoped references, `confidence`, `limitations`, and `filters`. Until the server contract changes, do not treat filtered ask as full RAG generation.
 
 Ask references try to derive clickable `https://oracleapex.cn/t/<id>` links from backend topic ids, `card_link`, `doc_id`, `url`, or `threadUrl`. Original backend URLs are preserved as `originalUrl`.
 

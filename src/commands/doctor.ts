@@ -18,6 +18,8 @@ type DoctorCheck = {
   message?: string;
   status?: number;
   requestId?: string;
+  retryAfterSeconds?: number;
+  windowSeconds?: number;
 };
 
 type DoctorOutput = {
@@ -200,7 +202,15 @@ async function checkApi(
     return { name, ok: true, requestId: data.requestId };
   } catch (error) {
     if (error instanceof HttpError) {
-      return { name, ok: false, message: redactSecret(error.message, session.token), status: error.status, requestId: error.requestId };
+      return {
+        name,
+        ok: false,
+        message: redactSecret(error.message, session.token),
+        status: error.status,
+        requestId: error.requestId,
+        retryAfterSeconds: error.retryAfterSeconds,
+        windowSeconds: error.windowSeconds
+      };
     }
     if (error instanceof NetworkError) {
       return { name, ok: false, message: error.message };
@@ -227,7 +237,9 @@ function printDoctor(options: CommandIo, result: DoctorOutput, commandOptions: F
   for (const check of result.checks) {
     const detail = check.message ? ` - ${check.message}` : "";
     const requestId = check.requestId ? ` requestId=${check.requestId}` : "";
-    options.stdout(`${check.ok ? "OK" : "FAIL"} ${check.name}${detail}${requestId}\n`);
+    const retry = check.retryAfterSeconds === undefined ? "" : ` retryAfterSeconds=${check.retryAfterSeconds}`;
+    const window = check.windowSeconds === undefined ? "" : ` windowSeconds=${check.windowSeconds}`;
+    options.stdout(`${check.ok ? "OK" : "FAIL"} ${check.name}${detail}${requestId}${retry}${window}\n`);
   }
 }
 

@@ -66,11 +66,14 @@ apexcn auth set-token \
 - Use `apexcn workflow verify-bundle --bundle <file> --json` when reviewing a portable workflow bundle without access to the original run directory.
 - Use `apexcn collection build --query <keyword> --topic-id <id> --output-dir <dir> --json` when the user needs a reusable offline knowledge collection from multiple searches or explicit topics.
 - Use `apexcn collection verify --dir <dir> --json` before relying on a saved collection in an AI workflow.
-- Use `apexcn stats category --json`, `apexcn stats topic --json`, and `apexcn stats tag --json` when the user asks for aggregate community, category, topic, or tag counts.
+- Use `apexcn stats category --json`, `apexcn stats topic --json`, and `apexcn stats tag --json` when the user asks for aggregate community, category, topic, or tag counts. Add `--from/--to` and `--top` when the user asks for a date window or top tag/topic list.
 - Use `apexcn admin list --json` when the user asks who administers the community; only report public fields returned by the API.
 - Use `apexcn me stats --json`, `apexcn me topics --json`, `apexcn me replies --json`, `apexcn me favorites --json`, or `apexcn me subscriptions --json` when the user asks about their own activity.
+- Use `apexcn topic list --view unanswered --json`, `apexcn topic list --view popular --json`, `apexcn topic list --source-domain <domain> --json`, or equivalent server-side filters when the user asks for triage, source audit, imported articles, unanswered topics, hot/popular topics, pinned/featured/locked topics, or useful-answer topics.
 - Use `apexcn topic recent --since-hours 48 --json` when the user asks for recently updated or latest community posts. If `page.hasMore` is true and `page.nextCursor` is present, pass it back with `--cursor` to continue.
+- Use `apexcn search "<keyword>" --tag <tag> --source-type <type> --json` when the user asks for filtered search. Prefer server-side filters such as `--tag`, `--tags`, `--author`, `--author-id`, `--source-domain`, `--original-url`, `--content-type`, `--source-type`, `--status`, `--view`, `--sort`, `--featured`, `--pinned`, `--locked`, `--unanswered`, and `--has-useful-reply`; do not crawl pages and filter client-side when the server supports the filter.
 - Use `apexcn search "<keyword>" --cursor <page.nextCursor> --json` when continuing a paginated search result. Prefer cursor pagination over `--offset`; keep `--offset` only for compatibility.
+- Use filtered ask flags `--category-id`, `--from/--to`, and `--tag` only when the user wants scoped reference retrieval. Treat filtered ask output as scoped references with `confidence`, `limitations`, and `filters`, not as full RAG generation unless the server contract changes.
 - Use `apexcn commands --json` to inspect available commands, purposes, safety metadata, examples, and options instead of parsing help text.
 - Use `apexcn auth audit --json` before API workflows when you need a local-only check for missing active profile, invalid base URLs, missing tokens, duplicate base URLs, or insecure HTTP profiles.
 - Use `apexcn doctor snapshot --json` before sharing diagnostics with a user or support channel. It is local-only and reports config/env/agent-skill state without exposing full tokens or API key values.
@@ -86,7 +89,7 @@ apexcn auth set-token \
 - Before deleting a reply, confirm the target post id belongs to the intended thread, then pass `--yes --force`.
 - When reporting search results, topic summaries, or inspected content to a user, include each topic's real URL from `url` or `threadUrl`; include `originalUrl` too when present.
 - Do not infer an exact total from search results. If `page.hasMore` is true, report a lower bound such as "at least N results" and suggest narrowing by category or date.
-- Treat `401` as auth/token failure, `403` as permission/config denial, `409` as state conflict, and `429` as rate limiting.
+- Treat `401` as auth/token failure, `403` as permission/config denial, `409` as state conflict, and `429` as rate limiting. If stderr includes `retryAfterSeconds`, wait or report that exact retry window instead of retrying immediately.
 - Preserve stderr and `requestId` in logs for troubleshooting.
 - If community API calls hang or the network is unstable, set `APEXCN_HTTP_TIMEOUT_MS` to a positive millisecond value before rerunning.
 - For scripts that need parseable stderr, set `APEXCN_ERROR_FORMAT=json`.
@@ -99,14 +102,18 @@ apexcn search "APEX" --page-size 5 --json
 apexcn auth audit --json
 apexcn doctor snapshot --json
 apexcn stats category --json
-apexcn stats topic --json
-apexcn stats tag --json
+apexcn stats category --from 2026-07-01 --to 2026-07-05 --json
+apexcn stats topic --tag ORDS --from 2026-07-01 --top 10 --json
+apexcn stats tag --from 2026-07-01 --top 20 --json
 apexcn admin list --json
 apexcn me stats --json
 apexcn me topics --page-size 10 --json
 apexcn me replies --page-size 10 --json
 apexcn me favorites --page-size 10 --json
 apexcn me subscriptions --page-size 10 --json
+apexcn search "ORDS" --tags APEX,ORDS --has-useful-reply --source-type external --json
+apexcn topic list --view unanswered --page-size 20 --json
+apexcn topic list --source-domain example.com --sort updated --json
 apexcn topic recent --since-hours 48 --page-size 10 --json
 apexcn research "REST API" --limit 3 --json
 apexcn collection build --query "REST API" --query "ORDS" --topic-id 30549 --output-dir ./collection --json
@@ -124,6 +131,7 @@ apexcn workflow verify-bundle --bundle ./workflow-bundle.json --json
 apexcn workflow run --resume ./run --execute --yes --json
 apexcn commands --json
 apexcn ask "Oracle APEX 如何调用 REST API？" --top-k 3 --json
+apexcn ask "最近 ORDS API 有哪些更新？" --tag ORDS --from 2026-07-01 --to 2026-07-05 --top-k 5 --json
 apexcn topic view 30549 --json
 apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --preview
 apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --json
