@@ -8,6 +8,7 @@ const repoRoot = join(__dirname, "..");
 const script = join(repoRoot, "scripts/check-release-version.mjs");
 const artifactScript = join(repoRoot, "scripts/check-release-artifacts.mjs");
 const baselineScript = join(repoRoot, "scripts/baseline-report.mjs");
+const sourceLayoutScript = join(repoRoot, "scripts/check-source-layout.mjs");
 const workflowScript = join(repoRoot, "scripts/check-workflows.mjs");
 
 function readRepoFile(relativePath: string): string {
@@ -183,6 +184,15 @@ describe("release version check", () => {
     });
 
     expect(output).toContain("Workflow check passed");
+  });
+
+  test("source layout check rejects minified or single-line source files", () => {
+    const output = execFileSync("node", [sourceLayoutScript], {
+      cwd: repoRoot,
+      encoding: "utf8"
+    });
+
+    expect(output).toContain("Source layout check passed");
   });
 
   test("CI runs Windows installer coverage", () => {
