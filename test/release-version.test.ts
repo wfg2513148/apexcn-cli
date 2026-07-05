@@ -8,6 +8,7 @@ const repoRoot = join(__dirname, "..");
 const script = join(repoRoot, "scripts/check-release-version.mjs");
 const artifactScript = join(repoRoot, "scripts/check-release-artifacts.mjs");
 const baselineScript = join(repoRoot, "scripts/baseline-report.mjs");
+const workflowScript = join(repoRoot, "scripts/check-workflows.mjs");
 
 function readRepoFile(relativePath: string): string {
   return readFileSync(join(repoRoot, relativePath), "utf8");
@@ -174,6 +175,15 @@ describe("release version check", () => {
       rmSync(artifactsDir, { recursive: true, force: true });
     }
   }, 30000);
+
+  test("workflow check enforces CI and release quality gates", () => {
+    const output = execFileSync("node", [workflowScript], {
+      cwd: repoRoot,
+      encoding: "utf8"
+    });
+
+    expect(output).toContain("Workflow check passed");
+  });
 
   test("CI runs Windows installer coverage", () => {
     const workflow = readRepoFile(".github/workflows/ci.yml");

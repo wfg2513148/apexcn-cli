@@ -40,7 +40,7 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('--install-agent-skills');
     expect(script).toContain('APEXCN_API_KEY');
     expect(script).toContain('https://oracleapex.cn/ords/api');
-    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.7/apexcn-cli.tgz');
+    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.8/apexcn-cli.tgz');
     expect(script).toContain('APEXCN_CLI_SKIP_CHECKSUM');
     expect(script).toContain('checksums.txt');
     expect(script).toContain('Checksum verification failed');
@@ -87,7 +87,7 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('InstallAgentSkills');
     expect(script).toContain('APEXCN_API_KEY');
     expect(script).toContain('https://oracleapex.cn/ords/api');
-    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.7/apexcn-cli.tgz');
+    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.8/apexcn-cli.tgz');
     expect(script).toContain('APEXCN_CLI_SKIP_CHECKSUM');
     expect(script).toContain('checksums.txt');
     expect(script).toContain('Checksum verification failed');
@@ -436,7 +436,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         env: { ...process.env, HOME: join(tempRoot, 'home') },
         encoding: 'utf8',
       });
-      expect(version).toBe('0.18.7\n');
+      expect(version).toBe('0.18.8\n');
       expect(readFileSync(join(installRoot, 'dist', 'index.js'), 'utf8')).not.toContain('stale');
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
@@ -450,8 +450,8 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
       execNpm(['pack', '--pack-destination', tempRoot], {
         encoding: 'utf8',
       });
-      const archive = join(tempRoot, 'apexcn-cli-0.18.7.tgz');
-      writeChecksums(tempRoot, 'apexcn-cli-0.18.7.tgz');
+      const archive = join(tempRoot, 'apexcn-cli-0.18.8.tgz');
+      writeChecksums(tempRoot, 'apexcn-cli-0.18.8.tgz');
 
       const output = execFileSync(
         'bash',
@@ -477,7 +477,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         env: { ...process.env, HOME: join(tempRoot, 'home') },
         encoding: 'utf8',
       });
-      expect(version).toBe('0.18.7\n');
+      expect(version).toBe('0.18.8\n');
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
@@ -499,8 +499,8 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
       execNpm(['pack', '--pack-destination', tempRoot], {
         encoding: 'utf8',
       });
-      const archive = join(tempRoot, 'apexcn-cli-0.18.7.tgz');
-      writeChecksums(tempRoot, 'apexcn-cli-0.18.7.tgz');
+      const archive = join(tempRoot, 'apexcn-cli-0.18.8.tgz');
+      writeChecksums(tempRoot, 'apexcn-cli-0.18.8.tgz');
 
       const output = execFileSync(
         pwsh,
@@ -539,7 +539,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         encoding: 'utf8',
         shell: process.platform === 'win32',
       });
-      expect(version).toBe('0.18.7\n');
+      expect(version).toBe('0.18.8\n');
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
@@ -635,8 +635,8 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
     expect(doc).toContain('APEXCN_CLI_INSTALL_AGENT_SKILLS');
     expect(doc).toContain('--install-agent-skills');
     expect(doc).toContain('当前用户运行该命令的 AI 工具全局 Skills 目录');
-    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.7/install-agent.sh');
-    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.7/install-agent.ps1');
+    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.8/install-agent.sh');
+    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.8/install-agent.ps1');
     expect(doc).not.toContain('wfg2513148/apexcn-forums/main/cli/install-agent.sh');
     expect(doc).not.toContain('wfg2513148/apexcn-forums/main/cli/install-agent.ps1');
     expect(doc).not.toContain('feature/apexcn-cli-ords-api');

@@ -1,6 +1,6 @@
 {
   "name": "apexcn-cli",
-  "version": "0.18.7",
+  "version": "0.18.8",
   "type": "module",
   "bin": {
     "apexcn": "./dist/index.js"
@@ -21,7 +21,8 @@
   "scripts": {
     "baseline": "node scripts/baseline-report.mjs",
     "build": "tsc -p tsconfig.json",
-    "check:release": "node scripts/check-release-version.mjs && node scripts/check-release-artifacts.mjs",
+    "check:release": "node scripts/check-release-version.mjs && node scripts/check-release-artifacts.mjs && node scripts/check-workflows.mjs",
+    "check:workflows": "node scripts/check-workflows.mjs",
     "eval:rag": "node scripts/eval-rag.mjs --report",
     "test": "vitest run",
     "test:e2e:readonly": "bash scripts/e2e-readonly.sh"
