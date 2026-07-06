@@ -80,7 +80,17 @@ function Download-File {
     Copy-Item -LiteralPath $uri.LocalPath -Destination $Target -Force
     return
   }
-  Invoke-WebRequest -Uri $Url -OutFile $Target
+  $maxAttempts = 5
+  for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+    try {
+      Invoke-WebRequest -Uri $Url -OutFile $Target -TimeoutSec 300
+      return
+    } catch {
+      if ($attempt -ge $maxAttempts) { throw }
+      Write-WarningStep "download failed, retrying ($attempt/$maxAttempts): $Url"
+      Start-Sleep -Seconds 2
+    }
+  }
 }
 
 function Get-ChecksumsUrl {

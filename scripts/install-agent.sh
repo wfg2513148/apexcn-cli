@@ -143,12 +143,12 @@ download_file() {
   local url="$1"
   local target="$2"
   if command_exists curl; then
-    run_cmd curl -fsSL "$url" -o "$target"
+    run_cmd curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300 "$url" -o "$target"
   elif command_exists wget; then
-    run_cmd wget -q "$url" -O "$target"
+    run_cmd wget -q --tries=5 --timeout=20 "$url" -O "$target"
   else
     ensure_command curl curl
-    run_cmd curl -fsSL "$url" -o "$target"
+    run_cmd curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300 "$url" -o "$target"
   fi
 }
 

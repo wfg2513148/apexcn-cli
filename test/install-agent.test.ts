@@ -45,6 +45,8 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('APEXCN_CLI_VERIFY_TIMEOUT_MS');
     expect(script).toContain('checksums.txt');
     expect(script).toContain('Checksum verification failed');
+    expect(script).toContain('curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300');
+    expect(script).toContain('wget -q --tries=5 --timeout=20');
     expect(script).toContain('Checking apexcn account with timeout');
     expect(script).toContain('--package-url');
     expect(script).toContain('Downloading apexcn-cli package');
@@ -94,6 +96,9 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('APEXCN_CLI_VERIFY_TIMEOUT_MS');
     expect(script).toContain('checksums.txt');
     expect(script).toContain('Checksum verification failed');
+    expect(script).toContain('$maxAttempts = 5');
+    expect(script).toContain('Invoke-WebRequest -Uri $Url -OutFile $Target -TimeoutSec 300');
+    expect(script).toContain('download failed, retrying');
     expect(script).toContain('Checking apexcn account with timeout');
     expect(script).toContain('PackageUrl');
     expect(script).toContain('Downloading apexcn-cli package');
@@ -675,6 +680,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
     expect(doc).toContain('apexcn-cli.tgz');
     expect(doc).toContain('APEXCN_API_KEY');
     expect(doc).toContain('APEXCN_CLI_INSTALL_AGENT_SKILLS');
+    expect(doc).toContain('curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300');
     expect(doc).toContain('--install-agent-skills');
     expect(doc).toContain('当前用户运行该命令的 AI 工具全局 Skills 目录');
     expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh');
