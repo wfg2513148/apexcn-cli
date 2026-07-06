@@ -64,8 +64,10 @@ describe("documentation consistency", () => {
 
   test("README keeps the minimal fail-closed install command", () => {
     const readme = read("README.md");
-    expect(readme).toContain("bash -o pipefail -c");
-    expect(readme).toContain("curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash");
+    expect(readme).toContain("bash -euo pipefail -c");
+    expect(readme).toContain('curl -fsSL -o "$tmp" https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh');
+    expect(readme).toContain('bash "$tmp"');
+    expect(readme).not.toContain("install-agent.sh | bash");
     expect(readme).not.toContain("curl -fsSL --retry");
     expect(readme).not.toContain("install-agent.sh | APEXCN_API_KEY");
   });

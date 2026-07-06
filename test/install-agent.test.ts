@@ -366,12 +366,15 @@ printf 'external launcher\\n'
   test("primary docs expose the zero-argument commands and separate authentication", () => {
     for (const path of ["README.md"]) {
       const doc = readRepoFile(path);
-      expect(doc).toContain("bash -o pipefail -c 'curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash'");
+      expect(doc).toContain('bash -euo pipefail -c');
+      expect(doc).toContain('curl -fsSL -o "$tmp" https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh');
+      expect(doc).toContain('bash "$tmp"');
       expect(doc).toContain('irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex');
       expect(doc).toContain("安装命令不接收 API key");
       expect(doc).not.toContain("APEXCN_CLI_INSTALL_AGENT_SKILLS");
       expect(doc).not.toContain("APEXCN_CLI_YES");
       expect(doc).not.toContain("bash -s --");
+      expect(doc).not.toContain("install-agent.sh | bash");
     }
   });
 
