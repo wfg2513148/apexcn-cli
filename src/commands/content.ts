@@ -674,6 +674,7 @@ export function createAskCommand(options: ApiCommandOptions): Command {
   return new Command("ask")
     .argument("<question>")
     .option("--top-k <n>", "number of chunks", parsePositiveInteger)
+    .option("--context <text>", "explicit context for a short follow-up question", parseNonBlankText)
     .option("--category-id <id>", "category id", parsePositiveInteger)
     .option("--from <date>", "inclusive activity-from date, YYYY-MM-DD", parseSearchDate)
     .option("--to <date>", "inclusive activity-to date, YYYY-MM-DD", parseSearchDate)
@@ -682,21 +683,26 @@ export function createAskCommand(options: ApiCommandOptions): Command {
     .option("--tag <tag>", "exact tag filter", parseNonBlankText)
     .option("--json", "pretty-print JSON")
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
-    .action(async (question: string, commandOptions: FormatOption & AskFilterOptions) => {
+    .action(async (question: string, commandOptions: FormatOption & AskFilterOptions & { context?: string }) => {
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
       if (!validateDateOptions(options, commandOptions, commandOptions)) {
         return;
       }
+      if (!commandOptions.context && isContextDependentAskQuestion(question)) {
+        printData(options, askNeedsContextFallback(question), outputFormat(commandOptions), formatAskText);
+        return;
+      }
       await runApi(options, commandOptions, async (session) => {
+        const apiQuestion = askQuestionWithContext(question, commandOptions.context);
         let data: unknown;
         try {
           data = await requestJson(session.baseUrl, "/api/v1/ask", {
             token: session.token,
             method: "POST",
             body: compactBody({
-              question,
+              question: apiQuestion,
               topK: commandOptions.topK,
               categoryId: commandOptions.categoryId,
               ...dateQuery(commandOptions),
@@ -705,12 +711,12 @@ export function createAskCommand(options: ApiCommandOptions): Command {
           });
         } catch (error) {
           if (error instanceof HttpError && error.status === 429) {
-            data = askRateLimitFallback(error, question, session.token);
+            data = askRateLimitFallback(error, apiQuestion, session.token);
           } else {
             throw error;
           }
         }
-        printData(options, enrichAskReferences(data, question), outputFormat(commandOptions), formatAskText);
+        printData(options, enrichAskReferences(data, apiQuestion), outputFormat(commandOptions), formatAskText);
       });
     });
 }
@@ -1308,7 +1314,7 @@ function enrichAskReferences(data: unknown, question?: string): unknown {
   if (!isRecord(data)) {
     return data;
   }
-  const output = { ...data };
+  const output = normalizeAskResponse(data);
   for (const key of ["sources", "citations", "references", "items"]) {
     const value = output[key];
     if (Array.isArray(value)) {
@@ -1316,6 +1322,22 @@ function enrichAskReferences(data: unknown, question?: string): unknown {
     }
   }
   return withAskFallback(output, question);
+}
+
+function normalizeAskResponse(data: Record<string, unknown>): Record<string, unknown> {
+  if (!isRecord(data.data)) {
+    return { ...data };
+  }
+  const inner = data.data;
+  return compactBody({
+    status: data.status,
+    message: data.message,
+    ...inner,
+    answer: inner.answer,
+    references: Array.isArray(inner.references) ? inner.references : undefined,
+    requestId: inner.requestId ?? inner.request_id ?? data.requestId ?? data.request_id,
+    requestUrl: inner.requestUrl ?? inner.request_url
+  });
 }
 
 function withAskFallback(data: Record<string, unknown>, question?: string): Record<string, unknown> {
@@ -1338,6 +1360,20 @@ function withAskFallback(data: Record<string, unknown>, question?: string): Reco
       suggestedCommands: askSuggestedCommands(suggestedQueries)
     }
   });
+}
+
+function askNeedsContextFallback(question: string): Record<string, unknown> {
+  const suggestedQueries = askSuggestedQueries(question);
+  return {
+    answerable: false,
+    needsContext: true,
+    fallback: {
+      reason: "needs-context",
+      message: askFallbackMessage("needs-context"),
+      suggestedQueries,
+      suggestedCommands: askSuggestedCommands(suggestedQueries)
+    }
+  };
 }
 
 function askRateLimitFallback(error: HttpError, question: string, token?: string): Record<string, unknown> {
@@ -1376,6 +1412,31 @@ function askFallbackReason(data: Record<string, unknown>): string | undefined {
   return sourcesFromData(data).length === 0 ? "no-trusted-references" : undefined;
 }
 
+function askQuestionWithContext(question: string, context?: string): string {
+  if (!context) {
+    return question;
+  }
+  return `上下文：${context.trim()}\n追问：${question}`;
+}
+
+function isContextDependentAskQuestion(question: string): boolean {
+  const normalized = fieldText(question).replace(/[?？。！!]+$/g, "").trim();
+  if (!normalized) {
+    return false;
+  }
+  const lowered = normalized.toLowerCase();
+  if (/\b(apex|ords|rest|api|sql|plsql|json|oauth|token|interactive\s+grid)\b/i.test(lowered)) {
+    return false;
+  }
+  if (/[A-Za-z0-9]{2,}/.test(normalized)) {
+    return false;
+  }
+  if (/^(那|它|这个|那个|其|如果|最后|先|服务端|客户端|怎么|在哪|哪里|能按顺序)/.test(normalized)) {
+    return normalized.length <= 18;
+  }
+  return /^(那|它|这个|那个|先|最后).*(怎么|哪里|哪|确认|整理|顺序|不行)/.test(normalized) && normalized.length <= 24;
+}
+
 function isLowAskConfidence(value: unknown): boolean {
   if (typeof value === "number") {
     return Number.isFinite(value) && value < 0.3;
@@ -1395,6 +1456,9 @@ function isLowAskConfidence(value: unknown): boolean {
 }
 
 function askFallbackMessage(reason: string, retryAfterSeconds?: number): string {
+  if (reason === "needs-context") {
+    return "这个追问缺少上一轮问题或引用上下文。请把完整背景写进问题，或使用 --context 提供上一轮主题后再问。";
+  }
   if (reason === "rate-limited") {
     const retry = retryAfterSeconds === undefined ? "" : `请等待 ${retryAfterSeconds} 秒后重试，或先用 search/research 获取引用资料。`;
     return `服务端触发限流，因此本次未生成回答。${retry}`;

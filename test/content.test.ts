@@ -2004,6 +2004,96 @@ describe("content commands", () => {
     });
   });
 
+  test("ask normalizes wrapped backend data responses", async () => {
+    const { program, stdout } = await configuredProgram(async () =>
+      Response.json({
+        status: "OK",
+        message: "LIMITED_TRUSTED_REFERENCES",
+        data: {
+          request_id: "req-wrapped",
+          request_url: "f?p=:120:::::P20_REQUEST_ID:req-wrapped",
+          answer: "401 通常先检查 token 和授权。",
+          references: [
+            {
+              card_title: "ORDS OAuth",
+              card_link: "f?p=:14:::::P14_THREAD_ID:23722",
+              source_url: "https://oracleapex.cn/ords/r/apex-cn/website/thread"
+            }
+          ]
+        }
+      })
+    );
+
+    await program.parseAsync(["node", "apexcn", "ask", "APEX 调 ORDS REST API 返回 401，新手应该怎么排查？", "--json"]);
+
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
+      status: "OK",
+      message: "LIMITED_TRUSTED_REFERENCES",
+      answer: "401 通常先检查 token 和授权。",
+      requestId: "req-wrapped",
+      requestUrl: "f?p=:120:::::P20_REQUEST_ID:req-wrapped",
+      references: [
+        expect.objectContaining({
+          card_title: "ORDS OAuth",
+          url: "https://oracleapex.cn/t/23722",
+          threadUrl: "https://oracleapex.cn/t/23722"
+        })
+      ]
+    }));
+  });
+
+  test("ask returns a context-needed fallback for short follow-up questions", async () => {
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ answer: "unexpected" }));
+
+    await program.parseAsync(["node", "apexcn", "ask", "那第一步怎么确认？", "--top-k", "3", "--json"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBeUndefined();
+    expect(JSON.parse(stdout.join(""))).toEqual({
+      answerable: false,
+      needsContext: true,
+      fallback: {
+        reason: "needs-context",
+        message: "这个追问缺少上一轮问题或引用上下文。请把完整背景写进问题，或使用 --context 提供上一轮主题后再问。",
+        suggestedQueries: ["那第一步怎么确认"],
+        suggestedCommands: [
+          "apexcn search \"那第一步怎么确认\" --json",
+          "apexcn research \"那第一步怎么确认\" --json"
+        ]
+      }
+    });
+  });
+
+  test("ask sends explicit context with short follow-up questions", async () => {
+    const { program, fetch } = await configuredProgram(async () =>
+      Response.json({ answer: "先确认 token URL。", references: [{ topicId: 23722 }], requestId: "req-context" })
+    );
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "ask",
+      "那第一步怎么确认？",
+      "--context",
+      "APEX 调 ORDS REST API 返回 401",
+      "--top-k",
+      "3",
+      "--json"
+    ]);
+
+    expect(fetch).toHaveBeenLastCalledWith(
+      "https://oracleapex.cn/ords/test/api/v1/ask",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          question: "上下文：APEX 调 ORDS REST API 返回 401\n追问：那第一步怎么确认？",
+          topK: 3
+        })
+      })
+    );
+  });
+
   test("ask marks no-reference answers as not answerable in JSON", async () => {
     const { program, stdout } = await configuredProgram(async () =>
       Response.json({
