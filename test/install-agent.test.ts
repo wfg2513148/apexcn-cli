@@ -660,15 +660,27 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
     expect(description).toContain('APEX 中文社区');
     expect(description).toContain('oracleapex.cn');
     expect(description).toContain('APEX Chinese Community');
-    expect(description).toContain('community-content access intent');
+    expect(description).toContain('Oracle APEX troubleshooting/how-to question');
     expect(description).not.toContain('community posts/topics');
     expect(description).not.toContain('forum search');
     expect(skill).toContain('## Trigger Keywords');
     expect(skill).toContain('APEX社区 when paired with actions');
     expect(skill).toContain('在 APEX 中文社区搜索');
     expect(skill).toContain('发布到 APEX 中文社区');
+    expect(skill).toContain('Natural Oracle APEX troubleshooting or how-to questions');
     expect(skill).toContain('Do not use this skill for:');
     expect(skill).toContain('without APEX Chinese Community or oracleapex.cn context');
+  });
+
+  test('Codex skill instructs agents to carry ask follow-up context', () => {
+    const skill = readRepoFile('agent-skill/SKILL.md');
+
+    expect(skill).toContain('For natural Oracle APEX troubleshooting/how-to questions');
+    expect(skill).toContain('apexcn ask "<question>" --top-k 3 --json');
+    expect(skill).toContain('Maintain conversation context in the agent');
+    expect(skill).toContain('--context "<previous question/topic and constraints>"');
+    expect(skill).toContain('do not call `apexcn ask` with only the short follow-up');
+    expect(skill).toContain('needsContext');
   });
 
   test('quickstart exposes one-line AI agent installation as the primary path', () => {

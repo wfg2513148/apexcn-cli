@@ -1,6 +1,6 @@
 ---
 name: apexcn-cli
-description: Use when the user refers to oracleapex.cn, APEX 中文社区/APEX Chinese Community, or asks to search, summarize, inspect, ask RAG questions, publish, edit, reply, delete, favorite, or subscribe to posts on that APEX community. Do not use for generic Chinese/community/forum mentions or general Oracle APEX questions without community-content access intent.
+description: Use when the user refers to oracleapex.cn, APEX 中文社区/APEX Chinese Community, asks to search/summarize/inspect/RAG/publish community content, or asks an Oracle APEX troubleshooting/how-to question that can benefit from community references. Do not use for unrelated generic Chinese/community/forum mentions.
 ---
 
 # apexcn-cli
@@ -16,12 +16,13 @@ Use this skill for natural requests mentioning:
 - 在 APEX 中文社区搜索, 搜一下 APEX 中文社区, 查 oracleapex.cn, 总结 APEX 中文社区帖子
 - 发布到 APEX 中文社区, 在 oracleapex.cn 发帖, 在 oracleapex.cn 回帖, 查看社区帖子 ID
 - APEX 中文社区 RAG, 问一下 APEX 中文社区知识库
+- Natural Oracle APEX troubleshooting or how-to questions such as APEX 页面报错、ORDS 401、Interactive Grid 保存失败、授权方案配置、REST API 调用, especially from users who may not know to mention the community explicitly
 - `apexcn search`, `apexcn ask`, `apexcn topic`, `apexcn workflow`
 
 Do not use this skill for:
 
 - generic mentions of 中文社区, community, forum, 社区帖子, or RAG without APEX Chinese Community or oracleapex.cn context
-- general Oracle APEX technical questions where the user is not asking to access, search, summarize, or publish community content
+- Oracle APEX questions where the user explicitly asks for official documentation only or asks not to use community knowledge
 
 ## Before Acting
 
@@ -53,6 +54,9 @@ apexcn auth set-token \
 ## Agent Rules
 
 - Pass `--json` for machine-readability by default. Exception: use `apexcn draft question --format text` when generating Markdown content for `topic create --content-file`.
+- For natural Oracle APEX troubleshooting/how-to questions, use `apexcn ask "<question>" --top-k 3 --json` to retrieve community-grounded references even when the user does not explicitly say "APEX 中文社区". If the answer is weak or unanswerable, report that limitation instead of inventing an answer.
+- Maintain conversation context in the agent. When the user asks a short follow-up such as "那第一步呢？", "具体怎么做？", "为什么？", or "这个报错怎么排？", pass the previous question/topic and key constraints with `--context "<previous question/topic and constraints>"`; do not call `apexcn ask` with only the short follow-up.
+- If there is no reliable previous context for a short follow-up, ask the user for the missing topic or surface the CLI `needsContext` fallback. Do not silently answer the short follow-up as an unrelated standalone question.
 - `apexcn draft question` is local-only and does not require auth preflight when you are only drafting content; run auth checks before API reads or writes.
 - Use `apexcn draft reply --format text` to prepare a local Markdown reply before `reply create --content-file`.
 - Use `apexcn review topic` before `topic create --preview` when you have a local Markdown draft or question-draft JSON. It is local-only, detects placeholders and possible secrets, and never publishes.
