@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { isAbsolute, join, normalize, sep } from "node:path";
 import { Command, InvalidArgumentError } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
+import { formatHttpErrorText, remediationForHttpError } from "../core/errors.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { buildIndexRecord, createIndexMeta, isCollectionIndexRecord, queryIndex, type CollectionIndexRecord } from "../core/knowledge/collection-index.js";
 import { fieldText, isRecord, itemsFromData, printData, printError } from "../output.js";
@@ -815,13 +816,13 @@ function errorMessage(error: unknown): string {
 
 function handleCollectionError(io: CommandIo, error: unknown): void {
   if (error instanceof HttpError) {
-    const requestId = error.requestId ? ` requestId=${error.requestId}` : "";
     printError(io, {
       type: "http",
       message: redactSecret(error.message),
       status: error.status,
-      requestId: error.requestId
-    }, `HTTP ${error.status}: ${redactSecret(error.message)}${requestId}\n`);
+      requestId: error.requestId,
+      remediation: remediationForHttpError(error)
+    }, formatHttpErrorText(error));
     process.exitCode = 1;
     return;
   }

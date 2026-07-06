@@ -1,5 +1,6 @@
 import { Command, InvalidArgumentError, Option } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
+import { formatHttpErrorText, remediationForHttpError } from "../core/errors.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { fieldText, isRecord, itemsFromData, outputFormat, parseOutputFormat, printData, printError, validateFormatOptions, type FormatOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
@@ -102,15 +103,15 @@ async function runMeApi(options: MeCommandOptions, commandOptions: { json?: bool
     await callback({ profile, ...current });
   } catch (error) {
     if (error instanceof HttpError) {
-      const requestId = error.requestId ? ` requestId=${error.requestId}` : "";
       printError(options, {
         type: "http",
         message: redactSecret(error.message, token),
         status: error.status,
         requestId: error.requestId,
         retryAfterSeconds: error.retryAfterSeconds,
-        windowSeconds: error.windowSeconds
-      }, httpErrorText(error, token, requestId), commandOptions.json);
+        windowSeconds: error.windowSeconds,
+        remediation: remediationForHttpError(error, token)
+      }, formatHttpErrorText(error, token), commandOptions.json);
       process.exitCode = 1;
       return;
     }
@@ -198,13 +199,6 @@ function formatTopicRelationListText(data: unknown): string {
     fieldText(item.unavailableReason),
     fieldText(item.url ?? item.threadUrl)
   ].join("\t")).join("\n");
-}
-
-function httpErrorText(error: HttpError, token: string | undefined, requestId: string): string {
-  const retry = error.retryAfterSeconds === undefined ? "" : ` retryAfterSeconds=${error.retryAfterSeconds}`;
-  const window = error.windowSeconds === undefined ? "" : ` windowSeconds=${error.windowSeconds}`;
-  const hint = error.status === 429 && error.retryAfterSeconds !== undefined ? ` Retry after ${error.retryAfterSeconds}s.` : "";
-  return `HTTP ${error.status}: ${redactSecret(error.message, token)}${requestId}${retry}${window}${hint}\n`;
 }
 
 function line(label: string, value: unknown): string | undefined {

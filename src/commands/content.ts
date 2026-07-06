@@ -3,6 +3,7 @@ import { stdin as processStdin, stdout as processStdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { Command, InvalidArgumentError, Option } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
+import { formatHttpErrorText, remediationForHttpError } from "../core/errors.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { blockText, fieldText, isRecord, itemsFromData, outputFormat, parseOutputFormat, printData, printError, validateFormatOptions, type FormatOption, type JsonOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
@@ -699,7 +700,7 @@ export function createAskCommand(options: ApiCommandOptions): Command {
             tag: commandOptions.tag
           })
         });
-        printData(options, enrichAskReferences(data), outputFormat(commandOptions), formatAskText);
+        printData(options, enrichAskReferences(data, question), outputFormat(commandOptions), formatAskText);
       });
     });
 }
@@ -730,7 +731,6 @@ async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOpt
     await callback(session);
   } catch (error) {
     if (error instanceof HttpError) {
-      const requestId = error.requestId ? ` requestId=${error.requestId}` : "";
       printError(options, {
         type: "http",
         message: redactSecret(error.message, session?.token),
@@ -738,8 +738,9 @@ async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOpt
         requestId: error.requestId,
         retryAfterSeconds: error.retryAfterSeconds,
         windowSeconds: error.windowSeconds,
+        remediation: remediationForHttpError(error, session?.token),
         exitCode: 1
-      }, httpErrorText(error, session?.token, requestId), commandOptions.json);
+      }, formatHttpErrorText(error, session?.token), commandOptions.json);
       process.exitCode = 1;
       return;
     }
@@ -960,13 +961,6 @@ function validateDateOptions(
   }
   const query = dateQuery(dates);
   return validateSearchDateRange(options, query.fromDate, query.toDate, commandOptions);
-}
-
-function httpErrorText(error: HttpError, token: string | undefined, requestId: string): string {
-  const retry = error.retryAfterSeconds === undefined ? "" : ` retryAfterSeconds=${error.retryAfterSeconds}`;
-  const window = error.windowSeconds === undefined ? "" : ` windowSeconds=${error.windowSeconds}`;
-  const hint = error.status === 429 && error.retryAfterSeconds !== undefined ? ` Retry after ${error.retryAfterSeconds}s.` : "";
-  return `HTTP ${error.status}: ${redactSecret(error.message, token)}${requestId}${retry}${window}${hint}\n`;
 }
 
 function formatCategoryListText(data: unknown): string {
@@ -1236,6 +1230,9 @@ function formatAskText(data: unknown): string {
   if (!isRecord(data)) {
     return "";
   }
+  if (data.answerable === false || isRecord(data.fallback)) {
+    return formatAskFallbackText(data);
+  }
   const answer = blockText(data.answer);
   const sources = sourcesFromData(data);
   const sourceLines = sources.map((source, index) => {
@@ -1253,6 +1250,20 @@ function formatAskText(data: unknown): string {
     line("filters", filtersText(data.filters)),
     sourceLines.length > 0 ? (filtersText(data.filters) ? "Scoped references:" : "Sources:") : undefined,
     ...sourceLines,
+    line("requestId", data.requestId)
+  ]);
+}
+
+function formatAskFallbackText(data: Record<string, unknown>): string {
+  const fallback = isRecord(data.fallback) ? data.fallback : {};
+  const suggestedQueries = textList(fallback.suggestedQueries);
+  const suggestedCommands = textList(fallback.suggestedCommands);
+  return lines([
+    "Answerable: false",
+    blockLine("Reason", fallback.message ?? "没有找到可引用的社区资料，因此未将回答作为可信结论输出。"),
+    line("confidence", data.confidence),
+    suggestedQueries ? `Suggested queries:\n${suggestedQueries}` : undefined,
+    suggestedCommands ? `Suggested commands:\n${suggestedCommands}` : undefined,
     line("requestId", data.requestId)
   ]);
 }
@@ -1277,7 +1288,7 @@ function sourcesFromData(data: Record<string, unknown>): Array<Record<string, un
   return [];
 }
 
-function enrichAskReferences(data: unknown): unknown {
+function enrichAskReferences(data: unknown, question?: string): unknown {
   if (!isRecord(data)) {
     return data;
   }
@@ -1288,7 +1299,94 @@ function enrichAskReferences(data: unknown): unknown {
       output[key] = value.map((item) => isRecord(item) ? enrichAskReference(item) : item);
     }
   }
-  return output;
+  return withAskFallback(output, question);
+}
+
+function withAskFallback(data: Record<string, unknown>, question?: string): Record<string, unknown> {
+  const reason = askFallbackReason(data);
+  if (!reason) {
+    return data;
+  }
+  const suggestedQueries = askSuggestedQueries(question ?? data.question ?? data.query);
+  return compactBody({
+    ...data,
+    answerable: false,
+    noTrustedReferences: true,
+    fallback: {
+      reason,
+      message: askFallbackMessage(reason),
+      suggestedQueries,
+      suggestedCommands: askSuggestedCommands(suggestedQueries)
+    }
+  });
+}
+
+function askFallbackReason(data: Record<string, unknown>): string | undefined {
+  const error = isRecord(data.error) ? data.error : {};
+  const code = fieldText(error.code ?? data.code);
+  const message = fieldText(error.message ?? data.message);
+  if (/NO[_-]?(TRUSTED[_-]?)?(REFERENCE|SOURCE)S?/i.test(`${code} ${message}`)
+    || /no trusted references?|no references?|没有.*引用|无.*引用/.test(`${code} ${message}`)) {
+    return "no-trusted-references";
+  }
+  if (isLowAskConfidence(data.confidence)) {
+    return "low-confidence";
+  }
+  return sourcesFromData(data).length === 0 ? "no-trusted-references" : undefined;
+}
+
+function isLowAskConfidence(value: unknown): boolean {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value < 0.3;
+  }
+  if (typeof value !== "string") {
+    return false;
+  }
+  const normalized = value.trim().toLowerCase();
+  if (normalized.length === 0) {
+    return false;
+  }
+  const numeric = Number(normalized);
+  if (Number.isFinite(numeric)) {
+    return numeric < 0.3;
+  }
+  return ["low", "very-low", "none", "unknown", "低", "很低", "无"].includes(normalized);
+}
+
+function askFallbackMessage(reason: string): string {
+  if (reason === "low-confidence") {
+    return "回答置信度过低，因此未将服务端回答作为可信结论输出。请先用 search 或 research 查找可引用资料。";
+  }
+  return "没有找到可引用的社区资料，因此未将服务端回答作为可信结论输出。请先用 search 或 research 查找相关帖子。";
+}
+
+function askSuggestedQueries(value: unknown): string[] {
+  const text = fieldText(value).replace(/[?？。！!]+$/g, "").trim();
+  if (!text) {
+    return [];
+  }
+  const compact = text.replace(/\s+/g, " ").slice(0, 120).trim();
+  return Array.from(new Set([compact])).filter(Boolean);
+}
+
+function askSuggestedCommands(queries: string[]): string[] {
+  const query = queries[0];
+  if (!query) {
+    return ["apexcn search <keywords> --json", "apexcn research <keywords> --json"];
+  }
+  const quoted = quoteCliArg(query);
+  return [`apexcn search ${quoted} --json`, `apexcn research ${quoted} --json`];
+}
+
+function quoteCliArg(value: string): string {
+  return `"${value.replace(/(["\\$`])/g, "\\$1")}"`;
+}
+
+function textList(value: unknown): string {
+  if (!Array.isArray(value)) {
+    return "";
+  }
+  return value.map((item) => `- ${fieldText(item)}`).filter((lineText) => lineText !== "- ").join("\n");
 }
 
 function enrichAskReference(source: Record<string, unknown>): Record<string, unknown> {

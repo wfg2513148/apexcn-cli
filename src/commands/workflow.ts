@@ -3,6 +3,7 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { Command, InvalidArgumentError, Option } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
+import { formatHttpErrorText, remediationForHttpError } from "../core/errors.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { blockText, fieldText, isRecord, outputFormat, parseOutputFormat, printData, printError, validateFormatOptions, type FormatOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
@@ -1741,13 +1742,13 @@ function errorMessage(error: unknown): string {
 
 function handleRunError(io: CommandIo, error: unknown, session: Session): void {
   if (error instanceof HttpError) {
-    const requestId = error.requestId ? ` requestId=${error.requestId}` : "";
     printError(io, {
       type: "http",
       message: redactSecret(error.message, session.token),
       status: error.status,
-      requestId: error.requestId
-    }, `HTTP ${error.status}: ${redactSecret(error.message, session.token)}${requestId}\n`);
+      requestId: error.requestId,
+      remediation: remediationForHttpError(error, session.token)
+    }, formatHttpErrorText(error, session.token));
     process.exitCode = 1;
     return;
   }

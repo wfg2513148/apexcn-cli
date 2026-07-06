@@ -18,6 +18,11 @@ export type ErrorPayload = {
   requestId?: string;
   retryAfterSeconds?: number;
   windowSeconds?: number;
+  remediation?: {
+    code: string;
+    message: string;
+    actions: string[];
+  };
   exitCode?: number;
 };
 

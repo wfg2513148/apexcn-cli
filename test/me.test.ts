@@ -276,7 +276,54 @@ describe("me command", () => {
     await program.parseAsync(["node", "apexcn", "me"]);
 
     expect(stdout.join("")).toBe("");
-    expect(stderr.join("")).toBe("HTTP 401: Invalid API token requestId=req-bad\n");
+    expect(stderr.join("")).toContain("HTTP 401: Invalid API token requestId=req-bad\n");
+    expect(stderr.join("")).toContain("Auth diagnosis: A local API token is configured, but the server rejected it.");
+    expect(stderr.join("")).toContain("apexcn auth show --json");
+    expect(stderr.join("")).toContain("apexcn auth set-token");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("prints actionable remediation for server-rejected tokens in JSON", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json(
+          { ok: false, error: { code: "INVALID_TOKEN", message: "Invalid API token", requestId: "req-json-401" } },
+          { status: 401 }
+        )
+      )
+    );
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "bad-token"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me", "--json"]);
+
+    const output = JSON.parse(stderr.join(""));
+    expect(output).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        type: "http",
+        message: "Invalid API token",
+        status: 401,
+        requestId: "req-json-401",
+        remediation: {
+          code: "TOKEN_REJECTED_BY_SERVER",
+          message: "A local API token is configured, but the server rejected it.",
+          actions: expect.arrayContaining([
+            "Run `apexcn auth show --json` to confirm the active profile and baseUrl."
+          ])
+        }
+      })
+    });
+    expect(stderr.join("")).not.toContain("bad-token");
     expect(process.exitCode).toBe(1);
   });
 

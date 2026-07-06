@@ -1961,6 +1961,75 @@ describe("content commands", () => {
     });
   });
 
+  test("ask marks no-reference answers as not answerable in JSON", async () => {
+    const { program, stdout } = await configuredProgram(async () =>
+      Response.json({
+        answer: "这是一段没有引用支撑的回答。",
+        references: [],
+        requestId: "req-no-ref"
+      })
+    );
+
+    await program.parseAsync(["node", "apexcn", "ask", "APEX 邮件发送失败怎么办？", "--json"]);
+
+    const output = JSON.parse(stdout.join(""));
+    expect(output).toEqual(expect.objectContaining({
+      answer: "这是一段没有引用支撑的回答。",
+      answerable: false,
+      noTrustedReferences: true,
+      requestId: "req-no-ref",
+      fallback: expect.objectContaining({
+        reason: "no-trusted-references",
+        message: expect.stringContaining("没有找到可引用的社区资料"),
+        suggestedQueries: ["APEX 邮件发送失败怎么办"],
+        suggestedCommands: [
+          "apexcn search \"APEX 邮件发送失败怎么办\" --json",
+          "apexcn research \"APEX 邮件发送失败怎么办\" --json"
+        ]
+      })
+    }));
+    expect(stdout.join("")).not.toContain("�");
+  });
+
+  test("ask text output falls back when references are absent or confidence is low", async () => {
+    const { program, stdout } = await configuredProgram(async () =>
+      Response.json({
+        answer: "不要把这段当成可信结论。",
+        confidence: "low",
+        sources: [{ topicId: 42 }],
+        requestId: "req-low-confidence"
+      })
+    );
+
+    await program.parseAsync(["node", "apexcn", "ask", "ORDS 401 如何排查？", "--format", "text"]);
+
+    const text = stdout.join("");
+    expect(text).toContain("Answerable: false\n");
+    expect(text).toContain("回答置信度过低");
+    expect(text).toContain("apexcn search \"ORDS 401 如何排查\" --json");
+    expect(text).toContain("apexcn research \"ORDS 401 如何排查\" --json");
+    expect(text).toContain("requestId: req-low-confidence");
+    expect(text).not.toContain("Answer:\n不要把这段当成可信结论。");
+  });
+
+  test("ask maps no-reference server errors to a stable fallback", async () => {
+    const { program, stdout } = await configuredProgram(async () =>
+      Response.json({
+        ok: false,
+        error: { code: "NO_TRUSTED_REFERENCES", message: "没有可引用资料" },
+        requestId: "req-no-trusted"
+      })
+    );
+
+    await program.parseAsync(["node", "apexcn", "ask", "不存在的 APEX 主题", "--json"]);
+
+    const output = JSON.parse(stdout.join(""));
+    expect(output.answerable).toBe(false);
+    expect(output.fallback.reason).toBe("no-trusted-references");
+    expect(output.fallback.message).toContain("没有找到可引用的社区资料");
+    expect(output.requestId).toBe("req-no-trusted");
+  });
+
   test("reply and relation write commands can print dry-run plans without calling the API", async () => {
     const { program, stdout, fetch } = await configuredProgram(async () => Response.json({ ok: true }));
 

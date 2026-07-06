@@ -1,6 +1,6 @@
 {
   "name": "apexcn-cli",
-  "version": "0.18.10",
+  "version": "0.18.11",
   "type": "module",
   "bin": {
     "apexcn": "./dist/index.js"
