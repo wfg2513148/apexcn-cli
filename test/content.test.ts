@@ -828,6 +828,27 @@ describe("content commands", () => {
     expect(emptyProgram.stdout.join("")).toBe("Research: REST\nTopics: 0\n");
   });
 
+  test("research accepts --top-k as a --limit alias", async () => {
+    const { program, stdout, fetch } = await configuredProgram(async (url: string | URL | Request) => {
+      const href = String(url);
+      if (href.includes("/api/v1/search")) {
+        return Response.json({ items: [{ id: 42, title: "REST API" }], requestId: "req-search" });
+      }
+      return Response.json({ topic: { id: 42, title: "REST API", content: "ok" }, requestId: "req-topic-42" });
+    });
+
+    await program.parseAsync(["node", "apexcn", "research", "REST", "--top-k", "1", "--json"]);
+
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      "https://oracleapex.cn/ords/test/api/v1/search?keyword=REST&pageSize=1",
+      expect.any(Object)
+    );
+    const data = JSON.parse(stdout.join(""));
+    expect(data.query).toEqual({ keyword: "REST", limit: 1 });
+    expect(data.topics).toHaveLength(1);
+  });
+
   test("research keeps partial bundles when one topic fetch fails", async () => {
     const { program, stdout, fetch } = await configuredProgram(async (url: string | URL | Request) => {
       const href = String(url);
@@ -1733,6 +1754,28 @@ describe("content commands", () => {
       "https://oracleapex.cn/ords/test/api/v1/topics/42",
       expect.objectContaining({ method: "POST", body: JSON.stringify({ content: "" }) })
     );
+  });
+
+  test("topic update preview without content does not read implicit stdin", async () => {
+    const readStdin = vi.fn(async () => {
+      throw new Error("unexpected stdin read");
+    });
+    const { program, stdout, fetch } = await configuredProgram(
+      async () => Response.json({ ok: true }),
+      { readStdin, isStdinTTY: () => false }
+    );
+
+    await program.parseAsync(["node", "apexcn", "thread", "edit", "42", "--title", "Updated title", "--preview", "--json"]);
+
+    expect(readStdin).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
+      dryRun: true,
+      preview: true,
+      mode: "preview",
+      path: "/api/v1/topics/42",
+      body: { title: "Updated title" }
+    }));
   });
 
   test("content-file can still read a literal dash filename via relative path", async () => {

@@ -246,12 +246,13 @@ export function createResearchCommand(options: ApiCommandOptions): Command {
   return new Command("research")
     .argument("<keyword>")
     .option("--limit <n>", "topics to fetch, 1-10", parseResearchLimit)
+    .addOption(new Option("--top-k <n>", "alias for --limit, topics to fetch, 1-10").argParser(parseResearchLimit).conflicts("limit"))
     .option("--category-id <id>", "category id", parsePositiveInteger)
     .option("--from-date <date>", "inclusive updated-from date, YYYY-MM-DD", parseSearchDate)
     .option("--to-date <date>", "inclusive updated-to date, YYYY-MM-DD", parseSearchDate)
     .option("--json", "pretty-print JSON")
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
-    .action(async (keyword: string, commandOptions: FormatOption & { limit?: number; categoryId?: number; fromDate?: string; toDate?: string }) => {
+    .action(async (keyword: string, commandOptions: FormatOption & { limit?: number; topK?: number; categoryId?: number; fromDate?: string; toDate?: string }) => {
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
@@ -260,7 +261,7 @@ export function createResearchCommand(options: ApiCommandOptions): Command {
       }
       const normalizedKeyword = normalizeSearchKeyword(keyword);
       await runApi(options, commandOptions, async (session) => {
-        const limit = commandOptions.limit ?? 3;
+        const limit = commandOptions.limit ?? commandOptions.topK ?? 3;
         const search = await requestJson(session.baseUrl, "/api/v1/search", {
           token: session.token,
           query: {
@@ -441,7 +442,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
           body: compactBody({
             categoryId: commandOptions.categoryId,
             title: commandOptions.title,
-            content: await optionalContentFromOptions(commandOptions, options),
+            content: await optionalContentFromOptions(commandOptions, options, { implicitStdin: false }),
             tags: commandOptions.tags
           })
         };
@@ -810,14 +811,18 @@ async function contentFromOptions(options: { content?: string; contentFile?: str
   return content;
 }
 
-async function optionalContentFromOptions(options: { content?: string; contentFile?: string }, commandOptions: ApiCommandOptions): Promise<string | undefined> {
+async function optionalContentFromOptions(
+  options: { content?: string; contentFile?: string },
+  commandOptions: ApiCommandOptions,
+  readOptions: { implicitStdin?: boolean } = {}
+): Promise<string | undefined> {
   if (options.contentFile) {
     return readContentFile(options.contentFile, commandOptions);
   }
   if (options.content !== undefined) {
     return options.content;
   }
-  if (isStdinTTY(commandOptions) !== true) {
+  if (readOptions.implicitStdin !== false && isStdinTTY(commandOptions) !== true) {
     return readStdin(commandOptions);
   }
   return undefined;
