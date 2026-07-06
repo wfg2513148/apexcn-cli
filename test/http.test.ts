@@ -47,7 +47,7 @@ describe("http", () => {
       headers: {
         Authorization: "Bearer abc123",
         "X-APEXCN-API-Key": "abc123",
-        "User-Agent": "apexcn-cli/0.18.15",
+        "User-Agent": "apexcn-cli/0.18.16",
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ title: "Hello" })
