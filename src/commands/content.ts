@@ -690,17 +690,26 @@ export function createAskCommand(options: ApiCommandOptions): Command {
         return;
       }
       await runApi(options, commandOptions, async (session) => {
-        const data = await requestJson(session.baseUrl, "/api/v1/ask", {
-          token: session.token,
-          method: "POST",
-          body: compactBody({
-            question,
-            topK: commandOptions.topK,
-            categoryId: commandOptions.categoryId,
-            ...dateQuery(commandOptions),
-            tag: commandOptions.tag
-          })
-        });
+        let data: unknown;
+        try {
+          data = await requestJson(session.baseUrl, "/api/v1/ask", {
+            token: session.token,
+            method: "POST",
+            body: compactBody({
+              question,
+              topK: commandOptions.topK,
+              categoryId: commandOptions.categoryId,
+              ...dateQuery(commandOptions),
+              tag: commandOptions.tag
+            })
+          });
+        } catch (error) {
+          if (error instanceof HttpError && error.status === 429) {
+            data = askRateLimitFallback(error, question, session.token);
+          } else {
+            throw error;
+          }
+        }
         printData(options, enrichAskReferences(data, question), outputFormat(commandOptions), formatAskText);
       });
     });
@@ -1267,6 +1276,8 @@ function formatAskFallbackText(data: Record<string, unknown>): string {
     "Answerable: false",
     blockLine("Reason", fallback.message ?? "没有找到可引用的社区资料，因此未将回答作为可信结论输出。"),
     line("confidence", data.confidence),
+    line("retryAfterSeconds", data.retryAfterSeconds),
+    line("windowSeconds", data.windowSeconds),
     suggestedQueries ? `Suggested queries:\n${suggestedQueries}` : undefined,
     suggestedCommands ? `Suggested commands:\n${suggestedCommands}` : undefined,
     line("requestId", data.requestId)
@@ -1308,6 +1319,9 @@ function enrichAskReferences(data: unknown, question?: string): unknown {
 }
 
 function withAskFallback(data: Record<string, unknown>, question?: string): Record<string, unknown> {
+  if (isRecord(data.fallback)) {
+    return data;
+  }
   const reason = askFallbackReason(data);
   if (!reason) {
     return data;
@@ -1320,6 +1334,28 @@ function withAskFallback(data: Record<string, unknown>, question?: string): Reco
     fallback: {
       reason,
       message: askFallbackMessage(reason),
+      suggestedQueries,
+      suggestedCommands: askSuggestedCommands(suggestedQueries)
+    }
+  });
+}
+
+function askRateLimitFallback(error: HttpError, question: string, token?: string): Record<string, unknown> {
+  const suggestedQueries = askSuggestedQueries(question);
+  return compactBody({
+    answerable: false,
+    rateLimited: true,
+    retryAfterSeconds: error.retryAfterSeconds,
+    windowSeconds: error.windowSeconds,
+    requestId: error.requestId,
+    error: {
+      type: "http",
+      status: error.status,
+      message: redactSecret(error.message, token)
+    },
+    fallback: {
+      reason: "rate-limited",
+      message: askFallbackMessage("rate-limited", error.retryAfterSeconds),
       suggestedQueries,
       suggestedCommands: askSuggestedCommands(suggestedQueries)
     }
@@ -1358,7 +1394,11 @@ function isLowAskConfidence(value: unknown): boolean {
   return ["low", "very-low", "none", "unknown", "低", "很低", "无"].includes(normalized);
 }
 
-function askFallbackMessage(reason: string): string {
+function askFallbackMessage(reason: string, retryAfterSeconds?: number): string {
+  if (reason === "rate-limited") {
+    const retry = retryAfterSeconds === undefined ? "" : `请等待 ${retryAfterSeconds} 秒后重试，或先用 search/research 获取引用资料。`;
+    return `服务端触发限流，因此本次未生成回答。${retry}`;
+  }
   if (reason === "low-confidence") {
     return "回答置信度过低，因此未将服务端回答作为可信结论输出。请先用 search 或 research 查找可引用资料。";
   }

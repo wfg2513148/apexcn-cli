@@ -2073,6 +2073,45 @@ describe("content commands", () => {
     expect(output.requestId).toBe("req-no-trusted");
   });
 
+  test("ask returns an answerable false JSON fallback when rate limited", async () => {
+    const { program, stdout, stderr } = await configuredProgram(async () =>
+      Response.json({
+        error: {
+          message: "Rate limit exceeded",
+          requestId: "req-rate",
+          retryAfterSeconds: 60,
+          windowSeconds: 60
+        }
+      }, { status: 429 })
+    );
+
+    await program.parseAsync(["node", "apexcn", "ask", "Interactive Grid 怎么入门？", "--top-k", "3", "--json"]);
+
+    expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBeUndefined();
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
+      answerable: false,
+      rateLimited: true,
+      retryAfterSeconds: 60,
+      windowSeconds: 60,
+      requestId: "req-rate",
+      error: {
+        type: "http",
+        status: 429,
+        message: "Rate limit exceeded"
+      },
+      fallback: expect.objectContaining({
+        reason: "rate-limited",
+        message: expect.stringContaining("请等待 60 秒后重试"),
+        suggestedQueries: ["Interactive Grid 怎么入门"],
+        suggestedCommands: [
+          "apexcn search \"Interactive Grid 怎么入门\" --json",
+          "apexcn research \"Interactive Grid 怎么入门\" --json"
+        ]
+      })
+    }));
+  });
+
   test("reply and relation write commands can print dry-run plans without calling the API", async () => {
     const { program, stdout, fetch } = await configuredProgram(async () => Response.json({ ok: true }));
 
