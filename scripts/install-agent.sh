@@ -11,6 +11,7 @@ bin_dir="${APEXCN_CLI_BIN_DIR:-$HOME/.local/bin}"
 base_url="${APEXCN_CLI_BASE_URL:-https://oracleapex.cn/ords/api}"
 profile="${APEXCN_CLI_PROFILE:-agent-prod}"
 token="${APEXCN_API_KEY:-}"
+verify_timeout_ms="${APEXCN_CLI_VERIFY_TIMEOUT_MS:-10000}"
 source_dir=""
 yes="${APEXCN_CLI_YES:-0}"
 dry_run="${APEXCN_CLI_DRY_RUN:-0}"
@@ -60,6 +61,8 @@ Environment:
   APEXCN_CLI_PACKAGE_URL      Override source package URL.
   APEXCN_CLI_CHECKSUMS_URL    Override checksums.txt URL. Defaults to package URL directory.
   APEXCN_CLI_SKIP_CHECKSUM=1  Explicitly skip release package checksum verification.
+  APEXCN_CLI_VERIFY_TIMEOUT_MS
+                              Account-check timeout in milliseconds after auth setup. Defaults to 10000.
 USAGE
 }
 
@@ -671,6 +674,14 @@ configure_auth() {
     --token "$token" >/dev/null
 }
 
+run_apexcn_verify() {
+  if [[ -n "${APEXCN_HTTP_TIMEOUT_MS:-}" ]]; then
+    "$bin_dir/apexcn" "$@"
+  else
+    APEXCN_HTTP_TIMEOUT_MS="$verify_timeout_ms" "$bin_dir/apexcn" "$@"
+  fi
+}
+
 verify_install() {
   if [[ "$dry_run" == "1" ]]; then
     run_cmd "$bin_dir/apexcn" --help
@@ -686,8 +697,10 @@ verify_install() {
   repair_shell_launcher
   check_shell_launcher
   if [[ -n "$token" ]]; then
+    [[ "$verify_timeout_ms" =~ ^[1-9][0-9]*$ ]] || die "APEXCN_CLI_VERIFY_TIMEOUT_MS must be a positive integer."
+    log "Checking apexcn account with timeout ${APEXCN_HTTP_TIMEOUT_MS:-$verify_timeout_ms}ms."
     "$bin_dir/apexcn" auth show --json >/dev/null
-    if ! "$bin_dir/apexcn" me --json >/dev/null 2>&1; then
+    if ! run_apexcn_verify me --json >/dev/null 2>&1; then
       log "Auth profile saved, but account check failed. Run: apexcn me --json"
     fi
   fi

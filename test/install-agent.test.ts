@@ -42,8 +42,10 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('https://oracleapex.cn/ords/api');
     expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/latest/download/apexcn-cli.tgz');
     expect(script).toContain('APEXCN_CLI_SKIP_CHECKSUM');
+    expect(script).toContain('APEXCN_CLI_VERIFY_TIMEOUT_MS');
     expect(script).toContain('checksums.txt');
     expect(script).toContain('Checksum verification failed');
+    expect(script).toContain('Checking apexcn account with timeout');
     expect(script).toContain('--package-url');
     expect(script).toContain('Downloading apexcn-cli package');
     expect(script).toContain('cli_root');
@@ -89,8 +91,10 @@ describe('agent one-click installer assets', () => {
     expect(script).toContain('https://oracleapex.cn/ords/api');
     expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/latest/download/apexcn-cli.tgz');
     expect(script).toContain('APEXCN_CLI_SKIP_CHECKSUM');
+    expect(script).toContain('APEXCN_CLI_VERIFY_TIMEOUT_MS');
     expect(script).toContain('checksums.txt');
     expect(script).toContain('Checksum verification failed');
+    expect(script).toContain('Checking apexcn account with timeout');
     expect(script).toContain('PackageUrl');
     expect(script).toContain('Downloading apexcn-cli package');
     expect(script).toContain('Get-CliRoot');
@@ -372,6 +376,44 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
       rmSync(tempRoot, { recursive: true, force: true });
     }
   });
+
+  posixExecutionTest('macOS/Linux installer makes token account checks visible and bounded', () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-token-verify-timeout-'));
+
+    try {
+      const output = execFileSync(
+        'bash',
+        [
+          join(repoRoot, 'scripts/install-agent.sh'),
+          '--source-dir',
+          repoRoot,
+          '--install-root',
+          join(tempRoot, 'install'),
+          '--bin-dir',
+          join(tempRoot, 'bin'),
+          '--yes',
+          '--base-url',
+          'https://203.0.113.1/ords/api',
+        ],
+        {
+          cwd: repoRoot,
+          env: {
+            ...process.env,
+            APEXCN_API_KEY: 'dummy-token-for-installer-test',
+            APEXCN_CLI_VERIFY_TIMEOUT_MS: '7',
+            APEXCN_CLI_CURRENT_AGENT: 'none',
+            HOME: join(tempRoot, 'home'),
+          },
+          encoding: 'utf8',
+        },
+      );
+
+      expect(output).toContain('Checking apexcn account with timeout 7ms.');
+      expect(output).toContain('Auth profile saved, but account check failed.');
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  }, 30000);
 
   posixExecutionTest('macOS/Linux installer writes a compact launcher for the resolved CLI root', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-launcher-install-'));

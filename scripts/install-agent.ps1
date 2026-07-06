@@ -13,7 +13,8 @@ param(
   [string]$BinDir = $(if ($env:APEXCN_CLI_BIN_DIR) { $env:APEXCN_CLI_BIN_DIR } else { Join-Path $env:LOCALAPPDATA "apexcn\bin" }),
   [string]$Profile = $(if ($env:APEXCN_CLI_PROFILE) { $env:APEXCN_CLI_PROFILE } else { "agent-prod" }),
   [string]$BaseUrl = $(if ($env:APEXCN_CLI_BASE_URL) { $env:APEXCN_CLI_BASE_URL } else { "https://oracleapex.cn/ords/api" }),
-  [string]$Token = $(if ($env:APEXCN_API_KEY) { $env:APEXCN_API_KEY } else { "" })
+  [string]$Token = $(if ($env:APEXCN_API_KEY) { $env:APEXCN_API_KEY } else { "" }),
+  [string]$VerifyTimeoutMs = $(if ($env:APEXCN_CLI_VERIFY_TIMEOUT_MS) { $env:APEXCN_CLI_VERIFY_TIMEOUT_MS } else { "10000" })
 )
 
 Set-StrictMode -Version Latest
@@ -484,6 +485,26 @@ function Configure-Auth {
   Invoke-Apexcn @("auth", "set-token", "--profile", $Profile, "--base-url", $BaseUrl, "--token", $Token) | Out-Null
 }
 
+function Invoke-ApexcnVerify {
+  param([string[]]$Args)
+  if ($env:APEXCN_HTTP_TIMEOUT_MS) {
+    Invoke-Apexcn $Args
+    return
+  }
+
+  $previous = $env:APEXCN_HTTP_TIMEOUT_MS
+  $env:APEXCN_HTTP_TIMEOUT_MS = $VerifyTimeoutMs
+  try {
+    Invoke-Apexcn $Args
+  } finally {
+    if ($null -eq $previous) {
+      Remove-Item Env:APEXCN_HTTP_TIMEOUT_MS -ErrorAction SilentlyContinue
+    } else {
+      $env:APEXCN_HTTP_TIMEOUT_MS = $previous
+    }
+  }
+}
+
 function Verify-Install {
   $apexcn = Join-Path $BinDir "apexcn.cmd"
   if ($DryRun) {
@@ -497,8 +518,13 @@ function Verify-Install {
   Repair-ShellLauncher
   Test-ShellLauncher
   if ($Token) {
+    if ($VerifyTimeoutMs -notmatch '^[1-9][0-9]*$') {
+      throw "APEXCN_CLI_VERIFY_TIMEOUT_MS must be a positive integer."
+    }
+    $effectiveTimeout = $(if ($env:APEXCN_HTTP_TIMEOUT_MS) { $env:APEXCN_HTTP_TIMEOUT_MS } else { $VerifyTimeoutMs })
+    Write-Step "Checking apexcn account with timeout ${effectiveTimeout}ms."
     Invoke-Apexcn @("auth", "show", "--json") | Out-Null
-    Invoke-Apexcn @("me", "--json") 2>$null | Out-Null
+    Invoke-ApexcnVerify @("me", "--json") 2>$null | Out-Null
     if ($LASTEXITCODE -ne 0) {
       Write-Step "Auth profile saved, but account check failed. Run: apexcn me --json"
     }
