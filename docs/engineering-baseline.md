@@ -13,20 +13,20 @@ Scan time: 2026-07-05T10:48:45Z.
 
 ## Version State
 
-- Package version: `0.18.11`.
+- Package version: `0.18.12`.
 - README install links: `releases/latest/download`.
 - docs/quickstart install links: `releases/latest/download`.
 - Local latest tag before publishing this patch: `v0.18.10`.
 - GitHub latest release before publishing this patch: `v0.18.10`.
 
-Version decision for this iteration: bump to `0.18.11` because this patch changes CLI behavior for server-rejected tokens and no-reference ask responses.
+Version decision for this iteration: bump to `0.18.12` because this patch changes CLI behavior for server-rejected tokens and no-reference ask responses.
 
 ## Baseline Commands
 
 - `npm ci`: passed; npm reported the existing `fsevents` install-script allow-scripts warning.
 - `npm run build`: passed.
 - `npm test`: passed, 36 test files and 550 tests.
-- `npm run check:release`: passed for `0.18.11`.
+- `npm run check:release`: passed for `0.18.12`.
 - `npm run eval:rag`: passed in offline fixture mode with 30 questions and 30 expected references.
 - `npm run test:e2e:readonly`: skipped safely because `APEXCN_API_KEY` is not set.
 
