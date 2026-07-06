@@ -16,7 +16,7 @@ const commandRegistry = readText("src/core/command-registry.ts");
 const issues = readText("issues.md");
 const problems = [];
 
-const readmeReleaseUrls = [...new Set([...readme.matchAll(/releases\/download\/(v\d+\.\d+\.\d+)\//g)].map((match) => match[1]))];
+const readmeReleaseUrls = [...new Set([...readme.matchAll(/releases\/(?:download\/(v\d+\.\d+\.\d+)|latest\/download)\//g)].map((match) => match[1] ?? "latest"))];
 const packageLockVersion = packageLock.packages?.[""]?.version ?? packageLock.version;
 const descriptors = [...commandRegistry.matchAll(/descriptor\("([^"]+)",\s*\[[^\]]+\],\s*"[^"]+",\s*"([^"]+)",\s*"([^"]+)",\s*"([^"]+)",\s*(true|false),\s*"([^"]+)"/g)]
   .map((match) => ({
@@ -44,8 +44,8 @@ const schemaFiles = run("git", ["ls-files", "src/schemas/*.ts"])
 if (packageLockVersion !== packageJson.version) {
   problems.push("package-lock version does not match package.json version");
 }
-if (readmeReleaseUrls.some((tag) => tag !== `v${packageJson.version}`)) {
-  problems.push("README release URL version does not match package.json version");
+if (readmeReleaseUrls.some((tag) => tag !== "latest")) {
+  problems.push("README install URLs must use releases/latest/download");
 }
 if (!releaseWorkflow.includes("artifacts/checksums.txt")) {
   problems.push("release workflow does not upload checksums.txt");

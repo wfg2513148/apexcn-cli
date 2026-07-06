@@ -10,7 +10,8 @@ const args = process.argv.slice(2);
 const expectedVersion = parseExpectedVersion(args) ?? readJson("package.json").version;
 const expectedTag = `v${expectedVersion}`;
 const releaseBase = "https://github.com/wfg2513148/apexcn-cli/releases/download";
-const expectedReleasePackageUrl = `${releaseBase}/${expectedTag}/apexcn-cli.tgz`;
+const latestReleaseBase = "https://github.com/wfg2513148/apexcn-cli/releases/latest/download";
+const expectedInstallPackageUrl = `${latestReleaseBase}/apexcn-cli.tgz`;
 const allowedReleaseAssets = new Set([
   "apexcn-cli.tgz",
   "install-agent.sh",
@@ -93,8 +94,8 @@ function checkShellInstallerDefaultUrl(path) {
   const text = readText(path);
   const match = /^package_url="\$\{APEXCN_CLI_PACKAGE_URL:-([^}]+)}"/m.exec(text);
   const actual = match?.[1];
-  if (actual !== expectedReleasePackageUrl) {
-    failures.push(`${path} default package URL: expected ${expectedReleasePackageUrl}, got ${String(actual)}`);
+  if (actual !== expectedInstallPackageUrl) {
+    failures.push(`${path} default package URL: expected ${expectedInstallPackageUrl}, got ${String(actual)}`);
   }
 }
 
@@ -102,8 +103,8 @@ function checkPowerShellInstallerDefaultUrl(path) {
   const text = readText(path);
   const match = /\[string]\$PackageUrl = \$\(if \(\$env:APEXCN_CLI_PACKAGE_URL\) \{ \$env:APEXCN_CLI_PACKAGE_URL \} else \{ "([^"]+)" \}\)/.exec(text);
   const actual = match?.[1];
-  if (actual !== expectedReleasePackageUrl) {
-    failures.push(`${path} default package URL: expected ${expectedReleasePackageUrl}, got ${String(actual)}`);
+  if (actual !== expectedInstallPackageUrl) {
+    failures.push(`${path} default package URL: expected ${expectedInstallPackageUrl}, got ${String(actual)}`);
   }
 }
 
@@ -121,11 +122,14 @@ function checkMarkdownReleaseUrls(paths) {
     const text = readText(path);
     for (const match of text.matchAll(pattern)) {
       const [, tag, asset] = match;
-      if (tag !== expectedTag) {
-        failures.push(`${path} release URL tag: expected ${expectedTag}, got ${tag}`);
+      if (tag !== expectedTag && tag !== "latest") {
+        failures.push(`${path} release URL tag: expected ${expectedTag} or latest, got ${tag}`);
       }
       if (!allowedReleaseAssets.has(asset)) {
         failures.push(`${path} release URL asset: unexpected ${asset}`);
+      }
+      if ((path === "README.md" || path === "docs/quickstart.md") && tag !== "latest") {
+        failures.push(`${path} install URL must use releases/latest/download instead of ${tag}`);
       }
     }
   }

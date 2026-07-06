@@ -35,11 +35,13 @@ describe("documentation consistency", () => {
     expect(release).toMatch(/^\s+gh release create "\$GITHUB_REF_NAME" \\$/m);
   });
 
-  test("release URLs use the package version", () => {
-    const version = JSON.parse(read("package.json")).version;
+  test("install URLs use the latest release endpoint", () => {
     const docs = ["README.md", "docs/quickstart.md", "scripts/install-agent.sh", "scripts/install-agent.ps1"].map(read).join("\n");
 
-    expect(docs).toContain(`/v${version}/apexcn-cli.tgz`);
+    expect(docs).toContain("/releases/latest/download/apexcn-cli.tgz");
+    expect(docs).toContain("/releases/latest/download/install-agent.sh");
+    expect(docs).toContain("/releases/latest/download/install-agent.ps1");
+    expect(docs).not.toMatch(/\/releases\/download\/v\d+\.\d+\.\d+\//);
     expect(docs).not.toMatch(/\/v0\.17\.0\//);
   });
 

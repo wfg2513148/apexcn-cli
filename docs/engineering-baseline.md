@@ -14,8 +14,8 @@ Scan time: 2026-07-05T10:48:45Z.
 ## Version State
 
 - Package version: `0.18.9`.
-- README release links: `v0.18.9`.
-- docs/quickstart release links: `v0.18.9`.
+- README install links: `releases/latest/download`.
+- docs/quickstart install links: `releases/latest/download`.
 - Local latest tag: `v0.18.9`.
 - GitHub latest release observed via `gh release view`: `v0.18.9`.
 

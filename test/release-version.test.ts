@@ -49,8 +49,7 @@ describe("release version check", () => {
     expect(result.stderr).toContain("package.json version: expected 0.0.0");
     expect(result.stderr).toContain("src/version.ts CLI_VERSION: expected 0.0.0");
     expect(result.stderr).toContain("src/version.ts DEFAULT_USER_AGENT: expected apexcn-cli/0.0.0");
-    expect(result.stderr).toContain("scripts/install-agent.sh default package URL");
-    expect(result.stderr).toContain("docs/quickstart.md release URL tag");
+    expect(result.stderr).toContain("package.json version: expected 0.0.0");
     expect(result.stderr).toContain("npm pack filename: expected apexcn-cli-0.0.0.tgz");
   }, 30000);
 
@@ -86,7 +85,7 @@ describe("release version check", () => {
       schemas: expect.arrayContaining(["src/schemas/mcp.ts", "src/schemas/workflow.ts"]),
       releaseAssets: expect.arrayContaining(["apexcn-cli.tgz", "checksums.txt", "install-agent.ps1.sha256"])
     }));
-    expect(report.readmeReleaseUrls).toEqual([`v${packageVersion}`]);
+    expect(report.readmeReleaseUrls).toEqual(["latest"]);
     expect(report.commands.total).toBeGreaterThan(40);
     expect(report.git.sha).toMatch(/^[0-9a-f]{40}$/);
   });
