@@ -692,8 +692,10 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
     expect(doc).toContain('apexcn-cli.tgz');
     expect(doc).toContain('APEXCN_API_KEY');
     expect(doc).toContain('APEXCN_CLI_INSTALL_AGENT_SKILLS');
+    expect(doc).toContain('bash -o pipefail -c');
     expect(doc).toContain('curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300');
     expect(doc).toContain('--install-agent-skills');
+    expect(doc).toContain('如果 GitHub 下载失败，整条命令会以失败状态退出');
     expect(doc).toContain('当前用户运行该命令的 AI 工具全局 Skills 目录');
     expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh');
     expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1');
@@ -765,6 +767,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
     expect(doc).toContain('请先搜索社区已有讨论，再帮我起草一篇提问帖');
     expect(doc).toContain('帮我收藏帖子 30549');
     expect(doc).toContain('APEXCN_CLI_INSTALL_AGENT_SKILLS');
+    expect(doc).toContain('bash -o pipefail -c');
     expect(doc).toContain('apexcn doctor --json');
     expect(doc).toContain('apexcn auth show --json');
     expect(doc).toContain('command -v apexcn');

@@ -45,6 +45,16 @@ describe("documentation consistency", () => {
     expect(docs).not.toMatch(/\/v0\.17\.0\//);
   });
 
+  test("macOS and Linux one-line install docs fail when the download pipe fails", () => {
+    for (const path of ["README.md", "docs/quickstart.md"]) {
+      const doc = read(path);
+
+      expect(doc).toContain("bash -o pipefail -c");
+      expect(doc).toContain("curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300");
+      expect(doc).not.toContain("install-agent.sh | APEXCN_API_KEY");
+    }
+  });
+
   test("README-linked docs files exist", () => {
     const readme = read("README.md");
     const docs = [...readme.matchAll(/\((docs\/[^)]+\.md)\)/g)].map((match) => match[1]);

@@ -57,8 +57,10 @@ https://oracleapex.cn/ords/api
 macOS / Linux：
 
 ```bash
-curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300 https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
+APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -o pipefail -c 'curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300 https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash -s -- --yes'
 ```
+
+macOS / Linux 命令通过外层 `bash -o pipefail -c` 执行管道；如果 GitHub 下载失败，整条命令会以失败状态退出，不会把空输入当成安装成功。
 
 Windows PowerShell：
 

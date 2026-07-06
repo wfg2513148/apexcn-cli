@@ -19,7 +19,7 @@
 macOS / Linux：
 
 ```bash
-curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300 https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -s -- --yes
+APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -o pipefail -c 'curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300 https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash -s -- --yes'
 ```
 
 Windows PowerShell：
@@ -35,7 +35,7 @@ $env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_I
 macOS / Linux：
 
 ```bash
-curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300 https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | APEXCN_API_KEY='你的_API_KEY' bash -s -- --yes
+APEXCN_API_KEY='你的_API_KEY' bash -o pipefail -c 'curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300 https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash -s -- --yes'
 ```
 
 Windows PowerShell：
