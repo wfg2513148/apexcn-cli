@@ -70,8 +70,8 @@ describe("doctor command", () => {
     const data = JSON.parse(stdout.join(""));
     expect(data.ok).toBe(true);
     expect(data.diagnostics).toEqual(expect.objectContaining({
-      cliVersion: "0.18.9",
-      userAgent: "apexcn-cli/0.18.9",
+      cliVersion: "0.18.10",
+      userAgent: "apexcn-cli/0.18.10",
       configPath: expect.stringContaining("config.json"),
       nodeVersion: expect.stringMatching(/^v\d+/),
       platform: process.platform,
@@ -237,8 +237,8 @@ describe("doctor command", () => {
     await program.parseAsync(["node", "apexcn", "doctor", "--format", "text"]);
 
     expect(stdout.join("")).toContain("apexcn doctor: ok\n");
-    expect(stdout.join("")).toContain("CLI Version: 0.18.9\n");
-    expect(stdout.join("")).toContain("User Agent: apexcn-cli/0.18.9\n");
+    expect(stdout.join("")).toContain("CLI Version: 0.18.10\n");
+    expect(stdout.join("")).toContain("User Agent: apexcn-cli/0.18.10\n");
     expect(stdout.join("")).toContain("Config Path: ");
     expect(stdout.join("")).toContain("OK search requestId=req-search\n");
   });
@@ -260,7 +260,7 @@ describe("doctor command", () => {
       await program.parseAsync(argv);
 
       expect(stdout.join("")).toContain("apexcn doctor: ok\n");
-      expect(stdout.join("")).toContain("CLI Version: 0.18.9\n");
+      expect(stdout.join("")).toContain("CLI Version: 0.18.10\n");
       expect(() => JSON.parse(stdout.join(""))).toThrow();
       vi.unstubAllGlobals();
     }

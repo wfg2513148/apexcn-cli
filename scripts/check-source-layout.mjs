@@ -40,7 +40,7 @@ function checkWorkflowFiles() {
 function checkScripts() {
   for (const path of gitFiles("scripts/*.mjs")) {
     const text = readText(path);
-    const firstLine = splitLines(text)[0] ?? "";
+    const firstLine = (splitLines(text)[0] ?? "").replace(/\r$/, "");
     if (firstLine.startsWith("#!") && firstLine !== "#!/usr/bin/env node") {
       failures.push(`${path}: shebang must be exactly '#!/usr/bin/env node' on its own line`);
     }
