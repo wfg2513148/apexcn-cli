@@ -10,6 +10,8 @@
     "dist/",
     "docs/",
     "eval/rag/",
+    "issues.json",
+    "roadmap.json",
     "scripts/e2e-readonly.sh",
     "scripts/baseline-report.mjs",
     "scripts/eval-rag.mjs",
@@ -21,10 +23,12 @@
   "scripts": {
     "baseline": "node scripts/baseline-report.mjs",
     "build": "tsc -p tsconfig.json",
-    "check:release": "node scripts/check-release-version.mjs && node scripts/check-release-artifacts.mjs && node scripts/check-workflows.mjs && node scripts/check-source-layout.mjs",
+    "check:release": "node scripts/check-release-version.mjs && node scripts/check-release-artifacts.mjs && node scripts/check-workflows.mjs && node scripts/check-source-layout.mjs && node scripts/check-roadmap.mjs",
+    "check:roadmap": "node scripts/check-roadmap.mjs",
     "check:source-layout": "node scripts/check-source-layout.mjs",
     "check:workflows": "node scripts/check-workflows.mjs",
     "eval:rag": "node scripts/eval-rag.mjs --report",
+    "roadmap:render": "node scripts/check-roadmap.mjs --write-docs",
     "test": "vitest run",
     "test:e2e:readonly": "bash scripts/e2e-readonly.sh"
   },

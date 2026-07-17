@@ -47,14 +47,21 @@ literal `0.2.x` package version.
 
 ## Roadmap Artifacts
 
-The roadmap uses two synchronized artifacts:
+The roadmap uses three synchronized artifacts:
 
 1. `/roadmap.json` is the machine-readable source of truth.
-2. `/docs/roadmap.md` is the human-readable projection.
+2. `/issues.json` contains unresolved defects and capability gaps only.
+3. `/docs/roadmap.md` is the human-readable projection.
 
 The Markdown document must not carry independent status or acceptance data.
 Every milestone, capability, metric, and state shown in Markdown must be
 derived from or checked against `roadmap.json`.
+
+Each main implementation task reads the current `roadmap.json` and
+`issues.json` before deciding what to do. It creates a just-in-time execution
+plan for the current task only. The repository does not keep speculative
+implementation plans for future milestones because actual validation findings
+and server dependencies may change the required work.
 
 ### Roadmap Schema
 
@@ -83,6 +90,8 @@ acceptanceCriteria[]
 validatorScenarios[]
 dependencies[]
 evidence[]
+activationGate
+completionReview
 ```
 
 Each capability contains:
@@ -148,6 +157,27 @@ State transitions follow these rules:
   revalidation closes the issue but does not rewrite the first-attempt result.
 - A blocked milestone must record a blocking issue, its owner, and its recovery
   condition.
+- A later milestone cannot become `in_progress` until the preceding
+  milestone's `completionReview.status` is `approved`.
+
+Completion review status:
+
+```text
+not_due | pending | approved | changes_requested
+```
+
+When a milestone first reaches `completed`, its completion review becomes
+`pending` and the main task must stop. It presents a concise handoff containing:
+
+1. capabilities added or materially strengthened;
+2. problems that were not anticipated before implementation;
+3. root causes and concrete prevention actions;
+4. the next milestone's objective;
+5. measurable expected results and major risks.
+
+Only an explicit user confirmation may change the completion review to
+`approved`. An agent must not infer approval from silence or from automated
+test success.
 
 ## Testing And Feedback Architecture
 
@@ -161,6 +191,13 @@ State transitions follow these rules:
 
 No replacement validator project or thread may be created unless the user
 explicitly changes this binding.
+
+Real API validation may create and use a dedicated apexcn forums API key in the
+`dev@oci` environment. The key must use the minimum required permissions,
+must never be committed or included in logs, fixtures, `issues.json`, roadmap
+evidence, doctor output, or support bundles, and must be rotated or revoked
+when the validation policy requires it. Production community writes remain
+prohibited.
 
 ### Execution Handshake
 
@@ -197,6 +234,8 @@ accepted.
    regression set.
 8. A fixed issue is removed from active `issues.json`; its first failure and
    closure evidence remain in immutable validation history.
+9. After all milestone exit gates pass, the main task produces the required
+   concise completion review and stops for explicit user approval.
 
 ### Issue Ownership
 
@@ -518,6 +557,7 @@ the scenario explicitly tests an ambiguity that should require clarification.
 The initial implementation adds:
 
 - `roadmap.json`;
+- `issues.json`;
 - a generated or consistency-checked `docs/roadmap.md`;
 - a lightweight Node validator with no production dependency;
 - Vitest contract tests for schema, IDs, status transitions, core gates,
@@ -534,6 +574,8 @@ The validator must reject:
   gates, missing evidence, or active P0/P1 issues;
 - `validated` capabilities without independent-validator evidence;
 - model or fixed-thread binding drift;
+- a later `in_progress` milestone whose predecessor lacks explicit completion
+  review approval;
 - Markdown milestones, themes, or status values that differ from
   `roadmap.json`.
 
@@ -554,14 +596,18 @@ This design delivers the roadmap contract and governance mechanism. Each
 milestone is implemented in a separate goal cycle:
 
 1. Audit the repository and prior milestone evidence.
-2. Select the next incomplete milestone only.
-3. Produce a milestone-specific implementation plan.
+2. Read current `roadmap.json` and unresolved `issues.json`.
+3. Select the next incomplete milestone only and create an in-session,
+   just-in-time plan based on current evidence.
 4. Implement and run repository quality gates.
 5. Hand the immutable artifact to the fixed independent validator.
 6. Route server dependencies through the fixed server task when required.
 7. Revalidate until all expected issues are resolved.
 8. Mark the milestone complete only after its exit gates pass.
+9. Summarize capabilities, unexpected problems, prevention actions, and the
+   next milestone's measurable target.
+10. Stop until the user explicitly approves starting the next milestone.
 
 Later milestones must be replanned from the actual validated state left by the
 previous milestone. The roadmap defines outcomes and gates; it does not
-pre-author ten speculative implementation plans.
+pre-author speculative implementation plans for future milestones.

@@ -1,34 +1,28 @@
 # Issues
 
+> `issues.json` 是活动问题的机器可读真相源。本文件由 `npm run roadmap:render` 生成。
+> 已修复问题必须从活动列表删除；首次失败与关闭证据保留在独立验证历史中。
+
 ## Active Backlog
-
-### P0
-
-- Release/tag/assets consistency checks must stay green for every `0.x` release.
-- Installer checksum verification must remain mandatory unless users explicitly set `APEXCN_CLI_SKIP_CHECKSUM=1`.
 
 ### P1
 
-- MCP stdio compatibility requires continued smoke coverage across readonly and preview-only modes.
-- JSON schema and fixture contract coverage should expand as public JSON outputs grow.
-- Workflow policy/diff/audit-log should continue moving from MVP checks toward full governance coverage.
-- Collection BM25 query quality needs real corpus regression fixtures.
-- RAG eval report artifacts should remain visible in CI.
-- Add readonly API-backed commands when server support exists for station notifications/inbox, community rules, and privacy policy.
-- Add a one-step favorites-to-collection flow after the API contract for favorite topic export is stable.
-- Add curated novice views for learning path, version compatibility, and deployment checklist content; current fallback remains `search`/`research`.
+| ID | Milestone | Owner | Status | Title |
+|---|---|---|---|---|
+| `ISSUE-020-001` | `0.2` | `cli` | `open` | Complete the public JSON contract inventory |
+| `ISSUE-020-002` | `0.2` | `cli` | `open` | Add curated novice learning and deployment views |
+| `ISSUE-030-001` | `0.3` | `cross_repo` | `open` | Add real readonly retrieval evaluation |
+| `ISSUE-040-001` | `0.4` | `server` | `open` | Expose notifications, rules, and privacy contracts |
+| `ISSUE-040-002` | `0.4` | `cross_repo` | `open` | Add favorites-to-collection flow |
+| `ISSUE-050-001` | `0.5` | `cli` | `open` | Expand workflow policy, diff, and audit governance |
+| `ISSUE-060-001` | `0.6` | `external` | `open` | Verify real MCP client compatibility |
+| `ISSUE-070-001` | `0.7` | `cli` | `open` | Add real-corpus BM25 regression and scale fixtures |
 
 ### P2
 
-- Core service extraction should continue gradually without weakening CLI-first behavior.
-- CredentialStore keychain support remains future optional work because native dependencies are out of scope.
-- Upgrade/uninstall installer paths need dedicated user-facing tests.
-- Draft inventory management (`draft list` or `me drafts`) needs a local draft storage decision before implementation.
-
-## Recently Closed
-
-- Retry novice audit: `review topic` now accepts novice-friendly inline `--content` for local review.
-- Retry novice audit: empty `search` output now includes fallback suggestions and related commands.
-- Retry novice audit: `doctor --check-ask` timeout results now include retry and bounded `search`/`research` fallback guidance.
-- Retry novice audit: `me --redact --json` provides privacy-safe account output for logs and audit reports.
-- Retry novice audit: MCP execute-write refusal now states that real writes are intentionally unavailable through MCP and should use CLI workflow.
+| ID | Milestone | Owner | Status | Title |
+|---|---|---|---|---|
+| `ISSUE-040-003` | `0.4` | `cli` | `open` | Decide local draft inventory storage |
+| `ISSUE-060-002` | `0.6` | `cli` | `open` | Continue gradual shared-core extraction |
+| `ISSUE-080-001` | `0.8` | `cli` | `open` | Define optional keychain implementation and fallback |
+| `ISSUE-080-002` | `0.8` | `test_environment` | `open` | Add cross-platform upgrade, rollback, and uninstall suites |

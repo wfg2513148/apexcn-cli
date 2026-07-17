@@ -1,0 +1,299 @@
+{
+  "schemaVersion": 1,
+  "product": "apexcn-cli",
+  "updatedAt": "2026-07-17",
+  "activeOnly": true,
+  "issues": [
+    {
+      "id": "ISSUE-020-001",
+      "kind": "capability_gap",
+      "title": "Complete the public JSON contract inventory",
+      "priority": "P1",
+      "status": "open",
+      "owner": "cli",
+      "milestoneId": "0.2",
+      "blockingMilestones": [
+        "0.2"
+      ],
+      "rootCauseStatus": "needs_analysis",
+      "description": "Public JSON outputs must be mapped to schemas and contract tests before stage 0.2 can pass.",
+      "acceptanceCriterionIds": [
+        "M020-AC-002"
+      ],
+      "dependencies": [],
+      "serverThreadId": null,
+      "serverCommit": null,
+      "apiContractVersion": null,
+      "cliCommit": null,
+      "validatorRound": null
+    },
+    {
+      "id": "ISSUE-020-002",
+      "kind": "capability_gap",
+      "title": "Add curated novice learning and deployment views",
+      "priority": "P1",
+      "status": "open",
+      "owner": "cli",
+      "milestoneId": "0.2",
+      "blockingMilestones": [
+        "0.2"
+      ],
+      "rootCauseStatus": "known",
+      "description": "Current search and research fallbacks do not provide curated learning path, version compatibility, and deployment checklist views.",
+      "acceptanceCriterionIds": [
+        "M020-AC-006",
+        "M020-AC-007"
+      ],
+      "dependencies": [],
+      "serverThreadId": null,
+      "serverCommit": null,
+      "apiContractVersion": null,
+      "cliCommit": null,
+      "validatorRound": null
+    },
+    {
+      "id": "ISSUE-030-001",
+      "kind": "capability_gap",
+      "title": "Add real readonly retrieval evaluation",
+      "priority": "P1",
+      "status": "open",
+      "owner": "cross_repo",
+      "milestoneId": "0.3",
+      "blockingMilestones": [
+        "0.3"
+      ],
+      "rootCauseStatus": "known",
+      "description": "The current offline fixture report does not measure live retrieval quality or real reference hit rate.",
+      "acceptanceCriterionIds": [
+        "M030-AC-001",
+        "M030-AC-002",
+        "M030-AC-003",
+        "M030-AC-004"
+      ],
+      "dependencies": [
+        "environment:dev@oci-api-key",
+        "server:stable-readonly-retrieval-contract"
+      ],
+      "serverThreadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
+      "serverCommit": null,
+      "apiContractVersion": null,
+      "cliCommit": null,
+      "validatorRound": null
+    },
+    {
+      "id": "ISSUE-040-001",
+      "kind": "server_capability_gap",
+      "title": "Expose notifications, rules, and privacy contracts",
+      "priority": "P1",
+      "status": "open",
+      "owner": "server",
+      "milestoneId": "0.4",
+      "blockingMilestones": [
+        "0.4"
+      ],
+      "rootCauseStatus": "known",
+      "description": "The CLI must wait for explicit ORDS REST API contracts for station notifications or inbox, community rules, and privacy policy.",
+      "acceptanceCriterionIds": [
+        "M040-AC-005"
+      ],
+      "dependencies": [
+        "server:notifications-rules-privacy"
+      ],
+      "serverThreadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
+      "serverCommit": null,
+      "apiContractVersion": null,
+      "cliCommit": null,
+      "validatorRound": null
+    },
+    {
+      "id": "ISSUE-040-002",
+      "kind": "cross_repo_capability_gap",
+      "title": "Add favorites-to-collection flow",
+      "priority": "P1",
+      "status": "open",
+      "owner": "cross_repo",
+      "milestoneId": "0.4",
+      "blockingMilestones": [
+        "0.4"
+      ],
+      "rootCauseStatus": "known",
+      "description": "A stable favorite topic export contract is required before the CLI can create a faithful one-step local collection.",
+      "acceptanceCriterionIds": [
+        "M040-AC-004"
+      ],
+      "dependencies": [
+        "server:favorite-topic-export"
+      ],
+      "serverThreadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
+      "serverCommit": null,
+      "apiContractVersion": null,
+      "cliCommit": null,
+      "validatorRound": null
+    },
+    {
+      "id": "ISSUE-040-003",
+      "kind": "product_decision",
+      "title": "Decide local draft inventory storage",
+      "priority": "P2",
+      "status": "open",
+      "owner": "cli",
+      "milestoneId": "0.4",
+      "blockingMilestones": [],
+      "rootCauseStatus": "needs_analysis",
+      "description": "Draft list or me drafts requires an explicit local storage, profile isolation, retention, and migration decision.",
+      "acceptanceCriterionIds": [],
+      "dependencies": [],
+      "serverThreadId": null,
+      "serverCommit": null,
+      "apiContractVersion": null,
+      "cliCommit": null,
+      "validatorRound": null
+    },
+    {
+      "id": "ISSUE-050-001",
+      "kind": "capability_gap",
+      "title": "Expand workflow policy, diff, and audit governance",
+      "priority": "P1",
+      "status": "open",
+      "owner": "cli",
+      "milestoneId": "0.5",
+      "blockingMilestones": [
+        "0.5"
+      ],
+      "rootCauseStatus": "known",
+      "description": "The existing workflow MVP needs full expiry, reviewer, mutation, recovery, idempotence, and audit evidence coverage.",
+      "acceptanceCriterionIds": [
+        "M050-AC-002",
+        "M050-AC-003",
+        "M050-AC-004",
+        "M050-AC-005",
+        "M050-AC-006"
+      ],
+      "dependencies": [],
+      "serverThreadId": null,
+      "serverCommit": null,
+      "apiContractVersion": null,
+      "cliCommit": null,
+      "validatorRound": null
+    },
+    {
+      "id": "ISSUE-060-001",
+      "kind": "validation_gap",
+      "title": "Verify real MCP client compatibility",
+      "priority": "P1",
+      "status": "open",
+      "owner": "external",
+      "milestoneId": "0.6",
+      "blockingMilestones": [
+        "0.6"
+      ],
+      "rootCauseStatus": "known",
+      "description": "Claude Desktop, Cursor, and VS Code Agent remain configuration-only until dated real-client evidence exists.",
+      "acceptanceCriterionIds": [
+        "M060-AC-004"
+      ],
+      "dependencies": [
+        "external:desktop-clients"
+      ],
+      "serverThreadId": null,
+      "serverCommit": null,
+      "apiContractVersion": null,
+      "cliCommit": null,
+      "validatorRound": null
+    },
+    {
+      "id": "ISSUE-060-002",
+      "kind": "engineering_gap",
+      "title": "Continue gradual shared-core extraction",
+      "priority": "P2",
+      "status": "open",
+      "owner": "cli",
+      "milestoneId": "0.6",
+      "blockingMilestones": [],
+      "rootCauseStatus": "known",
+      "description": "Readonly CLI and MCP paths still need progressive service reuse without a big-bang rewrite.",
+      "acceptanceCriterionIds": [
+        "M060-AC-001"
+      ],
+      "dependencies": [],
+      "serverThreadId": null,
+      "serverCommit": null,
+      "apiContractVersion": null,
+      "cliCommit": null,
+      "validatorRound": null
+    },
+    {
+      "id": "ISSUE-070-001",
+      "kind": "quality_gap",
+      "title": "Add real-corpus BM25 regression and scale fixtures",
+      "priority": "P1",
+      "status": "open",
+      "owner": "cli",
+      "milestoneId": "0.7",
+      "blockingMilestones": [
+        "0.7"
+      ],
+      "rootCauseStatus": "known",
+      "description": "Current synthetic collection tests do not prove ranking quality, incremental behavior, or 10000-document performance.",
+      "acceptanceCriterionIds": [
+        "M070-AC-001",
+        "M070-AC-002",
+        "M070-AC-003",
+        "M070-AC-004"
+      ],
+      "dependencies": [],
+      "serverThreadId": null,
+      "serverCommit": null,
+      "apiContractVersion": null,
+      "cliCommit": null,
+      "validatorRound": null
+    },
+    {
+      "id": "ISSUE-080-001",
+      "kind": "capability_gap",
+      "title": "Define optional keychain implementation and fallback",
+      "priority": "P2",
+      "status": "open",
+      "owner": "cli",
+      "milestoneId": "0.8",
+      "blockingMilestones": [],
+      "rootCauseStatus": "needs_analysis",
+      "description": "A cross-platform keychain strategy must preserve file and env compatibility without making native dependencies mandatory.",
+      "acceptanceCriterionIds": [
+        "M080-AC-004",
+        "M080-AC-005"
+      ],
+      "dependencies": [
+        "external:platform-credential-stores"
+      ],
+      "serverThreadId": null,
+      "serverCommit": null,
+      "apiContractVersion": null,
+      "cliCommit": null,
+      "validatorRound": null
+    },
+    {
+      "id": "ISSUE-080-002",
+      "kind": "validation_gap",
+      "title": "Add cross-platform upgrade, rollback, and uninstall suites",
+      "priority": "P2",
+      "status": "open",
+      "owner": "test_environment",
+      "milestoneId": "0.8",
+      "blockingMilestones": [],
+      "rootCauseStatus": "known",
+      "description": "Lifecycle behavior needs real supported-platform runners beyond current installer checks.",
+      "acceptanceCriterionIds": [
+        "M080-AC-004"
+      ],
+      "dependencies": [
+        "external:supported-platform-runners"
+      ],
+      "serverThreadId": null,
+      "serverCommit": null,
+      "apiContractVersion": null,
+      "cliCommit": null,
+      "validatorRound": null
+    }
+  ]
+}

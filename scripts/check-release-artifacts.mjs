@@ -105,6 +105,8 @@ function verifyArtifacts() {
     "package/docs/quickstart.md",
     "package/eval/rag/questions.zh.jsonl",
     "package/eval/rag/expected-references.jsonl",
+    "package/issues.json",
+    "package/roadmap.json",
     "package/dist/index.js",
     "package/dist/version.js",
     "package/node_modules/commander/package.json",

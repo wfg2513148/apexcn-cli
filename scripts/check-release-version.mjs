@@ -223,6 +223,8 @@ function checkPackageFiles() {
     "dist/",
     "docs/",
     "eval/rag/",
+    "issues.json",
+    "roadmap.json",
     "scripts/baseline-report.mjs",
     "scripts/eval-rag.mjs",
     "scripts/generate-release-checksums.mjs",

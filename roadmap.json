@@ -1,0 +1,2258 @@
+{
+  "schemaVersion": 1,
+  "product": "apexcn-cli",
+  "baselineRelease": "0.18.18",
+  "updatedAt": "2026-07-17",
+  "versionPolicy": {
+    "productStageToReleaseLine": {
+      "0.2": "0.20.x",
+      "0.3": "0.30.x",
+      "0.4": "0.40.x",
+      "0.5": "0.50.x",
+      "0.6": "0.60.x",
+      "0.7": "0.70.x",
+      "0.8": "0.80.x",
+      "0.9": "0.90.x"
+    },
+    "routineIteration": "0.0.x",
+    "allowVersion1": false
+  },
+  "executionProtocol": {
+    "planningMode": "just_in_time",
+    "planningInputs": [
+      "roadmap.json",
+      "issues.json"
+    ],
+    "preGeneratedImplementationPlans": false,
+    "activeMilestoneLimit": 1,
+    "fixedIssuesRemovedFromActiveList": true,
+    "nextMilestoneRequiresManualConfirmation": true,
+    "milestoneCompletionSummary": [
+      "enhancedCapabilities",
+      "unexpectedProblems",
+      "rootCauses",
+      "preventionActions",
+      "nextMilestoneGoal",
+      "expectedResults",
+      "majorRisks"
+    ]
+  },
+  "testingBindings": {
+    "builder": {
+      "repository": "/Users/kwang/apexcn-cli"
+    },
+    "validator": {
+      "project": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
+      "threadId": "019f6ed4-f811-7fd0-8111-241bb262c3ba",
+      "model": "gpt-5.6-luna",
+      "reasoningEffort": "high",
+      "interface": "installed-public-apexcn"
+    },
+    "server": {
+      "repository": "/Users/kwang/apexcn-forums",
+      "threadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
+      "model": "gpt-5.6-terra",
+      "reasoningEffort": "high",
+      "apiKeyEnvironment": "dev@oci",
+      "apiKeyPolicy": {
+        "minimumPrivilege": true,
+        "productionUseAllowed": false,
+        "persistInRepository": false,
+        "includeInEvidence": false,
+        "rotateOrRevokeAfterUse": true
+      }
+    }
+  },
+  "statusDefinitions": {
+    "milestone": [
+      "planned",
+      "in_progress",
+      "blocked",
+      "completed"
+    ],
+    "capability": [
+      "not_started",
+      "partial",
+      "implemented",
+      "validated"
+    ],
+    "acceptance": [
+      "pending",
+      "pass",
+      "fail"
+    ],
+    "completionReview": [
+      "not_due",
+      "pending",
+      "approved",
+      "changes_requested"
+    ],
+    "activationGate": [
+      "approved",
+      "waiting"
+    ]
+  },
+  "milestones": [
+    {
+      "id": "0.2",
+      "releaseLine": "0.20.x",
+      "title": "可信赖的新手 CLI",
+      "objective": "让首次使用者无需理解内部实现即可完成安装、认证、命令发现、故障诊断和核心只读任务。",
+      "status": "planned",
+      "activationGate": {
+        "status": "approved",
+        "previousMilestoneId": null,
+        "confirmationRef": "user-confirmed-roadmap-2026-07-17"
+      },
+      "completionReview": {
+        "status": "not_due",
+        "summaryEvidenceId": null,
+        "confirmationRef": null
+      },
+      "capabilities": [
+        {
+          "id": "M020-CAP-INSTALL",
+          "title": "无版本号安装与发布可信链",
+          "userValue": "用户始终安装最新稳定版本，并能验证下载资产完整性。",
+          "scope": [
+            "versionless installer entrypoints",
+            "checksums",
+            "upgrade guidance",
+            "macOS Linux and PowerShell gates"
+          ],
+          "nonGoals": [
+            "Homebrew Scoop or Winget distribution"
+          ],
+          "dependencies": [],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M020-AC-005"
+          ],
+          "validatorScenarioIds": [
+            "M020-V-INSTALL"
+          ],
+          "evidenceIds": [
+            "M020-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M020-CAP-CONTRACT",
+          "title": "稳定命令与 JSON 契约",
+          "userValue": "终端、脚本和 Agent 能依赖一致的命令清单、schema、退出码和错误结构。",
+          "scope": [
+            "command registry",
+            "JSON Schema",
+            "contract tests",
+            "stable exit and error envelope"
+          ],
+          "nonGoals": [
+            "breaking command redesign"
+          ],
+          "dependencies": [],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M020-AC-001",
+            "M020-AC-002",
+            "M020-AC-003"
+          ],
+          "validatorScenarioIds": [
+            "M020-V-CONTRACT",
+            "M020-V-ERRORS"
+          ],
+          "evidenceIds": [
+            "M020-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M020-CAP-AUTH",
+          "title": "认证、profile 与诊断",
+          "userValue": "用户能安全配置身份并获得不泄密的可执行诊断。",
+          "scope": [
+            "auth profiles",
+            "doctor",
+            "recursive secret redaction"
+          ],
+          "nonGoals": [
+            "mandatory native keychain"
+          ],
+          "dependencies": [],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M020-AC-004"
+          ],
+          "validatorScenarioIds": [
+            "M020-V-SECRETS"
+          ],
+          "evidenceIds": [
+            "M020-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M020-CAP-UX",
+          "title": "可执行的新手反馈",
+          "userValue": "空结果、权限、限流、超时和服务错误都给出下一步操作。",
+          "scope": [
+            "empty result guidance",
+            "error recovery guidance",
+            "novice natural-language tasks"
+          ],
+          "nonGoals": [
+            "interactive graphical interface"
+          ],
+          "dependencies": [],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M020-AC-003",
+            "M020-AC-006",
+            "M020-AC-007"
+          ],
+          "validatorScenarioIds": [
+            "M020-V-NOVICE",
+            "M020-V-ERRORS"
+          ],
+          "evidenceIds": [
+            "M020-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M020-CAP-FEEDBACK",
+          "title": "独立黑盒反馈闭环",
+          "userValue": "产品结论由独立项目中的自然语言黑盒验证支撑。",
+          "scope": [
+            "fixed validator binding",
+            "issues.json",
+            "immutable first-attempt evidence",
+            "owner routing"
+          ],
+          "nonGoals": [
+            "self-validation by the builder task"
+          ],
+          "dependencies": [],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M020-AC-008"
+          ],
+          "validatorScenarioIds": [
+            "M020-V-NOVICE"
+          ],
+          "evidenceIds": [
+            "M020-E-LOCAL"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "M020-AC-001",
+          "gate": "core",
+          "description": "公开命令全部进入 command registry。",
+          "metric": "publicCommandRegistryCoverage",
+          "comparator": "gte",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "compare executable public commands with command registry descriptors",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M020-AC-002",
+          "gate": "core",
+          "description": "公开 JSON 命令全部有契约测试。",
+          "metric": "publicJsonContractCoverage",
+          "comparator": "gte",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "map public JSON commands to schema and contract tests",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M020-AC-003",
+          "gate": "core",
+          "description": "401/403/404/409/429/5xx/network/timeout 均产生稳定且可执行的反馈。",
+          "metric": "actionableErrorCases",
+          "comparator": "eq",
+          "target": 8,
+          "unit": "cases",
+          "measurementMethod": "black-box error matrix",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M020-AC-004",
+          "gate": "core",
+          "description": "CLI、JSON、doctor、MCP、workflow、日志和 fixture 中无密钥泄露。",
+          "metric": "secretLeaks",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "findings",
+          "measurementMethod": "automated redaction tests and artifact scan",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M020-AC-005",
+          "gate": "core",
+          "description": "macOS/Linux 安装测试和 PowerShell 静态门禁通过。",
+          "metric": "installerPlatformGatesPassed",
+          "comparator": "eq",
+          "target": 2,
+          "unit": "gates",
+          "measurementMethod": "installer integration and PowerShell static checks",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M020-AC-006",
+          "gate": "core",
+          "description": "至少执行 60 个 L0/L1 自然语言首次尝试任务。",
+          "metric": "noviceFirstAttemptTaskCount",
+          "comparator": "gte",
+          "target": 60,
+          "unit": "tasks",
+          "measurementMethod": "fixed independent validator report",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M020-AC-007",
+          "gate": "core",
+          "description": "L0/L1 自然语言任务首次成功率至少 95%。",
+          "metric": "noviceFirstAttemptSuccessRate",
+          "comparator": "gte",
+          "target": 95,
+          "unit": "percent",
+          "measurementMethod": "fixed independent validator report",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M020-AC-008",
+          "gate": "core",
+          "description": "当前里程碑不存在活动 P0/P1 问题。",
+          "metric": "activeBlockingP0P1",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "issues",
+          "measurementMethod": "issues.json entries scoped to milestone 0.2",
+          "status": "pending",
+          "evidenceIds": []
+        }
+      ],
+      "validatorScenarios": [
+        {
+          "id": "M020-V-INSTALL",
+          "description": "从公开无版本号入口安装、校验并运行 apexcn。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M020-V-CONTRACT",
+          "description": "发现全部命令并验证 JSON/schema/exit-code 契约。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M020-V-ERRORS",
+          "description": "覆盖 HTTP、网络和超时错误矩阵。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M020-V-SECRETS",
+          "description": "扫描全部用户可见输出和 artifacts 的敏感信息。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M020-V-NOVICE",
+          "description": "以首次用户自然语言完成至少 60 个 L0/L1 场景。",
+          "mode": "natural_language"
+        }
+      ],
+      "dependencies": [],
+      "evidence": [
+        {
+          "id": "M020-E-LOCAL",
+          "kind": "repository",
+          "path": "docs/engineering-baseline.md",
+          "description": "Existing local build, contract, installer, diagnostics, and natural-language test evidence.",
+          "commit": "6bd185d"
+        }
+      ]
+    },
+    {
+      "id": "0.3",
+      "releaseLine": "0.30.x",
+      "title": "社区知识检索",
+      "objective": "让用户可靠发现、检索、总结并引用当前社区知识。",
+      "status": "planned",
+      "activationGate": {
+        "status": "waiting",
+        "previousMilestoneId": "0.2",
+        "confirmationRef": null
+      },
+      "completionReview": {
+        "status": "not_due",
+        "summaryEvidenceId": null,
+        "confirmationRef": null
+      },
+      "capabilities": [
+        {
+          "id": "M030-CAP-RETRIEVAL",
+          "title": "统一检索模型",
+          "userValue": "搜索、过滤、cursor、最近主题和主题详情行为一致。",
+          "scope": [
+            "search filters",
+            "cursor pagination",
+            "recent topics",
+            "topic detail"
+          ],
+          "nonGoals": [
+            "local vector database"
+          ],
+          "dependencies": [
+            "server:search-and-topic-contracts"
+          ],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M030-AC-005",
+            "M030-AC-006",
+            "M030-AC-009"
+          ],
+          "validatorScenarioIds": [
+            "M030-V-PAGINATION",
+            "M030-V-LATENCY"
+          ],
+          "evidenceIds": [
+            "M030-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M030-CAP-RAG",
+          "title": "可追溯 ask 与 research",
+          "userValue": "答案具备真实引用、新鲜度、过滤条件和来源。",
+          "scope": [
+            "ask",
+            "research",
+            "citations",
+            "freshness",
+            "provenance"
+          ],
+          "nonGoals": [
+            "claiming offline fixtures measure live answer correctness"
+          ],
+          "dependencies": [
+            "server:ask-and-research-contracts"
+          ],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M030-AC-001",
+            "M030-AC-002",
+            "M030-AC-003",
+            "M030-AC-009"
+          ],
+          "validatorScenarioIds": [
+            "M030-V-LIVE-RETRIEVAL"
+          ],
+          "evidenceIds": [
+            "M030-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M030-CAP-EVAL",
+          "title": "真实只读检索评测",
+          "userValue": "质量结论来自 dev@oci 真实只读 API，而非仅 fixture 完整性。",
+          "scope": [
+            "Chinese retrieval set",
+            "expected references",
+            "real readonly API evaluation"
+          ],
+          "nonGoals": [
+            "production write testing"
+          ],
+          "dependencies": [
+            "environment:dev@oci-api-key"
+          ],
+          "status": "not_started",
+          "acceptanceCriterionIds": [
+            "M030-AC-001",
+            "M030-AC-002",
+            "M030-AC-003",
+            "M030-AC-004"
+          ],
+          "validatorScenarioIds": [
+            "M030-V-LIVE-RETRIEVAL",
+            "M030-V-LOW-CONFIDENCE"
+          ],
+          "evidenceIds": []
+        },
+        {
+          "id": "M030-CAP-CONFIDENCE",
+          "title": "低置信拒答与缩小范围",
+          "userValue": "资料不足时不编造答案，并给出可执行的收窄建议。",
+          "scope": [
+            "low-confidence behavior",
+            "unanswerable questions",
+            "query narrowing"
+          ],
+          "nonGoals": [
+            "unqualified confident synthesis"
+          ],
+          "dependencies": [
+            "server:reference-quality-signals"
+          ],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M030-AC-004"
+          ],
+          "validatorScenarioIds": [
+            "M030-V-LOW-CONFIDENCE"
+          ],
+          "evidenceIds": [
+            "M030-E-LOCAL"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "M030-AC-001",
+          "gate": "core",
+          "description": "中文真实检索评测问题不少于 50 条。",
+          "metric": "retrievalQuestionCount",
+          "comparator": "gte",
+          "target": 50,
+          "unit": "questions",
+          "measurementMethod": "versioned live-read evaluation dataset",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M030-AC-002",
+          "gate": "core",
+          "description": "Top-5 期望引用命中率至少 85%。",
+          "metric": "top5ExpectedReferenceHitRate",
+          "comparator": "gte",
+          "target": 85,
+          "unit": "percent",
+          "measurementMethod": "dev@oci readonly retrieval evaluation",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M030-AC-003",
+          "gate": "core",
+          "description": "引用覆盖率至少 90%。",
+          "metric": "citationCoverage",
+          "comparator": "gte",
+          "target": 90,
+          "unit": "percent",
+          "measurementMethod": "answer-to-reference support mapping",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M030-AC-004",
+          "gate": "core",
+          "description": "至少 10 个不可回答问题全部正确说明限制或拒答。",
+          "metric": "unanswerableCorrectBehaviorRate",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "independent low-confidence scenario set",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M030-AC-005",
+          "gate": "core",
+          "description": "连续 5 页 cursor 分页无重复和丢失。",
+          "metric": "cursorDuplicateOrMissingRecords",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "records",
+          "measurementMethod": "five-page live API traversal",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M030-AC-006",
+          "gate": "core",
+          "description": "search P95 不超过 5 秒。",
+          "metric": "searchP95Latency",
+          "comparator": "lte",
+          "target": 5,
+          "unit": "seconds",
+          "measurementMethod": "recorded dev@oci benchmark",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M030-AC-007",
+          "gate": "core",
+          "description": "ask/research P95 不超过 15 秒。",
+          "metric": "ragP95Latency",
+          "comparator": "lte",
+          "target": 15,
+          "unit": "seconds",
+          "measurementMethod": "recorded dev@oci benchmark",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M030-AC-008",
+          "gate": "core",
+          "description": "至少 40 个独立自然语言检索任务首次成功率不低于 90%。",
+          "metric": "retrievalFirstAttemptSuccessRate",
+          "comparator": "gte",
+          "target": 90,
+          "unit": "percent",
+          "measurementMethod": "fixed independent validator report with at least 40 tasks",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M030-AC-009",
+          "gate": "core",
+          "description": "所有结果包含真实 URL、可用 requestId 和来源信息。",
+          "metric": "resultProvenanceCoverage",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "sampled public JSON result contract",
+          "status": "pending",
+          "evidenceIds": []
+        }
+      ],
+      "validatorScenarios": [
+        {
+          "id": "M030-V-LIVE-RETRIEVAL",
+          "description": "使用 dev@oci 只读 API 执行中文检索和引用评测。",
+          "mode": "natural_language"
+        },
+        {
+          "id": "M030-V-LOW-CONFIDENCE",
+          "description": "验证不可回答问题、低置信拒答和查询收窄。",
+          "mode": "natural_language"
+        },
+        {
+          "id": "M030-V-PAGINATION",
+          "description": "遍历 5 页 cursor 并检测重复、遗漏和顺序漂移。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M030-V-LATENCY",
+          "description": "记录 search、ask 和 research 的 P95 延迟。",
+          "mode": "black_box"
+        }
+      ],
+      "dependencies": [
+        "server:search-topic-ask-research"
+      ],
+      "evidence": [
+        {
+          "id": "M030-E-LOCAL",
+          "kind": "repository",
+          "path": "test/content.test.ts",
+          "description": "Existing local search, topic, ask, and research behavior tests.",
+          "commit": "6bd185d"
+        }
+      ]
+    },
+    {
+      "id": "0.4",
+      "releaseLine": "0.40.x",
+      "title": "个人社区工作台",
+      "objective": "让认证用户在不混淆 profile、不泄露隐私的前提下管理个人社区活动和知识。",
+      "status": "planned",
+      "activationGate": {
+        "status": "waiting",
+        "previousMilestoneId": "0.3",
+        "confirmationRef": null
+      },
+      "completionReview": {
+        "status": "not_due",
+        "summaryEvidenceId": null,
+        "confirmationRef": null
+      },
+      "capabilities": [
+        {
+          "id": "M040-CAP-PERSONAL",
+          "title": "统一个人数据面",
+          "userValue": "用户能统一查看 profile、主题、回复、收藏、订阅和统计。",
+          "scope": [
+            "profile",
+            "topics",
+            "replies",
+            "favorites",
+            "subscriptions",
+            "stats"
+          ],
+          "nonGoals": [
+            "server-side social graph redesign"
+          ],
+          "dependencies": [
+            "server:me-contracts"
+          ],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M040-AC-001",
+            "M040-AC-006"
+          ],
+          "validatorScenarioIds": [
+            "M040-V-PERSONAL"
+          ],
+          "evidenceIds": [
+            "M040-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M040-CAP-INBOX",
+          "title": "通知、收件箱与规则",
+          "userValue": "服务端提供契约时，用户可从 CLI 获取通知、规则和隐私信息。",
+          "scope": [
+            "notifications",
+            "inbox",
+            "community rules",
+            "privacy policy"
+          ],
+          "nonGoals": [
+            "fabricating unavailable server data"
+          ],
+          "dependencies": [
+            "server:notifications-rules-privacy"
+          ],
+          "status": "not_started",
+          "acceptanceCriterionIds": [
+            "M040-AC-005"
+          ],
+          "validatorScenarioIds": [
+            "M040-V-SERVER-GAPS"
+          ],
+          "evidenceIds": []
+        },
+        {
+          "id": "M040-CAP-COLLECTION",
+          "title": "收藏转知识资产",
+          "userValue": "用户可把收藏、保存查询和摘要转成可追溯本地资料。",
+          "scope": [
+            "favorites to collection",
+            "saved queries",
+            "personal digest"
+          ],
+          "nonGoals": [
+            "organization-wide knowledge governance"
+          ],
+          "dependencies": [
+            "server:favorite-topic-export"
+          ],
+          "status": "not_started",
+          "acceptanceCriterionIds": [
+            "M040-AC-004"
+          ],
+          "validatorScenarioIds": [
+            "M040-V-COLLECTION"
+          ],
+          "evidenceIds": []
+        },
+        {
+          "id": "M040-CAP-PRIVACY",
+          "title": "profile 隔离与隐私输出",
+          "userValue": "多个身份不会串用凭据、缓存、输出或动作。",
+          "scope": [
+            "three-profile isolation",
+            "privacy-safe output",
+            "redaction"
+          ],
+          "nonGoals": [
+            "shared multi-user daemon"
+          ],
+          "dependencies": [],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M040-AC-002",
+            "M040-AC-003"
+          ],
+          "validatorScenarioIds": [
+            "M040-V-PROFILES"
+          ],
+          "evidenceIds": [
+            "M040-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M040-CAP-PREVIEW",
+          "title": "个人动作预览",
+          "userValue": "可逆动作在执行前展示真实请求。",
+          "scope": [
+            "favorite preview",
+            "subscription preview"
+          ],
+          "nonGoals": [
+            "unattended write execution"
+          ],
+          "dependencies": [
+            "server:personal-write-contracts"
+          ],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M040-AC-007"
+          ],
+          "validatorScenarioIds": [
+            "M040-V-PREVIEW"
+          ],
+          "evidenceIds": [
+            "M040-E-LOCAL"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "M040-AC-001",
+          "gate": "core",
+          "description": "个人列表分页无重复或丢失。",
+          "metric": "personalPaginationDuplicateOrMissing",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "records",
+          "measurementMethod": "live readonly traversal for each personal list",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M040-AC-002",
+          "gate": "core",
+          "description": "三个 profile 在凭据、缓存、输出和动作上完全隔离。",
+          "metric": "profileIsolationFailures",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "failures",
+          "measurementMethod": "three-profile black-box matrix",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M040-AC-003",
+          "gate": "core",
+          "description": "隐私和敏感字段泄露为零。",
+          "metric": "privateFieldLeaks",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "findings",
+          "measurementMethod": "output and artifact scan",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M040-AC-004",
+          "gate": "core",
+          "description": "收藏转 collection 时正文、URL 和 topicId 保真率 100%。",
+          "metric": "favoriteCollectionFidelity",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "source-to-collection fixture and live sample comparison",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M040-AC-005",
+          "gate": "core",
+          "description": "服务端缺失能力全部明确返回 unavailable，不生成虚假数据。",
+          "metric": "missingServerCapabilityTruthfulRate",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "server capability negotiation scenarios",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M040-AC-006",
+          "gate": "core",
+          "description": "至少 30 个个人工作台自然语言任务首次成功率不低于 95%。",
+          "metric": "personalWorkbenchFirstAttemptSuccessRate",
+          "comparator": "gte",
+          "target": 95,
+          "unit": "percent",
+          "measurementMethod": "fixed validator report with at least 30 tasks",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M040-AC-007",
+          "gate": "core",
+          "description": "所有可逆动作 preview 与最终批准请求一致。",
+          "metric": "personalPreviewRequestMatchRate",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "preview and approved request comparison",
+          "status": "pending",
+          "evidenceIds": []
+        }
+      ],
+      "validatorScenarios": [
+        {
+          "id": "M040-V-PERSONAL",
+          "description": "自然语言查看和组合全部个人数据面。",
+          "mode": "natural_language"
+        },
+        {
+          "id": "M040-V-PROFILES",
+          "description": "三个 profile 交错执行并检查隔离和脱敏。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M040-V-SERVER-GAPS",
+          "description": "验证通知、规则和隐私接口缺失时的真实反馈和服务端路由。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M040-V-COLLECTION",
+          "description": "把收藏转换为本地 collection 并核对来源字段。",
+          "mode": "natural_language"
+        },
+        {
+          "id": "M040-V-PREVIEW",
+          "description": "对收藏和订阅动作比较 preview 与批准请求。",
+          "mode": "black_box"
+        }
+      ],
+      "dependencies": [
+        "server:personal-community-contracts"
+      ],
+      "evidence": [
+        {
+          "id": "M040-E-LOCAL",
+          "kind": "repository",
+          "path": "test/me.test.ts",
+          "description": "Existing local personal data, profile, redaction, favorite, and subscription tests.",
+          "commit": "330538c"
+        }
+      ]
+    },
+    {
+      "id": "0.5",
+      "releaseLine": "0.50.x",
+      "title": "可审计内容操作",
+      "objective": "让授权用户通过可恢复、hash-bound、可审计的 workflow 准备和执行内容变更。",
+      "status": "planned",
+      "activationGate": {
+        "status": "waiting",
+        "previousMilestoneId": "0.4",
+        "confirmationRef": null
+      },
+      "completionReview": {
+        "status": "not_due",
+        "summaryEvidenceId": null,
+        "confirmationRef": null
+      },
+      "capabilities": [
+        {
+          "id": "M050-CAP-CRUD",
+          "title": "主题与回复 CRUD",
+          "userValue": "用户可通过稳定命令管理主题和回复。",
+          "scope": [
+            "topic create update delete",
+            "reply create update delete"
+          ],
+          "nonGoals": [
+            "automated production writes"
+          ],
+          "dependencies": [
+            "server:content-write-contracts"
+          ],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M050-AC-001",
+            "M050-AC-008"
+          ],
+          "validatorScenarioIds": [
+            "M050-V-WRITE"
+          ],
+          "evidenceIds": [
+            "M050-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M050-CAP-REVIEW",
+          "title": "草稿与审核门禁",
+          "userValue": "正文质量、隐私和密钥问题在 API preview 前被发现。",
+          "scope": [
+            "draft question reply",
+            "review topic reply",
+            "content and secret checks"
+          ],
+          "nonGoals": [
+            "automatic editorial approval"
+          ],
+          "dependencies": [],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M050-AC-004",
+            "M050-AC-007"
+          ],
+          "validatorScenarioIds": [
+            "M050-V-NEGATIVE"
+          ],
+          "evidenceIds": [
+            "M050-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M050-CAP-WORKFLOW",
+          "title": "hash-bound workflow",
+          "userValue": "preview、approval 和 execute 绑定同一请求并可恢复审计。",
+          "scope": [
+            "plan",
+            "run",
+            "approve",
+            "verify",
+            "diff",
+            "audit",
+            "export",
+            "expiry",
+            "policy",
+            "idempotence"
+          ],
+          "nonGoals": [
+            "MCP execute-write"
+          ],
+          "dependencies": [],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M050-AC-002",
+            "M050-AC-003",
+            "M050-AC-004",
+            "M050-AC-005",
+            "M050-AC-006"
+          ],
+          "validatorScenarioIds": [
+            "M050-V-WRITE",
+            "M050-V-NEGATIVE",
+            "M050-V-RECOVERY"
+          ],
+          "evidenceIds": [
+            "M050-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M050-CAP-TEST-ENV",
+          "title": "隔离写测试环境",
+          "userValue": "真实写流程可验证且不污染生产社区或遗留测试资源。",
+          "scope": [
+            "dev@oci API key",
+            "isolated write category or environment",
+            "cleanup verification"
+          ],
+          "nonGoals": [
+            "production community write testing"
+          ],
+          "dependencies": [
+            "environment:dev@oci-api-key",
+            "server:isolated-write-test-surface"
+          ],
+          "status": "not_started",
+          "acceptanceCriterionIds": [
+            "M050-AC-001",
+            "M050-AC-008"
+          ],
+          "validatorScenarioIds": [
+            "M050-V-WRITE",
+            "M050-V-CLEANUP"
+          ],
+          "evidenceIds": []
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "M050-AC-001",
+          "gate": "core",
+          "description": "至少 20 个完整写 workflow 首次尝试样本通过。",
+          "metric": "writeWorkflowFirstAttemptPassCount",
+          "comparator": "gte",
+          "target": 20,
+          "unit": "workflows",
+          "measurementMethod": "isolated dev@oci validator run",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M050-AC-002",
+          "gate": "core",
+          "description": "成功执行的 preview、approval 和 execute 请求 hash 100% 一致。",
+          "metric": "workflowHashMatchRate",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "workflow artifact hash comparison",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M050-AC-003",
+          "gate": "core",
+          "description": "缺确认、过期审批、正文变化和权限不足全部阻断。",
+          "metric": "unsafeWriteBlockRate",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "negative workflow matrix",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M050-AC-004",
+          "gate": "core",
+          "description": "delete 确认绕过为零。",
+          "metric": "deleteConfirmationBypasses",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "bypasses",
+          "measurementMethod": "delete preview approval and execute attack scenarios",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M050-AC-005",
+          "gate": "core",
+          "description": "resume 和 retry 不产生重复写入。",
+          "metric": "duplicateWritesOnResume",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "writes",
+          "measurementMethod": "idempotence and resume scenarios",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M050-AC-006",
+          "gate": "core",
+          "description": "401/409/429/timeout 恢复不产生不确定重复写。",
+          "metric": "uncertainDuplicateWrites",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "writes",
+          "measurementMethod": "fault-injected isolated workflow runs",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M050-AC-007",
+          "gate": "core",
+          "description": "workflow、审核和测试证据中无密钥泄露。",
+          "metric": "workflowSecretLeaks",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "findings",
+          "measurementMethod": "artifact and log secret scan",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M050-AC-008",
+          "gate": "core",
+          "description": "隔离测试资源残留为零。",
+          "metric": "residualWriteTestResources",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "resources",
+          "measurementMethod": "post-run isolated environment inventory",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M050-AC-009",
+          "gate": "core",
+          "description": "当前里程碑不存在活动 P0/P1 问题。",
+          "metric": "activeBlockingP0P1",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "issues",
+          "measurementMethod": "issues.json entries scoped to milestone 0.5",
+          "status": "pending",
+          "evidenceIds": []
+        }
+      ],
+      "validatorScenarios": [
+        {
+          "id": "M050-V-WRITE",
+          "description": "在隔离环境完成主题和回复的完整 workflow。",
+          "mode": "natural_language"
+        },
+        {
+          "id": "M050-V-NEGATIVE",
+          "description": "验证确认、审批、hash、权限和密钥安全负向场景。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M050-V-RECOVERY",
+          "description": "注入 401/409/429/timeout 并验证安全恢复与幂等。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M050-V-CLEANUP",
+          "description": "清理并盘点隔离环境测试资源。",
+          "mode": "black_box"
+        }
+      ],
+      "dependencies": [
+        "server:content-write-contracts",
+        "environment:dev@oci-isolated-write"
+      ],
+      "evidence": [
+        {
+          "id": "M050-E-LOCAL",
+          "kind": "repository",
+          "path": "test/workflow.test.ts",
+          "description": "Existing local workflow, policy, review, and preview safety tests.",
+          "commit": "330538c"
+        }
+      ]
+    },
+    {
+      "id": "0.6",
+      "releaseLine": "0.60.x",
+      "title": "AI Agent 标准适配层",
+      "objective": "让 AI 客户端通过可预测、安全的本地 stdio 适配层发现并使用社区能力。",
+      "status": "planned",
+      "activationGate": {
+        "status": "waiting",
+        "previousMilestoneId": "0.5",
+        "confirmationRef": null
+      },
+      "completionReview": {
+        "status": "not_due",
+        "summaryEvidenceId": null,
+        "confirmationRef": null
+      },
+      "capabilities": [
+        {
+          "id": "M060-CAP-POLICY",
+          "title": "MCP readonly 与 preview-only 策略",
+          "userValue": "Agent 可读取和预览，但不能绕过 CLI workflow 执行写操作。",
+          "scope": [
+            "readonly",
+            "preview-only",
+            "execute-write disabled"
+          ],
+          "nonGoals": [
+            "remote HTTP MCP",
+            "MCP execute-write"
+          ],
+          "dependencies": [],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M060-AC-002",
+            "M060-AC-003"
+          ],
+          "validatorScenarioIds": [
+            "M060-V-SAFETY"
+          ],
+          "evidenceIds": [
+            "M060-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M060-CAP-CORE",
+          "title": "CLI/MCP 共用核心服务",
+          "userValue": "CLI 和 Agent 得到相同请求、安全和错误语义。",
+          "scope": [
+            "shared services",
+            "HTTP client",
+            "policy",
+            "redaction",
+            "schemas"
+          ],
+          "nonGoals": [
+            "big-bang CLI rewrite"
+          ],
+          "dependencies": [],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M060-AC-001"
+          ],
+          "validatorScenarioIds": [
+            "M060-V-TOOLS"
+          ],
+          "evidenceIds": [
+            "M060-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M060-CAP-CLIENTS",
+          "title": "真实 MCP 客户端兼容",
+          "userValue": "用户知道哪些客户端版本经过真实连接验证。",
+          "scope": [
+            "Claude Desktop",
+            "Cursor",
+            "VS Code Agent",
+            "dated evidence"
+          ],
+          "nonGoals": [
+            "claiming untested clients are verified"
+          ],
+          "dependencies": [
+            "external:desktop-clients"
+          ],
+          "status": "not_started",
+          "acceptanceCriterionIds": [
+            "M060-AC-004"
+          ],
+          "validatorScenarioIds": [
+            "M060-V-CLIENTS"
+          ],
+          "evidenceIds": []
+        },
+        {
+          "id": "M060-CAP-PROTOCOL",
+          "title": "稳定 stdio 协议",
+          "userValue": "MCP 启动、发现、调用和错误在连续运行中保持稳定。",
+          "scope": [
+            "initialize",
+            "tools/list",
+            "tools/call",
+            "JSON-RPC errors",
+            "startup latency"
+          ],
+          "nonGoals": [
+            "network MCP transport"
+          ],
+          "dependencies": [],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M060-AC-005",
+            "M060-AC-006",
+            "M060-AC-007",
+            "M060-AC-008"
+          ],
+          "validatorScenarioIds": [
+            "M060-V-PROTOCOL",
+            "M060-V-AGENT"
+          ],
+          "evidenceIds": [
+            "M060-E-LOCAL"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "M060-AC-001",
+          "gate": "core",
+          "description": "计划暴露的 readonly 命令全部映射到共用 core 的 MCP 工具。",
+          "metric": "readonlySharedCoreCoverage",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "command and tool registry plus service dependency inspection",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M060-AC-002",
+          "gate": "core",
+          "description": "readonly 和 preview-only 模式真实写请求为零。",
+          "metric": "mcpRealWriteRequests",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "requests",
+          "measurementMethod": "mock and isolated network observation",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M060-AC-003",
+          "gate": "core",
+          "description": "preview-only 响应全部包含 willExecute=false。",
+          "metric": "previewWillExecuteFalseCoverage",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "all preview tool contract scenarios",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M060-AC-004",
+          "gate": "core",
+          "description": "Claude Desktop、Cursor 和 VS Code Agent 均有带版本和日期的真实验证证据。",
+          "metric": "verifiedMcpClients",
+          "comparator": "eq",
+          "target": 3,
+          "unit": "clients",
+          "measurementMethod": "real client compatibility records",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M060-AC-005",
+          "gate": "core",
+          "description": "连续 100 次 JSON-RPC 调用无协议失败。",
+          "metric": "jsonRpcProtocolFailures",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "failures",
+          "measurementMethod": "100-call stdio soak",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M060-AC-006",
+          "gate": "core",
+          "description": "至少 40 个 Agent 自然语言任务首次成功率不低于 95%。",
+          "metric": "agentFirstAttemptSuccessRate",
+          "comparator": "gte",
+          "target": 95,
+          "unit": "percent",
+          "measurementMethod": "fixed validator report with at least 40 tasks",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M060-AC-007",
+          "gate": "core",
+          "description": "MCP 启动 P95 不超过 2 秒。",
+          "metric": "mcpStartupP95",
+          "comparator": "lte",
+          "target": 2,
+          "unit": "seconds",
+          "measurementMethod": "recorded local startup benchmark",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M060-AC-008",
+          "gate": "core",
+          "description": "MCP 输出和错误中的密钥泄露为零。",
+          "metric": "mcpSecretLeaks",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "findings",
+          "measurementMethod": "MCP response and error scan",
+          "status": "pending",
+          "evidenceIds": []
+        }
+      ],
+      "validatorScenarios": [
+        {
+          "id": "M060-V-TOOLS",
+          "description": "比较 CLI registry、core service 和 MCP tools 的映射。",
+          "mode": "contract"
+        },
+        {
+          "id": "M060-V-SAFETY",
+          "description": "验证 readonly、preview-only 和 disabled execute-write。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M060-V-CLIENTS",
+          "description": "在三个真实客户端中执行发现和只读调用。",
+          "mode": "manual_client"
+        },
+        {
+          "id": "M060-V-PROTOCOL",
+          "description": "执行 100 次 stdio JSON-RPC soak 和启动延迟测量。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M060-V-AGENT",
+          "description": "完成至少 40 个自然语言 Agent 任务。",
+          "mode": "natural_language"
+        }
+      ],
+      "dependencies": [],
+      "evidence": [
+        {
+          "id": "M060-E-LOCAL",
+          "kind": "repository",
+          "path": "test/mcp/mcp-stdio-smoke.test.ts",
+          "description": "Existing local MCP stdio, policy, schema, and safety tests.",
+          "commit": "330538c"
+        }
+      ]
+    },
+    {
+      "id": "0.7",
+      "releaseLine": "0.70.x",
+      "title": "本地知识资产与自动化",
+      "objective": "让用户构建可复现的本地知识资产，并在没有无人值守写入的前提下自动化只读知识流程。",
+      "status": "planned",
+      "activationGate": {
+        "status": "waiting",
+        "previousMilestoneId": "0.6",
+        "confirmationRef": null
+      },
+      "completionReview": {
+        "status": "not_due",
+        "summaryEvidenceId": null,
+        "confirmationRef": null
+      },
+      "capabilities": [
+        {
+          "id": "M070-CAP-INCREMENTAL",
+          "title": "增量 collection",
+          "userValue": "大规模资料更新时无需重复完整构建，并能发现重复、遗漏和陈旧数据。",
+          "scope": [
+            "incremental sync",
+            "deduplication",
+            "integrity",
+            "provenance",
+            "staleness"
+          ],
+          "nonGoals": [
+            "mandatory native vector database"
+          ],
+          "dependencies": [],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M070-AC-001",
+            "M070-AC-002",
+            "M070-AC-003",
+            "M070-AC-005"
+          ],
+          "validatorScenarioIds": [
+            "M070-V-SCALE",
+            "M070-V-INCREMENTAL"
+          ],
+          "evidenceIds": [
+            "M070-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M070-CAP-OFFLINE",
+          "title": "可复现离线知识包",
+          "userValue": "资料可离线检索、导出、验证、导入和恢复。",
+          "scope": [
+            "offline query",
+            "versioned export import",
+            "canonical hashes",
+            "restore"
+          ],
+          "nonGoals": [
+            "claiming offline results are live community state"
+          ],
+          "dependencies": [],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M070-AC-004",
+            "M070-AC-006",
+            "M070-AC-007",
+            "M070-AC-008"
+          ],
+          "validatorScenarioIds": [
+            "M070-V-OFFLINE",
+            "M070-V-RESTORE"
+          ],
+          "evidenceIds": [
+            "M070-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M070-CAP-AUTOMATION",
+          "title": "只读自动化",
+          "userValue": "用户可计划摘要和资料任务，同时保持真实写操作需要人工批准。",
+          "scope": [
+            "scheduled readonly digest",
+            "automation plans",
+            "idempotent local outputs"
+          ],
+          "nonGoals": [
+            "unattended real writes"
+          ],
+          "dependencies": [],
+          "status": "not_started",
+          "acceptanceCriterionIds": [
+            "M070-AC-008",
+            "M070-AC-009"
+          ],
+          "validatorScenarioIds": [
+            "M070-V-AUTOMATION"
+          ],
+          "evidenceIds": []
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "M070-AC-001",
+          "gate": "core",
+          "description": "10,000 文档在记录的参考环境中 5 分钟内完成索引。",
+          "metric": "tenThousandDocumentIndexTime",
+          "comparator": "lte",
+          "target": 5,
+          "unit": "minutes",
+          "measurementMethod": "recorded 10000-document benchmark",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M070-AC-002",
+          "gate": "core",
+          "description": "10,000 文档索引查询 P95 不超过 500ms。",
+          "metric": "localQueryP95",
+          "comparator": "lte",
+          "target": 500,
+          "unit": "milliseconds",
+          "measurementMethod": "recorded local benchmark",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M070-AC-003",
+          "gate": "core",
+          "description": "1% 文档变化的增量索引耗时不超过完整索引的 20%。",
+          "metric": "incrementalToFullIndexTime",
+          "comparator": "lte",
+          "target": 20,
+          "unit": "percent",
+          "measurementMethod": "paired full and incremental benchmark",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M070-AC-004",
+          "gate": "core",
+          "description": "本地基准 Top-10 期望引用命中率至少 90%。",
+          "metric": "localTop10ReferenceHitRate",
+          "comparator": "gte",
+          "target": 90,
+          "unit": "percent",
+          "measurementMethod": "versioned local corpus evaluation",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M070-AC-005",
+          "gate": "core",
+          "description": "同步后重复和缺失文档为零。",
+          "metric": "duplicateOrMissingDocuments",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "documents",
+          "measurementMethod": "source manifest and index comparison",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M070-AC-006",
+          "gate": "core",
+          "description": "相同 canonical 输入生成相同内容 hash。",
+          "metric": "canonicalHashMismatch",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "mismatches",
+          "measurementMethod": "repeated canonical build comparison",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M070-AC-007",
+          "gate": "core",
+          "description": "export/verify/import/restore 保留全部文档和 provenance。",
+          "metric": "knowledgeBundleRestoreFidelity",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "round-trip manifest comparison",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M070-AC-008",
+          "gate": "core",
+          "description": "至少 50 个离线自然语言任务首次成功率不低于 95%。",
+          "metric": "offlineFirstAttemptSuccessRate",
+          "comparator": "gte",
+          "target": 95,
+          "unit": "percent",
+          "measurementMethod": "fixed validator report with at least 50 tasks",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M070-AC-009",
+          "gate": "core",
+          "description": "离线模式网络请求和自动化无人值守写请求均为零。",
+          "metric": "offlineNetworkOrUnattendedWrites",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "requests",
+          "measurementMethod": "network and write-call observation",
+          "status": "pending",
+          "evidenceIds": []
+        }
+      ],
+      "validatorScenarios": [
+        {
+          "id": "M070-V-SCALE",
+          "description": "构建并查询 10,000 文档参考 collection。",
+          "mode": "benchmark"
+        },
+        {
+          "id": "M070-V-INCREMENTAL",
+          "description": "修改 1% 文档并验证增量耗时、去重和完整性。",
+          "mode": "benchmark"
+        },
+        {
+          "id": "M070-V-OFFLINE",
+          "description": "断网完成至少 50 个自然语言知识任务。",
+          "mode": "natural_language"
+        },
+        {
+          "id": "M070-V-RESTORE",
+          "description": "执行 export/verify/import/restore 全链路。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M070-V-AUTOMATION",
+          "description": "运行只读自动化并观察网络、写调用和重复输出。",
+          "mode": "black_box"
+        }
+      ],
+      "dependencies": [],
+      "evidence": [
+        {
+          "id": "M070-E-LOCAL",
+          "kind": "repository",
+          "path": "test/collection-bm25.test.ts",
+          "description": "Existing local collection BM25, explain, index, query, and stats tests.",
+          "commit": "6bd185d"
+        }
+      ]
+    },
+    {
+      "id": "0.8",
+      "releaseLine": "0.80.x",
+      "title": "组织治理与运营",
+      "objective": "让团队在支持的平台上治理策略、凭据、兼容性、审计、支持和生命周期操作。",
+      "status": "planned",
+      "activationGate": {
+        "status": "waiting",
+        "previousMilestoneId": "0.7",
+        "confirmationRef": null
+      },
+      "completionReview": {
+        "status": "not_due",
+        "summaryEvidenceId": null,
+        "confirmationRef": null
+      },
+      "capabilities": [
+        {
+          "id": "M080-CAP-POLICY",
+          "title": "策略与防篡改审计",
+          "userValue": "团队能统一允许、拒绝、审批并验证内容操作。",
+          "scope": [
+            "policy packs",
+            "approval levels",
+            "retention",
+            "tamper evidence"
+          ],
+          "nonGoals": [
+            "central hosted control plane"
+          ],
+          "dependencies": [],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M080-AC-001",
+            "M080-AC-002"
+          ],
+          "validatorScenarioIds": [
+            "M080-V-POLICY"
+          ],
+          "evidenceIds": [
+            "M080-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M080-CAP-COMPAT",
+          "title": "服务端能力协商",
+          "userValue": "CLI 能识别兼容 API 能力并准确报告缺口。",
+          "scope": [
+            "capability negotiation",
+            "API compatibility matrix",
+            "current plus two previous contracts"
+          ],
+          "nonGoals": [
+            "silent compatibility shims for missing APIs"
+          ],
+          "dependencies": [
+            "server:versioned-api-contracts"
+          ],
+          "status": "not_started",
+          "acceptanceCriterionIds": [
+            "M080-AC-003",
+            "M080-AC-006"
+          ],
+          "validatorScenarioIds": [
+            "M080-V-COMPAT",
+            "M080-V-ROUTING"
+          ],
+          "evidenceIds": []
+        },
+        {
+          "id": "M080-CAP-LIFECYCLE",
+          "title": "凭据与跨平台生命周期",
+          "userValue": "安装、升级、回滚、卸载和支持诊断在支持的平台上一致可控。",
+          "scope": [
+            "credential strategy",
+            "support bundles",
+            "observability",
+            "install upgrade rollback uninstall"
+          ],
+          "nonGoals": [
+            "mandatory native dependency without fallback"
+          ],
+          "dependencies": [
+            "external:supported-platform-runners"
+          ],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M080-AC-004",
+            "M080-AC-005",
+            "M080-AC-007"
+          ],
+          "validatorScenarioIds": [
+            "M080-V-PLATFORMS",
+            "M080-V-SOAK"
+          ],
+          "evidenceIds": [
+            "M080-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M080-CAP-ROUTING",
+          "title": "跨仓库根因路由",
+          "userValue": "ORDS API 缺口先在服务端修复，CLI 不再用不可靠补丁掩盖。",
+          "scope": [
+            "owner classification",
+            "server thread routing",
+            "API contract evidence",
+            "end-to-end revalidation"
+          ],
+          "nonGoals": [
+            "CLI-only masking of server defects"
+          ],
+          "dependencies": [
+            "server:fixed-thread"
+          ],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M080-AC-006"
+          ],
+          "validatorScenarioIds": [
+            "M080-V-ROUTING"
+          ],
+          "evidenceIds": [
+            "M080-E-LOCAL"
+          ]
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "M080-AC-001",
+          "gate": "core",
+          "description": "策略 allow/deny 矩阵判断准确率 100%。",
+          "metric": "policyDecisionAccuracy",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "versioned policy matrix",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M080-AC-002",
+          "gate": "core",
+          "description": "必需审计事件完整率和篡改检出率均为 100%。",
+          "metric": "auditCompletenessAndTamperDetection",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "audit event matrix and tamper injection",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M080-AC-003",
+          "gate": "core",
+          "description": "当前及前两个受支持 API 契约全部通过兼容测试。",
+          "metric": "supportedApiContractVersionsPassed",
+          "comparator": "eq",
+          "target": 3,
+          "unit": "versions",
+          "measurementMethod": "server and CLI compatibility suite",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M080-AC-004",
+          "gate": "core",
+          "description": "支持的 macOS、Linux、Windows 环境全部通过安装、升级、回滚和卸载。",
+          "metric": "platformLifecycleSuitesPassed",
+          "comparator": "eq",
+          "target": 3,
+          "unit": "platforms",
+          "measurementMethod": "platform runner lifecycle suites",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M080-AC-005",
+          "gate": "core",
+          "description": "10,000 个脱敏和 secret fuzz 样本泄露为零。",
+          "metric": "redactionFuzzLeaks",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "findings",
+          "measurementMethod": "10000-case deterministic fuzz corpus",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M080-AC-006",
+          "gate": "core",
+          "description": "种子化 CLI/server/cross_repo/test_environment/external 问题归属和路由准确率 100%。",
+          "metric": "issueRoutingAccuracy",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "seeded ownership and routing matrix",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M080-AC-007",
+          "gate": "core",
+          "description": "7 天只读 soak 成功率至少 99.5%，失败均有可执行诊断。",
+          "metric": "sevenDayReadonlySuccessRate",
+          "comparator": "gte",
+          "target": 99.5,
+          "unit": "percent",
+          "measurementMethod": "seven-day recorded soak",
+          "status": "pending",
+          "evidenceIds": []
+        }
+      ],
+      "validatorScenarios": [
+        {
+          "id": "M080-V-POLICY",
+          "description": "执行策略决策矩阵、审计完整性和篡改注入。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M080-V-COMPAT",
+          "description": "验证当前和前两个 API 契约版本。",
+          "mode": "contract"
+        },
+        {
+          "id": "M080-V-PLATFORMS",
+          "description": "在支持平台执行安装、升级、回滚和卸载。",
+          "mode": "platform"
+        },
+        {
+          "id": "M080-V-ROUTING",
+          "description": "分类种子问题并验证固定服务端线程闭环。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M080-V-SOAK",
+          "description": "运行 7 天只读 soak 并分析全部失败。",
+          "mode": "soak"
+        }
+      ],
+      "dependencies": [
+        "server:versioned-capability-contracts",
+        "external:supported-platform-runners"
+      ],
+      "evidence": [
+        {
+          "id": "M080-E-LOCAL",
+          "kind": "repository",
+          "path": "test/security-redaction.test.ts",
+          "description": "Existing local policy, redaction, credential, release, and installer tests.",
+          "commit": "6bd185d"
+        }
+      ]
+    },
+    {
+      "id": "0.9",
+      "releaseLine": "0.90.x",
+      "title": "GA 候选版本",
+      "objective": "冻结受支持公开面，并证明后续 GA 决策所需的发布、升级、安全、可靠性、恢复和文档成熟度。",
+      "status": "planned",
+      "activationGate": {
+        "status": "waiting",
+        "previousMilestoneId": "0.8",
+        "confirmationRef": null
+      },
+      "completionReview": {
+        "status": "not_due",
+        "summaryEvidenceId": null,
+        "confirmationRef": null
+      },
+      "capabilities": [
+        {
+          "id": "M090-CAP-FREEZE",
+          "title": "公开契约冻结",
+          "userValue": "CLI、JSON、MCP、workflow 和 API 兼容面具有明确稳定承诺。",
+          "scope": [
+            "CLI freeze",
+            "JSON freeze",
+            "MCP freeze",
+            "workflow freeze",
+            "API compatibility policy"
+          ],
+          "nonGoals": [
+            "automatic promotion to 1.0.0"
+          ],
+          "dependencies": [],
+          "status": "not_started",
+          "acceptanceCriterionIds": [
+            "M090-AC-001",
+            "M090-AC-003"
+          ],
+          "validatorScenarioIds": [
+            "M090-V-QUALIFICATION"
+          ],
+          "evidenceIds": []
+        },
+        {
+          "id": "M090-CAP-RECOVERY",
+          "title": "迁移、弃用与恢复",
+          "userValue": "用户可从受支持版本升级，并在失败时可靠回滚和恢复。",
+          "scope": [
+            "migration",
+            "deprecation",
+            "rollback",
+            "disaster recovery",
+            "support policy"
+          ],
+          "nonGoals": [
+            "supporting every historical pre-roadmap build"
+          ],
+          "dependencies": [],
+          "status": "not_started",
+          "acceptanceCriterionIds": [
+            "M090-AC-004",
+            "M090-AC-010"
+          ],
+          "validatorScenarioIds": [
+            "M090-V-UPGRADE",
+            "M090-V-RECOVERY"
+          ],
+          "evidenceIds": []
+        },
+        {
+          "id": "M090-CAP-SUPPLY",
+          "title": "发布供应链证据",
+          "userValue": "每个发布资产都能验证 checksum、SBOM 和来源证明。",
+          "scope": [
+            "checksums",
+            "SBOM",
+            "provenance"
+          ],
+          "nonGoals": [
+            "unverified third-party package channels"
+          ],
+          "dependencies": [
+            "external:release-platform"
+          ],
+          "status": "not_started",
+          "acceptanceCriterionIds": [
+            "M090-AC-005"
+          ],
+          "validatorScenarioIds": [
+            "M090-V-RELEASE"
+          ],
+          "evidenceIds": []
+        },
+        {
+          "id": "M090-CAP-QUALIFICATION",
+          "title": "独立资格验证",
+          "userValue": "GA 候选结论由跨角色黑盒、真实客户端、隔离写测试和安全审查共同支撑。",
+          "scope": [
+            "200 natural-language tasks",
+            "client revalidation",
+            "isolated write qualification",
+            "30-day soak",
+            "independent security review"
+          ],
+          "nonGoals": [
+            "production write qualification"
+          ],
+          "dependencies": [
+            "environment:dev@oci-isolated-write",
+            "external:independent-security-review"
+          ],
+          "status": "not_started",
+          "acceptanceCriterionIds": [
+            "M090-AC-002",
+            "M090-AC-006",
+            "M090-AC-007",
+            "M090-AC-008",
+            "M090-AC-009"
+          ],
+          "validatorScenarioIds": [
+            "M090-V-QUALIFICATION",
+            "M090-V-SOAK",
+            "M090-V-SECURITY"
+          ],
+          "evidenceIds": []
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "M090-AC-001",
+          "gate": "core",
+          "description": "活动 P0/P1 问题为零。",
+          "metric": "activeP0P1",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "issues",
+          "measurementMethod": "all active issues.json entries",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M090-AC-002",
+          "gate": "core",
+          "description": "至少 200 个跨角色自然语言任务首次成功率不低于 97%。",
+          "metric": "gaFirstAttemptSuccessRate",
+          "comparator": "gte",
+          "target": 97,
+          "unit": "percent",
+          "measurementMethod": "fixed validator report with at least 200 tasks",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M090-AC-003",
+          "gate": "core",
+          "description": "公开命令 contract 和场景覆盖率 100%。",
+          "metric": "publicContractAndScenarioCoverage",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "registry schema and scenario inventory",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M090-AC-004",
+          "gate": "core",
+          "description": "所有受支持 roadmap release line 升级至 0.90.x 的路径全部通过。",
+          "metric": "supportedUpgradePathSuccessRate",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "versioned upgrade matrix",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M090-AC-005",
+          "gate": "core",
+          "description": "所有 release assets 的 checksum、SBOM 和 provenance 全部验证通过。",
+          "metric": "releaseSupplyChainVerificationRate",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "release asset verification",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M090-AC-006",
+          "gate": "core",
+          "description": "当前支持版本的三个 MCP 客户端全部重新验证。",
+          "metric": "revalidatedMcpClients",
+          "comparator": "eq",
+          "target": 3,
+          "unit": "clients",
+          "measurementMethod": "dated real-client compatibility run",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M090-AC-007",
+          "gate": "core",
+          "description": "隔离写 workflow 测试全部通过且残留资源为零。",
+          "metric": "isolatedWriteQualificationRate",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "dev@oci isolated write suite and cleanup inventory",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M090-AC-008",
+          "gate": "core",
+          "description": "30 天资格 soak 达到文档化可靠性目标。",
+          "metric": "qualificationSoakDays",
+          "comparator": "eq",
+          "target": 30,
+          "unit": "days",
+          "measurementMethod": "continuous qualification report",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M090-AC-009",
+          "gate": "core",
+          "description": "独立安全审查无未解决 critical/high 问题。",
+          "metric": "openCriticalHighSecurityFindings",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "findings",
+          "measurementMethod": "independent security review report",
+          "status": "pending",
+          "evidenceIds": []
+        },
+        {
+          "id": "M090-AC-010",
+          "gate": "core",
+          "description": "文档化恢复和回滚场景全部通过。",
+          "metric": "recoveryRollbackSuccessRate",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "recovery and rollback exercise matrix",
+          "status": "pending",
+          "evidenceIds": []
+        }
+      ],
+      "validatorScenarios": [
+        {
+          "id": "M090-V-QUALIFICATION",
+          "description": "执行跨角色 200 个自然语言任务和公开契约盘点。",
+          "mode": "natural_language"
+        },
+        {
+          "id": "M090-V-UPGRADE",
+          "description": "从每个支持 release line 升级到 0.90.x。",
+          "mode": "platform"
+        },
+        {
+          "id": "M090-V-RELEASE",
+          "description": "验证 release checksum、SBOM 和 provenance。",
+          "mode": "supply_chain"
+        },
+        {
+          "id": "M090-V-RECOVERY",
+          "description": "执行全部恢复和回滚演练。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M090-V-SOAK",
+          "description": "运行 30 天资格 soak。",
+          "mode": "soak"
+        },
+        {
+          "id": "M090-V-SECURITY",
+          "description": "完成独立安全审查并关闭 critical/high 问题。",
+          "mode": "security_review"
+        }
+      ],
+      "dependencies": [
+        "milestone:0.8-completion-review-approved"
+      ],
+      "evidence": []
+    }
+  ]
+}

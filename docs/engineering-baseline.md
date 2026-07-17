@@ -25,8 +25,8 @@ This validation covers unreleased novice-experience improvements. Version select
 
 - `npm ci`: passed; npm reported the existing `fsevents` install-script allow-scripts warning.
 - `npm run build`: passed.
-- `npm test`: passed, 36 test files and 564 tests.
-- `npm run check:release`: passed for `0.18.18`.
+- `npm test`: passed, 37 test files and 570 tests.
+- `npm run check:release`: passed for `0.18.18`, including the roadmap/issues consistency gate.
 - `npm run eval:rag`: passed in offline fixture mode with 30 questions and 30 expected references.
 - `npm run test:e2e:readonly`: skipped safely because `APEXCN_API_KEY` is not set.
 
@@ -36,6 +36,7 @@ This validation covers unreleased novice-experience improvements. Version select
 - MCP commands detected: `mcp inspect`, `mcp serve`, `mcp tools`.
 - Collection commands detected: `collection build`, `collection index`, `collection query`, `collection stats`, `collection verify`.
 - RAG eval files detected: `eval/rag/questions.zh.jsonl`, `eval/rag/expected-references.jsonl`, `eval/rag/README.md`, `scripts/eval-rag.mjs`.
+- Roadmap governance detected: `roadmap.json`, active-only `issues.json`, generated `docs/roadmap.md`, and `scripts/check-roadmap.mjs`.
 
 ## Known Failures / Risks
 
