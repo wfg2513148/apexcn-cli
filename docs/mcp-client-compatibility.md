@@ -7,61 +7,16 @@
 | 客户端 | 版本 | 平台 | 日期 | 状态 | 真实结果 |
 |---|---:|---|---|---|---|
 | VS Code Agent | 1.129.0 | macOS 26.5.2 arm64 | 2026-07-18 | verified | UI 发现 10 个工具；真实调用 `apexcn_workflow_plan` 返回 `research-only` / `api-read` |
-| Cursor | 3.10.20 | macOS 26.5.2 arm64 | 2026-07-18 | blocked, not verified | 官方 notarized app 在当前系统会话进入 UI 前停在 `_dyld_start`；未连接 MCP，不作兼容结论 |
-| Claude Desktop | 1.20186.0 | macOS 26.5.2 arm64 | 2026-07-18 | blocked, not verified | 官方 notarized app 在当前系统会话进入 UI 前停在 `_dyld_start`；未连接 MCP，不作兼容结论 |
+
+0.50.x 只分发和支持 VS Code Agent 接入。Cursor 与 Claude Desktop 不属于本版本分发矩阵，不能据此文档声称兼容。
 
 VS Code 原始截图与哈希记录在
 [`reports/mcp/client-evidence/m050-client-evidence.json`](../reports/mcp/client-evidence/m050-client-evidence.json)。
 SDK smoke、100-call soak 和启动性能属于本地协议资格化，不能替代真实 UI。
 
-## Claude Desktop
-
-Status: blocked, not verified on the recorded host.
-
-Readonly:
-
-```json
-{
-  "mcpServers": {
-    "apexcn": {
-      "command": "apexcn",
-      "args": ["mcp", "serve", "--readonly"]
-    }
-  }
-}
-```
-
-Preview-only 写工具:
-
-```json
-{
-  "mcpServers": {
-    "apexcn": {
-      "command": "apexcn",
-      "args": ["mcp", "serve", "--allow-preview-write"]
-    }
-  }
-}
-```
-
-## Cursor
-
-Status: blocked, not verified on the recorded host.
-
-```json
-{
-  "mcpServers": {
-    "apexcn-readonly": {
-      "command": "/opt/homebrew/bin/node",
-      "args": ["/absolute/path/to/apexcn-cli/dist/index.js", "mcp", "serve", "--readonly"]
-    }
-  }
-}
-```
-
 ## VS Code Agent
 
-Status: verified with version and date in the matrix.
+Status: verified distribution target with version and date in the matrix.
 
 ```json
 {

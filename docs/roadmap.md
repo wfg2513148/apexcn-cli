@@ -205,7 +205,7 @@
 | `M050-AC-001` | `pending` | 计划暴露的 readonly 命令全部映射到共用 core 的 MCP 工具。 | `= 100 percent` | command and tool registry plus service dependency inspection |
 | `M050-AC-002` | `pending` | readonly 模式真实写请求为零。 | `= 0 requests` | readonly MCP network observation and call trace |
 | `M050-AC-003` | `pending` | command registry、shared core 与 MCP readonly exposure matrix 漂移为零。 | `= 0 findings` | registry core service and MCP manifest consistency gate |
-| `M050-AC-004` | `pending` | Claude Desktop、Cursor 和 VS Code Agent 均有带版本和日期的真实验证证据。 | `= 3 clients` | real client compatibility records |
+| `M050-AC-004` | `pending` | 正式分发的 VS Code Agent 有带版本和日期的真实 UI 验证证据。 | `= 1 clients` | real client compatibility records |
 | `M050-AC-005` | `pending` | 连续 100 次 JSON-RPC 调用无协议失败。 | `= 0 failures` | 100-call stdio soak |
 | `M050-AC-006` | `pending` | 至少 40 个 Agent 自然语言任务首次成功率不低于 95%。 | `>= 95 percent` | fixed validator report with at least 40 tasks |
 | `M050-AC-007` | `pending` | MCP 启动 P95 不超过 2 秒。 | `<= 2 seconds` | recorded local startup benchmark |

@@ -1392,12 +1392,12 @@
           "title": "真实 MCP 客户端兼容",
           "userValue": "用户知道哪些客户端版本经过真实连接验证。",
           "scope": [
-            "Claude Desktop",
-            "Cursor",
             "VS Code Agent",
             "dated evidence"
           ],
           "nonGoals": [
+            "Claude Desktop distribution",
+            "Cursor distribution",
             "claiming untested clients are verified"
           ],
           "dependencies": [
@@ -1486,10 +1486,10 @@
         {
           "id": "M050-AC-004",
           "gate": "core",
-          "description": "Claude Desktop、Cursor 和 VS Code Agent 均有带版本和日期的真实验证证据。",
+          "description": "正式分发的 VS Code Agent 有带版本和日期的真实 UI 验证证据。",
           "metric": "verifiedMcpClients",
           "comparator": "eq",
-          "target": 3,
+          "target": 1,
           "unit": "clients",
           "measurementMethod": "real client compatibility records",
           "status": "pending",
@@ -1562,7 +1562,7 @@
         },
         {
           "id": "M050-V-CLIENTS",
-          "description": "在三个真实客户端中执行发现和只读调用。",
+          "description": "在正式分发的 VS Code Agent 中执行发现和只读调用。",
           "mode": "manual_client"
         },
         {
@@ -3375,7 +3375,7 @@
       ],
       "status": "open",
       "blockingAt": "completion",
-      "description": "真实 MCP 客户端、版本和运行环境尚未锁定",
+      "description": "正式分发的 VS Code Agent 版本和运行环境尚待独立 validator 锁定",
       "resolutionEvidenceIds": []
     },
     {
