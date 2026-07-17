@@ -1,0 +1,186 @@
+{
+  "kind": "apexcn-cli-validator-scope-contract",
+  "schemaVersion": 1,
+  "milestoneId": "0.6",
+  "assignmentRef": "M060-R1-20260718T075300+0800",
+  "issuedAt": "2026-07-18T07:53:00+08:00",
+  "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
+  "persona": {
+    "mode": "fresh-novice",
+    "prompt": "你是第一次使用 apexcn-cli 的小白用户。不得读取主仓库源代码、旧 validator 任务、旧 harness 或历史实现说明；只可使用本轮 scope contract、打包产物和公开 CLI --help/文档。先记录首次尝试，再根据公开错误提示继续。",
+    "promptSha256": "f1db40727e280696d9aa6a97aa3866b26d44999581f61df0ba1502d96def5442"
+  },
+  "candidate": {
+    "testedCliVersion": "0.60.0",
+    "testedCommit": "68645b5c2906111adb1fa85b0f5a723947ff26a9",
+    "testedTag": "unreleased-candidate-0.60.0",
+    "artifactPath": "/Users/kwang/apexcn-cli/reports/m060-candidate/apexcn-cli-0.60.0.tgz",
+    "artifactSha256": "f802b443aca3abeee707668eaa8163487071dd6be27b1085cd269bd4bddaf69f",
+    "artifactSizeBytes": 338910
+  },
+  "baseline": {
+    "baselineSuiteVersion": "m060-fixed-baseline-v1",
+    "datasetVersion": "m060-fixed-baseline-dataset-v1",
+    "scorerVersion": "m060-fixed-baseline-scorer-v1",
+    "coverageRequiredPercent": 100,
+    "requiredBaselineScenarioIds": [
+      "B001-INSTALL-TARBALL",
+      "B002-VERSION-0600",
+      "B003-COMMAND-MANIFEST",
+      "B004-WORKFLOW-HELP",
+      "B005-MCP-MANIFEST-READONLY",
+      "B006-MCP-MANIFEST-PREVIEW",
+      "B007-DIRECT-TOPIC-WRITES-BLOCKED",
+      "B008-DIRECT-REPLY-WRITES-BLOCKED",
+      "B009-DIRECT-PREVIEWS-ZERO-WRITE",
+      "B010-TOPIC-CREATE-PLAN",
+      "B011-TOPIC-UPDATE-PLAN",
+      "B012-TOPIC-DELETE-PLAN",
+      "B013-REPLY-CREATE-PLAN",
+      "B014-REPLY-UPDATE-PLAN",
+      "B015-REPLY-DELETE-PLAN",
+      "B016-TOPIC-CREATE-PREVIEW-HASH",
+      "B017-TOPIC-UPDATE-TITLE-ONLY",
+      "B018-REPLY-CREATE-PREVIEW-HASH",
+      "B019-DELETE-CONFIRMATION-BINDING",
+      "B020-APPROVAL-EXPIRY",
+      "B021-APPROVAL-REQUEST-TAMPER",
+      "B022-APPROVAL-TARGET-MISMATCH",
+      "B023-DUPLICATE-COMPLETION-BLOCK",
+      "B024-SECRET-BLOCK-BEFORE-PREVIEW",
+      "B025-MCP-UPDATE-POST-ZERO-WRITE",
+      "B026-MCP-DELETE-CONFIRMATION",
+      "B027-RECOVERY-401",
+      "B028-RECOVERY-409",
+      "B029-RECOVERY-429",
+      "B030-RECOVERY-TIMEOUT-OR-5XX"
+    ],
+    "datasetSourceSha256": {
+      "naturalLanguageScenarios": "bb00efeb2cb4951419ef32a5949b114626f7116ecf99079bf6a3c313a528382a",
+      "workflowTests": "b90b86b7ff54c08f4a685d666c7f2001ac2c0a00cea19add72369638280af882",
+      "mcpTests": "c35f7c5ed1d472d488946fc19ff82ff02c61b6fb406e3ca6fa031c30ad4fc048"
+    }
+  },
+  "server": {
+    "contractVersion": "0.6.0-candidate",
+    "serverCommit": "55cc890aa31033345fd2811b33d35895350079a9",
+    "baseUrl": "https://oracleapex.cn/ords/dev",
+    "profile": "dev-write-eval",
+    "surfaceCode": "apexcn-cli-m060-dev-write",
+    "categoryId": 8,
+    "categoryName": "__APEXCN_CLI_DEV_WRITE_TEST__",
+    "browserUrlTemplate": "https://oracleapex.cn/ords/dev/f?p=100:14:::P14_THREAD_ID:<topicId>",
+    "contractFixturePath": "/Users/kwang/apexcn-forums/tests/fixtures/api/m060-content-write-contract.json",
+    "contractFixtureSha256": "bbce4ea032e685a86835741a7f637bd77f02626af44469735e1e55c3232a781e",
+    "serverSmokePath": "/Users/kwang/apexcn-forums/output/m060-dev-write-smoke/m060-dev-write-smoke-20260717T230524Z.json",
+    "serverSmokeSha256": "56f92aa57f66eea3387844bc33d90f96b02c097b7d5627e17e787816e3057b62"
+  },
+  "environment": {
+    "nodeVersion": "v26.0.0",
+    "npmVersion": "12.0.0",
+    "platform": "Darwin 25.5.0 arm64",
+    "environmentHash": "e547eb074d4ba41695997d5f9cf3c563cf74f915d8662d713cf9ef65b6801113",
+    "credentialPolicy": "Reuse the existing minimum-privilege dev-write-eval profile. Never print, copy into the repository, attach, or include the credential in evidence."
+  },
+  "dynamicSuite": {
+    "scoredSeparately": true,
+    "dynamicScenarioIds": [
+      "D001-LIVE-WRITE-WORKFLOWS-20-FIRST-ATTEMPTS",
+      "D002-LIVE-DUAL-EVIDENCE-20-OF-20",
+      "D003-LIVE-CLEANUP-ZERO-RESIDUAL",
+      "D004-ADVERSE-STALE-MISMATCH-DUPLICATE",
+      "D005-ADVERSE-401-409-429-TIMEOUT",
+      "D006-AGENT-PREVIEW-ZERO-WRITE"
+    ],
+    "writeWorkflowAssignment": {
+      "requiredFirstAttemptCount": 20,
+      "groups": [
+        {
+          "groupId": "LIVE-G1",
+          "sequence": ["topic-create", "topic-update", "reply-create", "reply-update", "reply-delete", "topic-delete"]
+        },
+        {
+          "groupId": "LIVE-G2",
+          "sequence": ["topic-create", "topic-update", "reply-create", "reply-update", "reply-delete", "topic-delete"]
+        },
+        {
+          "groupId": "LIVE-G3",
+          "sequence": ["topic-create", "topic-update", "reply-create", "reply-update", "reply-delete", "topic-delete"]
+        },
+        {
+          "groupId": "LIVE-G4",
+          "sequence": ["topic-create", "topic-delete"]
+        }
+      ],
+      "requiredEvidencePerWorkflow": [
+        "first-attempt CLI stdout/stderr and exit code with secrets redacted",
+        "preview, approval, and execute hash comparison",
+        "backend API response and follow-up object state",
+        "real Codex in-app browser screenshot from this round",
+        "visual recognition of title, body, formatting, visibility/status, and end-user accessibility",
+        "cleanup or final-deleted-state evidence"
+      ]
+    },
+    "adverseExplorationObjectives": [
+      "Try to execute direct topic/reply commands without workflow and prove zero write requests.",
+      "Try missing approval, expired approval, changed request body, changed target, mismatched confirmation, stale version, and duplicate completion.",
+      "Inject 401, 409, 429, timeout, and 5xx in a fresh round-specific black-box harness; prove retries reuse the same request and operationKey where allowed, while 409 requires a new workflow.",
+      "Call every preview-only MCP tool and prove willExecute=false and zero write network requests.",
+      "Attempt placeholder and secret-like content before preview; prove it is blocked and no secret appears in evidence."
+    ]
+  },
+  "evidenceContract": {
+    "roundDirectory": "run-m060-r1-20260718T075300+0800",
+    "requiredFiles": [
+      "intake.json",
+      "scope-contract.json",
+      "dataset/m060-fixed-baseline-v1.json",
+      "scorer/m060-fixed-baseline-scorer-v1.mjs",
+      "harness/m060-r1-harness.mjs",
+      "evidence/first-attempt.jsonl",
+      "evidence/backend/",
+      "evidence/browser/",
+      "results-baseline.json",
+      "results-dynamic.json",
+      "score.json",
+      "report.json",
+      "report.md",
+      "issues.json",
+      "cleanup.json"
+    ],
+    "firstAttemptImmutable": true,
+    "baselineAndDynamicScoresSeparate": true,
+    "issuesAdmission": "Only actual first-attempt product findings from this fresh task. Each issue must include threadId, assignmentRef, scenarioOrExplorationRef, observedCliVersion, firstAttemptEvidencePreserved, actualOutputSummary, expectedUserOutcome, and responsibilityAssessment.",
+    "successThresholds": {
+      "baselineCoveragePercent": 100,
+      "baselinePassPercent": 100,
+      "liveWriteWorkflowFirstAttemptPassCount": 20,
+      "workflowHashMatchRatePercent": 100,
+      "unsafeWriteBlockRatePercent": 100,
+      "deleteConfirmationBypasses": 0,
+      "duplicateWritesOnResume": 0,
+      "uncertainDuplicateWrites": 0,
+      "workflowSecretLeaks": 0,
+      "residualWriteTestResources": 0,
+      "writeBackDualEvidencePassRatePercent": 100,
+      "mcpPreviewWriteBypasses": 0
+    }
+  },
+  "allowedPublicMaterials": [
+    "this scope contract",
+    "the supplied tarball and files packaged inside it",
+    "public apexcn --help, commands --json, mcp tools --json, README, migration and manuals",
+    "the isolated dev API responses and rendered dev pages generated by this round"
+  ],
+  "prohibitedActions": [
+    "Do not read /Users/kwang/apexcn-cli source files or unbundled implementation details.",
+    "Do not open or reuse any previous validator task, old harness, old run directory, or historical screenshot.",
+    "Do not use hidden subagents as the validator.",
+    "Do not create another community account.",
+    "Do not print, copy, persist, attach, or expose any API key.",
+    "Do not write outside the approved isolated dev surface.",
+    "Do not perform any production community write.",
+    "Do not enable MCP execute-write or simulate approval through MCP.",
+    "Do not count database-only evidence as write-back acceptance."
+  ]
+}
