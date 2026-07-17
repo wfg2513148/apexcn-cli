@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { parseNpmPackResult } from "./npm-pack-json.mjs";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const args = process.argv.slice(2);
@@ -249,7 +250,7 @@ function checkNpmPackFilename() {
     failures.push(`npm pack --dry-run --json failed: ${error instanceof Error ? error.message : String(error)}`);
     return;
   }
-  const pack = JSON.parse(output)[0];
+  const pack = parseNpmPackResult(output);
   if (pack.filename !== expected) {
     failures.push(`npm pack filename: expected ${expected}, got ${String(pack.filename)}`);
   }

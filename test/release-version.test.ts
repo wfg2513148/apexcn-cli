@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
+import { parseNpmPackResult } from "../scripts/npm-pack-json.mjs";
 
 const repoRoot = join(__dirname, "..");
 const script = join(repoRoot, "scripts/check-release-version.mjs");
@@ -29,6 +30,17 @@ function execNpm(args: string[]): string {
 }
 
 describe("release version check", () => {
+  test("accepts array and object npm pack JSON response shapes", () => {
+    const metadata = {
+      filename: "apexcn-cli-0.18.18.tgz",
+      files: [{ path: "package.json" }]
+    };
+
+    expect(parseNpmPackResult(JSON.stringify([metadata]))).toEqual(metadata);
+    expect(parseNpmPackResult(JSON.stringify({ "apexcn-cli": metadata }))).toEqual(metadata);
+    expect(() => parseNpmPackResult("{}")).toThrow("npm pack --json returned no package metadata");
+  });
+
   test("passes for the current repository version", () => {
     const output = execFileSync("node", [script], {
       cwd: repoRoot,
@@ -108,7 +120,9 @@ describe("release version check", () => {
 
   test("npm package contains only runtime and user-facing assets", () => {
     const output = execNpm(["pack", "--dry-run", "--json"]);
-    const files = JSON.parse(output)[0].files.map((file: { path: string }) => file.path).sort();
+    const files = (parseNpmPackResult(output).files as Array<{ path: string }>)
+      .map((file) => file.path)
+      .sort();
 
     expect(files).toEqual(expect.arrayContaining([
       "README.md",

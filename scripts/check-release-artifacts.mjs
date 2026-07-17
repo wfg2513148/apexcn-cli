@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { cpSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseNpmPackResult } from "./npm-pack-json.mjs";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const args = parseArgs(process.argv.slice(2));
@@ -60,7 +61,7 @@ function runNpmPack() {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"]
     });
-    const pack = JSON.parse(output)[0];
+    const pack = parseNpmPackResult(output);
     const expectedFilename = `apexcn-cli-${expectedVersion}.tgz`;
     if (pack.filename !== expectedFilename) {
       throw new Error(`npm pack filename: expected ${expectedFilename}, got ${String(pack.filename)}`);

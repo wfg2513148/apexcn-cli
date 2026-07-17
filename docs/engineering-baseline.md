@@ -1,32 +1,32 @@
 # Engineering Baseline
 
-Scan time: 2026-07-05T10:48:45Z.
+Scan time: 2026-07-17T07:25:36Z.
 
 ## Repository State
 
 - Branch at scan start: `main`.
-- Working branch for this iteration: `chore/post-018-hardening`.
-- HEAD: `315bedcdc1e57abb1dea5fb6fd4833ebd6cdf032`.
-- Last commit: `315bedc chore: harden v0.18 release quality gates`.
+- Working branch for this iteration: `main`.
+- HEAD: `6bd7806af6bd484ae887ea1800d864676aab40be`.
+- Last commit: `6bd7806 docs: define staged apexcn-cli product roadmap`.
 - Node: `v26.0.0`.
-- npm: `11.18.0`.
+- npm: `12.0.0`.
 
 ## Version State
 
-- Package version: `0.18.12`.
+- Package version: `0.18.18`.
 - README install links: `releases/latest/download`.
 - docs/quickstart install links: `releases/latest/download`.
-- Local latest tag before publishing this patch: `v0.18.10`.
-- GitHub latest release before publishing this patch: `v0.18.10`.
+- Local latest tag: `v0.18.18`.
+- GitHub latest release: `v0.18.18`.
 
-Version decision for this iteration: bump to `0.18.12` because this patch changes CLI behavior for server-rejected tokens and no-reference ask responses.
+This validation covers unreleased novice-experience improvements. Version selection remains a release-time decision under the `0.0.x` routine-iteration policy.
 
 ## Baseline Commands
 
 - `npm ci`: passed; npm reported the existing `fsevents` install-script allow-scripts warning.
 - `npm run build`: passed.
-- `npm test`: passed, 36 test files and 550 tests.
-- `npm run check:release`: passed for `0.18.12`.
+- `npm test`: passed, 36 test files and 564 tests.
+- `npm run check:release`: passed for `0.18.18`.
 - `npm run eval:rag`: passed in offline fixture mode with 30 questions and 30 expected references.
 - `npm run test:e2e:readonly`: skipped safely because `APEXCN_API_KEY` is not set.
 
@@ -44,3 +44,4 @@ Version decision for this iteration: bump to `0.18.12` because this patch change
 - Release assets include `checksums.txt`; post-release hardening uploads per-asset `.sha256` files as well.
 - RAG eval is explicitly `offline-fixture`; it checks dataset/reference completeness and does not measure live answer correctness.
 - Collection query uses BM25; post-release hardening verifies declared field weights are reflected in index term weights.
+- npm 12 changed `npm pack --json` from an array to an object keyed by package name; release checks now normalize both response shapes.
