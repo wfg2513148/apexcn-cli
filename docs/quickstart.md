@@ -448,6 +448,11 @@ apexcn search "APEX" --page-size 3 --json
 | 配置审计 | `apexcn auth audit --json` |
 | 当前用户 | `apexcn me --json` |
 | 我的统计 | `apexcn me stats --json` |
+| 个人能力矩阵 | `apexcn me capabilities --json` |
+| 我的通知 | `apexcn me notifications --json` |
+| 我的收件箱 | `apexcn me inbox --json` |
+| 社区规则 | `apexcn me rules --json` |
+| 隐私政策 | `apexcn me privacy --json` |
 | 我的帖子 | `apexcn me topics --page-size 10 --json` |
 | 我的回复 | `apexcn me replies --page-size 10 --json` |
 | 我的收藏 | `apexcn me favorites --page-size 10 --json` |
@@ -465,7 +470,12 @@ apexcn search "APEX" --page-size 3 --json
 | 资料库 | `apexcn collection build --query <keyword> --topic-id <id> --output-dir <dir> --json` |
 | 资料库校验 | `apexcn collection verify --dir <dir> --json` |
 | 问题草稿 | `apexcn draft question --title <title> --problem <text> --research-file <file> --format text` |
+| 保存问题草稿 | `apexcn draft question --title <title> --problem <text> --save --json` |
 | 回复草稿 | `apexcn draft reply --topic-id <thread_id> --answer <text> --format text` |
+| 草稿 inventory | `apexcn draft list --json` |
+| 恢复草稿 | `apexcn draft restore <draft-id> --format text` |
+| 导出迁移 | `apexcn draft export --output <file> --json` |
+| 导入迁移 | `apexcn draft import --input <file> --json` |
 | 发布审查 | `apexcn review topic --title <title> --content-file <file> --category-id <id> --json` |
 | 回复审查 | `apexcn review reply --topic-id <thread_id> --content-file <file> --json` |
 | 工作流计划 | `apexcn workflow plan --goal ask-question --keyword <keyword> --title <title> --problem <text> --category-id <id> --json` |

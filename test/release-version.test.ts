@@ -32,7 +32,7 @@ function execNpm(args: string[]): string {
 describe("release version check", () => {
   test("accepts array and object npm pack JSON response shapes", () => {
     const metadata = {
-      filename: "apexcn-cli-0.30.0.tgz",
+      filename: "apexcn-cli-0.40.0.tgz",
       files: [{ path: "package.json" }]
     };
 

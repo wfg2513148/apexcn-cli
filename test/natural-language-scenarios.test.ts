@@ -55,6 +55,7 @@ type ScenarioRuntime = {
   stderr: string[];
   fetch: ReturnType<typeof vi.fn>;
   readStdin?: () => Promise<string>;
+  draftId?: string;
 };
 
 const GOOD_TOPIC_CONTENT = [
@@ -107,6 +108,11 @@ const commonReadScenarios: Scenario[] = [
   scenario("tag stats", "列出社区标签使用次数", "stats tag", "read", ["read"], "none", ["--json"]),
   scenario("admin list", "查看 APEX 中文社区管理员公开列表", "admin list", "read", ["read"], "none", ["--json"]),
   scenario("my stats", "统计我在社区发了多少帖子、回复、收藏和订阅", "me stats", "read", ["read"], "none", ["--json"]),
+  scenario("personal capabilities", "检查个人工作台哪些服务端能力真实可用", "me capabilities", "read", ["read"], "none", ["--json"]),
+  scenario("my notifications", "查看我的站内通知；如果服务端没有能力就明确告诉我 unavailable", "me notifications", "read", ["read"], "none", ["--json"]),
+  scenario("my inbox", "查看我的社区收件箱；不要编造消息", "me inbox", "read", ["read"], "none", ["--json"]),
+  scenario("community rules capability", "读取社区规则；没有权威来源时返回 unavailable", "me rules", "read", ["read"], "none", ["--json"]),
+  scenario("privacy policy capability", "读取隐私政策；没有权威来源时返回 unavailable", "me privacy", "read", ["read"], "none", ["--json"]),
   scenario("my topics", "列出我发布过的社区帖子", "me topics", "read", ["read"], "none", ["--page-size <n>", "--json"]),
   scenario("my replies", "列出我最近的社区回复", "me replies", "read", ["read"], "none", ["--page-size <n>", "--json"]),
   scenario("my favorites", "查看我收藏过的话题", "me favorites", "read", ["read"], "none", ["--page-size <n>", "--json"]),
@@ -175,6 +181,11 @@ const draftAndReviewScenarios: Scenario[] = [
   scenario("draft reply with topic file", "基于 topic.json 的上下文起草回复", "draft reply", "read", ["read"], "none", ["--topic-file <path>", "--answer <text>"]),
   scenario("draft reply with research file", "结合研究资料给帖子起草回复", "draft reply", "read", ["read"], "none", ["--research-file <path>", "--answer <text>"]),
   scenario("draft reply tone", "用更温和的语气起草回复", "draft reply", "read", ["read"], "none", ["--tone <tone>", "--format <format>"]),
+  scenario("draft inventory list", "列出当前 profile 保存的本地草稿", "draft list", "read", ["config-read"], "none", ["--json"]),
+  scenario("draft inventory restore", "恢复当前 profile 的一个已保存草稿", "draft restore", "read", ["config-read"], "none", ["--json"]),
+  scenario("draft inventory export", "导出当前 profile 的草稿用于迁移", "draft export", "execute", ["config-read", "config-write"], "none", ["--output <path>", "--json"]),
+  scenario("draft inventory import", "把草稿迁移包导入当前 profile", "draft import", "execute", ["config-read", "config-write"], "none", ["--input <path>", "--json"]),
+  scenario("draft inventory delete", "确认删除当前 profile 的一个本地草稿", "draft delete", "execute", ["config-write"], "none", ["--yes", "--json"], ["--yes"]),
   scenario("review topic markdown", "发布前检查这篇 Markdown 提问帖有没有占位符或敏感信息", "review topic", "read", ["read"], "none", ["--content-file <path>", "--json"]),
   scenario("review topic with category", "检查提问帖并确认板块 id 合理", "review topic", "read", ["read"], "none", ["--category-id <id>", "--json"]),
   scenario("review topic with tags", "发布前检查标题、正文和标签", "review topic", "read", ["read"], "none", ["--title <title>", "--tags <csv>", "--json"]),
@@ -603,6 +614,7 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
         expect(JSON.parse(stdout).user.nickname).toBe("Tester");
       }
     },
+    ...personalCapabilityExecutableScenarios(),
     {
       name: "category list reads categories",
       userSays: "列出 APEX 中文社区所有板块。",
@@ -921,6 +933,71 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
       }
     },
     {
+      name: "draft list shows active-profile inventory",
+      userSays: "列出当前 profile 保存的本地草稿。",
+      commandPath: "draft list",
+      prepare: prepareSavedDraft,
+      argv: ["node", "apexcn", "draft", "list", "--json"],
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "draft-inventory", count: 1 }));
+      }
+    },
+    {
+      name: "draft restore returns saved content",
+      userSays: "恢复当前 profile 的一个已保存草稿。",
+      commandPath: "draft restore",
+      prepare: prepareSavedDraft,
+      argv: (context) => ["node", "apexcn", "draft", "restore", String(context.draftId), "--json"],
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "stored-draft", draft: expect.objectContaining({ kind: "question-draft" }) }));
+      }
+    },
+    {
+      name: "draft export writes migration bundle",
+      userSays: "导出当前 profile 的草稿用于迁移。",
+      commandPath: "draft export",
+      prepare: prepareSavedDraft,
+      argv: (context) => ["node", "apexcn", "draft", "export", "--output", join(context.tmpDir, "drafts.json"), "--json"],
+      assertFeedback: async ({ stdout, stderr, fetch, tmpDir }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "draft-inventory-export-result", count: 1 }));
+        expect(JSON.parse(await readFile(join(tmpDir, "drafts.json"), "utf8"))).toEqual(expect.objectContaining({ kind: "draft-inventory-export" }));
+      }
+    },
+    {
+      name: "draft import migrates bundle into active profile",
+      userSays: "把草稿迁移包导入当前 profile。",
+      commandPath: "draft import",
+      prepare: async (context) => {
+        await prepareSavedDraft(context);
+        await context.program.parseAsync(["node", "apexcn", "draft", "export", "--output", join(context.tmpDir, "drafts.json"), "--json"]);
+        await context.program.parseAsync(["node", "apexcn", "auth", "set-token", "--profile", "migrated", "--token", "m".repeat(26)]);
+      },
+      argv: (context) => ["node", "apexcn", "draft", "import", "--input", join(context.tmpDir, "drafts.json"), "--json"],
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "draft-inventory-import", importedCount: 1 }));
+      }
+    },
+    {
+      name: "draft delete requires explicit confirmation",
+      userSays: "确认删除当前 profile 的一个本地草稿。",
+      commandPath: "draft delete",
+      prepare: prepareSavedDraft,
+      argv: (context) => ["node", "apexcn", "draft", "delete", String(context.draftId), "--yes", "--json"],
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "draft-delete-result", deleted: true }));
+      }
+    },
+    {
       name: "review topic checks local Markdown",
       userSays: "发布前检查这篇 Markdown 提问帖有没有占位符或敏感信息。",
       commandPath: "review topic",
@@ -1198,6 +1275,62 @@ function writePreview(commandPath: string, userSays: string, argv: string[], exp
   };
 }
 
+function personalCapabilityExecutableScenarios(): ExecutableNaturalLanguageScenario[] {
+  const unavailable = [
+    ["me notifications", "notifications", "/api/v1/notifications"],
+    ["me inbox", "inbox", "/api/v1/inbox"],
+    ["me rules", "rules", "/api/v1/community/rules"],
+    ["me privacy", "privacy", "/api/v1/privacy-policy"]
+  ] as const;
+  return [
+    {
+      name: "me capabilities discovers server support",
+      userSays: "检查个人工作台哪些服务端能力真实可用。",
+      commandPath: "me capabilities",
+      argv: ["node", "apexcn", "me", "capabilities", "--json"],
+      responseForUrl: (url) => {
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/capabilities");
+        return Response.json({
+          kind: "capability-inventory",
+          contractVersion: "0.4.3-candidate",
+          capabilities: [{ id: "personal-community", available: true, endpoints: ["/me"] }],
+          requestId: "req-capabilities"
+        });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "capability-inventory", contractVersion: "0.4.3-candidate" }));
+      }
+    },
+    ...unavailable.map(([commandPath, command, path]) => ({
+      name: `${commandPath} returns truthful unavailable`,
+      userSays: `读取 ${command}；没有权威来源时明确返回 unavailable。`,
+      commandPath,
+      argv: ["node", "apexcn", "me", command, "--json"],
+      responseForUrl: (url: string) => {
+        expect(url).toBe(`https://oracleapex.cn/ords/test${path}`);
+        return Response.json({
+          kind: commandPath.replace("me ", ""),
+          available: false,
+          status: "UNAVAILABLE",
+          unavailableReason: "NOT_IMPLEMENTED",
+          requestId: `req-${command}`
+        });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }: CliFeedback) => {
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({
+          available: false,
+          status: "UNAVAILABLE",
+          unavailableReason: "NOT_IMPLEMENTED"
+        }));
+      }
+    }))
+  ];
+}
+
 function doctorFetch(url: string): Response {
   if (url.endsWith("/api/v1/me")) {
     return Response.json({ user: { id: 1, nickname: "Tester" }, requestId: "req-me" });
@@ -1255,6 +1388,22 @@ function workflowRunArgv(runDir: string): string[] {
 
 async function prepareCollection(context: ScenarioRuntime, outputDir: string): Promise<void> {
   await context.program.parseAsync(["node", "apexcn", "collection", "build", "--query", "REST", "--limit", "1", "--output-dir", outputDir, "--json"]);
+}
+
+async function prepareSavedDraft(context: ScenarioRuntime): Promise<void> {
+  await context.program.parseAsync([
+    "node",
+    "apexcn",
+    "draft",
+    "question",
+    "--title",
+    "Saved draft",
+    "--problem",
+    "Local draft inventory",
+    "--save",
+    "--json"
+  ]);
+  context.draftId = String((JSON.parse(context.stdout.join("")) as { id: string }).id);
 }
 
 async function prepareWorkflowPreview(context: ScenarioRuntime, runDir: string): Promise<void> {

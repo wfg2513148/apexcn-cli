@@ -17,7 +17,7 @@ describe("CLI entrypoint detection", () => {
 
     await expect(program.parseAsync(["node", "apexcn", "--version"])).rejects.toMatchObject({ code: "commander.version" });
 
-    expect(output.join("")).toBe("0.30.0\n");
+    expect(output.join("")).toBe("0.40.0\n");
   });
 
   test("prints a machine-readable command manifest", async () => {
@@ -31,7 +31,7 @@ describe("CLI entrypoint detection", () => {
 
     const manifest = JSON.parse(output.join(""));
     expect(manifest.schemaVersion).toBe(1);
-    expect(manifest.version).toBe("0.30.0");
+    expect(manifest.version).toBe("0.40.0");
     expect(manifest.schema).toEqual({
       safetyEffects: ["read", "api-write", "destructive", "config-read", "config-write", "auth", "secret", "diagnostic", "manifest"],
       previewPolicies: ["required", "available", "none"],
@@ -73,18 +73,18 @@ describe("CLI entrypoint detection", () => {
       }),
       expect.objectContaining({
         path: "draft question",
-        options: expect.arrayContaining(["--research-file <path>", "--format <format>"]),
-        safety: expect.objectContaining({ effects: ["read"], preview: "none" }),
+        options: expect.arrayContaining(["--research-file <path>", "--save", "--format <format>"]),
+        safety: expect.objectContaining({ effects: ["read", "config-write"], preview: "none" }),
         examples: expect.arrayContaining([
-          expect.objectContaining({ command: 'apexcn draft question --title "标题" --problem "问题描述" --research-file ./research.json --format text', mode: "read" })
+          expect.objectContaining({ command: 'apexcn draft question --title "标题" --problem "问题描述" --research-file ./research.json --save --json', mode: "execute" })
         ])
       }),
       expect.objectContaining({
         path: "draft reply",
-        options: expect.arrayContaining(["--topic-id <id>", "--answer <text>", "--topic-file <path>", "--research-file <path>", "--format <format>"]),
-        safety: expect.objectContaining({ effects: ["read"], preview: "none" }),
+        options: expect.arrayContaining(["--topic-id <id>", "--answer <text>", "--topic-file <path>", "--research-file <path>", "--save", "--format <format>"]),
+        safety: expect.objectContaining({ effects: ["read", "config-write"], preview: "none" }),
         examples: expect.arrayContaining([
-          expect.objectContaining({ command: 'apexcn draft reply --topic-id 30549 --answer "回复建议" --format text', mode: "read" })
+          expect.objectContaining({ command: 'apexcn draft reply --topic-id 30549 --answer "回复建议" --save --json', mode: "execute" })
         ])
       }),
       expect.objectContaining({

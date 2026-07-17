@@ -1,10 +1,24 @@
 import { readFile } from "node:fs/promises";
 import { stdin as processStdin } from "node:process";
 import { Command, InvalidArgumentError, Option } from "commander";
+import {
+  deleteDraft,
+  DraftInventoryError,
+  exportDrafts,
+  importDrafts,
+  listDrafts,
+  readDraftBundle,
+  restoreDraft,
+  saveDraft,
+  writeDraftBundle,
+  type DraftPayload,
+  type StoredDraft
+} from "../core/draft-inventory.js";
 import { blockText, fieldText, isRecord, outputFormat, parseOutputFormat, printData, printError, validateFormatOptions, type FormatOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
 
 type DraftCommandOptions = CommandIo & {
+  configPath?: string;
   readStdin?: () => Promise<string>;
 };
 
@@ -16,6 +30,7 @@ type DraftQuestionOptions = FormatOption & {
   expected?: string;
   actual?: string;
   researchFile?: string;
+  save?: boolean;
 };
 
 type DraftReplyOptions = FormatOption & {
@@ -25,6 +40,7 @@ type DraftReplyOptions = FormatOption & {
   tone?: DraftReplyTone;
   topicFile?: string;
   researchFile?: string;
+  save?: boolean;
 };
 
 type DraftReplyTone = "concise" | "friendly" | "technical";
@@ -78,6 +94,7 @@ export function createDraftCommand(options: DraftCommandOptions): Command {
     .option("--expected <text>", "expected result")
     .option("--actual <text>", "actual result")
     .option("--research-file <path>", "read a research JSON bundle from a file or - for stdin")
+    .option("--save", "save the generated draft in the active profile inventory")
     .option("--json", "pretty-print JSON")
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
     .action(async (commandOptions: DraftQuestionOptions) => {
@@ -109,7 +126,10 @@ export function createDraftCommand(options: DraftCommandOptions): Command {
         actual: blockText(commandOptions.actual),
         references: research ? referencesFromResearch(research) : []
       });
-      printData(options, draftQuestion, outputFormat(commandOptions), (data) => isRecord(data) && typeof data.content === "string" ? data.content : "");
+      const output = commandOptions.save ? await saveDraftSafely(draftQuestion, options, commandOptions) : draftQuestion;
+      if (output) {
+        printData(options, output, outputFormat(commandOptions), formatDraftOutputText);
+      }
     });
 
   draft
@@ -120,6 +140,7 @@ export function createDraftCommand(options: DraftCommandOptions): Command {
     .addOption(new Option("--tone <tone>", "reply tone: concise, friendly, technical").argParser(parseDraftReplyTone))
     .option("--topic-file <path>", "read topic view JSON from a file or - for stdin")
     .option("--research-file <path>", "read research JSON from a file or - for stdin")
+    .option("--save", "save the generated draft in the active profile inventory")
     .option("--json", "pretty-print JSON")
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
     .action(async (commandOptions: DraftReplyOptions) => {
@@ -156,10 +177,141 @@ export function createDraftCommand(options: DraftCommandOptions): Command {
         topic,
         research
       });
-      printData(options, draftReply, outputFormat(commandOptions), (data) => isRecord(data) && typeof data.content === "string" ? data.content : "");
+      const output = commandOptions.save ? await saveDraftSafely(draftReply, options, commandOptions) : draftReply;
+      if (output) {
+        printData(options, output, outputFormat(commandOptions), formatDraftOutputText);
+      }
+    });
+
+  draft
+    .command("list")
+    .description("list saved drafts owned by the active profile")
+    .option("--json", "pretty-print JSON")
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async (commandOptions: FormatOption) => {
+      await runDraftInventory(options, commandOptions, async () => {
+        const items = await listDrafts(options.configPath);
+        printData(options, { kind: "draft-inventory", schemaVersion: 1, items, count: items.length }, outputFormat(commandOptions), formatDraftListText);
+      });
+    });
+
+  draft
+    .command("restore")
+    .description("restore one saved draft from the active profile inventory")
+    .argument("<draft-id>", "saved draft id")
+    .option("--json", "pretty-print JSON")
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async (draftId: string, commandOptions: FormatOption) => {
+      await runDraftInventory(options, commandOptions, async () => {
+        printData(options, await restoreDraft(draftId, options.configPath), outputFormat(commandOptions), formatDraftOutputText);
+      });
+    });
+
+  draft
+    .command("export")
+    .description("export all saved drafts for migration")
+    .requiredOption("--output <path>", "write the migration bundle to this path")
+    .option("--force", "replace an existing export file")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: FormatOption & { output: string; force?: boolean }) => {
+      await runDraftInventory(options, commandOptions, async () => {
+        const bundle = await exportDrafts(options.configPath);
+        await writeDraftBundle(commandOptions.output, bundle, { force: commandOptions.force });
+        printData(options, {
+          kind: "draft-inventory-export-result",
+          schemaVersion: 1,
+          output: commandOptions.output,
+          count: bundle.drafts.length
+        }, commandOptions.json);
+      });
+    });
+
+  draft
+    .command("import")
+    .description("import a migration bundle into the active profile inventory")
+    .requiredOption("--input <path>", "read the migration bundle from this path")
+    .option("--replace", "replace saved drafts with matching ids")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: FormatOption & { input: string; replace?: boolean }) => {
+      await runDraftInventory(options, commandOptions, async () => {
+        const result = await importDrafts(await readDraftBundle(commandOptions.input), options.configPath, { replace: commandOptions.replace });
+        printData(options, result, commandOptions.json);
+      });
+    });
+
+  draft
+    .command("delete")
+    .description("delete one saved draft from the active profile inventory")
+    .argument("<draft-id>", "saved draft id")
+    .requiredOption("--yes", "confirm local draft deletion")
+    .option("--json", "pretty-print JSON")
+    .action(async (draftId: string, commandOptions: FormatOption & { yes: boolean }) => {
+      await runDraftInventory(options, commandOptions, async () => {
+        const deleted = await deleteDraft(draftId, options.configPath);
+        printData(options, {
+          kind: "draft-delete-result",
+          schemaVersion: 1,
+          deleted: true,
+          id: deleted.id
+        }, commandOptions.json);
+      });
     });
 
   return draft;
+}
+
+async function saveDraftSafely(
+  draft: DraftPayload,
+  options: DraftCommandOptions,
+  commandOptions: FormatOption
+): Promise<StoredDraft | undefined> {
+  let output: StoredDraft | undefined;
+  await runDraftInventory(options, commandOptions, async () => {
+    output = await saveDraft(draft, options.configPath);
+  });
+  return output;
+}
+
+async function runDraftInventory(
+  options: DraftCommandOptions,
+  commandOptions: FormatOption,
+  callback: () => Promise<void>
+): Promise<void> {
+  if (!validateFormatOptions(options, commandOptions)) {
+    return;
+  }
+  try {
+    await callback();
+  } catch (error) {
+    if (error instanceof DraftInventoryError) {
+      printError(options, { type: "draft-inventory", message: error.message, exitCode: 1 }, undefined, commandOptions.json);
+      process.exitCode = 1;
+      return;
+    }
+    throw error;
+  }
+}
+
+function formatDraftOutputText(data: unknown): string {
+  if (!isRecord(data)) {
+    return "";
+  }
+  const draft = data.kind === "stored-draft" && isRecord(data.draft) ? data.draft : data;
+  const content = typeof draft.content === "string" ? draft.content : "";
+  const id = typeof data.id === "string" ? `draftId: ${data.id}\n\n` : "";
+  return `${id}${content}`;
+}
+
+function formatDraftListText(data: unknown): string {
+  if (!isRecord(data) || !Array.isArray(data.items)) {
+    return "";
+  }
+  return data.items.filter(isRecord).map((item) => [
+    fieldText(item.id),
+    fieldText(item.draftKind),
+    fieldText(item.title ?? item.topicId),
+    fieldText(item.updatedAt)
+  ].join("\t")).join("\n");
 }
 
 function buildDraftQuestion(input: {

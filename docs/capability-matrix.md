@@ -20,9 +20,11 @@
 | `reply delete` | write | destructive | yes | yes | yes | yes | preview-only | destructive | CLI 强确认。 |
 | `favorite add/remove` | write | api-write | yes | yes | yes | yes | preview-only | medium | MCP 只生成 preview。 |
 | `subscription add/remove` | write | api-write | yes | yes | yes | yes | preview-only | medium | MCP 只生成 preview。 |
-| `me profile/topics/replies/favorites/subscriptions/stats` | read | api-read | yes | yes | no | no | none | low | 个人数据只读。 |
+| `me profile/topics/replies/favorites/subscriptions/stats` | read | api-read | yes | yes | no | no | none | low | 个人数据只读；默认隐私脱敏，列表支持 opaque cursor。 |
+| `me capabilities/notifications/inbox/rules/privacy` | read | api-read | yes | yes | no | no | none | low | 能力协商；缺失能力保留 truthful unavailable。 |
 | `stats category/topic/tag` | read | api-read | yes | yes | no | no | none | low | 聚合统计。 |
-| `draft question/reply` | local | no-network | no | yes | no | no | none | low | 本地草稿。 |
+| `draft question/reply` | local | no-network | no | yes | no | no | none | low | 纯生成无需 profile；`--save` 要求 active profile。 |
+| `draft list/restore/export/import/delete` | local | no-network | no | yes | no | no | none | mixed | 要求 active profile 的隔离 inventory；delete 要求 `--yes`。 |
 | `guide learning/compatibility/deployment/security/performance` | local | no-network | no | yes | no | no | none | low | 本地策展任务路径，不冒充官方兼容性认证。 |
 | `review topic/reply` | local | no-network | no | yes | no | no | none | low | 本地发布前审核。 |
 | `collection build` | read | api-read | yes | yes | no | no | none | medium | 构建离线资料包。 |

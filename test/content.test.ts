@@ -115,12 +115,22 @@ const neverApiDryRunCommands = [
   "commands",
   "doctor",
   "doctor snapshot",
+  "draft delete",
+  "draft export",
+  "draft import",
+  "draft list",
   "draft reply",
   "draft question",
+  "draft restore",
   "guide",
   "me",
+  "me capabilities",
   "me favorites",
+  "me inbox",
+  "me notifications",
+  "me privacy",
   "me replies",
+  "me rules",
   "me stats",
   "me subscriptions",
   "me topics",
@@ -1292,7 +1302,7 @@ describe("content commands", () => {
 
   test("format option is exposed only on read commands with text output", () => {
     const program = createProgram();
-    const formatCommands = ["doctor", "doctor snapshot", "draft reply", "draft question", "guide", "review reply", "review topic", "workflow audit-log", "workflow plan", "admin list", "me", "me favorites", "me replies", "me stats", "me subscriptions", "me topics", "category list", "search", "stats category", "stats tag", "stats topic", "research", "topic list", "topic recent", "topic view", "thread list", "thread recent", "thread view", "ask"];
+    const formatCommands = ["doctor", "doctor snapshot", "draft list", "draft reply", "draft question", "draft restore", "guide", "review reply", "review topic", "workflow audit-log", "workflow plan", "admin list", "me", "me capabilities", "me favorites", "me inbox", "me notifications", "me privacy", "me replies", "me rules", "me stats", "me subscriptions", "me topics", "category list", "search", "stats category", "stats tag", "stats topic", "research", "topic list", "topic recent", "topic view", "thread list", "thread recent", "thread view", "ask"];
 
     for (const path of leafCommandPaths(program)) {
       if (formatCommands.includes(path)) {
@@ -1742,6 +1752,45 @@ describe("content commands", () => {
         path: "/api/v1/topics/42/favorite"
       }
     ]);
+  });
+
+  test("favorite and subscription previews exactly match the approved request", async () => {
+    for (const [relation, action, method] of [
+      ["favorite", "add", "POST"],
+      ["favorite", "remove", "DELETE"],
+      ["subscription", "add", "POST"],
+      ["subscription", "remove", "DELETE"]
+    ] as const) {
+      const previewRun = await configuredProgram(async () => Response.json({ ok: true, requestId: "req-relation" }));
+
+      await previewRun.program.parseAsync(["node", "apexcn", relation, action, "42", "--preview", "--json"]);
+      const preview = JSON.parse(previewRun.stdout.join(""));
+      expect(previewRun.fetch).not.toHaveBeenCalled();
+      vi.unstubAllGlobals();
+
+      const executeRun = await configuredProgram(async () => Response.json({ ok: true, requestId: "req-relation" }));
+      await executeRun.program.parseAsync(["node", "apexcn", relation, action, "42", "--json"]);
+      expect(executeRun.fetch).toHaveBeenCalledTimes(1);
+      const [url, request] = executeRun.fetch.mock.calls[0] ?? [];
+      expect({
+        method: request?.method,
+        path: String(url).replace("https://oracleapex.cn/ords/test", "")
+      }).toEqual({
+        method: preview.method,
+        path: preview.path
+      });
+      expect(preview).toEqual({
+        dryRun: true,
+        preview: true,
+        mode: "preview",
+        profile: "test@oci",
+        baseUrl: "https://oracleapex.cn/ords/test",
+        method,
+        path: `/api/v1/topics/42/${relation}`
+      });
+      expect(executeRun.stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+      vi.unstubAllGlobals();
+    }
   });
 
   test("delete commands require explicit confirmation", async () => {

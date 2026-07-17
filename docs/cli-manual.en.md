@@ -142,13 +142,20 @@ Read aggregate statistics and activity lists for the current account:
 
 ```bash
 apexcn me stats --json
+apexcn me capabilities --json
+apexcn me notifications --json
+apexcn me inbox --json
+apexcn me rules --json
+apexcn me privacy --json
 apexcn me topics --page-size 10 --json
-apexcn me replies --page-size 10 --offset 10 --json
+apexcn me replies --page-size 10 --cursor "<page.nextCursor>" --json
 apexcn me favorites --format text
 apexcn me subscriptions --json
 ```
 
-`me topics`, `me replies`, `me favorites`, and `me subscriptions` use numeric `offset` pagination. When `page.hasMore` is true, continue with `page.nextOffset`.
+`me` recursively redacts email, phone, IP, address, and secret-like fields by default. Only explicit `me --include-private` prints private account fields returned by the server. `me topics`, `me replies`, `me favorites`, and `me subscriptions` should continue with the server's opaque `page.nextCursor`. Numeric `offset/page.nextOffset` remains available for older servers, but `--cursor` and `--offset` cannot be combined.
+
+`me capabilities` reads the server `contractVersion` and capability inventory. `me notifications`, `me inbox`, `me rules`, and `me privacy` only relay authoritative readonly contracts. When a capability is missing, the CLI preserves `available: false`, `status: "UNAVAILABLE"`, `unavailableReason`, and `requestId`; it never fabricates empty messages, rules, or policy content.
 
 ## search
 
@@ -281,6 +288,20 @@ apexcn reply create 30549 --content-file reply.md --preview
 ```
 
 `draft reply` defaults to JSON and always contains `kind: "reply-draft"`, `schemaVersion: 1`, `topicId`, `parentPostId`, `content`, `references`, and `metadata`. When `--parent-post-id` is omitted, `parentPostId` is `null`. `--topic-id` is required. If `topic.id`, root `id`, `topicId`, or `threadId` in `--topic-file` does not match `--topic-id`, the command fails. Markdown output always contains `## 简短回应`, `## 建议步骤`, and `## 参考链接`; when there are no references it prints `无参考链接。`, never `待补充`. `--tone concise|friendly|technical` selects deterministic opening text, and JSON `metadata.tone` records the selected value.
+
+Add `--save --json` to `draft question` or `draft reply` when the draft should enter a durable local inventory. Saving requires an active profile; plain draft generation still does not read auth config. The profile name is hashed for the storage directory and saved draft files use mode `0600`:
+
+```bash
+apexcn draft question --title "Title" --problem "Symptom" --save --json
+apexcn draft list --json
+apexcn draft restore <draft-id> --format text
+apexcn draft export --output ./drafts.json --json
+apexcn auth use another-profile
+apexcn draft import --input ./drafts.json --json
+apexcn draft delete <draft-id> --yes --json
+```
+
+`export/import` is the profile migration path. Import preserves draft ids, timestamps, and all content fields while binding ownership to the active profile. Matching ids fail unless `--replace` is explicit. Existing export files fail unless `--force` is explicit.
 
 ## review
 

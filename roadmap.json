@@ -969,14 +969,14 @@
       "releaseLine": "0.40.x",
       "title": "个人工作台与能力协商",
       "objective": "让认证用户安全查看个人社区状态、管理 profile 隔离的本地草稿，并准确识别服务端能力边界。",
-      "status": "planned",
+      "status": "in_progress",
       "activationGate": {
-        "status": "waiting",
+        "status": "approved",
         "previousMilestoneId": "0.3",
-        "confirmationRef": null
+        "confirmationRef": "user-started-fresh-m040-goal-2026-07-17"
       },
       "completionReview": {
-        "status": "not_due",
+        "status": "pending",
         "summaryEvidenceId": null,
         "confirmationRef": null
       },
@@ -999,7 +999,7 @@
           "dependencies": [
             "server:personal-community-contracts"
           ],
-          "status": "partial",
+          "status": "implemented",
           "acceptanceCriterionIds": [
             "M040-AC-001",
             "M040-AC-006"
@@ -1008,7 +1008,8 @@
             "M040-V-PERSONAL"
           ],
           "evidenceIds": [
-            "M040-E-LOCAL"
+            "M040-E-LOCAL",
+            "M040-E-SERVER"
           ]
         },
         {
@@ -1027,14 +1028,16 @@
           "dependencies": [
             "server:notifications-rules-privacy"
           ],
-          "status": "not_started",
+          "status": "implemented",
           "acceptanceCriterionIds": [
             "M040-AC-005"
           ],
           "validatorScenarioIds": [
             "M040-V-SERVER-GAPS"
           ],
-          "evidenceIds": []
+          "evidenceIds": [
+            "M040-E-SERVER"
+          ]
         },
         {
           "id": "M040-CAP-DRAFTS",
@@ -1050,7 +1053,7 @@
             "cloud draft synchronization"
           ],
           "dependencies": [],
-          "status": "not_started",
+          "status": "implemented",
           "acceptanceCriterionIds": [
             "M040-AC-008",
             "M040-AC-009"
@@ -1058,7 +1061,9 @@
           "validatorScenarioIds": [
             "M040-V-DRAFTS"
           ],
-          "evidenceIds": []
+          "evidenceIds": [
+            "M040-E-LOCAL"
+          ]
         },
         {
           "id": "M040-CAP-PRIVACY",
@@ -1073,7 +1078,7 @@
             "shared multi-user daemon"
           ],
           "dependencies": [],
-          "status": "partial",
+          "status": "implemented",
           "acceptanceCriterionIds": [
             "M040-AC-002",
             "M040-AC-003"
@@ -1082,7 +1087,8 @@
             "M040-V-PROFILES"
           ],
           "evidenceIds": [
-            "M040-E-LOCAL"
+            "M040-E-LOCAL",
+            "M040-E-SERVER"
           ]
         },
         {
@@ -1099,7 +1105,7 @@
           "dependencies": [
             "server:personal-community-contracts"
           ],
-          "status": "partial",
+          "status": "implemented",
           "acceptanceCriterionIds": [
             "M040-AC-007"
           ],
@@ -1252,9 +1258,17 @@
         {
           "id": "M040-E-LOCAL",
           "kind": "repository",
-          "path": "test/me.test.ts",
-          "description": "Existing local personal data, profile, redaction, favorite, and subscription tests.",
-          "commit": "330538c"
+          "path": "test/draft.test.ts",
+          "description": "0.40.0 candidate local coverage for 50-draft round trips, three-profile isolation, default private-field redaction, personal cursor handling, truthful unavailable responses, and reversible-action preview request matching.",
+          "commit": "release-candidate-0.40.0"
+        },
+        {
+          "id": "M040-E-SERVER",
+          "kind": "server_readiness",
+          "path": "/Users/kwang/apexcn-forums/output/m040-readiness/dev107-personal-community-final2-20260718T002243.json",
+          "description": "dev@oci API contract 0.4.3-candidate provides capability discovery, truthful unavailable notifications/inbox/rules/privacy, privacy-safe /me, and endpoint-bound personal cursors. The persistent muted evaluator had empty personal collections, so live evidence covers terminal cursor and zero duplicates while non-empty multi-page behavior remains assigned to independent validation.",
+          "commit": "954d5963015c828ecf575b92b8e8f1a5bf14d199",
+          "sha256": "c8bdb2068785fdab6ab319a2597336179ec7bc0f27ed470558430be09ea7711b"
         }
       ],
       "userOutcome": "用户能够在多个 profile 间安全管理个人数据和草稿，且不会收到伪造的服务端能力结果。",
@@ -3114,13 +3128,13 @@
         "0.4"
       ],
       "requiredAt": "activation",
-      "status": "unverified",
+      "status": "ready",
       "resolutionThreadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
       "readinessEvidence": {
-        "apiContractVersion": null,
-        "providerCommit": null,
-        "fixturePath": null,
-        "liveSmokeArtifact": null
+        "apiContractVersion": "0.4.3-candidate",
+        "providerCommit": "954d5963015c828ecf575b92b8e8f1a5bf14d199",
+        "fixturePath": "/Users/kwang/apexcn-forums/docs/api/apexcn-cli-v1.openapi.yaml",
+        "liveSmokeArtifact": "/Users/kwang/apexcn-forums/output/m040-readiness/dev107-personal-community-final2-20260718T002243.json"
       }
     },
     {
@@ -3266,16 +3280,16 @@
       "id": "server:personal-community-contracts",
       "owner": "server",
       "requiredAt": "activation",
-      "status": "unverified",
+      "status": "ready",
       "milestoneIds": [
         "0.4"
       ],
       "resolutionThreadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
       "readinessEvidence": {
-        "apiContractVersion": null,
-        "providerCommit": null,
-        "fixturePath": null,
-        "liveSmokeArtifact": null
+        "apiContractVersion": "0.4.3-candidate",
+        "providerCommit": "954d5963015c828ecf575b92b8e8f1a5bf14d199",
+        "fixturePath": "/Users/kwang/apexcn-forums/docs/api/apexcn-cli-v1.openapi.yaml",
+        "liveSmokeArtifact": "/Users/kwang/apexcn-forums/output/m040-readiness/dev107-personal-community-final2-20260718T002243.json"
       }
     }
   ],
@@ -3292,6 +3306,17 @@
       "resolutionEvidenceIds": [
         "M020-E-VALIDATOR"
       ]
+    },
+    {
+      "id": "RISK-040-LIVE-PAGINATION",
+      "milestoneId": "0.4",
+      "capabilityIds": [
+        "M040-CAP-PERSONAL"
+      ],
+      "status": "open",
+      "blockingAt": "completion",
+      "description": "专用 live evaluator 的四个个人集合为空；需要独立 validator 用非空多页黑盒数据验证 cursor 连续性，并保留 live 空集合限制。",
+      "resolutionEvidenceIds": []
     },
     {
       "id": "RISK-050-SHARED-CORE",

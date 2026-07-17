@@ -34,6 +34,10 @@ If it is already installed, say:
 
 ## 5. Ask Questions Against Community Content
 
+To inspect personal-workbench support, say:
+
+> Check the server capability inventory first, then read my notifications, inbox, community rules, and privacy policy. Report missing capabilities as unavailable and do not invent content.
+
 > Use apexcn-cli to answer this from community content: How do I call a REST API from Oracle APEX? Include reference topic links.
 
 > Based on community content, create a troubleshooting checklist for ORDS OAuth2 Bearer Token issues.
@@ -45,6 +49,14 @@ If it is already installed, say:
 > Help me write a community support topic from the issue below. Include background, what I tried, error messages, expected result, and tags. Show me the draft first; do not publish it directly.
 
 ## 7. Publish a Topic
+
+If you are not ready to publish, say:
+
+> Save the draft in the current profile's local draft inventory. When I ask for my drafts later, show only drafts owned by this profile.
+
+For profile or machine migration:
+
+> Export the current profile's local drafts, switch to the target profile, then import them. Do not show the API key or replace matching drafts unless I explicitly confirm.
 
 > Publish the confirmed content to the right category. Before publishing, show me the selected category, title, body, and tags, then wait for my confirmation.
 

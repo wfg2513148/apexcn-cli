@@ -231,12 +231,22 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "doctor snapshot": "print a local support snapshot without calling the API",
   "draft question": "draft a local community question from structured inputs and research links",
   "draft reply": "draft a local community reply from structured inputs and references",
+  "draft list": "list saved drafts owned by the active profile",
+  "draft restore": "restore a saved draft owned by the active profile",
+  "draft export": "export active-profile drafts as a local migration bundle",
+  "draft import": "import a local migration bundle into the active profile",
+  "draft delete": "delete a saved draft owned by the active profile",
   "guide": "show a curated learning, compatibility, deployment, security, or performance task guide",
   "favorite add": "favorite a community topic",
   "favorite remove": "remove a topic from favorites",
   "me": "show the authenticated community account",
+  "me capabilities": "discover personal-workbench server capabilities",
   "me favorites": "list favorite topics for the authenticated account",
+  "me inbox": "read the authenticated account inbox when available",
+  "me notifications": "read authenticated account notifications when available",
+  "me privacy": "read the authoritative privacy policy when available",
   "me replies": "list replies by the authenticated account",
+  "me rules": "read authoritative community rules when available",
   "me stats": "show aggregate activity statistics for the authenticated account",
   "me subscriptions": "list subscribed topics for the authenticated account",
   "me topics": "list topics authored by the authenticated account",
@@ -349,12 +359,32 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     examples: [{ command: "apexcn doctor snapshot --json", mode: "read" }]
   },
   "draft question": {
-    safety: { effects: ["read"], preview: "none", confirmation: [] },
-    examples: [{ command: 'apexcn draft question --title "标题" --problem "问题描述" --research-file ./research.json --format text', mode: "read" }]
+    safety: { effects: ["read", "config-write"], preview: "none", confirmation: [] },
+    examples: [{ command: 'apexcn draft question --title "标题" --problem "问题描述" --research-file ./research.json --save --json', mode: "execute" }]
   },
   "draft reply": {
-    safety: { effects: ["read"], preview: "none", confirmation: [] },
-    examples: [{ command: 'apexcn draft reply --topic-id 30549 --answer "回复建议" --format text', mode: "read" }]
+    safety: { effects: ["read", "config-write"], preview: "none", confirmation: [] },
+    examples: [{ command: 'apexcn draft reply --topic-id 30549 --answer "回复建议" --save --json', mode: "execute" }]
+  },
+  "draft list": {
+    safety: { effects: ["config-read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn draft list --json", mode: "read" }]
+  },
+  "draft restore": {
+    safety: { effects: ["config-read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn draft restore <draft-id> --json", mode: "read" }]
+  },
+  "draft export": {
+    safety: { effects: ["config-read", "config-write"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn draft export --output ./drafts.json --json", mode: "execute" }]
+  },
+  "draft import": {
+    safety: { effects: ["config-read", "config-write"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn draft import --input ./drafts.json --json", mode: "execute" }]
+  },
+  "draft delete": {
+    safety: { effects: ["config-write"], preview: "none", confirmation: ["--yes"] },
+    examples: [{ command: "apexcn draft delete <draft-id> --yes --json", mode: "execute" }]
   },
   "guide": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
@@ -382,13 +412,33 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn me --json", mode: "read" }]
   },
+  "me capabilities": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn me capabilities --json", mode: "read" }]
+  },
   "me favorites": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn me favorites --page-size 10 --json", mode: "read" }]
   },
+  "me inbox": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn me inbox --json", mode: "read" }]
+  },
+  "me notifications": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn me notifications --json", mode: "read" }]
+  },
+  "me privacy": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn me privacy --json", mode: "read" }]
+  },
   "me replies": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn me replies --page-size 10 --json", mode: "read" }]
+  },
+  "me rules": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn me rules --json", mode: "read" }]
   },
   "me stats": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },

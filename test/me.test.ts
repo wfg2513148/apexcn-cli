@@ -17,7 +17,7 @@ describe("me command", () => {
     delete process.env.APEXCN_ERROR_FORMAT;
   });
 
-  test("prints the authenticated user JSON", async () => {
+  test("prints privacy-safe authenticated user JSON by default", async () => {
     const configPath = await tempConfigPath();
     const stdout: string[] = [];
     const stderr: string[] = [];
@@ -52,9 +52,10 @@ describe("me command", () => {
     await program.parseAsync(["node", "apexcn", "me", "--json"]);
 
     expect(JSON.parse(stdout.join(""))).toEqual({
-      user: { id: 11, email: "test@example.test", nickname: "Tester", roleLevel: 10, isMuted: false },
+      user: { id: 11, email: "t***@example.test", nickname: "Tester", roleLevel: 10, isMuted: false },
       requestId: "req-ok"
     });
+    expect(stdout.join("")).not.toContain("test@example.test");
     expect(stderr.join("")).toBe("");
     expect(process.exitCode).toBeUndefined();
   });
@@ -89,6 +90,49 @@ describe("me command", () => {
     expect(stdout.join("")).not.toContain("test@example.test");
     expect(stderr.join("")).toBe("");
     expect(process.exitCode).toBeUndefined();
+  });
+
+  test("includes private profile fields only after explicit opt-in", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          user: {
+            id: 11,
+            email: "test@example.test",
+            phone: "13800000000",
+            nickname: "Tester",
+            apiToken: "server-should-never-return-this"
+          },
+          requestId: "req-private"
+        })
+      )
+    );
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me", "--json", "--include-private"]);
+
+    expect(JSON.parse(stdout.join(""))).toEqual({
+      user: {
+        id: 11,
+        email: "test@example.test",
+        phone: "13800000000",
+        nickname: "Tester",
+        apiToken: "[redacted]"
+      },
+      requestId: "req-private"
+    });
+    expect(stdout.join("")).not.toContain("server-should-never-return-this");
+    expect(stderr.join("")).toBe("");
   });
 
   test("supports text format while preserving verbose diagnostics", async () => {
@@ -128,7 +172,7 @@ describe("me command", () => {
     expect(stdout.join("")).toBe([
       "id: 11",
       "name: Test er",
-      "email: test@example.test",
+      "email: t***@example.test",
       "roleLevel: 10",
       "isMuted: false",
       "requestId: req-ok",
@@ -172,6 +216,65 @@ describe("me command", () => {
     expect(stderr.join("")).toBe("");
   });
 
+  test("discovers capabilities and preserves truthful unavailable responses", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const responses: Record<string, unknown> = {
+      "/api/v1/capabilities": {
+        kind: "capability-inventory",
+        contractVersion: "0.4.3-candidate",
+        capabilities: [
+          { id: "personal-community", available: true, endpoints: ["/me", "/me/topics"] },
+          { id: "notifications", available: false, endpoints: ["/notifications"], unavailableReason: "NOT_IMPLEMENTED" },
+          { id: "inbox", available: false, endpoints: ["/inbox"], unavailableReason: "NOT_IMPLEMENTED" },
+          { id: "community-rules", available: false, endpoints: ["/community/rules"], unavailableReason: "NOT_IMPLEMENTED" },
+          { id: "privacy-policy", available: false, endpoints: ["/privacy-policy"], unavailableReason: "NOT_IMPLEMENTED" }
+        ],
+        requestId: "req-capabilities"
+      },
+      "/api/v1/notifications": { kind: "notifications", available: false, status: "UNAVAILABLE", unavailableReason: "NOT_IMPLEMENTED", requestId: "req-notifications" },
+      "/api/v1/inbox": { kind: "inbox", available: false, status: "UNAVAILABLE", unavailableReason: "NOT_IMPLEMENTED", requestId: "req-inbox" },
+      "/api/v1/community/rules": { kind: "community-rules", available: false, status: "UNAVAILABLE", unavailableReason: "NOT_IMPLEMENTED", requestId: "req-rules" },
+      "/api/v1/privacy-policy": { kind: "privacy-policy", available: false, status: "UNAVAILABLE", unavailableReason: "NOT_IMPLEMENTED", requestId: "req-privacy" }
+    };
+    vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request) => {
+      const path = String(url).replace("https://oracleapex.cn/ords/test", "");
+      return Response.json(responses[path] ?? { error: { message: `unexpected ${path}` } }, { status: responses[path] ? 200 : 500 });
+    }));
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz", "--base-url", "https://oracleapex.cn/ords/test"]);
+    for (const command of ["capabilities", "notifications", "inbox", "rules", "privacy"]) {
+      stdout.length = 0;
+      await program.parseAsync(["node", "apexcn", "me", command, "--json"]);
+      const output = JSON.parse(stdout.join(""));
+      expect(output).toEqual(responses[
+        command === "capabilities"
+          ? "/api/v1/capabilities"
+          : command === "rules"
+            ? "/api/v1/community/rules"
+            : command === "privacy"
+              ? "/api/v1/privacy-policy"
+              : `/api/v1/${command}`
+      ]);
+      if (command !== "capabilities") {
+        expect(output.available).toBe(false);
+        expect(output.status).toBe("UNAVAILABLE");
+        expect(output.unavailableReason).toBe("NOT_IMPLEMENTED");
+        expect(output.items).toBeUndefined();
+        expect(output.content).toBeUndefined();
+      }
+    }
+
+    expect(fetch).toHaveBeenCalledTimes(5);
+    expect(stderr.join("")).toBe("");
+  });
+
   test("prints current user activity lists with offset pagination", async () => {
     const configPath = await tempConfigPath();
     const stdout: string[] = [];
@@ -206,6 +309,57 @@ describe("me command", () => {
     expect(stderr.join("")).toBe("");
   });
 
+  test("passes opaque personal-list cursors and rejects mixed pagination modes", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const fetchMock = vi.fn(async () => Response.json({
+      kind: "me-topics",
+      items: [],
+      page: { pageSize: 2, count: 0, hasMore: false, nextCursor: null },
+      requestId: "req-cursor"
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz", "--base-url", "https://oracleapex.cn/ords/test"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me", "topics", "--page-size", "2", "--cursor", "opaque.next.cursor", "--json"]);
+
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "https://oracleapex.cn/ords/test/api/v1/me/topics?pageSize=2&cursor=opaque.next.cursor",
+      expect.any(Object)
+    );
+    expect(JSON.parse(stdout.join("")).page.nextCursor).toBeNull();
+
+    fetchMock.mockClear();
+    stdout.length = 0;
+    stderr.length = 0;
+    process.exitCode = undefined;
+    const mixedProgram = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+    await mixedProgram.parseAsync(["node", "apexcn", "me", "topics", "--offset", "2", "--cursor", "opaque.next.cursor", "--json"]);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "validation",
+        message: "--offset cannot be combined with --cursor",
+        exitCode: 1
+      }
+    });
+    expect(process.exitCode).toBe(1);
+  });
+
   test("favorite and subscription lists tolerate unavailable targets", async () => {
     const configPath = await tempConfigPath();
     const stdout: string[] = [];
@@ -230,6 +384,123 @@ describe("me command", () => {
     expect(stdout.join("")).toBe("404\t\t2026-07-04\t\tTOPIC_NOT_FOUND\t\n");
     expect(stderr.join("")).toBe("");
     expect(process.exitCode).toBeUndefined();
+  });
+
+  test("recursively redacts private and secret fields from personal lists", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      Response.json({
+        kind: "me-topics",
+        items: [{
+          id: 42,
+          title: "Topic",
+          email: "private@example.test",
+          author: {
+            phone: "13800000000",
+            lastLoginIp: "192.0.2.1",
+            apiKey: "server-secret-value"
+          }
+        }],
+        requestId: "req-private-list"
+      })
+    ));
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me", "topics", "--json"]);
+
+    expect(JSON.parse(stdout.join(""))).toEqual({
+      kind: "me-topics",
+      items: [{
+        id: 42,
+        title: "Topic",
+        email: "p***@example.test",
+        author: {
+          phone: "[redacted]",
+          lastLoginIp: "[redacted]",
+          apiKey: "[redacted]"
+        }
+      }],
+      requestId: "req-private-list"
+    });
+    expect(stdout.join("")).not.toContain("private@example.test");
+    expect(stdout.join("")).not.toContain("13800000000");
+    expect(stdout.join("")).not.toContain("192.0.2.1");
+    expect(stdout.join("")).not.toContain("server-secret-value");
+    expect(stderr.join("")).toBe("");
+  });
+
+  test("keeps credentials, requests, and outputs isolated across three profiles", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const profiles = [
+      { name: "alpha", baseUrl: "https://alpha.example.test/ords", token: "a".repeat(26), userId: 101 },
+      { name: "beta", baseUrl: "https://beta.example.test/ords", token: "b".repeat(26), userId: 202 },
+      { name: "gamma", baseUrl: "https://gamma.example.test/ords", token: "c".repeat(26), userId: 303 }
+    ];
+    const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      const profile = profiles.find((item) => String(url).startsWith(item.baseUrl));
+      const authorization = new Headers(init?.headers).get("Authorization");
+      if (!profile || authorization !== `Bearer ${profile.token}`) {
+        return Response.json({ error: { message: "cross-profile request" } }, { status: 403 });
+      }
+      return Response.json({
+        user: { id: profile.userId, nickname: profile.name, email: `${profile.name}@example.test` },
+        requestId: `req-${profile.name}`
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    for (const profile of profiles) {
+      await program.parseAsync([
+        "node",
+        "apexcn",
+        "auth",
+        "set-token",
+        "--profile",
+        profile.name,
+        "--base-url",
+        profile.baseUrl,
+        "--token",
+        profile.token
+      ]);
+      stdout.length = 0;
+    }
+
+    for (const profile of profiles) {
+      await program.parseAsync(["node", "apexcn", "auth", "use", profile.name]);
+      stdout.length = 0;
+      await program.parseAsync(["node", "apexcn", "me", "--json"]);
+      const output = stdout.join("");
+      expect(JSON.parse(output)).toEqual({
+        user: { id: profile.userId, nickname: profile.name, email: `${profile.name.slice(0, 1)}***@example.test` },
+        requestId: `req-${profile.name}`
+      });
+      for (const candidate of profiles) {
+        expect(output).not.toContain(candidate.token);
+        if (candidate !== profile) {
+          expect(output).not.toContain(candidate.name);
+          expect(output).not.toContain(String(candidate.userId));
+        }
+      }
+      stdout.length = 0;
+    }
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(stderr.join("")).toBe("");
   });
 
   test("rejects ambiguous format options before making API requests", async () => {

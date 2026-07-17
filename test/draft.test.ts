@@ -1,6 +1,6 @@
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createProgram } from "../src/index.js";
 
@@ -473,5 +473,110 @@ describe("draft commands", () => {
     const data = JSON.parse(stdout.join(""));
     expect(data.kind).toBe("reply-draft");
     expect(data.parentPostId).toBeNull();
+  });
+
+  test("round-trips 50 saved drafts while isolating three interleaved profiles", async () => {
+    const configPath = await tempPath(".apexcn/config.json");
+    const bundlePath = join(dirname(configPath), "alpha-drafts.json");
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+    const run = async (args: string[]) => {
+      stdout.length = 0;
+      stderr.length = 0;
+      await program.parseAsync(["node", "apexcn", ...args]);
+      expect(stderr.join("")).toBe("");
+      expect(process.exitCode).toBeUndefined();
+      return stdout.join("");
+    };
+    const runJson = async (args: string[]) => JSON.parse(await run(args)) as Record<string, unknown>;
+
+    await run(["auth", "set-token", "--profile", "alpha@example.test", "--token", "a".repeat(26)]);
+    const alphaDrafts: Array<Record<string, unknown>> = [];
+    for (let index = 0; index < 50; index += 1) {
+      const stored = await runJson([
+        "draft",
+        "question",
+        "--title",
+        `Draft ${index}`,
+        "--problem",
+        `Problem ${index}`,
+        "--environment",
+        `Environment ${index}`,
+        "--save",
+        "--json"
+      ]);
+      alphaDrafts.push(stored);
+    }
+    const alphaList = await runJson(["draft", "list", "--json"]);
+    expect(alphaList.count).toBe(50);
+
+    await runJson(["draft", "export", "--output", bundlePath, "--json"]);
+    const bundleText = await readFile(bundlePath, "utf8");
+    expect(bundleText).not.toContain("alpha@example.test");
+    expect(bundleText).not.toContain("a".repeat(26));
+    expect((await stat(bundlePath)).mode & 0o777).toBe(0o600);
+
+    await run(["auth", "set-token", "--profile", "beta@example.test", "--token", "b".repeat(26)]);
+    expect((await runJson(["draft", "list", "--json"])).count).toBe(0);
+    expect((await runJson(["draft", "import", "--input", bundlePath, "--json"])).importedCount).toBe(50);
+    expect((await runJson(["draft", "list", "--json"])).count).toBe(50);
+
+    for (const source of alphaDrafts) {
+      const restored = await runJson(["draft", "restore", String(source.id), "--json"]);
+      expect(restored.draft).toEqual(source.draft);
+      expect(restored.ownerProfileId).not.toBe(source.ownerProfileId);
+    }
+
+    await run(["auth", "set-token", "--profile", "gamma@example.test", "--token", "c".repeat(26)]);
+    expect((await runJson(["draft", "list", "--json"])).count).toBe(0);
+    await run(["auth", "use", "alpha@example.test"]);
+    expect((await runJson(["draft", "list", "--json"])).count).toBe(50);
+    await runJson(["draft", "delete", String(alphaDrafts[0]?.id), "--yes", "--json"]);
+    expect((await runJson(["draft", "list", "--json"])).count).toBe(49);
+    await run(["auth", "use", "beta@example.test"]);
+    expect((await runJson(["draft", "list", "--json"])).count).toBe(50);
+
+    const profileDirectories = await readdir(join(dirname(configPath), "drafts"));
+    expect(profileDirectories).toHaveLength(2);
+    expect(profileDirectories.every((name) => /^[a-f0-9]{64}$/.test(name))).toBe(true);
+    for (const profileDirectory of profileDirectories) {
+      expect((await stat(join(dirname(configPath), "drafts", profileDirectory))).mode & 0o777).toBe(0o700);
+      for (const name of await readdir(join(dirname(configPath), "drafts", profileDirectory))) {
+        expect((await stat(join(dirname(configPath), "drafts", profileDirectory, name))).mode & 0o777).toBe(0o600);
+      }
+    }
+  });
+
+  test("requires an active profile only when managing saved drafts", async () => {
+    const configPath = await tempPath(".apexcn/config.json");
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "draft", "question", "--title", "Local", "--problem", "No save"]);
+    expect(JSON.parse(stdout.join("")).kind).toBe("question-draft");
+    expect(stderr.join("")).toBe("");
+
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "draft", "question", "--title", "Local", "--problem", "Save", "--save", "--json"]);
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "draft-inventory",
+        message: "No active profile. Run `apexcn auth use <profile>` before managing saved drafts.",
+        exitCode: 1
+      }
+    });
+    expect(process.exitCode).toBe(1);
   });
 });

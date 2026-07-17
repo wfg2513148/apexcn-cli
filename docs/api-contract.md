@@ -55,6 +55,12 @@
 
 每个 `supportsJson: true` 的公开命令都必须在 manifest 中提供非空 `jsonContract`，并指向已存在的契约测试文件。不支持 JSON 的命令必须返回 `jsonContract: null`，避免能力声明与真实选项不一致。
 
+个人工作台输出默认应用两层过滤：secret-like 字段递归替换为 `[redacted]`；email、手机号、IP、地址等私有字段默认掩码或替换。只有 `me --include-private` 可显式显示服务端返回的私有账号字段，secret-like 字段仍不会透传。
+
+`me capabilities` 对应 `/api/v1/capabilities`。通知、收件箱、规则和隐私端点若无权威数据，成功响应仍必须明确包含 `available: false`、`status: "UNAVAILABLE"`、`unavailableReason` 和 `requestId`。CLI 不把 truthful unavailable 改写为伪造的空数组或正文。
+
+本地草稿 inventory 使用 `stored-draft` v1 包装原有 `question-draft` 或 `reply-draft`。`draft-inventory-export` v1 包含 `sourceProfileId`、`exportedAt` 和 `drafts[]`；profile 标识是 profile 名的 SHA-256，不包含 profile 名或 token。导入保留 draft id、时间戳和 payload 字段，只将 `ownerProfileId` 绑定到当前 active profile。
+
 ## Error Envelope
 
 核心错误对象：

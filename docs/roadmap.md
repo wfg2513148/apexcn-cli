@@ -47,7 +47,7 @@
 |---|---|---|---|---:|---|---|
 | `0.2` | `0.20.x` | 可信赖的 CLI 基础 | `completed` | 0 | `approved` | `approved` |
 | `0.3` | `0.30.x` | 社区知识检索 | `completed` | 0 | `approved` | `approved` |
-| `0.4` | `0.40.x` | 个人工作台与能力协商 | `planned` | 2 | `waiting` | `not_due` |
+| `0.4` | `0.40.x` | 个人工作台与能力协商 | `in_progress` | 2 | `approved` | `pending` |
 | `0.5` | `0.50.x` | AI Agent 只读适配层 | `planned` | 0 | `waiting` | `not_due` |
 | `0.6` | `0.60.x` | 可审计内容操作 | `planned` | 0 | `waiting` | `not_due` |
 | `0.7` | `0.70.x` | 本地知识资产与只读自动化 | `planned` | 1 | `waiting` | `not_due` |
@@ -151,11 +151,11 @@
 
 | ID | Capability | Status | User value |
 |---|---|---|---|
-| `M040-CAP-PERSONAL` | 统一个人数据面 | `partial` | 用户能统一查看 profile、主题、回复、收藏、订阅和统计。 |
-| `M040-CAP-INBOX` | 通知、收件箱与规则 | `not_started` | 服务端提供契约时，用户可从 CLI 获取通知、规则和隐私信息。 |
-| `M040-CAP-DRAFTS` | profile 隔离的本地草稿资产 | `not_started` | 用户可保存、列出、恢复、迁移和删除本地草稿，且 profile 之间不会串数据。 |
-| `M040-CAP-PRIVACY` | profile 隔离与隐私输出 | `partial` | 多个身份不会串用凭据、缓存、输出或动作。 |
-| `M040-CAP-PREVIEW` | 个人动作预览 | `partial` | 可逆动作在执行前展示真实请求。 |
+| `M040-CAP-PERSONAL` | 统一个人数据面 | `implemented` | 用户能统一查看 profile、主题、回复、收藏、订阅和统计。 |
+| `M040-CAP-INBOX` | 通知、收件箱与规则 | `implemented` | 服务端提供契约时，用户可从 CLI 获取通知、规则和隐私信息。 |
+| `M040-CAP-DRAFTS` | profile 隔离的本地草稿资产 | `implemented` | 用户可保存、列出、恢复、迁移和删除本地草稿，且 profile 之间不会串数据。 |
+| `M040-CAP-PRIVACY` | profile 隔离与隐私输出 | `implemented` | 多个身份不会串用凭据、缓存、输出或动作。 |
+| `M040-CAP-PREVIEW` | 个人动作预览 | `implemented` | 可逆动作在执行前展示真实请求。 |
 
 ### 核心验收
 
@@ -179,8 +179,8 @@
 
 ### 人工交接门禁
 
-- Activation: `waiting`
-- Completion review: `not_due`
+- Activation: `approved`
+- Completion review: `pending`
 - 完成后必须总结：增强能力、未预估问题、根因、规避措施、下一阶段目标、量化预期和主要风险。
 - 发布验证和上下文压缩完成后，自动批准完成审查并启动下一里程碑。
 
@@ -414,8 +414,8 @@
 
 ## 依赖与就绪风险
 
-- 结构化依赖：13 项；未就绪：11 项。
-- 就绪风险：11 项；开放：10 项。
+- 结构化依赖：13 项；未就绪：9 项。
+- 就绪风险：12 项；开放：11 项。
 
 ## 非目标
 

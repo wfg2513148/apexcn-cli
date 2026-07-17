@@ -156,13 +156,20 @@ apexcn admin list --format text
 
 ```bash
 apexcn me stats --json
+apexcn me capabilities --json
+apexcn me notifications --json
+apexcn me inbox --json
+apexcn me rules --json
+apexcn me privacy --json
 apexcn me topics --page-size 10 --json
-apexcn me replies --page-size 10 --offset 10 --json
+apexcn me replies --page-size 10 --cursor "<page.nextCursor>" --json
 apexcn me favorites --format text
 apexcn me subscriptions --json
 ```
 
-`me topics`、`me replies`、`me favorites` 和 `me subscriptions` 使用数字 `offset` 分页；当 `page.hasMore` 为 `true` 时，用 `page.nextOffset` 继续读取下一页。
+`me` 默认递归脱敏 email、手机号、IP、地址和 secret-like 字段；只有显式 `me --include-private` 才显示服务端返回的私有账号字段。`me topics`、`me replies`、`me favorites` 和 `me subscriptions` 优先使用服务端返回的 opaque `page.nextCursor` 继续分页；兼容旧服务端时仍可使用 `offset/page.nextOffset`，但 `--cursor` 与 `--offset` 不能同时使用。
+
+`me capabilities` 读取服务端 `contractVersion` 与能力矩阵。`me notifications`、`me inbox`、`me rules` 和 `me privacy` 只转发权威只读契约；能力缺失时保留服务端的 `available: false`、`status: "UNAVAILABLE"`、`unavailableReason` 和 `requestId`，不会生成空消息、规则或政策冒充真实数据。
 
 ## search
 
@@ -295,6 +302,20 @@ apexcn reply create 30549 --content-file reply.md --preview
 ```
 
 `draft reply` 默认输出 JSON，固定包含 `kind: "reply-draft"`、`schemaVersion: 1`、`topicId`、`parentPostId`、`content`、`references` 和 `metadata`。未提供 `--parent-post-id` 时 JSON 中固定为 `null`。`--topic-id` 必填；如果 `--topic-file` 中的 `topic.id`、根 `id`、`topicId` 或 `threadId` 与 `--topic-id` 不一致，命令会拒绝。Markdown 固定包含 `## 简短回应`、`## 建议步骤`、`## 参考链接`；无引用时输出 `无参考链接。`，不会输出 `待补充`。`--tone concise|friendly|technical` 会产生固定不同的开头语，JSON 的 `metadata.tone` 也会记录该值。
+
+需要长期保存时，给 `draft question` 或 `draft reply` 增加 `--save --json`。保存动作要求存在 active profile；普通草稿生成仍不读取认证配置。草稿 inventory 位于本地配置目录，profile 名只用于计算 SHA-256 隔离目录，草稿文件权限为 `0600`：
+
+```bash
+apexcn draft question --title "标题" --problem "现象" --save --json
+apexcn draft list --json
+apexcn draft restore <draft-id> --format text
+apexcn draft export --output ./drafts.json --json
+apexcn auth use another-profile
+apexcn draft import --input ./drafts.json --json
+apexcn draft delete <draft-id> --yes --json
+```
+
+`export/import` 是 profile 间迁移路径；导入时保留草稿 id、时间和全部内容字段，只把 owner 绑定到当前 profile。遇到同 id 默认拒绝，只有显式 `--replace` 才覆盖。导出文件已存在时默认拒绝，只有 `--force` 才替换。
 
 ## review
 
