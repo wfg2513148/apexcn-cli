@@ -1,0 +1,91 @@
+{
+  "kind": "apexcn-milestone-blocked-handoff",
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-17T22:27:37Z",
+  "milestone": {
+    "id": "0.5",
+    "status": "blocked",
+    "accepted": false,
+    "completionReviewMode": "activation override, not milestone acceptance",
+    "confirmationRef": "user-requested-skip-m050-b28-2026-07-18"
+  },
+  "candidate": {
+    "version": "0.50.0",
+    "commit": "3f34e7979283cf77ad5bda1093f64f5a28107e38",
+    "localTag": "v0.50.0-rc.2",
+    "artifact": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/candidate-m050-r1-20260718T0300/apexcn-cli-0.50.0.tgz",
+    "artifactSha256": "d26a8267fba8a206ad199bfdb5f22999ac2c12c9ae3f91509c56edaf86062d2a",
+    "released": false,
+    "releaseTagPublished": false,
+    "githubReleasePublished": false
+  },
+  "independentValidation": {
+    "round": "M050-VAL-R2-20260718",
+    "threadId": "019f719c-4f7e-7740-995b-88e26795e048",
+    "cwd": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "high",
+    "persona": "novice",
+    "report": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-m050-r2-20260718T034911/reports/milestone-0.5-validator-r2-20260718T034911.json",
+    "reportSha256": "86c48d3abcaaa6c2c65253d8a58a890a4ffff5b79db6b24771160e77113ba714",
+    "issuesReport": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-m050-r2-20260718T034911/reports/milestone-0.5-validator-r2-issues-20260718T034911.json",
+    "issuesReportSha256": "1e1ac668b3174861ffbe7b506cdd48b57377965e7332d4421fabc096d18c0835",
+    "decision": "REJECT",
+    "baseline": {
+      "passed": 27,
+      "denominator": 28,
+      "passedItems": "B01-B27",
+      "failedItems": [
+        "B28"
+      ]
+    },
+    "dynamicAdverse": {
+      "passed": 48,
+      "denominator": 48
+    },
+    "productIssues": 0,
+    "environmentBlocker": {
+      "id": "ENV-M050-R2-001",
+      "reason": "Mac locked before real VS Code Agent UI discovery and readonly call evidence could be collected",
+      "affectedAcceptanceCriteria": [
+        "M050-AC-004"
+      ]
+    }
+  },
+  "enhancedCapabilities": [
+    "A stable local stdio MCP adapter exposes an exact 10-tool readonly allowlist backed by shared CLI core services.",
+    "Execute-write remains permanently unavailable and readonly policy blocks preview or write surfaces from becoming MCP tools.",
+    "JSON-RPC initialize, discovery, calls, parse errors, invalid requests, strict schemas, framing, redaction, and startup behavior have local and independent non-UI evidence.",
+    "VS Code Agent is the only distributed client in the 0.5 support denominator; Cursor and Claude Desktop remain explicitly excluded."
+  ],
+  "unexpectedProblems": [
+    "VS Code virtualized tool lists made a single viewport appear to expose only 8 of 10 tools during R1.",
+    "The first R2 raw-frame harness returned before responses with explicit request IDs arrived, initially misclassifying parse-error and invalid-request behavior.",
+    "The Mac locked before R2 could perform the required real VS Code Agent UI verification."
+  ],
+  "rootCauses": [
+    "The VS Code Configure Tools UI virtualizes and scrolls the tool list, so one screenshot is not a complete manifest.",
+    "The raw JSON-RPC harness keyed its wait on a parsed message object even when intentionally sending malformed raw strings.",
+    "The client UI check depended on an interactive authenticated desktop session that was not guaranteed through the end of the validation round."
+  ],
+  "preventionActions": [
+    "Require scrolled or searched UI evidence for the complete supported-client tool manifest instead of counting one viewport.",
+    "Preflight malformed-frame harnesses against explicit response IDs and preserve supplemental evidence separately from first-attempt scoring.",
+    "Before resuming 0.5, preflight an unlocked, authenticated, controllable VS Code Agent session and then create a fresh validator task for the full applicable suite."
+  ],
+  "remainingRisks": [
+    "M050-AC-004 is failed because independent real VS Code Agent UI discovery and readonly invocation remain unverified.",
+    "The external MCP client runner dependency remains unverified at the 0.5 completion gate.",
+    "The 0.50.0 RC candidate must not be described as accepted or released until a fresh validator closes B28/AC004 and all completion gates pass."
+  ],
+  "nextMilestone": {
+    "id": "0.6",
+    "goal": "Qualify auditable content operations in an isolated write-test surface: hash-bound preview, explicit approval, minimum-privilege execution, resumability, idempotence, and Agent preview-only behavior.",
+    "expectedResults": [
+      "All 0.6 core acceptance criteria are measured by a fresh novice validator using complete fixed baseline plus separately scored dynamic and adverse suites.",
+      "Approved topic and reply workflows produce matching backend/API evidence and real Codex in-app browser visual evidence without residual test resources.",
+      "Unsafe, stale, mismatched, duplicate, or unapproved writes are blocked; MCP remains preview-only and exposes no execute-write path."
+    ],
+    "implementationPlanGenerated": false
+  }
+}

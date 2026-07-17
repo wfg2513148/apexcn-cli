@@ -48,7 +48,7 @@
 | `0.2` | `0.20.x` | 可信赖的 CLI 基础 | `completed` | 0 | `approved` | `approved` |
 | `0.3` | `0.30.x` | 社区知识检索 | `completed` | 0 | `approved` | `approved` |
 | `0.4` | `0.40.x` | 个人工作台与能力协商 | `completed` | 0 | `approved` | `approved` |
-| `0.5` | `0.50.x` | AI Agent 只读适配层 | `in_progress` | 0 | `approved` | `not_due` |
+| `0.5` | `0.50.x` | AI Agent 只读适配层 | `blocked` | 0 | `approved` | `approved` |
 | `0.6` | `0.60.x` | 可审计内容操作 | `planned` | 0 | `waiting` | `not_due` |
 | `0.7` | `0.70.x` | 本地知识资产与只读自动化 | `planned` | 1 | `waiting` | `not_due` |
 | `0.8` | `0.80.x` | 组织治理与生命周期资格化 | `planned` | 0 | `waiting` | `not_due` |
@@ -193,23 +193,23 @@
 
 | ID | Capability | Status | User value |
 |---|---|---|---|
-| `M050-CAP-POLICY` | MCP readonly 安全策略 | `partial` | Agent 可读取社区能力，但不能产生或执行真实写请求。 |
-| `M050-CAP-CORE` | CLI/MCP 共用核心服务 | `partial` | CLI 和 Agent 得到相同请求、安全和错误语义。 |
-| `M050-CAP-CLIENTS` | 真实 MCP 客户端兼容 | `not_started` | 用户知道哪些客户端版本经过真实连接验证。 |
-| `M050-CAP-PROTOCOL` | 稳定 stdio 协议 | `partial` | MCP 启动、发现、调用和错误在连续运行中保持稳定。 |
+| `M050-CAP-POLICY` | MCP readonly 安全策略 | `validated` | Agent 可读取社区能力，但不能产生或执行真实写请求。 |
+| `M050-CAP-CORE` | CLI/MCP 共用核心服务 | `validated` | CLI 和 Agent 得到相同请求、安全和错误语义。 |
+| `M050-CAP-CLIENTS` | 真实 MCP 客户端兼容 | `partial` | 用户知道哪些客户端版本经过真实连接验证。 |
+| `M050-CAP-PROTOCOL` | 稳定 stdio 协议 | `validated` | MCP 启动、发现、调用和错误在连续运行中保持稳定。 |
 
 ### 核心验收
 
 | ID | Status | Metric | Target | Measurement |
 |---|---|---|---|---|
-| `M050-AC-001` | `pending` | 计划暴露的 readonly 命令全部映射到共用 core 的 MCP 工具。 | `= 100 percent` | command and tool registry plus service dependency inspection |
-| `M050-AC-002` | `pending` | readonly 模式真实写请求为零。 | `= 0 requests` | readonly MCP network observation and call trace |
-| `M050-AC-003` | `pending` | command registry、shared core 与 MCP readonly exposure matrix 漂移为零。 | `= 0 findings` | registry core service and MCP manifest consistency gate |
-| `M050-AC-004` | `pending` | 正式分发的 VS Code Agent 有带版本和日期的真实 UI 验证证据。 | `= 1 clients` | real client compatibility records |
-| `M050-AC-005` | `pending` | 连续 100 次 JSON-RPC 调用无协议失败。 | `= 0 failures` | 100-call stdio soak |
-| `M050-AC-006` | `pending` | 至少 40 个 Agent 自然语言任务首次成功率不低于 95%。 | `>= 95 percent` | fixed validator report with at least 40 tasks |
-| `M050-AC-007` | `pending` | MCP 启动 P95 不超过 2 秒。 | `<= 2 seconds` | recorded local startup benchmark |
-| `M050-AC-008` | `pending` | MCP 输出和错误中的密钥泄露为零。 | `= 0 findings` | MCP response and error scan |
+| `M050-AC-001` | `pass` | 计划暴露的 readonly 命令全部映射到共用 core 的 MCP 工具。 | `= 100 percent` | command and tool registry plus service dependency inspection |
+| `M050-AC-002` | `pass` | readonly 模式真实写请求为零。 | `= 0 requests` | readonly MCP network observation and call trace |
+| `M050-AC-003` | `pass` | command registry、shared core 与 MCP readonly exposure matrix 漂移为零。 | `= 0 findings` | registry core service and MCP manifest consistency gate |
+| `M050-AC-004` | `fail` | 正式分发的 VS Code Agent 有带版本和日期的真实 UI 验证证据。 | `= 1 clients` | real client compatibility records |
+| `M050-AC-005` | `pass` | 连续 100 次 JSON-RPC 调用无协议失败。 | `= 0 failures` | 100-call stdio soak |
+| `M050-AC-006` | `pass` | 至少 40 个 Agent 自然语言任务首次成功率不低于 95%。 | `>= 95 percent` | fixed validator report with at least 40 tasks |
+| `M050-AC-007` | `pass` | MCP 启动 P95 不超过 2 秒。 | `<= 2 seconds` | recorded local startup benchmark |
+| `M050-AC-008` | `pass` | MCP 输出和错误中的密钥泄露为零。 | `= 0 findings` | MCP response and error scan |
 
 ### 活动问题
 
@@ -218,7 +218,7 @@
 ### 人工交接门禁
 
 - Activation: `approved`
-- Completion review: `not_due`
+- Completion review: `approved`
 - 完成后必须总结：增强能力、未预估问题、根因、规避措施、下一阶段目标、量化预期和主要风险。
 - 发布验证和上下文压缩完成后，自动批准完成审查并启动下一里程碑。
 
@@ -412,7 +412,7 @@
 ## 依赖与就绪风险
 
 - 结构化依赖：13 项；未就绪：9 项。
-- 就绪风险：12 项；开放：10 项。
+- 就绪风险：12 项；开放：9 项。
 
 ## 非目标
 

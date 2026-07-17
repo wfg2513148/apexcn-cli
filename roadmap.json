@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "product": "apexcn-cli",
   "baselineRelease": "0.18.18",
-  "updatedAt": "2026-07-17",
+  "updatedAt": "2026-07-18",
   "versionPolicy": {
     "productStageToReleaseLine": {
       "0.2": "0.20.x",
@@ -1323,16 +1323,16 @@
       "releaseLine": "0.50.x",
       "title": "AI Agent 只读适配层",
       "objective": "让 AI 客户端通过稳定、安全的本地 stdio 适配层复用 CLI 只读核心能力。",
-      "status": "in_progress",
+      "status": "blocked",
       "activationGate": {
         "status": "approved",
         "previousMilestoneId": "0.4",
         "confirmationRef": "user-delegated-fresh-m050-goal-2026-07-18"
       },
       "completionReview": {
-        "status": "not_due",
-        "summaryEvidenceId": null,
-        "confirmationRef": null
+        "status": "approved",
+        "summaryEvidenceId": "M050-E-BLOCKED-HANDOFF",
+        "confirmationRef": "user-requested-skip-m050-b28-2026-07-18"
       },
       "capabilities": [
         {
@@ -1349,7 +1349,7 @@
             "MCP execute-write"
           ],
           "dependencies": [],
-          "status": "partial",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M050-AC-002",
             "M050-AC-003"
@@ -1358,7 +1358,8 @@
             "M050-V-SAFETY"
           ],
           "evidenceIds": [
-            "M050-E-LOCAL"
+            "M050-E-LOCAL",
+            "M050-E-R2"
           ]
         },
         {
@@ -1376,7 +1377,7 @@
             "big-bang CLI rewrite"
           ],
           "dependencies": [],
-          "status": "partial",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M050-AC-001"
           ],
@@ -1384,7 +1385,8 @@
             "M050-V-TOOLS"
           ],
           "evidenceIds": [
-            "M050-E-LOCAL"
+            "M050-E-LOCAL",
+            "M050-E-R2"
           ]
         },
         {
@@ -1403,14 +1405,16 @@
           "dependencies": [
             "external:mcp-client-runners"
           ],
-          "status": "not_started",
+          "status": "partial",
           "acceptanceCriterionIds": [
             "M050-AC-004"
           ],
           "validatorScenarioIds": [
             "M050-V-CLIENTS"
           ],
-          "evidenceIds": []
+          "evidenceIds": [
+            "M050-E-R2"
+          ]
         },
         {
           "id": "M050-CAP-PROTOCOL",
@@ -1427,7 +1431,7 @@
             "network MCP transport"
           ],
           "dependencies": [],
-          "status": "partial",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M050-AC-005",
             "M050-AC-006",
@@ -1439,7 +1443,8 @@
             "M050-V-AGENT"
           ],
           "evidenceIds": [
-            "M050-E-LOCAL"
+            "M050-E-LOCAL",
+            "M050-E-R2"
           ]
         }
       ],
@@ -1453,8 +1458,10 @@
           "target": 100,
           "unit": "percent",
           "measurementMethod": "command and tool registry plus service dependency inspection",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M050-E-R2"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -1466,8 +1473,10 @@
           "target": 0,
           "unit": "requests",
           "measurementMethod": "readonly MCP network observation and call trace",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M050-E-R2"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -1479,8 +1488,10 @@
           "target": 0,
           "unit": "findings",
           "measurementMethod": "registry core service and MCP manifest consistency gate",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M050-E-R2"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -1492,8 +1503,10 @@
           "target": 1,
           "unit": "clients",
           "measurementMethod": "real client compatibility records",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "fail",
+          "evidenceIds": [
+            "M050-E-R2"
+          ],
           "measurementProfileId": "PROFILE-REAL-MCP-CLIENT"
         },
         {
@@ -1505,8 +1518,10 @@
           "target": 0,
           "unit": "failures",
           "measurementMethod": "100-call stdio soak",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M050-E-R2"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -1518,8 +1533,10 @@
           "target": 95,
           "unit": "percent",
           "measurementMethod": "fixed validator report with at least 40 tasks",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M050-E-R2"
+          ],
           "measurementProfileId": "PROFILE-INDEPENDENT-NATURAL-LANGUAGE"
         },
         {
@@ -1531,8 +1548,10 @@
           "target": 2,
           "unit": "seconds",
           "measurementMethod": "recorded local startup benchmark",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M050-E-R2"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -1544,8 +1563,10 @@
           "target": 0,
           "unit": "findings",
           "measurementMethod": "MCP response and error scan",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M050-E-R2"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         }
       ],
@@ -1584,8 +1605,21 @@
           "id": "M050-E-LOCAL",
           "kind": "repository",
           "path": "test/mcp/mcp-stdio-smoke.test.ts",
-          "description": "Existing local MCP stdio, policy, schema, and safety tests.",
-          "commit": "330538c"
+          "description": "0.50.0 RC2 local coverage for the exact 10-tool readonly allowlist, shared-core CLI/MCP behavior, strict schemas, JSON-RPC framing and errors, 100-call soak, startup latency, redaction, and permanent execute-write rejection.",
+          "commit": "3f34e7979283cf77ad5bda1093f64f5a28107e38"
+        },
+        {
+          "id": "M050-E-R2",
+          "kind": "independent_validator",
+          "path": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-m050-r2-20260718T034911/reports/milestone-0.5-validator-r2-20260718T034911.json",
+          "description": "Fresh novice task 019f719c-4f7e-7740-995b-88e26795e048 independently tested RC2 3f34e7979283cf77ad5bda1093f64f5a28107e38: B01-B27 passed, dynamic/adverse 48/48 passed, and product issues were zero. B28 and AC004 were not verified because the Mac was locked, so the overall verdict remained REJECT and milestone 0.5 remains blocked.",
+          "sha256": "86c48d3abcaaa6c2c65253d8a58a890a4ffff5b79db6b24771160e77113ba714"
+        },
+        {
+          "id": "M050-E-BLOCKED-HANDOFF",
+          "kind": "milestone_summary",
+          "path": "reports/m050-blocked-handoff-20260718.json",
+          "description": "User-authorized blocked handoff for B28/AC004. completionReview approval is an activation override for the next independent milestone task, not milestone acceptance: 0.5 is blocked, AC004 failed, the RC artifact is unreleased, and no v0.50.0 GitHub Release was published."
         }
       ],
       "userOutcome": "AI 客户端能够发现并稳定完成社区只读任务，且不产生任何真实写请求。",
@@ -3362,10 +3396,12 @@
       "capabilityIds": [
         "M050-CAP-CORE"
       ],
-      "status": "open",
+      "status": "mitigated",
       "blockingAt": "completion",
-      "description": "CLI 与 MCP 的 shared-core coverage 尚未达到目标",
-      "resolutionEvidenceIds": []
+      "description": "R2 独立 validator 已验证 CLI registry、shared core 与 MCP readonly exposure matrix 的映射及 100% shared-core coverage",
+      "resolutionEvidenceIds": [
+        "M050-E-R2"
+      ]
     },
     {
       "id": "RISK-050-CLIENTS",
@@ -3375,7 +3411,7 @@
       ],
       "status": "open",
       "blockingAt": "completion",
-      "description": "正式分发的 VS Code Agent 版本和运行环境尚待独立 validator 锁定",
+      "description": "R2 因 Mac locked 无法完成正式分发 VS Code Agent 的独立 UI 发现与只读调用；B28/AC004 仍未验收",
       "resolutionEvidenceIds": []
     },
     {
