@@ -969,16 +969,16 @@
       "releaseLine": "0.40.x",
       "title": "个人工作台与能力协商",
       "objective": "让认证用户安全查看个人社区状态、管理 profile 隔离的本地草稿，并准确识别服务端能力边界。",
-      "status": "in_progress",
+      "status": "completed",
       "activationGate": {
         "status": "approved",
         "previousMilestoneId": "0.3",
         "confirmationRef": "user-started-fresh-m040-goal-2026-07-17"
       },
       "completionReview": {
-        "status": "pending",
-        "summaryEvidenceId": null,
-        "confirmationRef": null
+        "status": "approved",
+        "summaryEvidenceId": "M040-E-SUMMARY",
+        "confirmationRef": "M040-VAL-R2-20260718"
       },
       "capabilities": [
         {
@@ -999,7 +999,7 @@
           "dependencies": [
             "server:personal-community-contracts"
           ],
-          "status": "implemented",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M040-AC-001",
             "M040-AC-006"
@@ -1009,7 +1009,8 @@
           ],
           "evidenceIds": [
             "M040-E-LOCAL",
-            "M040-E-SERVER"
+            "M040-E-SERVER",
+            "M040-E-VALIDATOR"
           ]
         },
         {
@@ -1028,7 +1029,7 @@
           "dependencies": [
             "server:notifications-rules-privacy"
           ],
-          "status": "implemented",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M040-AC-005"
           ],
@@ -1036,7 +1037,8 @@
             "M040-V-SERVER-GAPS"
           ],
           "evidenceIds": [
-            "M040-E-SERVER"
+            "M040-E-SERVER",
+            "M040-E-VALIDATOR"
           ]
         },
         {
@@ -1053,7 +1055,7 @@
             "cloud draft synchronization"
           ],
           "dependencies": [],
-          "status": "implemented",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M040-AC-008",
             "M040-AC-009"
@@ -1062,7 +1064,8 @@
             "M040-V-DRAFTS"
           ],
           "evidenceIds": [
-            "M040-E-LOCAL"
+            "M040-E-LOCAL",
+            "M040-E-VALIDATOR"
           ]
         },
         {
@@ -1078,7 +1081,7 @@
             "shared multi-user daemon"
           ],
           "dependencies": [],
-          "status": "implemented",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M040-AC-002",
             "M040-AC-003"
@@ -1088,7 +1091,8 @@
           ],
           "evidenceIds": [
             "M040-E-LOCAL",
-            "M040-E-SERVER"
+            "M040-E-SERVER",
+            "M040-E-VALIDATOR"
           ]
         },
         {
@@ -1105,7 +1109,7 @@
           "dependencies": [
             "server:personal-community-contracts"
           ],
-          "status": "implemented",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M040-AC-007"
           ],
@@ -1113,7 +1117,8 @@
             "M040-V-PREVIEW"
           ],
           "evidenceIds": [
-            "M040-E-LOCAL"
+            "M040-E-LOCAL",
+            "M040-E-VALIDATOR"
           ]
         }
       ],
@@ -1127,8 +1132,11 @@
           "target": 0,
           "unit": "records",
           "measurementMethod": "live readonly traversal for each personal list",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M040-E-SERVER",
+            "M040-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -1140,8 +1148,10 @@
           "target": 0,
           "unit": "failures",
           "measurementMethod": "three-profile black-box matrix",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M040-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -1153,8 +1163,10 @@
           "target": 0,
           "unit": "findings",
           "measurementMethod": "output and artifact scan",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M040-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -1166,8 +1178,11 @@
           "target": 100,
           "unit": "percent",
           "measurementMethod": "server capability negotiation scenarios",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M040-E-SERVER",
+            "M040-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -1179,8 +1194,10 @@
           "target": 95,
           "unit": "percent",
           "measurementMethod": "fixed validator report with at least 30 tasks",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M040-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-INDEPENDENT-NATURAL-LANGUAGE"
         },
         {
@@ -1192,8 +1209,10 @@
           "target": 100,
           "unit": "percent",
           "measurementMethod": "preview and approved request comparison",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M040-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -1206,8 +1225,10 @@
           "unit": "percent",
           "measurementMethod": "profile-separated draft round-trip fixture",
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY",
-          "status": "pending",
-          "evidenceIds": []
+          "status": "pass",
+          "evidenceIds": [
+            "M040-E-VALIDATOR"
+          ]
         },
         {
           "id": "M040-AC-009",
@@ -1219,8 +1240,10 @@
           "unit": "failures",
           "measurementMethod": "three-profile draft isolation matrix",
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY",
-          "status": "pending",
-          "evidenceIds": []
+          "status": "pass",
+          "evidenceIds": [
+            "M040-E-VALIDATOR"
+          ]
         }
       ],
       "validatorScenarios": [
@@ -1260,7 +1283,7 @@
           "kind": "repository",
           "path": "test/draft.test.ts",
           "description": "0.40.0 candidate local coverage for 50-draft round trips, three-profile isolation, default private-field redaction, personal cursor handling, truthful unavailable responses, and reversible-action preview request matching.",
-          "commit": "release-candidate-0.40.0"
+          "commit": "a589c2f0ccce716f725252b16c84b933e7b8e8bf"
         },
         {
           "id": "M040-E-SERVER",
@@ -1269,6 +1292,18 @@
           "description": "dev@oci API contract 0.4.3-candidate provides capability discovery, truthful unavailable notifications/inbox/rules/privacy, privacy-safe /me, and endpoint-bound personal cursors. The persistent muted evaluator had empty personal collections, so live evidence covers terminal cursor and zero duplicates while non-empty multi-page behavior remains assigned to independent validation.",
           "commit": "954d5963015c828ecf575b92b8e8f1a5bf14d199",
           "sha256": "c8bdb2068785fdab6ab319a2597336179ec7bc0f27ed470558430be09ea7711b"
+        },
+        {
+          "id": "M040-E-VALIDATOR",
+          "kind": "independent_validator",
+          "path": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/r2-20260718T010915+0800/report.json",
+          "description": "Fresh novice task 019f70fd-c1d8-7dc2-a36c-50e2d4a0ce20 independently validated candidate a589c2f0ccce716f725252b16c84b933e7b8e8bf: fixed baseline 24/24, dynamic 40/40, 64/64 first-attempt tasks, nine approved live readonly GETs, all 0.4 acceptance coverage, the NO_ACTIVE_PROFILE remediation fix, and zero product, harness, or environment findings.",
+          "sha256": "d873c6327ea2a19a931622346c06b7c1f04f9816fef80ec5028571faf1f0cefe"
+        },
+        {
+          "id": "M040-E-SUMMARY",
+          "kind": "milestone_summary",
+          "description": "0.4 delivered cursor-safe personal workbench reads, truthful capability negotiation, default privacy redaction, profile-isolated local draft inventory, and preview-safe personal actions. Unexpected work included incomplete server capability contracts, live evaluator access not initially available to the validator, a missing local no-profile error code, and repeated validator harness event-loop/assertion defects. Root causes were split server ownership, secure credential handoff not prepared before R1, an uncovered local preflight envelope, and synchronous child processes sharing a mock server event loop. Future rounds must preflight dev readonly credentials without exposing secrets, validate local error envelopes in the public contract suite, run mock servers out of process, preserve immutable first-attempt evidence, and keep harness findings out of product issues."
         }
       ],
       "userOutcome": "用户能够在多个 profile 间安全管理个人数据和草稿，且不会收到伪造的服务端能力结果。",
@@ -3313,10 +3348,13 @@
       "capabilityIds": [
         "M040-CAP-PERSONAL"
       ],
-      "status": "open",
+      "status": "mitigated",
       "blockingAt": "completion",
-      "description": "专用 live evaluator 的四个个人集合为空；需要独立 validator 用非空多页黑盒数据验证 cursor 连续性，并保留 live 空集合限制。",
-      "resolutionEvidenceIds": []
+      "description": "独立 validator 已用每端点至少五个非空 mock 页验证 cursor 连续性、终止、无重复、跨端点拒绝和 offset 兼容，并用专用 live evaluator 验证四个空集合的 terminal cursor；live 数据为空的限制已如实保留。",
+      "resolutionEvidenceIds": [
+        "M040-E-SERVER",
+        "M040-E-VALIDATOR"
+      ]
     },
     {
       "id": "RISK-050-SHARED-CORE",

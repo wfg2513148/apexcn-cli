@@ -9,12 +9,4 @@
 
 | ID | Milestone | Owner | Status | Title |
 |---|---|---|---|---|
-| `ISSUE-040-001` | `0.4` | `server` | `open` | Expose notifications, rules, and privacy contracts |
-| `ISSUE-040-004` | `0.4` | `cli` | `open` | Stabilize no-profile JSON error envelope |
 | `ISSUE-070-002` | `0.7` | `cross_repo` | `open` | Add favorites-to-collection flow |
-
-### P2
-
-| ID | Milestone | Owner | Status | Title |
-|---|---|---|---|---|
-| `ISSUE-040-003` | `0.4` | `cli` | `open` | Decide local draft inventory storage |
