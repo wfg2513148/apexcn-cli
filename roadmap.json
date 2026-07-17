@@ -32,7 +32,7 @@
     "preGeneratedImplementationPlans": false,
     "activeMilestoneLimit": 1,
     "fixedIssuesRemovedFromActiveList": true,
-    "nextMilestoneRequiresManualConfirmation": true,
+    "nextMilestoneRequiresManualConfirmation": false,
     "milestoneCompletionSummary": [
       "enhancedCapabilities",
       "unexpectedProblems",
@@ -69,8 +69,9 @@
       "requiredForEveryMilestone": true,
       "milestoneExecutionMode": "one-codex-goal-per-roadmap-milestone",
       "startsWhen": [
-        "用户手工确认并激活当前 roadmap 里程碑",
-        "主会话为该里程碑创建一个独立 Codex 目标模式并承诺全部验收条件"
+        "上一里程碑完成发布、总结和上下文压缩后自动激活下一个 roadmap 里程碑",
+        "主会话为该里程碑创建一个独立 Codex 目标模式并承诺全部验收条件",
+        "自 0.4 起为每个里程碑新建用户可见的 Codex Desktop 主实施任务，且 cwd 精确等于 builder repository"
       ],
       "excludes": [
         "只读分析或审查",
@@ -92,10 +93,18 @@
   },
   "testingBindings": {
     "builder": {
-      "repository": "/Users/kwang/apexcn-cli"
+      "repository": "/Users/kwang/apexcn-cli",
+      "freshTaskPerMilestone": true,
+      "appliesFromMilestone": "0.4",
+      "threadVisibility": "user-visible-codex-desktop-task",
+      "sessionCwdMustEqualRepository": true,
+      "reusePredecessorTaskAllowed": false
     },
     "validator": {
       "project": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
+      "threadVisibility": "user-visible-codex-desktop-task",
+      "sessionCwdMustEqualProject": true,
+      "hiddenSubagentAllowed": false,
       "model": "gpt-5.6-luna",
       "reasoningEffort": "high",
       "interface": "installed-public-apexcn",
@@ -255,9 +264,9 @@
         "confirmationRef": "user-confirmed-roadmap-2026-07-17"
       },
       "completionReview": {
-        "status": "pending",
+        "status": "approved",
         "summaryEvidenceId": "M020-E-VALIDATOR",
-        "confirmationRef": null
+        "confirmationRef": "user-authorized-continuous-roadmap-2026-07-17"
       },
       "capabilities": [
         {
@@ -598,16 +607,16 @@
       "releaseLine": "0.30.x",
       "title": "社区知识检索",
       "objective": "让用户可靠发现、检索、总结并引用当前社区知识。",
-      "status": "planned",
+      "status": "completed",
       "activationGate": {
-        "status": "waiting",
+        "status": "approved",
         "previousMilestoneId": "0.2",
-        "confirmationRef": null
+        "confirmationRef": "user-authorized-continuous-roadmap-2026-07-17"
       },
       "completionReview": {
-        "status": "not_due",
-        "summaryEvidenceId": null,
-        "confirmationRef": null
+        "status": "approved",
+        "summaryEvidenceId": "M030-E-SUMMARY",
+        "confirmationRef": "user-authorized-continuous-roadmap-2026-07-17"
       },
       "capabilities": [
         {
@@ -627,7 +636,7 @@
             "environment:dev@oci-api-key",
             "server:stable-readonly-retrieval-contract"
           ],
-          "status": "partial",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M030-AC-005",
             "M030-AC-006",
@@ -638,7 +647,10 @@
             "M030-V-LATENCY"
           ],
           "evidenceIds": [
-            "M030-E-LOCAL"
+            "M030-E-LOCAL",
+            "M030-E-SERVER",
+            "M030-E-LIVE",
+            "M030-E-VALIDATOR"
           ]
         },
         {
@@ -659,7 +671,7 @@
             "environment:dev@oci-api-key",
             "server:stable-readonly-retrieval-contract"
           ],
-          "status": "partial",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M030-AC-001",
             "M030-AC-002",
@@ -670,7 +682,10 @@
             "M030-V-LIVE-RETRIEVAL"
           ],
           "evidenceIds": [
-            "M030-E-LOCAL"
+            "M030-E-LOCAL",
+            "M030-E-SERVER",
+            "M030-E-LIVE",
+            "M030-E-VALIDATOR"
           ]
         },
         {
@@ -689,7 +704,7 @@
             "environment:dev@oci-api-key",
             "server:stable-readonly-retrieval-contract"
           ],
-          "status": "not_started",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M030-AC-001",
             "M030-AC-002",
@@ -700,7 +715,10 @@
             "M030-V-LIVE-RETRIEVAL",
             "M030-V-LOW-CONFIDENCE"
           ],
-          "evidenceIds": []
+          "evidenceIds": [
+            "M030-E-LIVE",
+            "M030-E-VALIDATOR"
+          ]
         },
         {
           "id": "M030-CAP-CONFIDENCE",
@@ -718,7 +736,7 @@
             "environment:dev@oci-api-key",
             "server:stable-readonly-retrieval-contract"
           ],
-          "status": "partial",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M030-AC-004"
           ],
@@ -726,7 +744,10 @@
             "M030-V-LOW-CONFIDENCE"
           ],
           "evidenceIds": [
-            "M030-E-LOCAL"
+            "M030-E-LOCAL",
+            "M030-E-SERVER",
+            "M030-E-LIVE",
+            "M030-E-VALIDATOR"
           ]
         }
       ],
@@ -740,8 +761,10 @@
           "target": 50,
           "unit": "questions",
           "measurementMethod": "versioned live-read evaluation dataset",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M030-E-LIVE"
+          ],
           "measurementProfileId": "PROFILE-LIVE-READONLY"
         },
         {
@@ -753,8 +776,10 @@
           "target": 85,
           "unit": "percent",
           "measurementMethod": "dev@oci readonly retrieval evaluation",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M030-E-LIVE"
+          ],
           "measurementProfileId": "PROFILE-LIVE-READONLY"
         },
         {
@@ -766,8 +791,10 @@
           "target": 90,
           "unit": "percent",
           "measurementMethod": "answer-to-reference support mapping",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M030-E-LIVE"
+          ],
           "measurementProfileId": "PROFILE-LIVE-READONLY"
         },
         {
@@ -779,8 +806,10 @@
           "target": 100,
           "unit": "percent",
           "measurementMethod": "independent low-confidence scenario set",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M030-E-LIVE"
+          ],
           "measurementProfileId": "PROFILE-LIVE-READONLY"
         },
         {
@@ -792,8 +821,11 @@
           "target": 0,
           "unit": "records",
           "measurementMethod": "five-page live API traversal",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M030-E-SERVER",
+            "M030-E-LIVE"
+          ],
           "measurementProfileId": "PROFILE-LIVE-READONLY"
         },
         {
@@ -805,8 +837,11 @@
           "target": 5,
           "unit": "seconds",
           "measurementMethod": "recorded dev@oci benchmark",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M030-E-SERVER",
+            "M030-E-LIVE"
+          ],
           "measurementProfileId": "PROFILE-LIVE-READONLY"
         },
         {
@@ -818,8 +853,11 @@
           "target": 15,
           "unit": "seconds",
           "measurementMethod": "recorded dev@oci benchmark",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M030-E-SERVER",
+            "M030-E-LIVE"
+          ],
           "measurementProfileId": "PROFILE-LIVE-READONLY"
         },
         {
@@ -831,8 +869,10 @@
           "target": 90,
           "unit": "percent",
           "measurementMethod": "fixed independent validator report with at least 40 tasks",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M030-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-LIVE-READONLY"
         },
         {
@@ -844,8 +884,10 @@
           "target": 100,
           "unit": "percent",
           "measurementMethod": "sampled public JSON result contract",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M030-E-LIVE"
+          ],
           "measurementProfileId": "PROFILE-LIVE-READONLY"
         }
       ],
@@ -882,6 +924,32 @@
           "path": "test/content.test.ts",
           "description": "Existing local search, topic, ask, and research behavior tests.",
           "commit": "6bd185d"
+        },
+        {
+          "id": "M030-E-SERVER",
+          "kind": "server_readiness",
+          "path": "/Users/kwang/apexcn-forums/output/m030-rag-repair/dev107-20260717T223507.json",
+          "description": "dev@oci API contract 0.4.2-candidate with persistent pending-index compensation, LDAP topic 24683 indexed and cited, five grounded ask cases at client P95 11.640 seconds, explicit NO_DIRECT_EVIDENCE fallback, and zero production deployment.",
+          "commit": "c233ab1,d538abf,ea3c7ee,6423944"
+        },
+        {
+          "id": "M030-E-LIVE",
+          "kind": "live_readonly_evaluation",
+          "path": "eval/retrieval/results/v0.30.0-dev.json",
+          "description": "Versioned 60-question dev@oci readonly evaluation: Top-5 hit 100%, ask and research citation coverage 100%, unanswerable behavior 100%, provenance 100%, zero cursor duplicate or missing records, search P95 0.601 seconds, ask P95 12.911 seconds, and research P95 1.265 seconds.",
+          "sha256": "b018545ba072b4009ca33eb243df5e85d57834c638fd993b3a15098558b6c7c7"
+        },
+        {
+          "id": "M030-E-VALIDATOR",
+          "kind": "independent_validator",
+          "path": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/reports/milestone-0.3-final-validator-20260717T153825Z.json",
+          "description": "Fresh apexcn-cli-test task 019f70b5-8238-7dc1-945a-e1835a28b7c8 executed 50 first-attempt readonly/local scenarios against candidate df1b9a4a984930e0c6a48bda0a033ef4a59ae947328d3d5efa5ff9ab4e82d0d0: effective fixed 35/35, dynamic 13/13, A/B/C and M44 passed, no write API, and zero product issues.",
+          "sha256": "61ca0271f4ff5f0c296ad520809f2178b953664bbe9637dff07a9c0c64424d91"
+        },
+        {
+          "id": "M030-E-SUMMARY",
+          "kind": "milestone_summary",
+          "description": "0.3 delivered grounded search, topic, research, ask provenance, live readonly evaluation, and low-confidence refusal. Unexpected work included ORDS vector-index drift and pending jobs, LDAP source recovery, validator NDJSON/setup defects, false assumptions about stable nonzero JSON errors, collection subcommand JSON propagation, and blank research input. Future milestones must preflight fresh harnesses, preserve immutable first-attempt evidence, adjudicate harness defects without reruns, validate locally before network calls, and route server contract gaps to apexcn-forums."
         }
       ],
       "userOutcome": "用户能够基于真实社区数据检索、引用、拒答并判断答案来源。",
@@ -3014,13 +3082,13 @@
         "0.3"
       ],
       "requiredAt": "activation",
-      "status": "unverified",
+      "status": "ready",
       "resolutionThreadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
       "readinessEvidence": {
-        "apiContractVersion": null,
-        "providerCommit": null,
-        "fixturePath": null,
-        "liveSmokeArtifact": null
+        "apiContractVersion": "0.4.2-candidate",
+        "providerCommit": "c233ab1,d538abf",
+        "fixturePath": "/Users/kwang/apexcn-forums/docs/api/apexcn-cli-v1.openapi.yaml",
+        "liveSmokeArtifact": "/Users/kwang/apexcn-forums/output/m030-ask-evidence/dev107-20260717T205406.json"
       }
     },
     {
@@ -3031,12 +3099,12 @@
         "0.6"
       ],
       "requiredAt": "activation",
-      "status": "unverified",
+      "status": "ready",
       "resolutionThreadId": null,
       "readinessEvidence": {
-        "environmentRef": null,
-        "accessAuditArtifact": null,
-        "smokeArtifact": null
+        "environmentRef": "dev@oci:dev-eval-readonly",
+        "accessAuditArtifact": "/Users/kwang/apexcn-forums/output/m030-readiness/dev107-4200-20260717T204000.json",
+        "smokeArtifact": "/Users/kwang/apexcn-forums/output/m030-search/dev107-4200-safe-20260717T203000.json"
       }
     },
     {

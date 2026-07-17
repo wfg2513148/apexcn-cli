@@ -22,12 +22,14 @@ function validationInput(roadmap = loadJson("roadmap.json"), issues = loadJson("
 
 describe("roadmap contract", () => {
   test("passes the repository roadmap quality gate", () => {
+    const roadmap = loadJson("roadmap.json");
+    const issues = loadJson("issues.json");
     const output = execFileSync("node", ["scripts/check-roadmap.mjs"], {
       cwd: repoRoot,
       encoding: "utf8"
     });
 
-    expect(output).toContain("Roadmap check passed for 8 milestones and 4 active issues");
+    expect(output).toContain(`Roadmap check passed for ${roadmap.milestones.length} milestones and ${issues.issues.length} active issues`);
   });
 
   test("defines differentiated measurable stages from 0.2 through 0.9", () => {
@@ -79,7 +81,7 @@ describe("roadmap contract", () => {
       planningInputs: ["roadmap.json", "issues.json"],
       preGeneratedImplementationPlans: false,
       activeMilestoneLimit: 1,
-      nextMilestoneRequiresManualConfirmation: true
+      nextMilestoneRequiresManualConfirmation: false
     }));
     expect(roadmap.testingBindings.validator).toEqual(expect.objectContaining({
       threadStrategy: "fresh-task-per-validation-round",
@@ -169,15 +171,16 @@ describe("roadmap contract", () => {
     }));
   });
 
-  test("blocks a next milestone before manual approval", () => {
+  test("blocks a next milestone before predecessor completion approval", () => {
     const roadmap = loadJson("roadmap.json");
     const issues = loadJson("issues.json");
+    roadmap.milestones[0].completionReview.status = "pending";
     roadmap.milestones[1].status = "in_progress";
     roadmap.milestones[1].activationGate.status = "approved";
 
     const problems = validateRoadmap(validationInput(roadmap, issues));
 
-    expect(problems).toContain("0.3 cannot start before 0.2 manual approval");
+    expect(problems).toContain("0.3 cannot start before 0.2 completion approval");
   });
 
   test("rejects validated capabilities without independent evidence", () => {
@@ -228,12 +231,27 @@ describe("roadmap contract", () => {
     expect(problems).toContain("validator binding must not pin a reusable threadId");
   });
 
+  test("rejects hidden validator agents or a session outside the validator project", () => {
+    const roadmap = loadJson("roadmap.json");
+    const issues = loadJson("issues.json");
+    roadmap.testingBindings.validator.hiddenSubagentAllowed = true;
+    roadmap.testingBindings.validator.sessionCwdMustEqualProject = false;
+
+    const problems = validateRoadmap(validationInput(roadmap, issues));
+
+    expect(problems).toContain("hidden subagents cannot satisfy validator rounds");
+    expect(problems).toContain("validator session cwd must equal the validator project");
+  });
+
   test("blocks milestone activation on unready structured dependencies", () => {
     const roadmap = loadJson("roadmap.json");
     const issues = loadJson("issues.json");
     roadmap.milestones[0].completionReview.status = "approved";
     roadmap.milestones[1].status = "in_progress";
     roadmap.milestones[1].activationGate.status = "approved";
+    roadmap.dependencyRegistry.find(
+      (dependency: { id: string }) => dependency.id === "environment:dev@oci-api-key"
+    ).status = "unverified";
 
     const problems = validateRoadmap(validationInput(roadmap, issues));
 

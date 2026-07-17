@@ -51,6 +51,8 @@
 
 策略：宽进严出。服务端额外字段允许存在，关键字段必须可验证。
 
+`research` 的 additive contract 包含 `searchAttempts[]`。原始自然语言短语无结果时，每次有限查询扩展都记录 `keyword`、`resultCount` 和 `requestId`；最终采用的关键词写入 `query.selectedKeyword`，完整候选顺序写入 `query.attemptedKeywords`。这些 requestId 同时汇总到顶层 `provenance.requestIds`。
+
 每个 `supportsJson: true` 的公开命令都必须在 manifest 中提供非空 `jsonContract`，并指向已存在的契约测试文件。不支持 JSON 的命令必须返回 `jsonContract: null`，避免能力声明与真实选项不一致。
 
 ## Error Envelope

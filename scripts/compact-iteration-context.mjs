@@ -103,7 +103,7 @@ export function createIterationContext({
       instructions: [
         "Re-read current repository state before planning.",
         "Create only a just-in-time plan for the active milestone.",
-        "Do not start the next milestone without explicit user confirmation."
+        "After release closure, automatically activate only the next planned milestone and create its dedicated goal."
       ]
     }
   });

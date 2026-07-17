@@ -18,14 +18,14 @@
 
 - 每个主会话开始时必须读取 `roadmap.json` 与 `issues.json`。
 - 只为当前里程碑生成即时执行计划，不预制后续里程碑实施计划。
-- 每个经用户确认激活的里程碑必须启动一个独立 Codex 目标模式，直至全部验收、独立复验、问题清零和发版闭环完成。
+- 每个里程碑必须启动一个独立 Codex 目标模式，直至全部验收、独立复验、问题清零和发版闭环完成。
 - 每轮验证必须在固定测试项目中新建独立小白任务线程；主会话按当前里程碑和实际风险动态下发结构化测试范围。
 - 固定基线套件与动态里程碑/逆向探索套件分开执行和计分，旧线程只作为历史证据。
 - `issues.json` 只接收独立 validator 线程实际观察且证据完整的问题；规划缺口进入 `readinessRisks`。
 - 同一时间最多一个里程碑为 `in_progress`。
 - 修复后的问题从活动 `issues.json` 删除，首次失败证据保留在验证历史。
-- 完成里程碑后必须停下，归纳增强能力、意外问题、根因、规避措施和下一阶段预期。
-- 只有用户手工确认后，下一里程碑才可进入 `in_progress`。
+- 完成里程碑后必须归纳增强能力、意外问题、根因、规避措施和下一阶段预期。
+- 发布验证和上下文压缩完成后，自动批准完成审查并激活下一个里程碑，无需再次等待用户确认。
 - 每次目标模式小版本完成后必须 bump patch、通过本地门禁、提交、推送、打 tag，并直接创建 GitHub Release。
 - 发版提交以 `[skip ci]` 结尾；不得触发 GitHub Actions，正常发版使用 `gh release create`。
 - 发布验证后必须生成不超过 12 KiB 的 `reports/iteration-context.json`，并结束当前目标。
@@ -45,8 +45,8 @@
 
 | Stage | Release line | Theme | Status | Active issues | Activation | Completion review |
 |---|---|---|---|---:|---|---|
-| `0.2` | `0.20.x` | 可信赖的 CLI 基础 | `completed` | 0 | `approved` | `pending` |
-| `0.3` | `0.30.x` | 社区知识检索 | `planned` | 1 | `waiting` | `not_due` |
+| `0.2` | `0.20.x` | 可信赖的 CLI 基础 | `completed` | 0 | `approved` | `approved` |
+| `0.3` | `0.30.x` | 社区知识检索 | `completed` | 0 | `approved` | `approved` |
 | `0.4` | `0.40.x` | 个人工作台与能力协商 | `planned` | 2 | `waiting` | `not_due` |
 | `0.5` | `0.50.x` | AI Agent 只读适配层 | `planned` | 0 | `waiting` | `not_due` |
 | `0.6` | `0.60.x` | 可审计内容操作 | `planned` | 0 | `waiting` | `not_due` |
@@ -93,9 +93,9 @@
 ### 人工交接门禁
 
 - Activation: `approved`
-- Completion review: `pending`
+- Completion review: `approved`
 - 完成后必须总结：增强能力、未预估问题、根因、规避措施、下一阶段目标、量化预期和主要风险。
-- 未获得用户明确确认，不得启动下一里程碑。
+- 发布验证和上下文压缩完成后，自动批准完成审查并启动下一里程碑。
 
 ## 0.3 / 0.30.x: 社区知识检索
 
@@ -109,37 +109,35 @@
 
 | ID | Capability | Status | User value |
 |---|---|---|---|
-| `M030-CAP-RETRIEVAL` | 统一检索模型 | `partial` | 搜索、过滤、cursor、最近主题和主题详情行为一致。 |
-| `M030-CAP-RAG` | 可追溯 ask 与 research | `partial` | 答案具备真实引用、新鲜度、过滤条件和来源。 |
-| `M030-CAP-EVAL` | 真实只读检索评测 | `not_started` | 质量结论来自 dev@oci 真实只读 API，而非仅 fixture 完整性。 |
-| `M030-CAP-CONFIDENCE` | 低置信拒答与缩小范围 | `partial` | 资料不足时不编造答案，并给出可执行的收窄建议。 |
+| `M030-CAP-RETRIEVAL` | 统一检索模型 | `validated` | 搜索、过滤、cursor、最近主题和主题详情行为一致。 |
+| `M030-CAP-RAG` | 可追溯 ask 与 research | `validated` | 答案具备真实引用、新鲜度、过滤条件和来源。 |
+| `M030-CAP-EVAL` | 真实只读检索评测 | `validated` | 质量结论来自 dev@oci 真实只读 API，而非仅 fixture 完整性。 |
+| `M030-CAP-CONFIDENCE` | 低置信拒答与缩小范围 | `validated` | 资料不足时不编造答案，并给出可执行的收窄建议。 |
 
 ### 核心验收
 
 | ID | Status | Metric | Target | Measurement |
 |---|---|---|---|---|
-| `M030-AC-001` | `pending` | 中文真实检索评测问题不少于 50 条。 | `>= 50 questions` | versioned live-read evaluation dataset |
-| `M030-AC-002` | `pending` | Top-5 期望引用命中率至少 85%。 | `>= 85 percent` | dev@oci readonly retrieval evaluation |
-| `M030-AC-003` | `pending` | 引用覆盖率至少 90%。 | `>= 90 percent` | answer-to-reference support mapping |
-| `M030-AC-004` | `pending` | 至少 10 个不可回答问题全部正确说明限制或拒答。 | `= 100 percent` | independent low-confidence scenario set |
-| `M030-AC-005` | `pending` | 连续 5 页 cursor 分页无重复和丢失。 | `= 0 records` | five-page live API traversal |
-| `M030-AC-006` | `pending` | search P95 不超过 5 秒。 | `<= 5 seconds` | recorded dev@oci benchmark |
-| `M030-AC-007` | `pending` | ask/research P95 不超过 15 秒。 | `<= 15 seconds` | recorded dev@oci benchmark |
-| `M030-AC-008` | `pending` | 至少 40 个独立自然语言检索任务首次成功率不低于 90%。 | `>= 90 percent` | fixed independent validator report with at least 40 tasks |
-| `M030-AC-009` | `pending` | 所有结果包含真实 URL、可用 requestId 和来源信息。 | `= 100 percent` | sampled public JSON result contract |
+| `M030-AC-001` | `pass` | 中文真实检索评测问题不少于 50 条。 | `>= 50 questions` | versioned live-read evaluation dataset |
+| `M030-AC-002` | `pass` | Top-5 期望引用命中率至少 85%。 | `>= 85 percent` | dev@oci readonly retrieval evaluation |
+| `M030-AC-003` | `pass` | 引用覆盖率至少 90%。 | `>= 90 percent` | answer-to-reference support mapping |
+| `M030-AC-004` | `pass` | 至少 10 个不可回答问题全部正确说明限制或拒答。 | `= 100 percent` | independent low-confidence scenario set |
+| `M030-AC-005` | `pass` | 连续 5 页 cursor 分页无重复和丢失。 | `= 0 records` | five-page live API traversal |
+| `M030-AC-006` | `pass` | search P95 不超过 5 秒。 | `<= 5 seconds` | recorded dev@oci benchmark |
+| `M030-AC-007` | `pass` | ask/research P95 不超过 15 秒。 | `<= 15 seconds` | recorded dev@oci benchmark |
+| `M030-AC-008` | `pass` | 至少 40 个独立自然语言检索任务首次成功率不低于 90%。 | `>= 90 percent` | fixed independent validator report with at least 40 tasks |
+| `M030-AC-009` | `pass` | 所有结果包含真实 URL、可用 requestId 和来源信息。 | `= 100 percent` | sampled public JSON result contract |
 
 ### 活动问题
 
-| ID | Priority | Owner | Status | Title |
-|---|---|---|---|---|
-| `ISSUE-030-001` | `P1` | `cross_repo` | `open` | Add real readonly retrieval evaluation |
+无。
 
 ### 人工交接门禁
 
-- Activation: `waiting`
-- Completion review: `not_due`
+- Activation: `approved`
+- Completion review: `approved`
 - 完成后必须总结：增强能力、未预估问题、根因、规避措施、下一阶段目标、量化预期和主要风险。
-- 未获得用户明确确认，不得启动下一里程碑。
+- 发布验证和上下文压缩完成后，自动批准完成审查并启动下一里程碑。
 
 ## 0.4 / 0.40.x: 个人工作台与能力协商
 
@@ -184,7 +182,7 @@
 - Activation: `waiting`
 - Completion review: `not_due`
 - 完成后必须总结：增强能力、未预估问题、根因、规避措施、下一阶段目标、量化预期和主要风险。
-- 未获得用户明确确认，不得启动下一里程碑。
+- 发布验证和上下文压缩完成后，自动批准完成审查并启动下一里程碑。
 
 ## 0.5 / 0.50.x: AI Agent 只读适配层
 
@@ -225,7 +223,7 @@
 - Activation: `waiting`
 - Completion review: `not_due`
 - 完成后必须总结：增强能力、未预估问题、根因、规避措施、下一阶段目标、量化预期和主要风险。
-- 未获得用户明确确认，不得启动下一里程碑。
+- 发布验证和上下文压缩完成后，自动批准完成审查并启动下一里程碑。
 
 ## 0.6 / 0.60.x: 可审计内容操作
 
@@ -271,7 +269,7 @@
 - Activation: `waiting`
 - Completion review: `not_due`
 - 完成后必须总结：增强能力、未预估问题、根因、规避措施、下一阶段目标、量化预期和主要风险。
-- 未获得用户明确确认，不得启动下一里程碑。
+- 发布验证和上下文压缩完成后，自动批准完成审查并启动下一里程碑。
 
 ## 0.7 / 0.70.x: 本地知识资产与只读自动化
 
@@ -316,7 +314,7 @@
 - Activation: `waiting`
 - Completion review: `not_due`
 - 完成后必须总结：增强能力、未预估问题、根因、规避措施、下一阶段目标、量化预期和主要风险。
-- 未获得用户明确确认，不得启动下一里程碑。
+- 发布验证和上下文压缩完成后，自动批准完成审查并启动下一里程碑。
 
 ## 0.8 / 0.80.x: 组织治理与生命周期资格化
 
@@ -357,7 +355,7 @@
 - Activation: `waiting`
 - Completion review: `not_due`
 - 完成后必须总结：增强能力、未预估问题、根因、规避措施、下一阶段目标、量化预期和主要风险。
-- 未获得用户明确确认，不得启动下一里程碑。
+- 发布验证和上下文压缩完成后，自动批准完成审查并启动下一里程碑。
 
 ## 0.9 / 0.90.x: GA 候选版本
 
@@ -401,7 +399,7 @@
 - Activation: `waiting`
 - Completion review: `not_due`
 - 完成后必须总结：增强能力、未预估问题、根因、规避措施、下一阶段目标、量化预期和主要风险。
-- 未获得用户明确确认，不得启动下一里程碑。
+- 发布验证和上下文压缩完成后，自动批准完成审查并启动下一里程碑。
 
 ## 全局完成门禁
 
@@ -416,7 +414,7 @@
 
 ## 依赖与就绪风险
 
-- 结构化依赖：13 项；未就绪：13 项。
+- 结构化依赖：13 项；未就绪：11 项。
 - 就绪风险：11 项；开放：10 项。
 
 ## 非目标

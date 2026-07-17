@@ -231,7 +231,7 @@ apexcn research "REST API" --limit 3 --json
 apexcn research "ORDS" --category-id 4 --from-date 2026-01-01 --format text
 ```
 
-`--limit` 支持 1 到 10，默认 3。JSON 输出固定包含 `query`、`items`、`topics`、`links`、`requestIds` 和 `errors`。`links` 会按 topic id 或 URL 去重，并在后端返回时保留 `createdDate`、`updatedDate` 和 `originalUrl`。单个帖子抓取失败时，命令仍输出已完成的研究包并把失败写入 `errors`，同时返回非零退出码。
+`--limit` 支持 1 到 10，默认 3。JSON 输出固定包含 `query`、`searchAttempts`、`items`、`topics`、`links`、`requestIds`、`provenance` 和 `errors`。原始自然语言短语无结果时，命令最多使用 3 个可解释的技术关键词做只读重试；`query.attemptedKeywords`、`query.selectedKeyword` 和 `searchAttempts` 保留每次查询及 requestId。`links` 会按 topic id 或 URL 去重，并在后端返回时保留 `createdDate`、`updatedDate` 和 `originalUrl`。单个帖子抓取失败时，命令仍输出已完成的研究包并把失败写入 `errors`，同时返回非零退出码。
 
 ## collection
 

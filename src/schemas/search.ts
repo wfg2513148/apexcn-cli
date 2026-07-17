@@ -1,7 +1,8 @@
-import { assertArray, assertRecord, assertString, isRecord } from "./common.js";
+import { assertArray, assertReadProvenance, assertRecord, assertString, isRecord } from "./common.js";
 
 export function assertSearchResponse(value: unknown): asserts value is Record<string, unknown> {
   assertRecord(value, "search response");
+  assertReadProvenance(value, "search-results");
   if (value.items !== undefined) {
     assertArray(value.items, "items");
     for (const [index, item] of value.items.entries()) {

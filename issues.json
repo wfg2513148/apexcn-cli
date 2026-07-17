@@ -5,57 +5,6 @@
   "activeOnly": true,
   "issues": [
     {
-      "id": "ISSUE-030-001",
-      "kind": "capability_gap",
-      "title": "Add real readonly retrieval evaluation",
-      "priority": "P1",
-      "status": "open",
-      "owner": "cross_repo",
-      "milestoneId": "0.3",
-      "blockingMilestones": [
-        "0.3"
-      ],
-      "rootCauseStatus": "known",
-      "description": "The current offline fixture report does not measure live retrieval quality or real reference hit rate.",
-      "acceptanceCriterionIds": [
-        "M030-AC-001",
-        "M030-AC-002",
-        "M030-AC-003",
-        "M030-AC-004"
-      ],
-      "dependencies": [
-        "environment:dev@oci-api-key",
-        "server:stable-readonly-retrieval-contract"
-      ],
-      "serverThreadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
-      "serverCommit": null,
-      "apiContractVersion": null,
-      "cliCommit": null,
-      "validatorRound": "historical-novice-audit-2026-07-06",
-      "source": {
-        "type": "independent-validator-thread",
-        "threadId": "019f35e1-9185-7a71-b393-fbae369e4a24",
-        "assignmentRef": "historical-novice-audit-2026-07-06",
-        "report": "apexcn-cli-novice-audit-2026-07-06.md",
-        "findingRefs": [
-          "Q025",
-          "Q093",
-          "High-Priority Gaps 1-3"
-        ],
-        "observedCliVersion": "0.18.8",
-        "persona": "novice",
-        "firstAttemptEvidencePreserved": true,
-        "actualOutputSummary": "黑盒测试发现离线报告无法证明实时检索质量，部分请求出现 ORDS 404 或缺少引用。",
-        "expectedUserOutcome": "真实只读检索可稳定返回可验证来源，并以真实查询集报告质量。",
-        "responsibilityAssessment": "cross_repo",
-        "scenarioOrExplorationRef": [
-          "Q025",
-          "Q093",
-          "High-Priority Gaps 1-3"
-        ]
-      }
-    },
-    {
       "id": "ISSUE-040-001",
       "kind": "server_capability_gap",
       "title": "Expose notifications, rules, and privacy contracts",

@@ -1,7 +1,8 @@
-import { assertRecord, assertString } from "./common.js";
+import { assertReadProvenance, assertRecord, assertString } from "./common.js";
 
 export function assertAskResponse(value: unknown): asserts value is Record<string, unknown> {
   assertRecord(value, "ask response");
+  assertReadProvenance(value, "ask-response");
   if (value.answer !== undefined) {
     assertString(value.answer, "answer");
   }

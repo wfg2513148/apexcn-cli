@@ -337,7 +337,31 @@ describe("collection commands", () => {
     await program.parseAsync(["node", "apexcn", "collection", "query", "REST", "--dir", outputDir, "--json"]);
 
     expect(stdout.join("")).toBe("");
-    expect(stderr.join("")).toContain("index.jsonl line 1 has an invalid schema");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "validation",
+        message: "Invalid collection index: index.jsonl line 1 has an invalid schema"
+      }
+    });
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("collection query emits a JSON error when the index is missing", async () => {
+    const outputDir = await tempPath("query-missing-index");
+    const { program, stdout, stderr } = await configuredProgram();
+    process.exitCode = undefined;
+
+    await program.parseAsync(["node", "apexcn", "collection", "query", "REST", "--dir", outputDir, "--json"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "validation",
+        message: expect.stringContaining("Invalid collection index: ENOENT")
+      }
+    });
     expect(process.exitCode).toBe(1);
   });
 });

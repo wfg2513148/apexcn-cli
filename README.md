@@ -122,9 +122,11 @@ apexcn stats category --json
 - Terminal Manual (English)：[docs/cli-manual.en.md](docs/cli-manual.en.md)
 - 快速说明：[docs/quickstart.md](docs/quickstart.md)
 - 产品路线图：[docs/roadmap.md](docs/roadmap.md)
+- 0.30.x 迁移说明：[docs/migration-v0.30.md](docs/migration-v0.30.md)
 - MCP Agent 接入：[docs/mcp.md](docs/mcp.md)
 - MCP 客户端兼容：[docs/mcp-client-compatibility.md](docs/mcp-client-compatibility.md)
 - JSON/API 契约：[docs/api-contract.md](docs/api-contract.md)
+- RAG 与 live readonly 检索质量：[docs/rag-quality.md](docs/rag-quality.md)
 - 安全模型：[docs/security-model.md](docs/security-model.md)
 
 ## AI Agent / MCP

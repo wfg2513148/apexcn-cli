@@ -19,13 +19,37 @@ function fixture(name: string): unknown {
 
 describe("API response contracts", () => {
   test("search ok and empty shapes are accepted", () => {
-    expect(() => assertSearchResponse({ items: [{ id: 1, title: "REST" }], page: { hasMore: false } })).not.toThrow();
-    expect(() => assertSearchResponse({ items: [], page: { hasMore: false } })).not.toThrow();
+    expect(() => assertSearchResponse({
+      kind: "search-results",
+      schemaVersion: 1,
+      items: [{ id: 1, title: "REST" }],
+      page: { hasMore: false },
+      provenance: { requestIds: ["req-search"], sources: [] }
+    })).not.toThrow();
+    expect(() => assertSearchResponse({
+      kind: "search-results",
+      schemaVersion: 1,
+      items: [],
+      page: { hasMore: false },
+      provenance: { requestIds: ["req-empty"], sources: [] }
+    })).not.toThrow();
   });
 
   test("topic and ask shapes validate required stable fields", () => {
-    expect(() => assertTopicResponse({ topic: { id: 1, title: "Topic" }, replies: [] })).not.toThrow();
-    expect(() => assertAskResponse({ answer: "Use ORDS privileges.", references: [{ topicId: 1 }] })).not.toThrow();
+    expect(() => assertTopicResponse({
+      kind: "topic-detail",
+      schemaVersion: 1,
+      topic: { id: 1, title: "Topic" },
+      replies: [],
+      provenance: { requestIds: ["req-topic"], sources: [] }
+    })).not.toThrow();
+    expect(() => assertAskResponse({
+      kind: "ask-response",
+      schemaVersion: 1,
+      answer: "Use ORDS privileges.",
+      references: [{ topicId: 1 }],
+      provenance: { requestIds: ["req-ask"], sources: [] }
+    })).not.toThrow();
   });
 
   test("stable error envelope validates without exposing secrets", () => {
@@ -46,6 +70,13 @@ describe("API response contracts", () => {
     expect(() => assertCollectionQueryResult(fixture("collection-query.ok.json"))).not.toThrow();
     expect(() => assertMcpToolsManifest(fixture("mcp-tools.ok.json"))).not.toThrow();
     expect(() => assertApexcnErrorBody(fixture("error.http-401.json"))).not.toThrow();
+  });
+
+  test("rejects malformed research query expansion provenance", () => {
+    const value = fixture("research.ok.json") as Record<string, unknown>;
+    value.searchAttempts = [{ keyword: "ORDS", resultCount: "one" }];
+
+    expect(() => assertResearchBundle(value)).toThrow("searchAttempts[0].resultCount must be a number");
   });
 
   test("contract validators reject missing stable fields", () => {

@@ -256,22 +256,47 @@ export function createResearchCommand(options: ApiCommandOptions): Command {
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
+      if (keyword.trim().length === 0) {
+        printError(options, {
+          type: "validation",
+          code: "INVALID_ARGUMENT",
+          message: "Research keyword must not be blank.",
+          exitCode: 1
+        }, undefined, commandOptions.json);
+        process.exitCode = 1;
+        return;
+      }
       if (!validateSearchDateRange(options, commandOptions.fromDate, commandOptions.toDate, commandOptions)) {
         return;
       }
       const normalizedKeyword = normalizeSearchKeyword(keyword);
       await runApi(options, commandOptions, async (session) => {
         const limit = commandOptions.limit ?? commandOptions.topK ?? 3;
-        const search = await requestJson(session.baseUrl, "/api/v1/search", {
-          token: session.token,
-          query: {
-            keyword: normalizedKeyword,
-            pageSize: limit,
-            categoryId: commandOptions.categoryId,
-            fromDate: commandOptions.fromDate,
-            toDate: commandOptions.toDate
+        const searchAttempts = [];
+        let search: unknown;
+        let selectedKeyword = normalizedKeyword;
+        for (const candidate of researchQueryCandidates(normalizedKeyword)) {
+          const candidateResult = await requestJson(session.baseUrl, "/api/v1/search", {
+            token: session.token,
+            query: {
+              keyword: candidate,
+              pageSize: limit,
+              categoryId: commandOptions.categoryId,
+              fromDate: commandOptions.fromDate,
+              toDate: commandOptions.toDate
+            }
+          });
+          search = candidateResult;
+          selectedKeyword = candidate;
+          searchAttempts.push({
+            keyword: candidate,
+            resultCount: itemsFromData(candidateResult).length,
+            requestId: isRecord(candidateResult) ? candidateResult.requestId : undefined
+          });
+          if (itemsFromData(candidateResult).length > 0) {
+            break;
           }
-        });
+        }
         const items = itemsFromData(search).slice(0, limit);
         const topics = [];
         const topicRequestIds = [];
@@ -290,24 +315,33 @@ export function createResearchCommand(options: ApiCommandOptions): Command {
             }
           }
         }
-        const data = {
+        const links = researchLinks(items, topics);
+        const data = withReadProvenance({
+          kind: "research-bundle",
+          schemaVersion: 1,
           query: compactBody({
             keyword,
             normalizedKeyword: normalizedKeyword === keyword ? undefined : normalizedKeyword,
+            selectedKeyword: selectedKeyword === normalizedKeyword ? undefined : selectedKeyword,
+            attemptedKeywords: searchAttempts.length > 1 ? searchAttempts.map((attempt) => attempt.keyword) : undefined,
             limit,
             categoryId: commandOptions.categoryId,
             fromDate: commandOptions.fromDate,
             toDate: commandOptions.toDate
           }),
+          searchAttempts,
           items,
           topics,
-          links: researchLinks(items, topics),
+          links,
+          sources: links,
           requestIds: {
             search: isRecord(search) ? search.requestId : undefined,
             topics: topicRequestIds
           },
-          errors
-        };
+          errors,
+          answerable: items.length > 0,
+          fallback: items.length === 0 ? retrievalFallback(keyword) : undefined
+        }, "research-bundle", links);
         if (errors.length > 0) {
           process.exitCode = 1;
         }
@@ -336,7 +370,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
         token: session.token,
         query: topicFilterQuery(commandOptions)
       });
-      printData(options, data, outputFormat(commandOptions), formatTopicListText);
+      printData(options, withReadProvenance(data, "topic-list", itemsFromData(data)), outputFormat(commandOptions), formatTopicListText);
     });
   });
 
@@ -359,7 +393,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
       }
       await runApi(options, commandOptions, async (session) => {
         const recent = await recentTopics(session, commandOptions);
-        printData(options, recent, outputFormat(commandOptions), formatRecentTopicsText);
+        printData(options, withReadProvenance(recent, "topic-recent", itemsFromData(recent)), outputFormat(commandOptions), formatRecentTopicsText);
       });
     });
 
@@ -374,7 +408,8 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
       }
       await runApi(options, commandOptions, async (session) => {
         const data = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
-        printData(options, data, outputFormat(commandOptions), formatTopicText);
+        const topic = topicFromData(data);
+        printData(options, withReadProvenance(data, "topic-detail", topic ? [topic] : []), outputFormat(commandOptions), formatTopicText);
       });
     });
 
@@ -691,7 +726,7 @@ export function createAskCommand(options: ApiCommandOptions): Command {
         return;
       }
       if (!commandOptions.context && isContextDependentAskQuestion(question)) {
-        printData(options, askNeedsContextFallback(question), outputFormat(commandOptions), formatAskText);
+        printData(options, withReadProvenance(askNeedsContextFallback(question), "ask-response"), outputFormat(commandOptions), formatAskText);
         return;
       }
       await runApi(options, commandOptions, async (session) => {
@@ -716,7 +751,9 @@ export function createAskCommand(options: ApiCommandOptions): Command {
             throw error;
           }
         }
-        printData(options, enrichAskReferences(data, apiQuestion), outputFormat(commandOptions), formatAskText);
+        const enriched = enrichAskReferences(data, apiQuestion);
+        const sources = isRecord(enriched) ? sourcesFromData(enriched) : [];
+        printData(options, withReadProvenance(enriched, "ask-response", sources), outputFormat(commandOptions), formatAskText);
       });
     });
 }
@@ -1100,6 +1137,7 @@ function formatResearchText(data: unknown): string {
   const keyword = fieldText(data.query.keyword);
   const topics = data.topics.filter(isRecord);
   const errors = Array.isArray(data.errors) ? data.errors.filter(isRecord) : [];
+  const fallback = isRecord(data.fallback) ? data.fallback : undefined;
   const sections = topics.map((topic, index) => lines([
     `${index + 1}. ${fieldText(topic.title ?? topic.topicTitle ?? `topic ${index + 1}`)}`,
     line("URL", topic.url ?? topic.threadUrl),
@@ -1110,6 +1148,10 @@ function formatResearchText(data: unknown): string {
   return lines([
     keyword ? `Research: ${keyword}` : "Research",
     `Topics: ${topics.length}`,
+    fallback ? blockLine("Limitations", fallback.message) : undefined,
+    fallback && Array.isArray(fallback.suggestedCommands)
+      ? `Suggested commands:\n${textList(fallback.suggestedCommands)}`
+      : undefined,
     ...sections,
     errorLines.length > 0 ? "Errors:" : undefined,
     ...errorLines
@@ -1130,15 +1172,26 @@ function searchOutput(data: unknown, originalKeyword: string, normalizedKeyword:
     })
   };
   if (itemsFromData(data).length === 0) {
-    return {
+    return withReadProvenance({
       ...output,
       emptyResult: emptySearchResult(originalKeyword, normalizedKeyword)
-    };
+    }, "search-results");
   }
-  if (originalKeyword === normalizedKeyword) {
-    return data;
-  }
-  return output;
+  return withReadProvenance(
+    originalKeyword === normalizedKeyword ? data : output,
+    "search-results",
+    itemsFromData(data)
+  );
+}
+
+function retrievalFallback(query: string): Record<string, unknown> {
+  const suggestedQueries = researchQueryCandidates(query);
+  return {
+    reason: "no-trusted-references",
+    message: "没有找到可引用的社区资料。请缩短或改写关键词，移除过滤条件后再试。",
+    suggestedQueries,
+    suggestedCommands: askSuggestedCommands(suggestedQueries)
+  };
 }
 
 function emptySearchResult(originalKeyword: string, normalizedKeyword: string): Record<string, unknown> {
@@ -1396,13 +1449,15 @@ function normalizeAskResponse(data: Record<string, unknown>): Record<string, unk
   }
   const inner = data.data;
   return compactBody({
-    status: data.status,
-    message: data.message,
     ...inner,
-    answer: inner.answer,
-    references: Array.isArray(inner.references) ? inner.references : undefined,
-    requestId: inner.requestId ?? inner.request_id ?? data.requestId ?? data.request_id,
-    requestUrl: inner.requestUrl ?? inner.request_url
+    ...data,
+    data: undefined,
+    answer: data.answer ?? inner.answer,
+    references: Array.isArray(data.references)
+      ? data.references
+      : Array.isArray(inner.references) ? inner.references : undefined,
+    requestId: data.requestId ?? data.request_id ?? inner.requestId ?? inner.request_id,
+    requestUrl: data.requestUrl ?? data.request_url ?? inner.requestUrl ?? inner.request_url
   });
 }
 
@@ -1566,13 +1621,21 @@ function textList(value: unknown): string {
 
 function enrichAskReference(source: Record<string, unknown>): Record<string, unknown> {
   const topicId = topicIdFromAskReference(source);
-  const topicUrl = source.url ?? source.threadUrl ?? (topicId === undefined ? undefined : `https://oracleapex.cn/t/${topicId}`);
+  const topicUrl = firstAbsoluteUrl(source.canonicalUrl, source.threadUrl)
+    ?? (topicId === undefined ? undefined : `https://oracleapex.cn/t/${topicId}`)
+    ?? firstAbsoluteUrl(source.url, source.source_url);
   return compactBody({
     ...source,
     url: topicUrl,
-    threadUrl: source.threadUrl ?? topicUrl,
+    threadUrl: firstAbsoluteUrl(source.threadUrl) ?? topicUrl,
     originalUrl: source.originalUrl ?? source.source_url
   });
+}
+
+function firstAbsoluteUrl(...values: unknown[]): string | undefined {
+  return values
+    .map(fieldText)
+    .find((value) => /^https?:\/\//i.test(value));
 }
 
 function topicIdFromAskReference(source: Record<string, unknown>): number | undefined {
@@ -1628,6 +1691,68 @@ function researchLinks(items: Array<Record<string, unknown>>, topics: Array<Reco
     merged.set(key, compactBody({ ...merged.get(key), ...link }));
   }
   return [...merged.values()];
+}
+
+function withReadProvenance(
+  data: unknown,
+  kind: string,
+  sourceRecords: Array<Record<string, unknown>> = []
+): unknown {
+  if (!isRecord(data)) {
+    return data;
+  }
+  const requestIds = readRequestIds(data);
+  const sources = sourceRecords
+    .map(readSourceSummary)
+    .filter((source) => Object.keys(source).length > 0);
+  return {
+    ...data,
+    kind: typeof data.kind === "string" ? data.kind : kind,
+    schemaVersion: typeof data.schemaVersion === "number" ? data.schemaVersion : 1,
+    provenance: {
+      requestIds,
+      sources
+    }
+  };
+}
+
+function readRequestIds(value: unknown): string[] {
+  const requestIds = new Set<string>();
+  const visit = (entry: unknown, key?: string, insideRequestIds = false): void => {
+    const isRequestIdBranch = insideRequestIds || Boolean(key && /^requestIds?$/i.test(key));
+    if (typeof entry === "string" && isRequestIdBranch && entry.trim()) {
+      requestIds.add(entry);
+      return;
+    }
+    if (Array.isArray(entry)) {
+      for (const item of entry) {
+        visit(item, key, isRequestIdBranch);
+      }
+      return;
+    }
+    if (!isRecord(entry)) {
+      return;
+    }
+    for (const [childKey, child] of Object.entries(entry)) {
+      visit(child, childKey, isRequestIdBranch);
+    }
+  };
+  visit(value);
+  return [...requestIds];
+}
+
+function readSourceSummary(source: Record<string, unknown>): Record<string, unknown> {
+  const topicId = topicIdFromAskReference(source);
+  return compactBody({
+    id: source.id ?? source.topicId ?? source.threadId ?? topicId,
+    title: source.title ?? source.topicTitle ?? source.card_title,
+    url: source.canonicalUrl ?? source.threadUrl ?? source.url,
+    originalUrl: source.originalUrl ?? source.source_url,
+    sourceDomain: source.sourceDomain,
+    sourceType: source.sourceType,
+    contentType: source.contentType,
+    tags: source.tags
+  });
 }
 
 function researchTopicFromData(data: unknown, sourceItemIndex: number): Record<string, unknown> {
@@ -1864,6 +1989,29 @@ function isOnOrAfter(value: unknown, since: Date): boolean {
 
 function normalizeSearchKeyword(keyword: string): string {
   return keyword.replace(/\bAPEX\s*Lang\b/gi, "ApexLang");
+}
+
+function researchQueryCandidates(keyword: string): string[] {
+  const normalized = normalizeSearchKeyword(keyword).replace(/\s+/g, " ").trim();
+  const candidates = [normalized];
+  const technicalPatterns = [
+    /\bREST\s+API\b/i,
+    /\bInteractive\s+Grid\b/i,
+    /\bWeb\s+Credential\b/i,
+    /\bJSON_TABLE\b/i,
+    /\bAPEX_MAIL\b/i,
+    /\bOAuth(?:\s*2(?:\.0)?)?\b/i,
+    /\bORDS\b/i,
+    /\bApexLang\b/i,
+    /\bPL\/SQL\b/i
+  ];
+  for (const pattern of technicalPatterns) {
+    const match = normalized.match(pattern)?.[0];
+    if (match) {
+      candidates.push(match);
+    }
+  }
+  return Array.from(new Set(candidates.map((candidate) => candidate.trim()).filter(Boolean))).slice(0, 4);
 }
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {

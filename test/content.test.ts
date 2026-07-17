@@ -544,9 +544,21 @@ describe("content commands", () => {
       page: { limit: 2 },
       requestId: "req-search"
     };
+    const enrichedPayload = {
+      ...payload,
+      kind: "search-results",
+      schemaVersion: 1,
+      provenance: {
+        requestIds: ["req-search"],
+        sources: [
+          { id: 42, title: "APEX topic", url: "https://oracleapex.cn/t/42" },
+          { id: 43, title: "ORDS topic" }
+        ]
+      }
+    };
     const cases = [
-      { argv: ["node", "apexcn", "search", "APEX", "--format", "json"], expected: `${JSON.stringify(payload)}\n` },
-      { argv: ["node", "apexcn", "search", "APEX", "--format", "pretty"], expected: `${JSON.stringify(payload, null, 2)}\n` },
+      { argv: ["node", "apexcn", "search", "APEX", "--format", "json"], expected: `${JSON.stringify(enrichedPayload)}\n` },
+      { argv: ["node", "apexcn", "search", "APEX", "--format", "pretty"], expected: `${JSON.stringify(enrichedPayload, null, 2)}\n` },
       {
         argv: ["node", "apexcn", "search", "APEX", "--format", "text"],
         expected: [
@@ -555,7 +567,7 @@ describe("content commands", () => {
           ""
         ].join("\n")
       },
-      { argv: ["node", "apexcn", "search", "APEX", "--json", "--format", "pretty"], expected: `${JSON.stringify(payload, null, 2)}\n` }
+      { argv: ["node", "apexcn", "search", "APEX", "--json", "--format", "pretty"], expected: `${JSON.stringify(enrichedPayload, null, 2)}\n` }
     ];
 
     for (const item of cases) {
@@ -836,6 +848,16 @@ describe("content commands", () => {
       toDate: "2026-12-31"
     });
     expect(data.items).toHaveLength(2);
+    expect(data).toEqual(expect.objectContaining({
+      kind: "research-bundle",
+      schemaVersion: 1,
+      answerable: true,
+      sources: expect.any(Array),
+      provenance: {
+        requestIds: ["req-search", "req-topic-42", "req-topic-43"],
+        sources: expect.any(Array)
+      }
+    }));
     expect(data.topics.map((topic: { id: number }) => topic.id)).toEqual([42, 43]);
     expect(data.links).toHaveLength(2);
     expect(data.links).toEqual(expect.arrayContaining([
@@ -871,7 +893,93 @@ describe("content commands", () => {
 
     await emptyProgram.program.parseAsync(["node", "apexcn", "research", "REST", "--format", "text"]);
 
-    expect(emptyProgram.stdout.join("")).toBe("Research: REST\nTopics: 0\n");
+    expect(emptyProgram.stdout.join("")).toContain("Research: REST\nTopics: 0\n");
+    expect(emptyProgram.stdout.join("")).toContain("Limitations:\n没有找到可引用的社区资料。");
+    expect(emptyProgram.stdout.join("")).toContain("apexcn search \"REST\" --json");
+  });
+
+  test("research rejects a blank keyword before making a request", async () => {
+    const { program, stdout, stderr, fetch } = await configuredProgram();
+    process.exitCode = undefined;
+
+    await program.parseAsync(["node", "apexcn", "research", "   ", "--json"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "validation",
+        code: "INVALID_ARGUMENT",
+        message: "Research keyword must not be blank.",
+        exitCode: 1
+      }
+    });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("research retries an empty natural-language query with bounded technical keywords", async () => {
+    const { program, stdout, fetch } = await configuredProgram(async (url: string | URL | Request) => {
+      const href = String(url);
+      if (href.includes("keyword=APEX+%E8%B0%83%E7%94%A8+REST+API")) {
+        return Response.json({ items: [], requestId: "req-original" });
+      }
+      if (href.includes("keyword=REST+API")) {
+        return Response.json({
+          items: [{ id: 42, title: "APEX REST API", url: "https://oracleapex.cn/t/42" }],
+          requestId: "req-expanded"
+        });
+      }
+      return Response.json({
+        topic: {
+          id: 42,
+          title: "APEX REST API",
+          url: "https://oracleapex.cn/t/42",
+          content: "Use APEX_WEB_SERVICE."
+        },
+        requestId: "req-topic"
+      });
+    });
+
+    await program.parseAsync(["node", "apexcn", "research", "APEX 调用 REST API", "--limit", "5", "--json"]);
+
+    expect(fetch).toHaveBeenCalledTimes(3);
+    const data = JSON.parse(stdout.join(""));
+    expect(data.query).toEqual({
+      keyword: "APEX 调用 REST API",
+      selectedKeyword: "REST API",
+      attemptedKeywords: ["APEX 调用 REST API", "REST API"],
+      limit: 5
+    });
+    expect(data.searchAttempts).toEqual([
+      { keyword: "APEX 调用 REST API", resultCount: 0, requestId: "req-original" },
+      { keyword: "REST API", resultCount: 1, requestId: "req-expanded" }
+    ]);
+    expect(data.provenance.requestIds).toEqual(["req-original", "req-expanded", "req-topic"]);
+    expect(data.answerable).toBe(true);
+  });
+
+  test("research does not broaden a specific empty query to generic APEX or SQL results", async () => {
+    const { program, stdout, fetch } = await configuredProgram(async (url: string | URL | Request) => {
+      const href = String(url);
+      const keyword = new URL(href).searchParams.get("keyword");
+      if (keyword === "APEX" || keyword === "SQL") {
+        return Response.json({
+          items: [{ id: 99, title: "Unrelated APEX installation topic", url: "https://oracleapex.cn/t/99" }],
+          requestId: "req-too-broad"
+        });
+      }
+      return Response.json({ items: [], requestId: keyword === "REST API" ? "req-rest" : "req-original" });
+    });
+
+    await program.parseAsync(["node", "apexcn", "research", "APEX 调用 REST API", "--limit", "5", "--json"]);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const data = JSON.parse(stdout.join(""));
+    expect(data.query.attemptedKeywords).toEqual(["APEX 调用 REST API", "REST API"]);
+    expect(data.answerable).toBe(false);
+    expect(data.fallback.reason).toBe("no-trusted-references");
+    expect(data.provenance.sources).toEqual([]);
   });
 
   test("research accepts --top-k as a --limit alias", async () => {
@@ -2036,6 +2144,19 @@ describe("content commands", () => {
 
     expect(JSON.parse(stdout.join(""))).toEqual({
       answer: "APEXLang supports single page imports.",
+      kind: "ask-response",
+      schemaVersion: 1,
+      provenance: {
+        requestIds: ["req-ask"],
+        sources: [
+          {
+            id: 29667,
+            title: "APEXLang import",
+            url: "https://oracleapex.cn/t/29667",
+            originalUrl: "https://oracleapex.cn/ords/r/apex-cn/website/thread?session=abc"
+          }
+        ]
+      },
       sources: [
         {
           card_title: "APEXLang import",
@@ -2048,6 +2169,47 @@ describe("content commands", () => {
       ],
       requestId: "req-ask"
     });
+  });
+
+  test("ask replaces relative thread links with stable absolute topic URLs", async () => {
+    const { program, stdout } = await configuredProgram(async () =>
+      Response.json({
+        answer: "ORDS 403 should be checked against the granted roles.",
+        answerable: true,
+        sources: [
+          {
+            id: 23142,
+            title: "APEX、ORDS 与 REST Enabled SQL",
+            url: "https://blog.example/apex-ords",
+            threadUrl: "f?p=100:14:::::P14_THREAD_ID:23142",
+            source_url: "https://blog.example/apex-ords"
+          }
+        ],
+        requestId: "req-relative-thread"
+      })
+    );
+
+    await program.parseAsync(["node", "apexcn", "ask", "ORDS 403?", "--json"]);
+
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
+      sources: [
+        expect.objectContaining({
+          url: "https://oracleapex.cn/t/23142",
+          threadUrl: "https://oracleapex.cn/t/23142",
+          originalUrl: "https://blog.example/apex-ords"
+        })
+      ],
+      provenance: {
+        requestIds: ["req-relative-thread"],
+        sources: [
+          expect.objectContaining({
+            id: 23142,
+            url: "https://oracleapex.cn/t/23142",
+            originalUrl: "https://blog.example/apex-ords"
+          })
+        ]
+      }
+    }));
   });
 
   test("ask normalizes wrapped backend data responses", async () => {
@@ -2088,6 +2250,44 @@ describe("content commands", () => {
     }));
   });
 
+  test("ask preserves additive top-level RAG fields when legacy data is present", async () => {
+    const { program, stdout } = await configuredProgram(async () =>
+      Response.json({
+        status: "OK",
+        message: "LIMITED_TRUSTED_REFERENCES",
+        data: {
+          request_id: "req-legacy",
+          answer: "legacy answer",
+          references: [{ id: 23722, title: "legacy source", url: "https://oracleapex.cn/t/23722" }]
+        },
+        requestId: "req-top-level",
+        answer: "top-level answer",
+        answerable: true,
+        fallback: false,
+        confidence: { level: "medium", score: 0.5 },
+        limitations: ["The answer is based on fewer than 10 trusted references."],
+        sources: [{ id: 23722, title: "ORDS OAuth", url: "https://oracleapex.cn/t/23722" }],
+        citations: [{ id: 23722, title: "ORDS OAuth", url: "https://oracleapex.cn/t/23722" }]
+      })
+    );
+
+    await program.parseAsync(["node", "apexcn", "ask", "ORDS 401 怎么排查？", "--json"]);
+
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
+      answer: "top-level answer",
+      answerable: true,
+      fallback: false,
+      confidence: { level: "medium", score: 0.5 },
+      requestId: "req-top-level",
+      sources: [expect.objectContaining({ id: 23722, title: "ORDS OAuth" })],
+      citations: [expect.objectContaining({ id: 23722, title: "ORDS OAuth" })],
+      provenance: {
+        requestIds: ["req-top-level"],
+        sources: [expect.objectContaining({ id: 23722, title: "ORDS OAuth" })]
+      }
+    }));
+  });
+
   test("ask returns a context-needed fallback for short follow-up questions", async () => {
     const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ answer: "unexpected" }));
 
@@ -2099,6 +2299,12 @@ describe("content commands", () => {
     expect(JSON.parse(stdout.join(""))).toEqual({
       answerable: false,
       needsContext: true,
+      kind: "ask-response",
+      schemaVersion: 1,
+      provenance: {
+        requestIds: [],
+        sources: []
+      },
       fallback: {
         reason: "needs-context",
         message: "这个追问缺少上一轮问题或引用上下文。请把完整背景写进问题，或使用 --context 提供上一轮主题后再问。",

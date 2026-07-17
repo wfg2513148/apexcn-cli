@@ -87,7 +87,7 @@ export function createCollectionCommand(options: CollectionCommandOptions): Comm
       try {
         await buildCollection(options, commandOptions);
       } catch (error) {
-        handleCollectionError(options, error);
+        handleCollectionError(options, error, commandOptions.json);
       }
     });
 
@@ -99,7 +99,7 @@ export function createCollectionCommand(options: CollectionCommandOptions): Comm
       try {
         await indexCollection(options, commandOptions);
       } catch (error) {
-        handleCollectionError(options, error);
+        handleCollectionError(options, error, commandOptions.json);
       }
     });
 
@@ -114,7 +114,7 @@ export function createCollectionCommand(options: CollectionCommandOptions): Comm
       try {
         await queryCollection(options, query, commandOptions);
       } catch (error) {
-        handleCollectionError(options, error);
+        handleCollectionError(options, error, commandOptions.json);
       }
     });
 
@@ -126,7 +126,7 @@ export function createCollectionCommand(options: CollectionCommandOptions): Comm
       try {
         await collectionStats(options, commandOptions);
       } catch (error) {
-        handleCollectionError(options, error);
+        handleCollectionError(options, error, commandOptions.json);
       }
     });
 
@@ -138,7 +138,7 @@ export function createCollectionCommand(options: CollectionCommandOptions): Comm
       try {
         await verifyCollection(options, commandOptions);
       } catch (error) {
-        handleCollectionError(options, error);
+        handleCollectionError(options, error, commandOptions.json);
       }
     });
 
@@ -149,11 +149,11 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
   const queries = (options.query ?? []).map((query) => query.trim()).filter(Boolean);
   const explicitTopicIds = options.topicId ?? [];
   if (queries.length === 0 && explicitTopicIds.length === 0) {
-    printError(io, { type: "validation", message: "Provide at least one --query or --topic-id." });
+    printError(io, { type: "validation", message: "Provide at least one --query or --topic-id." }, undefined, options.json);
     process.exitCode = 1;
     return;
   }
-  if (!validateDateRange(io, options.fromDate, options.toDate)) {
+  if (!validateDateRange(io, options.fromDate, options.toDate, options.json)) {
     return;
   }
   const session = await loadSession(io);
@@ -276,7 +276,7 @@ async function verifyCollection(io: CommandIo, options: VerifyOptions): Promise<
   try {
     collection = JSON.parse(await readFile(collectionPath, "utf8")) as unknown;
   } catch (error) {
-    printError(io, { type: "validation", message: `Invalid collection: ${errorMessage(error)}` });
+    printError(io, { type: "validation", message: `Invalid collection: ${errorMessage(error)}` }, undefined, options.json);
     process.exitCode = 1;
     return;
   }
@@ -288,7 +288,7 @@ async function verifyCollection(io: CommandIo, options: VerifyOptions): Promise<
 }
 
 async function indexCollection(io: CommandIo, options: IndexOptions): Promise<void> {
-  const loaded = await readCollectionFile(io, options.dir);
+  const loaded = await readCollectionFile(io, options.dir, options.json);
   if (!loaded) {
     return;
   }
@@ -334,7 +334,7 @@ async function indexCollection(io: CommandIo, options: IndexOptions): Promise<vo
 async function queryCollection(io: CommandIo, query: string, options: QueryOptions): Promise<void> {
   const trimmed = query.trim();
   if (trimmed.length === 0) {
-    printError(io, { type: "validation", message: "Query must not be blank." });
+    printError(io, { type: "validation", message: "Query must not be blank." }, undefined, options.json);
     process.exitCode = 1;
     return;
   }
@@ -342,7 +342,7 @@ async function queryCollection(io: CommandIo, query: string, options: QueryOptio
   try {
     records = parseCollectionSearchRecords(await readFile(join(options.dir, "index.jsonl"), "utf8"));
   } catch (error) {
-    printError(io, { type: "validation", message: `Invalid collection index: ${errorMessage(error)}` });
+    printError(io, { type: "validation", message: `Invalid collection index: ${errorMessage(error)}` }, undefined, options.json);
     process.exitCode = 1;
     return;
   }
@@ -366,7 +366,7 @@ async function collectionStats(io: CommandIo, options: StatsOptions): Promise<vo
     records = parseCollectionSearchRecords(await readFile(join(options.dir, "index.jsonl"), "utf8"));
     meta = JSON.parse(await readFile(join(options.dir, "index.meta.json"), "utf8")) as unknown;
   } catch (error) {
-    printError(io, { type: "validation", message: `Invalid collection index: ${errorMessage(error)}` });
+    printError(io, { type: "validation", message: `Invalid collection index: ${errorMessage(error)}` }, undefined, options.json);
     process.exitCode = 1;
     return;
   }
@@ -426,7 +426,7 @@ async function collectionVerificationReport(dir: string, collection: unknown): P
 
 type CollectionSearchRecord = CollectionIndexRecord;
 
-async function readCollectionFile(io: CommandIo, dir: string): Promise<{ collection: ValidCollection; content: string } | undefined> {
+async function readCollectionFile(io: CommandIo, dir: string, json?: boolean): Promise<{ collection: ValidCollection; content: string } | undefined> {
   const collectionPath = join(dir, "collection.json");
   let collection: unknown;
   let content: string;
@@ -434,12 +434,12 @@ async function readCollectionFile(io: CommandIo, dir: string): Promise<{ collect
     content = await readFile(collectionPath, "utf8");
     collection = JSON.parse(content) as unknown;
   } catch (error) {
-    printError(io, { type: "validation", message: `Invalid collection: ${errorMessage(error)}` });
+    printError(io, { type: "validation", message: `Invalid collection: ${errorMessage(error)}` }, undefined, json);
     process.exitCode = 1;
     return undefined;
   }
   if (!isValidCollectionSchema(collection)) {
-    printError(io, { type: "validation", message: "collection.json has an invalid schema." });
+    printError(io, { type: "validation", message: "collection.json has an invalid schema." }, undefined, json);
     process.exitCode = 1;
     return undefined;
   }
@@ -762,9 +762,9 @@ function sourcesText(sources: Record<string, unknown>[]): string {
   return sources.map((source) => source.type === "query" ? `query:${fieldText(source.query)}#${fieldText(source.searchIndex)}` : "explicit").join(", ");
 }
 
-function validateDateRange(io: CommandIo, fromDate?: string, toDate?: string): boolean {
+function validateDateRange(io: CommandIo, fromDate?: string, toDate?: string, json?: boolean): boolean {
   if (fromDate && toDate && fromDate > toDate) {
-    printError(io, { type: "validation", message: "--from-date must be before or equal to --to-date" });
+    printError(io, { type: "validation", message: "--from-date must be before or equal to --to-date" }, undefined, json);
     process.exitCode = 1;
     return false;
   }
@@ -814,7 +814,7 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function handleCollectionError(io: CommandIo, error: unknown): void {
+function handleCollectionError(io: CommandIo, error: unknown, json?: boolean): void {
   if (error instanceof HttpError) {
     printError(io, {
       type: "http",
@@ -823,7 +823,7 @@ function handleCollectionError(io: CommandIo, error: unknown): void {
       status: error.status,
       requestId: error.requestId,
       remediation: remediationForHttpError(error)
-    }, formatHttpErrorText(error));
+    }, formatHttpErrorText(error), json);
     process.exitCode = 1;
     return;
   }
@@ -833,7 +833,7 @@ function handleCollectionError(io: CommandIo, error: unknown): void {
       code: stableErrorCode(error),
       message: error.message,
       remediation: remediationForTransportError(error)
-    }, formatTransportErrorText(error));
+    }, formatTransportErrorText(error), json);
     process.exitCode = 1;
     return;
   }

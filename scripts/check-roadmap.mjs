@@ -29,14 +29,14 @@ export function renderRoadmap(roadmap, issues) {
     "",
     "- 每个主会话开始时必须读取 `roadmap.json` 与 `issues.json`。",
     "- 只为当前里程碑生成即时执行计划，不预制后续里程碑实施计划。",
-    "- 每个经用户确认激活的里程碑必须启动一个独立 Codex 目标模式，直至全部验收、独立复验、问题清零和发版闭环完成。",
+    "- 每个里程碑必须启动一个独立 Codex 目标模式，直至全部验收、独立复验、问题清零和发版闭环完成。",
     "- 每轮验证必须在固定测试项目中新建独立小白任务线程；主会话按当前里程碑和实际风险动态下发结构化测试范围。",
     "- 固定基线套件与动态里程碑/逆向探索套件分开执行和计分，旧线程只作为历史证据。",
     "- `issues.json` 只接收独立 validator 线程实际观察且证据完整的问题；规划缺口进入 `readinessRisks`。",
     "- 同一时间最多一个里程碑为 `in_progress`。",
     "- 修复后的问题从活动 `issues.json` 删除，首次失败证据保留在验证历史。",
-    "- 完成里程碑后必须停下，归纳增强能力、意外问题、根因、规避措施和下一阶段预期。",
-    "- 只有用户手工确认后，下一里程碑才可进入 `in_progress`。",
+    "- 完成里程碑后必须归纳增强能力、意外问题、根因、规避措施和下一阶段预期。",
+    "- 发布验证和上下文压缩完成后，自动批准完成审查并激活下一个里程碑，无需再次等待用户确认。",
     "- 每次目标模式小版本完成后必须 bump patch、通过本地门禁、提交、推送、打 tag，并直接创建 GitHub Release。",
     "- 发版提交以 `[skip ci]` 结尾；不得触发 GitHub Actions，正常发版使用 `gh release create`。",
     "- 发布验证后必须生成不超过 12 KiB 的 `reports/iteration-context.json`，并结束当前目标。",
@@ -112,7 +112,7 @@ export function renderRoadmap(roadmap, issues) {
       `- Activation: \`${milestone.activationGate.status}\``,
       `- Completion review: \`${milestone.completionReview.status}\``,
       "- 完成后必须总结：增强能力、未预估问题、根因、规避措施、下一阶段目标、量化预期和主要风险。",
-      "- 未获得用户明确确认，不得启动下一里程碑。"
+      "- 发布验证和上下文压缩完成后，自动批准完成审查并启动下一里程碑。"
     );
   }
 
@@ -195,7 +195,7 @@ export function validateRoadmap({ roadmap, issues, roadmapMarkdown, issuesMarkdo
   check(issues.activeOnly === true, "issues.json must contain active issues only", problems);
   check(roadmap.executionProtocol?.planningMode === "just_in_time", "planningMode must be just_in_time", problems);
   check(roadmap.executionProtocol?.preGeneratedImplementationPlans === false, "preGeneratedImplementationPlans must be false", problems);
-  check(roadmap.executionProtocol?.nextMilestoneRequiresManualConfirmation === true, "manual milestone confirmation must be required", problems);
+  check(roadmap.executionProtocol?.nextMilestoneRequiresManualConfirmation === false, "milestones must continue automatically after release closure", problems);
   check(equalArrays(roadmap.executionProtocol?.planningInputs, ["roadmap.json", "issues.json"]), "planningInputs must be roadmap.json and issues.json", problems);
   check(nonEmpty(roadmap.productStrategy?.primaryPersona), "product strategy needs a primary persona", problems);
   check(Array.isArray(roadmap.productStrategy?.topJobs) && roadmap.productStrategy.topJobs.length >= 4, "product strategy needs differentiated top jobs", problems);
@@ -222,6 +222,9 @@ export function validateRoadmap({ roadmap, issues, roadmapMarkdown, issuesMarkdo
   check(patchClosure?.contextCompaction?.nextSessionMustRead === true, "next session must read compact context", problems);
   const validator = roadmap.testingBindings?.validator;
   check(validator?.project === "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test", "validator project binding drifted", problems);
+  check(validator?.threadVisibility === "user-visible-codex-desktop-task", "validator must be a user-visible Codex Desktop task", problems);
+  check(validator?.sessionCwdMustEqualProject === true, "validator session cwd must equal the validator project", problems);
+  check(validator?.hiddenSubagentAllowed === false, "hidden subagents cannot satisfy validator rounds", problems);
   check(roadmap.testingBindings?.validator?.model === "gpt-5.6-luna", "validator model must be gpt-5.6-luna", problems);
   check(roadmap.testingBindings?.validator?.reasoningEffort === "high", "validator reasoning must be high", problems);
   check(validator?.threadStrategy === "fresh-task-per-validation-round", "each validator round must use a fresh task thread", problems);
@@ -357,7 +360,7 @@ export function validateRoadmap({ roadmap, issues, roadmapMarkdown, issuesMarkdo
     const expectedPreviousId = previous?.id ?? null;
     check(milestone.activationGate?.previousMilestoneId === expectedPreviousId, `activation predecessor mismatch for ${milestone.id}`, problems);
     if (previous && ["in_progress", "completed"].includes(milestone.status)) {
-      check(previous.completionReview?.status === "approved", `${milestone.id} cannot start before ${previous.id} manual approval`, problems);
+      check(previous.completionReview?.status === "approved", `${milestone.id} cannot start before ${previous.id} completion approval`, problems);
       check(milestone.activationGate?.status === "approved", `${milestone.id} activation must be approved`, problems);
     }
 
@@ -423,7 +426,7 @@ export function validateRoadmap({ roadmap, issues, roadmapMarkdown, issuesMarkdo
     if (milestone.status === "completed") {
       check(milestone.capabilities.every((capability) => capability.status === "validated"), `completed milestone ${milestone.id} has unvalidated capabilities`, problems);
       check(milestone.acceptanceCriteria.filter((criterion) => criterion.gate === "core").every((criterion) => criterion.status === "pass"), `completed milestone ${milestone.id} has incomplete core gates`, problems);
-      check(["pending", "approved"].includes(milestone.completionReview?.status), `completed milestone ${milestone.id} must await or have manual review`, problems);
+      check(milestone.completionReview?.status === "approved", `completed milestone ${milestone.id} must have an approved completion review`, problems);
       for (const dependency of roadmap.dependencyRegistry ?? []) {
         if ((dependency.milestoneIds ?? []).includes(milestone.id) && dependency.requiredAt === "completion") {
           check(dependency.status === "ready", `completed milestone ${milestone.id} has unready dependency ${dependency.id}`, problems);
@@ -509,11 +512,12 @@ export function validateRoadmap({ roadmap, issues, roadmapMarkdown, issuesMarkdo
   check(roadmapMarkdown === renderRoadmap(roadmap, issues), "docs/roadmap.md is not synchronized with roadmap.json", problems);
   check(issuesMarkdown === renderIssues(issues), "issues.md is not synchronized with issues.json", problems);
   check(agentsText.includes("roadmap.json") && agentsText.includes("issues.json"), "AGENTS.md must require roadmap.json and issues.json", problems);
-  check(agentsText.includes("手工确认"), "AGENTS.md must require manual milestone confirmation", problems);
+  check(agentsText.includes("automatically mark") && agentsText.includes("Do not wait for additional user confirmation"), "AGENTS.md must require automatic milestone continuation", problems);
   check(agentsText.includes("[skip ci]") && agentsText.includes("gh release create"), "AGENTS.md must define direct release closure", problems);
   check(agentsText.includes("context:compact") && agentsText.includes("reports/iteration-context.json"), "AGENTS.md must define context compaction", problems);
   check(agentsText.includes("one dedicated Codex goal") && agentsText.includes("100%"), "AGENTS.md must require one goal mode per milestone through release", problems);
   check(agentsText.includes("fresh independent novice task thread") && agentsText.includes("dynamically assigns"), "AGENTS.md must require fresh dynamically scoped validator threads", problems);
+  check(agentsText.includes("user-visible Codex Desktop task") && agentsText.includes("Hidden subagents do not satisfy"), "AGENTS.md must require a visible validator task in the validator project", problems);
   check(agentsText.includes("issues.json") && agentsText.includes("actual validator findings only"), "AGENTS.md must restrict issues.json to validator findings", problems);
   check(agentsText.includes("Codex in-app browser") && agentsText.includes("database-only"), "AGENTS.md must require visual write-back validation", problems);
   check(agentsText.includes("existing dedicated test account"), "AGENTS.md must require test account reuse", problems);

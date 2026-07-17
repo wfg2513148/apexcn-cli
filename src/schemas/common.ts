@@ -25,3 +25,25 @@ export function assertArray(value: unknown, label: string): asserts value is unk
     throw new Error(`${label} must be an array`);
   }
 }
+
+export function assertReadProvenance(value: Record<string, unknown>, expectedKind?: string): void {
+  assertString(value.kind, "kind");
+  if (expectedKind !== undefined && value.kind !== expectedKind) {
+    throw new Error(`kind must be ${expectedKind}`);
+  }
+  if (value.schemaVersion !== 1) {
+    throw new Error("schemaVersion must be 1");
+  }
+  assertRecord(value.provenance, "provenance");
+  assertArray(value.provenance.requestIds, "provenance.requestIds");
+  for (const [index, requestId] of value.provenance.requestIds.entries()) {
+    assertString(requestId, `provenance.requestIds[${index}]`);
+  }
+  assertArray(value.provenance.sources, "provenance.sources");
+  for (const [index, source] of value.provenance.sources.entries()) {
+    assertRecord(source, `provenance.sources[${index}]`);
+    if (source.url !== undefined) {
+      assertString(source.url, `provenance.sources[${index}].url`);
+    }
+  }
+}

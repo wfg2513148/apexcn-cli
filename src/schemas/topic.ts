@@ -1,7 +1,8 @@
-import { assertRecord, assertString, isRecord } from "./common.js";
+import { assertReadProvenance, assertRecord, assertString, isRecord } from "./common.js";
 
 export function assertTopicResponse(value: unknown): asserts value is Record<string, unknown> {
   assertRecord(value, "topic response");
+  assertReadProvenance(value);
   const topic = isRecord(value.topic) ? value.topic : value;
   assertRecord(topic, "topic");
   if (topic.title !== undefined) {

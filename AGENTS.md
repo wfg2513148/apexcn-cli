@@ -12,9 +12,10 @@
 - Build only a just-in-time plan for the current milestone from current code, evidence, and active issues. Do not pre-generate implementation plans for later milestones.
 - Keep at most one milestone `in_progress`.
 - Remove fixed issues from active `issues.json`; preserve first-attempt failures in independent validation history.
-- After the user confirms milestone activation, run one dedicated Codex goal for that roadmap milestone. The goal may end only after 100% of milestone acceptance, independent validation, issue closure, push, release, and context handoff are complete.
+- Run one dedicated Codex goal for each roadmap milestone. The goal may end only after 100% of milestone acceptance, independent validation, issue closure, push, release, and context handoff are complete.
+- Starting with milestone `0.4`, create a fresh user-visible Codex Desktop task for every milestone's main implementation goal. Its session `cwd` must be exactly `/Users/kwang/apexcn-cli`; never continue the next milestone in the predecessor task.
 - When a milestone is complete, stop and briefly summarize enhanced capabilities, unexpected problems, root causes, prevention actions, and the next milestone's measurable goal and expected result.
-- Do not start the next milestone until the user gives explicit 手工确认 and the predecessor completion review is marked `approved`.
+- After that summary, release verification, and context compaction, automatically mark the predecessor completion review `approved`, activate the next planned milestone, and create its dedicated Codex goal. Do not wait for additional user confirmation.
 - Run `npm run check:roadmap` after changing roadmap or issue state.
 
 ## Goal-Mode Patch Closure
@@ -29,6 +30,7 @@
 
 - Independent CLI validation project: `/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test`
 - Every validation round creates a fresh independent novice task thread in that project. Never reuse a prior validator thread; historical thread IDs are evidence only.
+- The validator must be a user-visible Codex Desktop task whose session `cwd` is exactly the validation project above, so it appears under `apexcn-cli-test` in the sidebar. Hidden subagents do not satisfy this requirement.
 - The main session dynamically assigns a structured scope contract from the active milestone and current risks. Every round runs the complete applicable fixed baseline suite plus a separately scored dynamic milestone/adverse suite.
 - The scope contract records the tested CLI version, commit/tag/checksum, baseline dataset and scorer versions, environment hash, allowed public materials, prohibited actions, evidence format, and assigned scenarios.
 - `issues.json` accepts actual validator findings only. Each issue must cite its fresh validator thread, assignment, scenario or exploration task, first-attempt evidence, actual output, expected user result, and responsibility assessment. Planning gaps belong in `roadmap.readinessRisks`.

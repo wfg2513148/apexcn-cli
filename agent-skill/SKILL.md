@@ -81,6 +81,7 @@ apexcn auth set-token \
 - Use `apexcn topic recent --since-hours 48 --json` when the user asks for recently updated or latest community posts. If `page.hasMore` is true and `page.nextCursor` is present, pass it back with `--cursor` to continue.
 - Use `apexcn search "<keyword>" --tag <tag> --source-type <type> --json` when the user asks for filtered search. Prefer server-side filters such as `--tag`, `--tags`, `--author`, `--author-id`, `--source-domain`, `--original-url`, `--content-type`, `--source-type`, `--status`, `--view`, `--sort`, `--featured`, `--pinned`, `--locked`, `--unanswered`, and `--has-useful-reply`; do not crawl pages and filter client-side when the server supports the filter.
 - Use `apexcn search "<keyword>" --cursor <page.nextCursor> --json` when continuing a paginated search result. Prefer cursor pagination over `--offset`; keep `--offset` only for compatibility.
+- Use `apexcn research "<natural-language query>" --limit 5 --json` when the user needs a citable bundle rather than a result list. If the original phrase is too narrow, inspect `query.attemptedKeywords`, `query.selectedKeyword`, and `searchAttempts`; cite only URLs in `provenance.sources`.
 - Use filtered ask flags `--category-id`, `--from/--to`, and `--tag` only when the user wants scoped reference retrieval. Treat filtered ask output as scoped references with `confidence`, `limitations`, and `filters`, not as full RAG generation unless the server contract changes.
 - Use `apexcn commands --json` to inspect available commands, purposes, safety metadata, examples, and options instead of parsing help text.
 - Use `apexcn auth audit --json` before API workflows when you need a local-only check for missing active profile, invalid base URLs, missing tokens, duplicate base URLs, or insecure HTTP profiles.
@@ -96,6 +97,7 @@ apexcn auth set-token \
 - Before deleting a topic, run `apexcn topic view <thread_id> --json`, then pass `--yes --force --confirm-title "<exact title>"`.
 - Before deleting a reply, confirm the target post id belongs to the intended thread, then pass `--yes --force`.
 - When reporting search results, topic summaries, or inspected content to a user, include each topic's real URL from `url` or `threadUrl`; include `originalUrl` too when present.
+- Preserve `provenance.requestIds` and `provenance.sources` from search, topic, ask, and research outputs in downstream evidence.
 - Do not infer an exact total from search results. If `page.hasMore` is true, report a lower bound such as "at least N results" and suggest narrowing by category or date.
 - Treat `401` as auth/token failure, `403` as permission/config denial, `409` as state conflict, and `429` as rate limiting. If stderr includes `retryAfterSeconds`, wait or report that exact retry window instead of retrying immediately.
 - Preserve stderr and `requestId` in logs for troubleshooting.

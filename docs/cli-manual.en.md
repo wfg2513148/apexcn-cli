@@ -217,7 +217,7 @@ apexcn research "REST API" --limit 3 --json
 apexcn research "ORDS" --category-id 4 --from-date 2026-01-01 --format text
 ```
 
-`--limit` accepts 1 to 10 and defaults to 3. JSON output always contains `query`, `items`, `topics`, `links`, `requestIds`, and `errors`. `links` are deduplicated by topic id or URL and preserve `createdDate`, `updatedDate`, and `originalUrl` when the backend returns them. If one topic fetch fails, the command still prints the completed portion of the research bundle, records the failure in `errors`, and exits non-zero.
+`--limit` accepts 1 to 10 and defaults to 3. JSON output always contains `query`, `searchAttempts`, `items`, `topics`, `links`, `requestIds`, `provenance`, and `errors`. When the original natural-language phrase returns no results, the command makes at most three readonly retries using explainable technical keywords; `query.attemptedKeywords`, `query.selectedKeyword`, and `searchAttempts` preserve each query and request ID. `links` are deduplicated by topic id or URL and preserve `createdDate`, `updatedDate`, and `originalUrl` when the backend returns them. If one topic fetch fails, the command still prints the completed portion of the research bundle, records the failure in `errors`, and exits non-zero.
 
 ## collection
 
