@@ -49,7 +49,9 @@ roadmap 里程碑
   },
   "validator": {
     "project": "<INDEPENDENT_TEST_PROJECT>",
-    "threadId": "<VALIDATOR_CODEX_THREAD>",
+    "threadStrategy": "fresh-task-per-validation-round",
+    "personaResetEachRound": "novice",
+    "dynamicScenarioAssignment": true,
     "model": "<VALIDATOR_MODEL>",
     "reasoningEffort": "high"
   },
@@ -64,12 +66,13 @@ roadmap 里程碑
 
 每轮委派前必须确认：
 
-1. 目标 Codex 任务 ID 正确。
+1. 本轮创建了全新的 validator Codex 任务 ID，且未复用旧线程。
 2. 工作目录正确。
-3. 模型和思考强度正确。
+3. 小白身份、模型和思考强度正确。
 4. 被测 commit、tag 或安装包版本明确。
 5. 安装包或证据文件 checksum 已记录。
 6. 测试环境与生产环境隔离。
+7. 主会话已按当前里程碑生成结构化 scope contract。
 
 ## 3. 机器可读真相源
 
@@ -164,9 +167,28 @@ issues.md
 
 同一时间最多一个里程碑处于 `in_progress`。
 
+每个经用户手工确认激活的里程碑都必须启动一个独立 Codex 目标模式。该目标模式必须持续到里程碑验收条件 100% 通过、独立验证完成、阻塞问题清零、提交推送、发版和上下文交接全部完成，不得提前结束。
+
 ## 6. 黑盒测试标准
 
 独立验证必须使用真实自然语言驱动 CLI，而不只是调用内部函数。
+
+### 6.1 每轮线程隔离
+
+- 测试项目固定，但每轮都新建一个独立 validator 任务线程。
+- 每个线程从小白身份开始，不继承旧线程的实现知识、补丁解释或结论。
+- 旧线程只能用于历史曲线、现有问题来源和关闭证据，不能成为新活动问题的唯一来源。
+- 主会话根据当前里程碑、活动风险和实际改动动态分配场景，不预制后续里程碑测试计划。
+
+### 6.2 固定基线与动态测试
+
+每轮 scope contract 必须同时包含：
+
+1. 固定公开基线套件：适用于当前里程碑的场景覆盖率为 100%，用于跨版本趋势比较。
+2. 动态里程碑套件：覆盖本轮新增或变化能力。
+3. 逆向探索套件：覆盖异常输入、错误恢复、安全边界和跨能力回归。
+
+三类结果分别统计，不得混算。纵向结果必须记录 dataset、scorer、environment、CLI、server contract 和 validator thread 版本。
 
 至少覆盖：
 
@@ -272,9 +294,22 @@ issues.md
   "title": "安装失败时缺少可执行建议",
   "description": "...",
   "acceptanceCriterionIds": ["M020-AC-INSTALL-01"],
-  "blockingMilestones": ["0.2"]
+  "blockingMilestones": ["0.2"],
+  "source": {
+    "type": "independent-validator-thread",
+    "threadId": "<FRESH_VALIDATOR_THREAD>",
+    "assignmentRef": "<ROUND_SCOPE_CONTRACT>",
+    "scenarioOrExplorationRef": ["NOVICE-INSTALL-001"],
+    "firstAttemptEvidencePreserved": true,
+    "observedCliVersion": "0.20.0",
+    "actualOutputSummary": "...",
+    "expectedUserOutcome": "...",
+    "responsibilityAssessment": "cli"
+  }
 }
 ```
+
+`issues.json` 中的每个问题都必须来自独立 validator 线程的实际观察。主会话、批判审查线程、代码审查或路线图讨论发现的规划缺口只能进入 `roadmap.readinessRisks`，不能伪装成用户问题。新活动问题必须由当轮新线程观察；旧线程只能保留既有问题的历史来源。
 
 状态只允许：
 
@@ -323,6 +358,7 @@ blocked
 5. 回写场景具备后端与浏览器双层证据。
 6. build、test、release check 和专项质量门禁通过。
 7. 文档与实际命令一致。
+8. 对应 Codex 目标模式已完成提交、推送、tag、Release、资产验证和上下文交接。
 
 完成后主会话必须停止，并用简洁语言输出：
 
@@ -443,7 +479,9 @@ Set-Cookie
 - 验收条件具有 metric、comparator、target 和 measurement method。
 - `issues.json` 只包含活动问题。
 - Server/Cross-repo 问题绑定固定服务端会话。
-- 独立验证模型、任务和目录没有漂移。
+- 独立验证项目、模型、小白身份和动态 scope contract 没有漂移。
+- 每轮 validator 使用新任务线程，固定基线与动态套件分开计分。
+- `issues.json` 每条问题都具有当轮 validator 来源和首次尝试证据。
 - 回写场景要求真实浏览器视觉验收。
 - 测试账号必须复用。
 - 每次目标模式要求 patch 发版。
@@ -459,7 +497,6 @@ Set-Cookie
 <CLI_REPOSITORY>
 <SERVER_REPOSITORY>
 <INDEPENDENT_TEST_PROJECT>
-<VALIDATOR_CODEX_THREAD>
 <SERVER_CODEX_THREAD>
 <VALIDATOR_MODEL>
 <SERVER_MODEL>

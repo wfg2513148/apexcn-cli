@@ -25,7 +25,25 @@
       "serverCommit": null,
       "apiContractVersion": null,
       "cliCommit": null,
-      "validatorRound": null
+      "validatorRound": "historical-novice-audit-retry-2026-07-06",
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "019f362d-52df-7e33-9bc8-2fdc2eaa7caf",
+        "assignmentRef": "historical-novice-audit-retry-2026-07-06",
+        "report": "apexcn-cli-novice-audit-retry-2026-07-06.md",
+        "findingRefs": [
+          "Partial: JSON argument parsing errors are inconsistent"
+        ],
+        "observedCliVersion": "0.18.8",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "黑盒测试观察到不同 JSON 参数错误的反馈结构不一致。",
+        "expectedUserOutcome": "全部公开 JSON 命令以稳定、可机器处理的错误契约返回参数错误。",
+        "responsibilityAssessment": "cli",
+        "scenarioOrExplorationRef": [
+          "Partial: JSON argument parsing errors are inconsistent"
+        ]
+      }
     },
     {
       "id": "ISSUE-020-002",
@@ -41,7 +59,6 @@
       "rootCauseStatus": "known",
       "description": "Current search and research fallbacks do not provide curated learning path, version compatibility, and deployment checklist views.",
       "acceptanceCriterionIds": [
-        "M020-AC-006",
         "M020-AC-007"
       ],
       "dependencies": [],
@@ -49,7 +66,25 @@
       "serverCommit": null,
       "apiContractVersion": null,
       "cliCommit": null,
-      "validatorRound": null
+      "validatorRound": "historical-novice-audit-retry-2026-07-06",
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "019f362d-52df-7e33-9bc8-2fdc2eaa7caf",
+        "assignmentRef": "historical-novice-audit-retry-2026-07-06",
+        "report": "apexcn-cli-novice-audit-retry-2026-07-06.md",
+        "findingRefs": [
+          "Main Improvement Area 7: learning path and deployment checklist"
+        ],
+        "observedCliVersion": "0.18.8",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "黑盒测试无法从现有命令获得策展式学习路径、版本兼容和部署检查清单。",
+        "expectedUserOutcome": "新手可直接获得结构化学习与部署路径，而非自行拼接搜索结果。",
+        "responsibilityAssessment": "cli",
+        "scenarioOrExplorationRef": [
+          "Main Improvement Area 7: learning path and deployment checklist"
+        ]
+      }
     },
     {
       "id": "ISSUE-030-001",
@@ -78,7 +113,29 @@
       "serverCommit": null,
       "apiContractVersion": null,
       "cliCommit": null,
-      "validatorRound": null
+      "validatorRound": "historical-novice-audit-2026-07-06",
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "019f35e1-9185-7a71-b393-fbae369e4a24",
+        "assignmentRef": "historical-novice-audit-2026-07-06",
+        "report": "apexcn-cli-novice-audit-2026-07-06.md",
+        "findingRefs": [
+          "Q025",
+          "Q093",
+          "High-Priority Gaps 1-3"
+        ],
+        "observedCliVersion": "0.18.8",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "黑盒测试发现离线报告无法证明实时检索质量，部分请求出现 ORDS 404 或缺少引用。",
+        "expectedUserOutcome": "真实只读检索可稳定返回可验证来源，并以真实查询集报告质量。",
+        "responsibilityAssessment": "cross_repo",
+        "scenarioOrExplorationRef": [
+          "Q025",
+          "Q093",
+          "High-Priority Gaps 1-3"
+        ]
+      }
     },
     {
       "id": "ISSUE-040-001",
@@ -103,32 +160,29 @@
       "serverCommit": null,
       "apiContractVersion": null,
       "cliCommit": null,
-      "validatorRound": null
-    },
-    {
-      "id": "ISSUE-040-002",
-      "kind": "cross_repo_capability_gap",
-      "title": "Add favorites-to-collection flow",
-      "priority": "P1",
-      "status": "open",
-      "owner": "cross_repo",
-      "milestoneId": "0.4",
-      "blockingMilestones": [
-        "0.4"
-      ],
-      "rootCauseStatus": "known",
-      "description": "A stable favorite topic export contract is required before the CLI can create a faithful one-step local collection.",
-      "acceptanceCriterionIds": [
-        "M040-AC-004"
-      ],
-      "dependencies": [
-        "server:favorite-topic-export"
-      ],
-      "serverThreadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
-      "serverCommit": null,
-      "apiContractVersion": null,
-      "cliCommit": null,
-      "validatorRound": null
+      "validatorRound": "historical-novice-audit-retry-2026-07-06",
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "019f362d-52df-7e33-9bc8-2fdc2eaa7caf",
+        "assignmentRef": "historical-novice-audit-retry-2026-07-06",
+        "report": "apexcn-cli-novice-audit-retry-2026-07-06.md",
+        "findingRefs": [
+          "Q064",
+          "Q083",
+          "Q085"
+        ],
+        "observedCliVersion": "0.18.8",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "黑盒测试无法通过 CLI 获取站内通知、社区规则和隐私政策。",
+        "expectedUserOutcome": "用户可通过稳定 ORDS 契约和 CLI 命令读取通知、规则与隐私信息。",
+        "responsibilityAssessment": "server",
+        "scenarioOrExplorationRef": [
+          "Q064",
+          "Q083",
+          "Q085"
+        ]
+      }
     },
     {
       "id": "ISSUE-040-003",
@@ -138,162 +192,110 @@
       "status": "open",
       "owner": "cli",
       "milestoneId": "0.4",
-      "blockingMilestones": [],
+      "blockingMilestones": [
+        "0.4"
+      ],
       "rootCauseStatus": "needs_analysis",
       "description": "Draft list or me drafts requires an explicit local storage, profile isolation, retention, and migration decision.",
-      "acceptanceCriterionIds": [],
-      "dependencies": [],
-      "serverThreadId": null,
-      "serverCommit": null,
-      "apiContractVersion": null,
-      "cliCommit": null,
-      "validatorRound": null
-    },
-    {
-      "id": "ISSUE-050-001",
-      "kind": "capability_gap",
-      "title": "Expand workflow policy, diff, and audit governance",
-      "priority": "P1",
-      "status": "open",
-      "owner": "cli",
-      "milestoneId": "0.5",
-      "blockingMilestones": [
-        "0.5"
-      ],
-      "rootCauseStatus": "known",
-      "description": "The existing workflow MVP needs full expiry, reviewer, mutation, recovery, idempotence, and audit evidence coverage.",
       "acceptanceCriterionIds": [
-        "M050-AC-002",
-        "M050-AC-003",
-        "M050-AC-004",
-        "M050-AC-005",
-        "M050-AC-006"
+        "M040-AC-008",
+        "M040-AC-009"
       ],
       "dependencies": [],
       "serverThreadId": null,
       "serverCommit": null,
       "apiContractVersion": null,
       "cliCommit": null,
-      "validatorRound": null
+      "validatorRound": "historical-novice-audit-retry-2026-07-06",
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "019f362d-52df-7e33-9bc8-2fdc2eaa7caf",
+        "assignmentRef": "historical-novice-audit-retry-2026-07-06",
+        "report": "apexcn-cli-novice-audit-retry-2026-07-06.md",
+        "findingRefs": [
+          "Q063"
+        ],
+        "observedCliVersion": "0.18.8",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "黑盒测试无法列出或恢复本地草稿，现有命令未形成草稿资产清单。",
+        "expectedUserOutcome": "用户可按 profile 安全列出、恢复和迁移本地草稿。",
+        "responsibilityAssessment": "cli",
+        "scenarioOrExplorationRef": [
+          "Q063"
+        ]
+      }
     },
     {
-      "id": "ISSUE-060-001",
-      "kind": "validation_gap",
-      "title": "Verify real MCP client compatibility",
+      "id": "ISSUE-070-002",
+      "kind": "cross_repo_capability_gap",
+      "title": "Add favorites-to-collection flow",
       "priority": "P1",
       "status": "open",
-      "owner": "external",
-      "milestoneId": "0.6",
-      "blockingMilestones": [
-        "0.6"
-      ],
-      "rootCauseStatus": "known",
-      "description": "Claude Desktop, Cursor, and VS Code Agent remain configuration-only until dated real-client evidence exists.",
-      "acceptanceCriterionIds": [
-        "M060-AC-004"
-      ],
-      "dependencies": [
-        "external:desktop-clients"
-      ],
-      "serverThreadId": null,
-      "serverCommit": null,
-      "apiContractVersion": null,
-      "cliCommit": null,
-      "validatorRound": null
-    },
-    {
-      "id": "ISSUE-060-002",
-      "kind": "engineering_gap",
-      "title": "Continue gradual shared-core extraction",
-      "priority": "P2",
-      "status": "open",
-      "owner": "cli",
-      "milestoneId": "0.6",
-      "blockingMilestones": [],
-      "rootCauseStatus": "known",
-      "description": "Readonly CLI and MCP paths still need progressive service reuse without a big-bang rewrite.",
-      "acceptanceCriterionIds": [
-        "M060-AC-001"
-      ],
-      "dependencies": [],
-      "serverThreadId": null,
-      "serverCommit": null,
-      "apiContractVersion": null,
-      "cliCommit": null,
-      "validatorRound": null
-    },
-    {
-      "id": "ISSUE-070-001",
-      "kind": "quality_gap",
-      "title": "Add real-corpus BM25 regression and scale fixtures",
-      "priority": "P1",
-      "status": "open",
-      "owner": "cli",
+      "owner": "cross_repo",
       "milestoneId": "0.7",
       "blockingMilestones": [
         "0.7"
       ],
       "rootCauseStatus": "known",
-      "description": "Current synthetic collection tests do not prove ranking quality, incremental behavior, or 10000-document performance.",
+      "description": "A stable favorite topic export contract is required before the CLI can create a faithful one-step local collection.",
       "acceptanceCriterionIds": [
-        "M070-AC-001",
-        "M070-AC-002",
-        "M070-AC-003",
-        "M070-AC-004"
-      ],
-      "dependencies": [],
-      "serverThreadId": null,
-      "serverCommit": null,
-      "apiContractVersion": null,
-      "cliCommit": null,
-      "validatorRound": null
-    },
-    {
-      "id": "ISSUE-080-001",
-      "kind": "capability_gap",
-      "title": "Define optional keychain implementation and fallback",
-      "priority": "P2",
-      "status": "open",
-      "owner": "cli",
-      "milestoneId": "0.8",
-      "blockingMilestones": [],
-      "rootCauseStatus": "needs_analysis",
-      "description": "A cross-platform keychain strategy must preserve file and env compatibility without making native dependencies mandatory.",
-      "acceptanceCriterionIds": [
-        "M080-AC-004",
-        "M080-AC-005"
+        "M070-AC-010"
       ],
       "dependencies": [
-        "external:platform-credential-stores"
+        "server:favorite-topic-export"
       ],
-      "serverThreadId": null,
+      "serverThreadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
       "serverCommit": null,
       "apiContractVersion": null,
       "cliCommit": null,
-      "validatorRound": null
-    },
-    {
-      "id": "ISSUE-080-002",
-      "kind": "validation_gap",
-      "title": "Add cross-platform upgrade, rollback, and uninstall suites",
-      "priority": "P2",
-      "status": "open",
-      "owner": "test_environment",
-      "milestoneId": "0.8",
-      "blockingMilestones": [],
-      "rootCauseStatus": "known",
-      "description": "Lifecycle behavior needs real supported-platform runners beyond current installer checks.",
-      "acceptanceCriterionIds": [
-        "M080-AC-004"
-      ],
-      "dependencies": [
-        "external:supported-platform-runners"
-      ],
-      "serverThreadId": null,
-      "serverCommit": null,
-      "apiContractVersion": null,
-      "cliCommit": null,
-      "validatorRound": null
+      "validatorRound": "historical-novice-audit-retry-2026-07-06",
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "019f362d-52df-7e33-9bc8-2fdc2eaa7caf",
+        "assignmentRef": "historical-novice-audit-retry-2026-07-06",
+        "report": "apexcn-cli-novice-audit-retry-2026-07-06.md",
+        "findingRefs": [
+          "Q094"
+        ],
+        "observedCliVersion": "0.18.8",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "黑盒测试无法将收藏主题一键构建为忠实的本地 collection。",
+        "expectedUserOutcome": "用户可从服务端收藏清单构建可验证、可离线查询的本地知识集合。",
+        "responsibilityAssessment": "cross_repo",
+        "scenarioOrExplorationRef": [
+          "Q094"
+        ]
+      }
     }
-  ]
+  ],
+  "sourcePolicy": {
+    "allowedSource": "independent-validator-thread",
+    "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
+    "threadStrategy": "fresh-task-per-validation-round",
+    "dynamicAssignmentRequired": true,
+    "novicePersonaRequired": true,
+    "implementationPlanningItemsBelongIn": "roadmap.readinessRisks",
+    "removeAfterIndependentRevalidation": true,
+    "requiredProvenance": [
+      "threadId",
+      "assignmentRef",
+      "report",
+      "findingRefs",
+      "scenarioOrExplorationRef",
+      "observedCliVersion",
+      "persona",
+      "firstAttemptEvidencePreserved",
+      "actualOutputSummary",
+      "expectedUserOutcome",
+      "responsibilityAssessment"
+    ],
+    "historicalThreadsMayOnlyProvide": [
+      "historical-baseline",
+      "existing-active-issue-provenance",
+      "closed-issue-evidence"
+    ],
+    "newActiveIssueRequiresFreshRound": true
+  }
 }

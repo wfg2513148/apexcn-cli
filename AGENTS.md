@@ -12,6 +12,7 @@
 - Build only a just-in-time plan for the current milestone from current code, evidence, and active issues. Do not pre-generate implementation plans for later milestones.
 - Keep at most one milestone `in_progress`.
 - Remove fixed issues from active `issues.json`; preserve first-attempt failures in independent validation history.
+- After the user confirms milestone activation, run one dedicated Codex goal for that roadmap milestone. The goal may end only after 100% of milestone acceptance, independent validation, issue closure, push, release, and context handoff are complete.
 - When a milestone is complete, stop and briefly summarize enhanced capabilities, unexpected problems, root causes, prevention actions, and the next milestone's measurable goal and expected result.
 - Do not start the next milestone until the user gives explicit 手工确认 and the predecessor completion review is marked `approved`.
 - Run `npm run check:roadmap` after changing roadmap or issue state.
@@ -24,15 +25,18 @@
 - The compact summary must include enhanced capabilities, unexpected problems, root causes, prevention actions, the next milestone goal, expected results, and major risks.
 - End the current goal after context compaction. The next main session must read `reports/iteration-context.json` when present, then re-read `roadmap.json` and `issues.json` before planning.
 
-## Fixed Validation Routing
+## Independent Validation Routing
 
 - Independent CLI validation project: `/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test`
-- Independent CLI validation thread: `019f6ed4-f811-7fd0-8111-241bb262c3ba`
+- Every validation round creates a fresh independent novice task thread in that project. Never reuse a prior validator thread; historical thread IDs are evidence only.
+- The main session dynamically assigns a structured scope contract from the active milestone and current risks. Every round runs the complete applicable fixed baseline suite plus a separately scored dynamic milestone/adverse suite.
+- The scope contract records the tested CLI version, commit/tag/checksum, baseline dataset and scorer versions, environment hash, allowed public materials, prohibited actions, evidence format, and assigned scenarios.
+- `issues.json` accepts actual validator findings only. Each issue must cite its fresh validator thread, assignment, scenario or exploration task, first-attempt evidence, actual output, expected user result, and responsibility assessment. Planning gaps belong in `roadmap.readinessRisks`.
 - Validator model: `gpt-5.6-luna`, reasoning effort `high`
 - ORDS API repository: `/Users/kwang/apexcn-forums`
 - ORDS API thread: `019f2888-ef40-7b20-9af7-e4495f3a1091`
 - Server model: `gpt-5.6-terra`, reasoning effort `high`
-- Before accepting a delegated round, verify the target thread, working directory, model, reasoning effort, commit, and artifact checksum.
+- Before accepting a delegated round, verify the new thread, working directory, novice persona, model, reasoning effort, tested commit/tag, artifact checksum, and scope contract.
 - Every CLI write-back validation must include both backend/API evidence and visual recognition in the real Codex in-app browser. Review the rendered title, body, formatting, visibility/status, and end-user accessibility; a database-only success check is insufficient.
 - Reuse the existing dedicated test account for write-back validation. Do not create a new account for each run; only maintain or replace it when it is unavailable or lacks the required minimum permissions.
 - Route missing or incorrect ORDS REST API capability to the fixed server thread before adapting the CLI. Do not hide server gaps with CLI-only workarounds.

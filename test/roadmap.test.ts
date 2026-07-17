@@ -27,7 +27,7 @@ describe("roadmap contract", () => {
       encoding: "utf8"
     });
 
-    expect(output).toContain("Roadmap check passed for 8 milestones and 12 active issues");
+    expect(output).toContain("Roadmap check passed for 8 milestones and 6 active issues");
   });
 
   test("defines differentiated measurable stages from 0.2 through 0.9", () => {
@@ -56,6 +56,9 @@ describe("roadmap contract", () => {
     for (const milestone of roadmap.milestones) {
       expect(milestone.capabilities.length).toBeGreaterThan(0);
       expect(milestone.acceptanceCriteria.length).toBeGreaterThan(0);
+      expect(milestone.userOutcome).toEqual(expect.any(String));
+      expect(milestone.stageNonGoals.length).toBeGreaterThan(0);
+      expect(milestone.outcomeMetricIds.length).toBeGreaterThan(0);
       for (const criterion of milestone.acceptanceCriteria) {
         expect(criterion.gate).toBe("core");
         expect(criterion.metric).toEqual(expect.any(String));
@@ -63,11 +66,12 @@ describe("roadmap contract", () => {
         expect(criterion.target).not.toBeNull();
         expect(criterion.unit).toEqual(expect.any(String));
         expect(criterion.measurementMethod).toEqual(expect.any(String));
+        expect(criterion.measurementProfileId).toEqual(expect.any(String));
       }
     }
   });
 
-  test("locks just-in-time planning and fixed model routing", () => {
+  test("locks just-in-time planning and fresh novice validator routing", () => {
     const roadmap = loadJson("roadmap.json");
 
     expect(roadmap.executionProtocol).toEqual(expect.objectContaining({
@@ -78,11 +82,39 @@ describe("roadmap contract", () => {
       nextMilestoneRequiresManualConfirmation: true
     }));
     expect(roadmap.testingBindings.validator).toEqual(expect.objectContaining({
-      threadId: "019f6ed4-f811-7fd0-8111-241bb262c3ba",
+      threadStrategy: "fresh-task-per-validation-round",
+      dynamicScenarioAssignment: true,
+      personaResetEachRound: "novice",
+      issuesMustOriginateFromValidator: true,
+      reusePreviousThread: false,
       model: "gpt-5.6-luna",
       reasoningEffort: "high"
     }));
-    expect(roadmap.executionProtocol.patchIterationClosure).toEqual({
+    expect(roadmap.testingBindings.validator).not.toHaveProperty("threadId");
+    expect(roadmap.testingBindings.validator.roundProtocol).toEqual(expect.objectContaining({
+      intakeGate: expect.objectContaining({ required: true }),
+      scopeContractGate: expect.objectContaining({
+        required: true,
+        assignedBy: "main-session",
+        baselineSuiteCoverageRequiredPercent: 100,
+        dynamicSuiteRequired: true
+      }),
+      issueAdmissionGate: expect.objectContaining({
+        required: true,
+        issueSourceMustMatchRoundThread: true
+      }),
+      longitudinalComparison: expect.objectContaining({
+        baselineSuiteStableAcrossRounds: true,
+        dynamicSuiteReportedSeparately: true
+      })
+    }));
+    expect(roadmap.executionProtocol.goalModeDefinition).toEqual(expect.objectContaining({
+      requiredForEveryMilestone: true,
+      milestoneExecutionMode: "one-codex-goal-per-roadmap-milestone",
+      incompleteWhenReleaseFails: true,
+      mayEndBeforeMilestoneCompletion: false
+    }));
+    expect(roadmap.executionProtocol.patchIterationClosure).toEqual(expect.objectContaining({
       requiredInGoalMode: true,
       versionBump: "patch",
       commitRequired: true,
@@ -97,8 +129,14 @@ describe("roadmap contract", () => {
         output: "reports/iteration-context.json",
         maxBytes: 12288,
         nextSessionMustRead: true
+      },
+      milestoneEntryException: {
+        allowed: true,
+        condition: "首次发布新激活里程碑的 release line",
+        versionBump: "minor",
+        migrationNoteRequired: true
       }
-    });
+    }));
     expect(roadmap.testingBindings.validator.writeBackVisualVerification).toEqual({
       required: true,
       browser: "codex-in-app-browser",
@@ -167,5 +205,51 @@ describe("roadmap contract", () => {
     issues.issues[0].status = "resolved";
     const problems = validateRoadmap(validationInput(roadmap, issues));
     expect(problems).toContain(`issues.json contains non-active status for ${issues.issues[0].id}`);
+  });
+
+  test("rejects active issues without independent validator provenance", () => {
+    const roadmap = loadJson("roadmap.json");
+    const issues = loadJson("issues.json");
+    delete issues.issues[0].source;
+
+    const problems = validateRoadmap(validationInput(roadmap, issues));
+
+    expect(problems).toContain(`issue ${issues.issues[0].id} must originate from an independent validator thread`);
+  });
+
+  test("rejects a reusable validator thread binding", () => {
+    const roadmap = loadJson("roadmap.json");
+    const issues = loadJson("issues.json");
+    roadmap.testingBindings.validator.threadId = "reused-thread";
+
+    const problems = validateRoadmap(validationInput(roadmap, issues));
+
+    expect(problems).toContain("validator binding must not pin a reusable threadId");
+  });
+
+  test("blocks milestone activation on unready structured dependencies", () => {
+    const roadmap = loadJson("roadmap.json");
+    const issues = loadJson("issues.json");
+    roadmap.milestones[0].completionReview.status = "approved";
+    roadmap.milestones[1].status = "in_progress";
+    roadmap.milestones[1].activationGate.status = "approved";
+
+    const problems = validateRoadmap(validationInput(roadmap, issues));
+
+    expect(problems).toContain(
+      "milestone 0.3 cannot activate before dependency environment:dev@oci-api-key is ready"
+    );
+  });
+
+  test("rejects acceptance criteria without a known measurement profile", () => {
+    const roadmap = loadJson("roadmap.json");
+    const issues = loadJson("issues.json");
+    roadmap.milestones[0].acceptanceCriteria[0].measurementProfileId = "PROFILE-MISSING";
+
+    const problems = validateRoadmap(validationInput(roadmap, issues));
+
+    expect(problems).toContain(
+      "criterion M020-AC-001 references unknown measurement profile PROFILE-MISSING"
+    );
   });
 });

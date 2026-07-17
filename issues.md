@@ -13,16 +13,10 @@
 | `ISSUE-020-002` | `0.2` | `cli` | `open` | Add curated novice learning and deployment views |
 | `ISSUE-030-001` | `0.3` | `cross_repo` | `open` | Add real readonly retrieval evaluation |
 | `ISSUE-040-001` | `0.4` | `server` | `open` | Expose notifications, rules, and privacy contracts |
-| `ISSUE-040-002` | `0.4` | `cross_repo` | `open` | Add favorites-to-collection flow |
-| `ISSUE-050-001` | `0.5` | `cli` | `open` | Expand workflow policy, diff, and audit governance |
-| `ISSUE-060-001` | `0.6` | `external` | `open` | Verify real MCP client compatibility |
-| `ISSUE-070-001` | `0.7` | `cli` | `open` | Add real-corpus BM25 regression and scale fixtures |
+| `ISSUE-070-002` | `0.7` | `cross_repo` | `open` | Add favorites-to-collection flow |
 
 ### P2
 
 | ID | Milestone | Owner | Status | Title |
 |---|---|---|---|---|
 | `ISSUE-040-003` | `0.4` | `cli` | `open` | Decide local draft inventory storage |
-| `ISSUE-060-002` | `0.6` | `cli` | `open` | Continue gradual shared-core extraction |
-| `ISSUE-080-001` | `0.8` | `cli` | `open` | Define optional keychain implementation and fallback |
-| `ISSUE-080-002` | `0.8` | `test_environment` | `open` | Add cross-platform upgrade, rollback, and uninstall suites |
