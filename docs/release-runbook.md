@@ -36,12 +36,17 @@ The checksum generator writes both aggregate `checksums.txt` and per-asset `.sha
 
 ## Publish
 
-Replace `v0.18.18` with the intended `0.x` version.
+The normal goal-mode closure path publishes directly with GitHub CLI. It does not dispatch a GitHub Actions workflow.
 
 ```bash
-git tag v0.18.18
-git push origin v0.18.18
-gh release view v0.18.18 || gh release create v0.18.18 \
+VERSION=$(node -p "require('./package.json').version")
+TAG="v$VERSION"
+
+git commit -m "release: $TAG [skip ci]"
+git push origin main
+git tag "$TAG"
+git push origin "$TAG"
+gh release create "$TAG" \
   artifacts/apexcn-cli.tgz \
   artifacts/install-agent.sh \
   artifacts/install-agent.ps1 \
@@ -49,17 +54,46 @@ gh release view v0.18.18 || gh release create v0.18.18 \
   artifacts/apexcn-cli.tgz.sha256 \
   artifacts/install-agent.sh.sha256 \
   artifacts/install-agent.ps1.sha256 \
-  --title v0.18.18 \
-  --notes "apexcn-cli release v0.18.18"
+  --title "$TAG" \
+  --notes "apexcn-cli release $TAG"
 ```
 
-The normal path is to push the tag and let `.github/workflows/release.yml` build and publish the assets.
+The release commit must end with `[skip ci]`. Do not run `gh workflow run`. `.github/workflows/release.yml` is a manual fallback only and is not triggered by tag pushes.
 
 ## Post-Release Checks
 
 ```bash
-gh release view v0.18.18 --json tagName,isDraft,isPrerelease,assets,url
-curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/download/v0.18.18/checksums.txt
+RELEASE_URL=$(gh release view "$TAG" --json url --jq .url)
+gh release view "$TAG" --json tagName,isDraft,isPrerelease,assets,url
+gh release download "$TAG" --pattern checksums.txt --dir /tmp/apexcn-release-check
+cat /tmp/apexcn-release-check/checksums.txt
 ```
 
 Confirm the release is not a draft, not a prerelease, and includes `checksums.txt` plus the three per-asset `.sha256` files.
+
+## Compact Iteration Context
+
+Create a JSON summary with these required fields:
+
+```json
+{
+  "milestoneId": "0.2",
+  "enhancedCapabilities": ["..."],
+  "unexpectedProblems": ["none observed"],
+  "rootCauses": ["..."],
+  "preventionActions": ["..."],
+  "nextMilestoneGoal": "...",
+  "expectedResults": ["..."],
+  "majorRisks": ["..."]
+}
+```
+
+Then write and verify the bounded handoff:
+
+```bash
+npm run context:compact -- \
+  --summary /tmp/apexcn-iteration-summary.json \
+  --release-url "$RELEASE_URL"
+```
+
+The command requires a clean synchronized `main`, a tag at `HEAD`, a final GitHub Release, and all required release assets. It writes at most 12 KiB to `reports/iteration-context.json`. End the current goal after this step; the next main session reads that file before `roadmap.json` and `issues.json`.

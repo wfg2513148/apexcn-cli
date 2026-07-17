@@ -43,20 +43,25 @@ function checkReleaseWorkflow() {
   checkMultiline(path, text, 25);
   checkTopLevel(path, text, ["name: Release", "on:", "permissions:", "jobs:"]);
   checkContains(path, text, [
+    "workflow_dispatch:",
+    "inputs:",
+    "tag:",
     "contents: write",
+    "ref: ${{ inputs.tag }}",
     "npm ci",
     "npm run build",
     "npm test",
     "npm run check:release",
     "scripts/check-release-artifacts.mjs",
-    "gh release create \"$GITHUB_REF_NAME\"",
+    "RELEASE_TAG: ${{ inputs.tag }}",
+    "gh release create \"$RELEASE_TAG\"",
     "artifacts/checksums.txt",
     "artifacts/apexcn-cli.tgz.sha256",
     "artifacts/install-agent.sh.sha256",
     "artifacts/install-agent.ps1.sha256"
   ]);
-  checkOrder(path, text, "npm run check:release", "gh release create \"$GITHUB_REF_NAME\"");
-  checkOrder(path, text, "scripts/check-release-artifacts.mjs", "gh release create \"$GITHUB_REF_NAME\"");
+  checkOrder(path, text, "npm run check:release", "gh release create \"$RELEASE_TAG\"");
+  checkOrder(path, text, "scripts/check-release-artifacts.mjs", "gh release create \"$RELEASE_TAG\"");
 }
 
 function checkMultiline(path, text, minimumLines) {

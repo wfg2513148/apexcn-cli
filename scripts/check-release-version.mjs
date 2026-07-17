@@ -141,7 +141,13 @@ function checkReleaseWorkflow() {
   const text = readText(path);
   const checkIndex = text.indexOf("npm run check:release");
   const artifactIndex = text.indexOf("scripts/check-release-artifacts.mjs");
-  const releaseIndex = text.indexOf('gh release create "$GITHUB_REF_NAME"');
+  const releaseIndex = text.indexOf('gh release create "$RELEASE_TAG"');
+  if (!text.includes("workflow_dispatch:")) {
+    failures.push(`${path}: release workflow must be manual-only`);
+  }
+  if (/^\s+push:\s*$/m.test(text)) {
+    failures.push(`${path}: release workflow must not run on tag push`);
+  }
   if (checkIndex === -1) {
     failures.push(`${path}: missing npm run check:release`);
   }
@@ -149,7 +155,7 @@ function checkReleaseWorkflow() {
     failures.push(`${path}: missing scripts/check-release-artifacts.mjs`);
   }
   if (releaseIndex === -1) {
-    failures.push(`${path}: missing gh release create "$GITHUB_REF_NAME"`);
+    failures.push(`${path}: missing gh release create "$RELEASE_TAG"`);
   }
   if (checkIndex !== -1 && releaseIndex !== -1 && checkIndex > releaseIndex) {
     failures.push(`${path}: npm run check:release must run before gh release create`);
@@ -158,7 +164,7 @@ function checkReleaseWorkflow() {
     failures.push(`${path}: release artifacts must be checked before gh release create`);
   }
 
-  const releaseCommand = /gh release create "\$GITHUB_REF_NAME" \\\r?\n([\s\S]*?)\r?\n\s*--title/.exec(text);
+  const releaseCommand = /gh release create "\$RELEASE_TAG" \\\r?\n([\s\S]*?)\r?\n\s*--title/.exec(text);
   if (!releaseCommand) {
     failures.push(`${path}: unable to parse gh release create assets`);
     return;

@@ -32,7 +32,9 @@ describe("documentation consistency", () => {
     expect(release).toMatch(/^name: Release$/m);
     expect(release).toMatch(/^on:$/m);
     expect(release).toMatch(/^jobs:$/m);
-    expect(release).toMatch(/^\s+gh release create "\$GITHUB_REF_NAME" \\$/m);
+    expect(release).toMatch(/^\s+workflow_dispatch:$/m);
+    expect(release).not.toMatch(/^\s+push:$/m);
+    expect(release).toMatch(/^\s+gh release create "\$RELEASE_TAG" \\$/m);
   });
 
   test("install URLs use the latest release endpoint", () => {

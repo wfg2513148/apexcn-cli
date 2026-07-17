@@ -27,6 +27,7 @@
     "check:roadmap": "node scripts/check-roadmap.mjs",
     "check:source-layout": "node scripts/check-source-layout.mjs",
     "check:workflows": "node scripts/check-workflows.mjs",
+    "context:compact": "node scripts/compact-iteration-context.mjs",
     "eval:rag": "node scripts/eval-rag.mjs --report",
     "roadmap:render": "node scripts/check-roadmap.mjs --write-docs",
     "test": "vitest run",

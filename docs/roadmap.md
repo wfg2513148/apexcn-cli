@@ -14,6 +14,9 @@
 - 修复后的问题从活动 `issues.json` 删除，首次失败证据保留在验证历史。
 - 完成里程碑后必须停下，归纳增强能力、意外问题、根因、规避措施和下一阶段预期。
 - 只有用户手工确认后，下一里程碑才可进入 `in_progress`。
+- 每次目标模式小版本完成后必须 bump patch、通过本地门禁、提交、推送、打 tag，并直接创建 GitHub Release。
+- 发版提交以 `[skip ci]` 结尾；不得触发 GitHub Actions，正常发版使用 `gh release create`。
+- 发布验证后必须生成不超过 12 KiB 的 `reports/iteration-context.json`，并结束当前目标。
 
 ## 固定验证路由
 
@@ -23,6 +26,8 @@
 | ORDS API | /Users/kwang/apexcn-forums | `019f2888-ef40-7b20-9af7-e4495f3a1091` | `gpt-5.6-terra` | `high` |
 
 真实 API 验证可在 `dev@oci` 创建最小权限专用 API key；不得写入仓库、日志、fixture 或证据包，也不得用于生产社区写操作。
+
+所有 CLI 回写场景必须同时保留后端/API 证据和 Codex 侧边栏真实浏览器视觉证据。浏览器复核标题、正文、格式、可见状态、用户可访问性与截图；不得只验证数据库。复用既有专用测试账号，不得逐轮新建。
 
 ## 里程碑总览
 

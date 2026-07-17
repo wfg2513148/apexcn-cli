@@ -35,7 +35,24 @@
       "nextMilestoneGoal",
       "expectedResults",
       "majorRisks"
-    ]
+    ],
+    "patchIterationClosure": {
+      "requiredInGoalMode": true,
+      "versionBump": "patch",
+      "commitRequired": true,
+      "pushRequired": true,
+      "githubReleaseRequired": true,
+      "githubActionsMode": "skip",
+      "releaseMethod": "gh-release-create",
+      "releaseCommitSuffix": "[skip ci]",
+      "contextCompaction": {
+        "required": true,
+        "strategy": "durable-handoff",
+        "output": "reports/iteration-context.json",
+        "maxBytes": 12288,
+        "nextSessionMustRead": true
+      }
+    }
   },
   "testingBindings": {
     "builder": {
@@ -46,7 +63,25 @@
       "threadId": "019f6ed4-f811-7fd0-8111-241bb262c3ba",
       "model": "gpt-5.6-luna",
       "reasoningEffort": "high",
-      "interface": "installed-public-apexcn"
+      "interface": "installed-public-apexcn",
+      "writeBackVisualVerification": {
+        "required": true,
+        "browser": "codex-in-app-browser",
+        "perspective": "end-user",
+        "requireVisualRecognition": true,
+        "backendEvidenceStillRequired": true,
+        "requiredBrowserEvidence": [
+          "rendered-content",
+          "formatting",
+          "visibility-and-status",
+          "screenshot"
+        ],
+        "testAccountPolicy": {
+          "reuseExistingAccount": true,
+          "createAccountPerRun": false,
+          "credentialsStoredInRepository": false
+        }
+      }
     },
     "server": {
       "repository": "/Users/kwang/apexcn-forums",

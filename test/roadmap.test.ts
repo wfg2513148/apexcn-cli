@@ -82,6 +82,41 @@ describe("roadmap contract", () => {
       model: "gpt-5.6-luna",
       reasoningEffort: "high"
     }));
+    expect(roadmap.executionProtocol.patchIterationClosure).toEqual({
+      requiredInGoalMode: true,
+      versionBump: "patch",
+      commitRequired: true,
+      pushRequired: true,
+      githubReleaseRequired: true,
+      githubActionsMode: "skip",
+      releaseMethod: "gh-release-create",
+      releaseCommitSuffix: "[skip ci]",
+      contextCompaction: {
+        required: true,
+        strategy: "durable-handoff",
+        output: "reports/iteration-context.json",
+        maxBytes: 12288,
+        nextSessionMustRead: true
+      }
+    });
+    expect(roadmap.testingBindings.validator.writeBackVisualVerification).toEqual({
+      required: true,
+      browser: "codex-in-app-browser",
+      perspective: "end-user",
+      requireVisualRecognition: true,
+      backendEvidenceStillRequired: true,
+      requiredBrowserEvidence: [
+        "rendered-content",
+        "formatting",
+        "visibility-and-status",
+        "screenshot"
+      ],
+      testAccountPolicy: {
+        reuseExistingAccount: true,
+        createAccountPerRun: false,
+        credentialsStoredInRepository: false
+      }
+    });
     expect(roadmap.testingBindings.server).toEqual(expect.objectContaining({
       threadId: "019f2888-ef40-7b20-9af7-e4495f3a1091",
       model: "gpt-5.6-terra",

@@ -179,6 +179,23 @@ Only an explicit user confirmation may change the completion review to
 `approved`. An agent must not infer approval from silence or from automated
 test success.
 
+Every completed goal-mode patch iteration also has a release closure:
+
+1. Bump the patch version and pass all local quality gates.
+2. Commit with a message ending in `[skip ci]`.
+3. Push `main` and the release tag.
+4. Create the GitHub Release directly with `gh release create`.
+5. Do not activate GitHub Actions or run `gh workflow run`.
+6. Verify the published tag, assets, checksums, and release URL.
+7. Write a compact durable handoff to `reports/iteration-context.json`.
+8. End the current goal so the next goal starts from the compact handoff,
+   `roadmap.json`, and `issues.json`.
+
+The Codex runtime does not expose a repository-callable API that can mutate the
+platform's current context window on demand. The required durable handoff is
+therefore the enforceable compaction boundary: it is size-limited, verified
+after release, and is the first context source for the next main task.
+
 ## Testing And Feedback Architecture
 
 ### Fixed Execution Bindings
@@ -198,6 +215,14 @@ must never be committed or included in logs, fixtures, `issues.json`, roadmap
 evidence, doctor output, or support bundles, and must be rotated or revoked
 when the validation policy requires it. Production community writes remain
 prohibited.
+
+Every CLI write-back scenario requires two evidence layers: API or database
+evidence that the mutation persisted, and visual recognition in the real Codex
+in-app browser from the end-user perspective. The browser review must inspect
+the rendered title, body, formatting, visibility/status, accessibility, and a
+screenshot. Backend-only verification is insufficient. The validator reuses
+the existing dedicated test account instead of creating a new account per run;
+credentials remain outside the repository and evidence artifacts.
 
 ### Execution Handshake
 

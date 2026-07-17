@@ -28,6 +28,9 @@ export function renderRoadmap(roadmap, issues) {
     "- 修复后的问题从活动 `issues.json` 删除，首次失败证据保留在验证历史。",
     "- 完成里程碑后必须停下，归纳增强能力、意外问题、根因、规避措施和下一阶段预期。",
     "- 只有用户手工确认后，下一里程碑才可进入 `in_progress`。",
+    "- 每次目标模式小版本完成后必须 bump patch、通过本地门禁、提交、推送、打 tag，并直接创建 GitHub Release。",
+    "- 发版提交以 `[skip ci]` 结尾；不得触发 GitHub Actions，正常发版使用 `gh release create`。",
+    "- 发布验证后必须生成不超过 12 KiB 的 `reports/iteration-context.json`，并结束当前目标。",
     "",
     "## 固定验证路由",
     "",
@@ -37,6 +40,8 @@ export function renderRoadmap(roadmap, issues) {
     `| ORDS API | ${md(roadmap.testingBindings.server.repository)} | \`${roadmap.testingBindings.server.threadId}\` | \`${roadmap.testingBindings.server.model}\` | \`${roadmap.testingBindings.server.reasoningEffort}\` |`,
     "",
     `真实 API 验证可在 \`${roadmap.testingBindings.server.apiKeyEnvironment}\` 创建最小权限专用 API key；不得写入仓库、日志、fixture 或证据包，也不得用于生产社区写操作。`,
+    "",
+    "所有 CLI 回写场景必须同时保留后端/API 证据和 Codex 侧边栏真实浏览器视觉证据。浏览器复核标题、正文、格式、可见状态、用户可访问性与截图；不得只验证数据库。复用既有专用测试账号，不得逐轮新建。",
     "",
     "## 里程碑总览",
     "",
@@ -162,9 +167,37 @@ export function validateRoadmap({ roadmap, issues, roadmapMarkdown, issuesMarkdo
   check(roadmap.executionProtocol?.preGeneratedImplementationPlans === false, "preGeneratedImplementationPlans must be false", problems);
   check(roadmap.executionProtocol?.nextMilestoneRequiresManualConfirmation === true, "manual milestone confirmation must be required", problems);
   check(equalArrays(roadmap.executionProtocol?.planningInputs, ["roadmap.json", "issues.json"]), "planningInputs must be roadmap.json and issues.json", problems);
+  const patchClosure = roadmap.executionProtocol?.patchIterationClosure;
+  check(patchClosure?.requiredInGoalMode === true, "goal-mode patch closure must be required", problems);
+  check(patchClosure?.versionBump === "patch", "goal-mode closure must bump patch version", problems);
+  check(patchClosure?.commitRequired === true && patchClosure?.pushRequired === true, "goal-mode closure must commit and push", problems);
+  check(patchClosure?.githubReleaseRequired === true, "goal-mode closure must publish a GitHub Release", problems);
+  check(patchClosure?.githubActionsMode === "skip", "goal-mode closure must skip GitHub Actions", problems);
+  check(patchClosure?.releaseMethod === "gh-release-create", "goal-mode closure must use gh release create", problems);
+  check(patchClosure?.releaseCommitSuffix === "[skip ci]", "release commit must end with [skip ci]", problems);
+  check(patchClosure?.contextCompaction?.required === true, "iteration context compaction must be required", problems);
+  check(patchClosure?.contextCompaction?.strategy === "durable-handoff", "context compaction strategy must be durable-handoff", problems);
+  check(patchClosure?.contextCompaction?.output === "reports/iteration-context.json", "context compaction output drifted", problems);
+  check(patchClosure?.contextCompaction?.maxBytes === 12288, "iteration context maximum must be 12288 bytes", problems);
+  check(patchClosure?.contextCompaction?.nextSessionMustRead === true, "next session must read compact context", problems);
   check(roadmap.testingBindings?.validator?.threadId === "019f6ed4-f811-7fd0-8111-241bb262c3ba", "validator thread binding drifted", problems);
   check(roadmap.testingBindings?.validator?.model === "gpt-5.6-luna", "validator model must be gpt-5.6-luna", problems);
   check(roadmap.testingBindings?.validator?.reasoningEffort === "high", "validator reasoning must be high", problems);
+  const visualVerification = roadmap.testingBindings?.validator?.writeBackVisualVerification;
+  check(visualVerification?.required === true, "write-back visual verification must be required", problems);
+  check(visualVerification?.browser === "codex-in-app-browser", "write-back validation must use the Codex in-app browser", problems);
+  check(visualVerification?.perspective === "end-user", "write-back validation must use the end-user perspective", problems);
+  check(visualVerification?.requireVisualRecognition === true, "write-back validation must require visual recognition", problems);
+  check(visualVerification?.backendEvidenceStillRequired === true, "write-back validation must retain backend evidence", problems);
+  check(equalArrays(visualVerification?.requiredBrowserEvidence, [
+    "rendered-content",
+    "formatting",
+    "visibility-and-status",
+    "screenshot"
+  ]), "write-back browser evidence requirements drifted", problems);
+  check(visualVerification?.testAccountPolicy?.reuseExistingAccount === true, "write-back tests must reuse the existing account", problems);
+  check(visualVerification?.testAccountPolicy?.createAccountPerRun === false, "write-back tests must not create an account per run", problems);
+  check(visualVerification?.testAccountPolicy?.credentialsStoredInRepository === false, "test account credentials must stay outside the repository", problems);
   check(roadmap.testingBindings?.server?.threadId === "019f2888-ef40-7b20-9af7-e4495f3a1091", "server thread binding drifted", problems);
   check(roadmap.testingBindings?.server?.model === "gpt-5.6-terra", "server model must be gpt-5.6-terra", problems);
   check(roadmap.testingBindings?.server?.reasoningEffort === "high", "server reasoning must be high", problems);
@@ -296,6 +329,10 @@ export function validateRoadmap({ roadmap, issues, roadmapMarkdown, issuesMarkdo
   check(issuesMarkdown === renderIssues(issues), "issues.md is not synchronized with issues.json", problems);
   check(agentsText.includes("roadmap.json") && agentsText.includes("issues.json"), "AGENTS.md must require roadmap.json and issues.json", problems);
   check(agentsText.includes("手工确认"), "AGENTS.md must require manual milestone confirmation", problems);
+  check(agentsText.includes("[skip ci]") && agentsText.includes("gh release create"), "AGENTS.md must define direct release closure", problems);
+  check(agentsText.includes("context:compact") && agentsText.includes("reports/iteration-context.json"), "AGENTS.md must define context compaction", problems);
+  check(agentsText.includes("Codex in-app browser") && agentsText.includes("database-only"), "AGENTS.md must require visual write-back validation", problems);
+  check(agentsText.includes("existing dedicated test account"), "AGENTS.md must require test account reuse", problems);
   return problems;
 }
 

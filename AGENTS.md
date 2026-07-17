@@ -16,6 +16,14 @@
 - Do not start the next milestone until the user gives explicit 手工确认 and the predecessor completion review is marked `approved`.
 - Run `npm run check:roadmap` after changing roadmap or issue state.
 
+## Goal-Mode Patch Closure
+
+- Every completed small-version goal-mode iteration must bump the patch version, pass local quality gates, commit, push `main`, push the release tag, and publish a GitHub Release.
+- Do not activate GitHub Actions for this closure path. The release commit must end with `[skip ci]`, and the release must be created directly with `gh release create`; do not run `gh workflow run`.
+- After release verification, run `npm run context:compact -- --summary <summary.json> --release-url <url>` to write `reports/iteration-context.json`.
+- The compact summary must include enhanced capabilities, unexpected problems, root causes, prevention actions, the next milestone goal, expected results, and major risks.
+- End the current goal after context compaction. The next main session must read `reports/iteration-context.json` when present, then re-read `roadmap.json` and `issues.json` before planning.
+
 ## Fixed Validation Routing
 
 - Independent CLI validation project: `/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test`
@@ -25,5 +33,7 @@
 - ORDS API thread: `019f2888-ef40-7b20-9af7-e4495f3a1091`
 - Server model: `gpt-5.6-terra`, reasoning effort `high`
 - Before accepting a delegated round, verify the target thread, working directory, model, reasoning effort, commit, and artifact checksum.
+- Every CLI write-back validation must include both backend/API evidence and visual recognition in the real Codex in-app browser. Review the rendered title, body, formatting, visibility/status, and end-user accessibility; a database-only success check is insufficient.
+- Reuse the existing dedicated test account for write-back validation. Do not create a new account for each run; only maintain or replace it when it is unavailable or lacks the required minimum permissions.
 - Route missing or incorrect ORDS REST API capability to the fixed server thread before adapting the CLI. Do not hide server gaps with CLI-only workarounds.
 - A dedicated minimum-privilege apexcn forums API key may be created and used in `dev@oci` for required validation. Never commit it, print it, include it in evidence, or use it for production community writes.
