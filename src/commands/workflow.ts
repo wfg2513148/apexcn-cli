@@ -4,6 +4,11 @@ import { dirname, join } from "node:path";
 import { Command, InvalidArgumentError, Option } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
+import {
+  createWorkflowPlan,
+  type WorkflowGoal,
+  type WorkflowPlanInput
+} from "../core/workflow-plan.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { blockText, fieldText, isRecord, outputFormat, parseOutputFormat, printData, printError, validateFormatOptions, type FormatOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
@@ -12,22 +17,9 @@ type WorkflowCommandOptions = CommandIo & {
   configPath?: string;
 };
 
-type WorkflowGoal = "ask-question" | "reply" | "research-only" | "publish-topic";
 type WorkflowRunGoal = "ask-question" | "reply";
-type WorkflowStepMode = "local" | "api-read" | "api-write-preview" | "api-write-execute";
 
-type WorkflowPlanOptions = FormatOption & {
-  goal: WorkflowGoal;
-  keyword?: string;
-  topicId?: number;
-  categoryId?: number;
-  title?: string;
-  problem?: string;
-  answer?: string;
-  contentFile?: string;
-  outputDir?: string;
-  includeExecute?: boolean;
-};
+type WorkflowPlanOptions = FormatOption & WorkflowPlanInput;
 
 type WorkflowRunOptions = FormatOption & {
   goal?: WorkflowRunGoal;
@@ -82,35 +74,6 @@ type WorkflowExportOptions = {
 type WorkflowVerifyBundleOptions = {
   bundle: string;
   json?: boolean;
-};
-
-type WorkflowStep = {
-  id: string;
-  label: string;
-  command: string;
-  mode: WorkflowStepMode;
-  inputFiles: string[];
-  outputFiles: string[];
-  requiresConfirmation: boolean;
-};
-
-type WorkflowPlan = {
-  kind: "workflow-plan";
-  schemaVersion: 1;
-  goal: WorkflowGoal;
-  steps: WorkflowStep[];
-  checkpoints: {
-    missingInputs: string[];
-    confirmations: string[];
-  };
-  files: Record<string, string>;
-  safetySummary: {
-    localSteps: number;
-    apiReadSteps: number;
-    apiWritePreviewSteps: number;
-    apiWriteExecuteSteps: number;
-    requiresConfirmation: boolean;
-  };
 };
 
 type Session = {
@@ -198,7 +161,7 @@ export function createWorkflowCommand(options: WorkflowCommandOptions): Command 
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
-      const plan = workflowPlan(commandOptions);
+      const plan = createWorkflowPlan(commandOptions);
       printData(options, plan, outputFormat(commandOptions), formatWorkflowPlanText);
     });
 
@@ -561,25 +524,6 @@ async function runWorkflow(io: WorkflowCommandOptions, options: WorkflowRunOptio
   state.nextAction = options.execute ? "Workflow completed." : `Review ${state.artifacts.preview} and approve it with apexcn workflow approve --run-dir ${shellArg(runDir)} --json.`;
   await writeRunState(runDir, state);
   printData(io, state, outputFormat(options), formatWorkflowRunText);
-}
-
-function workflowPlan(options: WorkflowPlanOptions): WorkflowPlan {
-  const files = workflowFiles(options.outputDir);
-  const missingInputs = missingInputsForGoal(options);
-  const steps = stepsForGoal(options, files);
-  const confirmations = steps.filter((step) => step.requiresConfirmation).map((step) => step.id);
-  return {
-    kind: "workflow-plan",
-    schemaVersion: 1,
-    goal: options.goal,
-    steps,
-    checkpoints: {
-      missingInputs,
-      confirmations
-    },
-    files,
-    safetySummary: safetySummary(steps)
-  };
 }
 
 async function workflowVerificationReport(runDir: string, state: WorkflowRunState): Promise<Record<string, unknown> & { ok: boolean; reportPath?: string }> {
@@ -1260,36 +1204,6 @@ async function runStep(state: WorkflowRunState, runDir: string, id: string, arti
   }
 }
 
-function stepsForGoal(options: WorkflowPlanOptions, files: Record<string, string>): WorkflowStep[] {
-  if (options.goal === "research-only") {
-    return [
-      step("research", "Build research bundle", researchCommand(options, files), "api-read", [], [files.research], false)
-    ];
-  }
-  if (options.goal === "ask-question") {
-    const steps = [
-      step("research", "Build research bundle", researchCommand(options, files), "api-read", [], [files.research], false),
-      step("draft-question", "Draft local question", draftQuestionCommand(options, files), "local", [files.research], [files.question], false),
-      step("review-topic", "Review local topic draft", reviewTopicCommand(options, files), "local", [files.question], [], false),
-      step("preview-topic-create", "Preview topic create API request", topicCreateCommand(options, files, true), "api-write-preview", [files.question], [], false)
-    ];
-    return options.includeExecute ? [...steps, step("execute-topic-create", "Create topic after confirmation", topicCreateCommand(options, files, false), "api-write-execute", [files.question], [], true)] : steps;
-  }
-  if (options.goal === "reply") {
-    const steps = [
-      step("topic-view", "Fetch topic context", topicViewCommand(options, files), "api-read", [], [files.topic], false),
-      step("draft-reply", "Draft local reply", draftReplyCommand(options, files), "local", [files.topic], [files.reply], false),
-      step("preview-reply-create", "Preview reply create API request", replyCreateCommand(options, files, true), "api-write-preview", [files.reply], [], false)
-    ];
-    return options.includeExecute ? [...steps, step("execute-reply-create", "Create reply after confirmation", replyCreateCommand(options, files, false), "api-write-execute", [files.reply], [], true)] : steps;
-  }
-  const steps = [
-    step("review-topic", "Review existing topic Markdown", reviewTopicCommand(options, files), "local", [contentFile(options, files)], [], false),
-    step("preview-topic-create", "Preview topic create API request", topicCreateCommand(options, files, true), "api-write-preview", [contentFile(options, files)], [], false)
-  ];
-  return options.includeExecute ? [...steps, step("execute-topic-create", "Create topic after confirmation", topicCreateCommand(options, files, false), "api-write-execute", [contentFile(options, files)], [], true)] : steps;
-}
-
 function initialRunState(goal: WorkflowRunGoal, runDir: string, options: WorkflowRunOptions): WorkflowRunState {
   const createdAt = now();
   const artifacts = runArtifacts(goal, runDir);
@@ -1783,89 +1697,6 @@ function formatWorkflowRunText(data: unknown): string {
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && "code" in error;
-}
-
-function workflowFiles(outputDir = "."): Record<string, string> {
-  const dir = outputDir.replace(/\/+$/, "") || ".";
-  return {
-    research: `${dir}/research.json`,
-    topic: `${dir}/topic.json`,
-    question: `${dir}/question.md`,
-    reply: `${dir}/reply.md`
-  };
-}
-
-function missingInputsForGoal(options: WorkflowPlanOptions): string[] {
-  const missing = [];
-  if ((options.goal === "ask-question" || options.goal === "research-only") && !fieldText(options.keyword).trim()) {
-    missing.push("--keyword");
-  }
-  if ((options.goal === "ask-question" || options.goal === "publish-topic") && options.categoryId === undefined) {
-    missing.push("--category-id");
-  }
-  if ((options.goal === "ask-question" || options.goal === "publish-topic") && !fieldText(options.title).trim()) {
-    missing.push("--title");
-  }
-  if (options.goal === "ask-question" && !fieldText(options.problem).trim()) {
-    missing.push("--problem");
-  }
-  if ((options.goal === "reply") && options.topicId === undefined) {
-    missing.push("--topic-id");
-  }
-  if (options.goal === "reply" && !fieldText(options.answer).trim()) {
-    missing.push("--answer");
-  }
-  if (options.goal === "publish-topic" && !options.contentFile) {
-    missing.push("--content-file");
-  }
-  return missing;
-}
-
-function researchCommand(options: WorkflowPlanOptions, files: Record<string, string>): string {
-  return `apexcn research ${shellArg(options.keyword ?? "<keyword>")} --limit 3 --json > ${shellArg(files.research)}`;
-}
-
-function draftQuestionCommand(options: WorkflowPlanOptions, files: Record<string, string>): string {
-  return `apexcn draft question --title ${shellArg(options.title ?? "<title>")} --problem ${shellArg(options.problem ?? "<problem>")} --research-file ${shellArg(files.research)} --format text > ${shellArg(files.question)}`;
-}
-
-function reviewTopicCommand(options: WorkflowPlanOptions, files: Record<string, string>): string {
-  return `apexcn review topic --title ${shellArg(options.title ?? "<title>")} --content-file ${shellArg(contentFile(options, files))}${options.categoryId === undefined ? "" : ` --category-id ${options.categoryId}`} --json`;
-}
-
-function topicCreateCommand(options: WorkflowPlanOptions, files: Record<string, string>, preview: boolean): string {
-  const category = options.categoryId === undefined ? "--category-id <id>" : `--category-id ${options.categoryId}`;
-  return `apexcn topic create ${category} --title ${shellArg(options.title ?? "<title>")} --content-file ${shellArg(contentFile(options, files))} ${preview ? "--preview" : "--json"}`;
-}
-
-function topicViewCommand(options: WorkflowPlanOptions, files: Record<string, string>): string {
-  return `apexcn topic view ${options.topicId ?? "<topic-id>"} --json > ${shellArg(files.topic)}`;
-}
-
-function draftReplyCommand(options: WorkflowPlanOptions, files: Record<string, string>): string {
-  return `apexcn draft reply --topic-id ${options.topicId ?? "<topic-id>"} --answer ${shellArg(options.answer ?? "<answer>")} --topic-file ${shellArg(files.topic)} --format text > ${shellArg(files.reply)}`;
-}
-
-function replyCreateCommand(options: WorkflowPlanOptions, files: Record<string, string>, preview: boolean): string {
-  return `apexcn reply create ${options.topicId ?? "<topic-id>"} --content-file ${shellArg(files.reply)} ${preview ? "--preview" : "--json"}`;
-}
-
-function contentFile(options: WorkflowPlanOptions, files: Record<string, string>): string {
-  return options.contentFile ?? files.question;
-}
-
-function step(id: string, label: string, command: string, mode: WorkflowStepMode, inputFiles: string[], outputFiles: string[], requiresConfirmation: boolean): WorkflowStep {
-  return { id, label, command, mode, inputFiles, outputFiles, requiresConfirmation };
-}
-
-function safetySummary(steps: WorkflowStep[]): WorkflowPlan["safetySummary"] {
-  return {
-    localSteps: steps.filter((step) => step.mode === "local").length,
-    apiReadSteps: steps.filter((step) => step.mode === "api-read").length,
-    apiWritePreviewSteps: steps.filter((step) => step.mode === "api-write-preview").length,
-    apiWriteExecuteSteps: steps.filter((step) => step.mode === "api-write-execute").length,
-    requiresConfirmation: steps.some((step) => step.requiresConfirmation)
-  };
 }
 
 function formatWorkflowPlanText(data: unknown): string {

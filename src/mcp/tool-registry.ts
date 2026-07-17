@@ -57,6 +57,10 @@ export const MCP_TOOL_MANIFEST_JSON_SCHEMA = {
 } as const;
 
 const READONLY_TOOLS: McpToolDefinition[] = [
+  readonlyTool("apexcn_admin_list", "admin.list", "List public community admins", {
+    type: "object",
+    properties: {}
+  }),
   readonlyTool("apexcn_search", "search", "Search community topics", {
     type: "object",
     properties: {
@@ -75,9 +79,16 @@ const READONLY_TOOLS: McpToolDefinition[] = [
     properties: { topicId: { type: "number" } },
     required: ["topicId"]
   }),
+  readonlyTool("apexcn_topic_list", "topic.list", "List community topics", topicListInputSchema()),
   readonlyTool("apexcn_topic_recent", "topic.recent", "List recent community topics", {
     type: "object",
-    properties: { hours: { type: "number" }, categoryId: { type: "number" }, pageSize: { type: "number" } }
+    properties: {
+      pageSize: { type: "number" },
+      categoryId: { type: "number" },
+      cursor: { type: "string" },
+      from: { type: "string" },
+      to: { type: "string" }
+    }
   }),
   readonlyTool("apexcn_category_list", "category.list", "List community categories", { type: "object", properties: {} }),
   readonlyTool("apexcn_ask", "ask", "Answer with community references", {
@@ -96,7 +107,18 @@ const READONLY_TOOLS: McpToolDefinition[] = [
   }),
   readonlyTool("apexcn_workflow_plan", "workflow.plan", "Create a local workflow plan preview", {
     type: "object",
-    properties: { intent: { type: "string" }, topicId: { type: "number" }, title: { type: "string" }, content: { type: "string" } }
+    properties: {
+      goal: { enum: ["ask-question", "reply", "research-only", "publish-topic"] },
+      keyword: { type: "string" },
+      topicId: { type: "number" },
+      categoryId: { type: "number" },
+      title: { type: "string" },
+      problem: { type: "string" },
+      answer: { type: "string" },
+      contentFile: { type: "string" },
+      outputDir: { type: "string" }
+    },
+    required: ["goal"]
   })
 ];
 
@@ -150,10 +172,47 @@ export function mcpToolManifest(policy: McpPolicy): Record<string, unknown> {
 }
 
 export function assertMcpCommandRegistryCoverage(): boolean {
-  const readonlyIds = new Set(mcpReadonlyDescriptors().map((descriptor) => descriptor.id));
-  const previewIds = new Set(mcpPreviewDescriptors().map((descriptor) => descriptor.id));
-  return READONLY_TOOLS.every((tool) => readonlyIds.has(tool.commandId))
-    && PREVIEW_TOOLS.every((tool) => previewIds.has(tool.commandId));
+  return sameIds(READONLY_TOOLS, mcpReadonlyDescriptors())
+    && sameIds(PREVIEW_TOOLS, mcpPreviewDescriptors());
+}
+
+function sameIds(tools: McpToolDefinition[], descriptors: CommandDescriptor[]): boolean {
+  const toolIds = tools.map((tool) => tool.commandId);
+  const descriptorIds = descriptors.map((descriptor) => descriptor.id);
+  return new Set(toolIds).size === toolIds.length
+    && new Set(descriptorIds).size === descriptorIds.length
+    && toolIds.length === descriptorIds.length
+    && toolIds.every((id) => descriptorIds.includes(id));
+}
+
+function topicListInputSchema(): Record<string, unknown> {
+  return {
+    type: "object",
+    properties: {
+      pageSize: { type: "number" },
+      categoryId: { type: "number" },
+      cursor: { type: "string" },
+      offset: { type: "number" },
+      from: { type: "string" },
+      to: { type: "string" },
+      tag: { type: "string" },
+      tags: { type: "string" },
+      author: { type: "string" },
+      authorId: { type: "number" },
+      sourceDomain: { type: "string" },
+      originalUrl: { type: "string" },
+      contentType: { type: "string" },
+      sourceType: { type: "string" },
+      status: { type: "string" },
+      view: { type: "string" },
+      sort: { type: "string" },
+      featured: { type: "boolean" },
+      pinned: { type: "boolean" },
+      locked: { type: "boolean" },
+      unanswered: { type: "boolean" },
+      hasUsefulReply: { type: "boolean" }
+    }
+  };
 }
 
 function readonlyTool(name: string, commandId: string, fallbackDescription: string, inputSchema: Record<string, unknown>): McpToolDefinition {
@@ -182,7 +241,10 @@ function tool(name: string, commandId: string, fallbackDescription: string, expo
     description: descriptor?.summary ?? fallbackDescription,
     exposure,
     commandId,
-    inputSchema
+    inputSchema: {
+      additionalProperties: false,
+      ...inputSchema
+    }
   };
 }
 

@@ -30,31 +30,6 @@ export type CommandDescriptor = {
   }>;
 };
 
-const READONLY_MCP = new Set([
-  "ask",
-  "category.list",
-  "doctor.snapshot",
-  "research",
-  "search",
-  "topic.list",
-  "topic.recent",
-  "topic.view",
-  "workflow.plan"
-]);
-
-const PREVIEW_MCP = new Set([
-  "favorite.add",
-  "favorite.remove",
-  "reply.create",
-  "reply.delete",
-  "reply.update",
-  "subscription.add",
-  "subscription.remove",
-  "topic.create",
-  "topic.delete",
-  "topic.update"
-]);
-
 export const COMMAND_DESCRIPTORS: CommandDescriptor[] = [
   descriptor("admin.list", ["admin", "list"], "List public community admins", "read", "api-read", "low", true, "readonly", "apexcn admin list --json"),
   descriptor("ask", ["ask"], "Ask community RAG or scoped references", "read", "api-read", "medium", true, "readonly", 'apexcn ask "问题" --top-k 3 --json'),
@@ -132,11 +107,11 @@ export function descriptorForPath(path: string): CommandDescriptor | undefined {
 }
 
 export function mcpReadonlyDescriptors(): CommandDescriptor[] {
-  return COMMAND_DESCRIPTORS.filter((item) => READONLY_MCP.has(item.id));
+  return COMMAND_DESCRIPTORS.filter((item) => item.mcpExposure === "readonly");
 }
 
 export function mcpPreviewDescriptors(): CommandDescriptor[] {
-  return COMMAND_DESCRIPTORS.filter((item) => PREVIEW_MCP.has(item.id));
+  return COMMAND_DESCRIPTORS.filter((item) => item.mcpExposure === "preview-only");
 }
 
 function descriptor(

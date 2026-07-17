@@ -2,6 +2,10 @@ import type { ApexcnApiClient } from "./api-client.js";
 
 export type TopicFilters = Record<string, string | number | boolean | undefined>;
 
+export function listAdmins(client: ApexcnApiClient): Promise<unknown> {
+  return client.get("/api/v1/admin-list");
+}
+
 export function searchTopics(client: ApexcnApiClient, keyword: string, filters: TopicFilters = {}): Promise<unknown> {
   return client.get("/api/v1/search", { keyword, ...filters });
 }
@@ -26,18 +30,34 @@ export function askCommunity(client: ApexcnApiClient, input: { question: string;
   return client.post("/api/v1/ask", input);
 }
 
-export async function researchTopics(client: ApexcnApiClient, input: { query: string; limit?: number; categoryId?: number }): Promise<unknown> {
+export async function researchTopics(client: ApexcnApiClient, input: {
+  query: string;
+  limit?: number;
+  categoryId?: number;
+  fromDate?: string;
+  toDate?: string;
+}): Promise<unknown> {
   const limit = input.limit ?? 3;
-  const search = await searchTopics(client, input.query, { pageSize: limit, categoryId: input.categoryId });
+  const search = await searchTopics(client, input.query, {
+    pageSize: limit,
+    categoryId: input.categoryId,
+    fromDate: input.fromDate,
+    toDate: input.toDate
+  });
   const items = isRecord(search) && Array.isArray(search.items) ? search.items.filter(isRecord).slice(0, limit) : [];
   const topics = [];
-  for (const item of items) {
+  const failures = [];
+  for (const [sourceItemIndex, item] of items.entries()) {
     const id = topicIdFrom(item);
     if (id !== undefined) {
-      topics.push(await viewTopic(client, id));
+      try {
+        topics.push({ sourceItemIndex, value: await viewTopic(client, id) });
+      } catch (error) {
+        failures.push({ sourceItemIndex, id, error });
+      }
     }
   }
-  return { kind: "research-core", query: input.query, items, topics };
+  return { kind: "research-core", query: input.query, search, items, topics, failures };
 }
 
 function topicIdFrom(item: Record<string, unknown>): number | undefined {

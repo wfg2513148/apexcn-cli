@@ -1323,11 +1323,11 @@
       "releaseLine": "0.50.x",
       "title": "AI Agent 只读适配层",
       "objective": "让 AI 客户端通过稳定、安全的本地 stdio 适配层复用 CLI 只读核心能力。",
-      "status": "planned",
+      "status": "in_progress",
       "activationGate": {
-        "status": "waiting",
+        "status": "approved",
         "previousMilestoneId": "0.4",
-        "confirmationRef": null
+        "confirmationRef": "user-delegated-fresh-m050-goal-2026-07-18"
       },
       "completionReview": {
         "status": "not_due",

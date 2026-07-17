@@ -1,4 +1,5 @@
 import readline from "node:readline";
+import { redactSecrets, redactSecretText } from "../core/secret-redaction.js";
 import { CLI_VERSION } from "../version.js";
 import { callMcpTool } from "./tools.js";
 import { mcpPolicy, mcpToolManifest, type McpPolicy } from "./tool-registry.js";
@@ -16,6 +17,8 @@ type JsonRpcRequest = {
   method?: string;
   params?: unknown;
 };
+
+const SUPPORTED_PROTOCOL_VERSIONS = new Set(["2025-06-18", "2025-03-26", "2024-11-05"]);
 
 export async function serveMcp(options: McpServerOptions = {}): Promise<void> {
   const stdin = options.stdin ?? process.stdin;
@@ -38,12 +41,20 @@ export async function handleMcpRequest(request: JsonRpcRequest | { parseError: s
     return rpcError(null, -32700, request.parseError);
   }
   const id = request.id ?? null;
+  if (request.jsonrpc !== "2.0" || typeof request.method !== "string") {
+    return request.id === undefined ? undefined : rpcError(id, -32600, "Invalid JSON-RPC request.");
+  }
   if (request.method === "initialize") {
+    const params = paramsRecord(request.params);
+    const requestedVersion = typeof params.protocolVersion === "string" ? params.protocolVersion : "2024-11-05";
     return rpcResult(id, {
-      protocolVersion: "2024-11-05",
+      protocolVersion: SUPPORTED_PROTOCOL_VERSIONS.has(requestedVersion) ? requestedVersion : "2025-06-18",
       serverInfo: { name: "apexcn-cli", version: CLI_VERSION },
       capabilities: { tools: {} }
     });
+  }
+  if (request.method === "ping") {
+    return rpcResult(id, {});
   }
   if (request.method === "tools/list") {
     const manifest = mcpToolManifest(policy);
@@ -54,12 +65,13 @@ export async function handleMcpRequest(request: JsonRpcRequest | { parseError: s
     const name = typeof params.name === "string" ? params.name : "";
     const args = paramsRecord(params.arguments);
     const result = await callMcpTool(name, args, policy, { configPath });
+    const safeResult = redactSecrets(result);
     return rpcResult(id, {
-      content: [{ type: "text", text: JSON.stringify(result) }],
-      isError: isErrorResult(result)
+      content: [{ type: "text", text: JSON.stringify(safeResult) }],
+      isError: isErrorResult(safeResult)
     });
   }
-  if (request.method === "notifications/initialized") {
+  if (request.id === undefined) {
     return undefined;
   }
   return rpcError(id, -32601, `Unsupported MCP method: ${request.method ?? ""}`);
@@ -83,7 +95,7 @@ function rpcResult(id: string | number | null, result: unknown): Record<string, 
 }
 
 function rpcError(id: string | number | null, code: number, message: string): Record<string, unknown> {
-  return { jsonrpc: "2.0", id, error: { code, message } };
+  return { jsonrpc: "2.0", id, error: { code, message: redactSecretText(message) } };
 }
 
 function isErrorResult(value: unknown): boolean {

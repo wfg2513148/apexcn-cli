@@ -3,7 +3,18 @@ import { stdin as processStdin, stdout as processStdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { Command, InvalidArgumentError, Option } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
+import { createApiClient } from "../core/api-client.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
+import {
+  askCommunity,
+  listAdmins,
+  listCategories,
+  listTopics,
+  recentTopics as recentTopicsCore,
+  researchTopics as researchTopicsCore,
+  searchTopics,
+  viewTopic
+} from "../core/services.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { blockText, fieldText, isRecord, itemsFromData, outputFormat, parseOutputFormat, printData, printError, validateFormatOptions, type FormatOption, type JsonOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
@@ -94,7 +105,7 @@ export function createCategoryCommand(options: ApiCommandOptions): Command {
         return;
       }
       await runApi(options, commandOptions, async (session) => {
-        const data = await requestJson(session.baseUrl, "/api/v1/categories", { token: session.token });
+        const data = await listCategories(createApiClient(session));
         printData(options, data, outputFormat(commandOptions), formatCategoryListText);
       });
     });
@@ -208,7 +219,7 @@ export function createAdminCommand(options: ApiCommandOptions): Command {
         return;
       }
       await runApi(options, commandOptions, async (session) => {
-        const data = await requestJson(session.baseUrl, "/api/v1/admin-list", { token: session.token });
+        const data = await listAdmins(createApiClient(session));
         printData(options, data, outputFormat(commandOptions), formatAdminListText);
       });
     });
@@ -230,13 +241,7 @@ export function createSearchCommand(options: ApiCommandOptions): Command {
       }
       const normalizedKeyword = normalizeSearchKeyword(keyword);
       await runApi(options, commandOptions, async (session) => {
-        const data = await requestJson(session.baseUrl, "/api/v1/search", {
-          token: session.token,
-          query: {
-            keyword: normalizedKeyword,
-            ...topicFilterQuery(commandOptions)
-          }
-        });
+        const data = await searchTopics(createApiClient(session), normalizedKeyword, topicFilterQuery(commandOptions));
         printData(options, searchOutput(data, keyword, normalizedKeyword), outputFormat(commandOptions), formatSearchText);
       });
     });
@@ -274,45 +279,45 @@ export function createResearchCommand(options: ApiCommandOptions): Command {
         const limit = commandOptions.limit ?? commandOptions.topK ?? 3;
         const searchAttempts = [];
         let search: unknown;
+        let coreResult: Record<string, unknown> | undefined;
         let selectedKeyword = normalizedKeyword;
         for (const candidate of researchQueryCandidates(normalizedKeyword)) {
-          const candidateResult = await requestJson(session.baseUrl, "/api/v1/search", {
-            token: session.token,
-            query: {
-              keyword: candidate,
-              pageSize: limit,
-              categoryId: commandOptions.categoryId,
-              fromDate: commandOptions.fromDate,
-              toDate: commandOptions.toDate
-            }
+          const candidateResult = await researchTopicsCore(createApiClient(session), {
+            query: candidate,
+            limit,
+            categoryId: commandOptions.categoryId,
+            fromDate: commandOptions.fromDate,
+            toDate: commandOptions.toDate
           });
-          search = candidateResult;
+          coreResult = isRecord(candidateResult) ? candidateResult : undefined;
+          search = coreResult?.search;
           selectedKeyword = candidate;
           searchAttempts.push({
             keyword: candidate,
-            resultCount: itemsFromData(candidateResult).length,
-            requestId: isRecord(candidateResult) ? candidateResult.requestId : undefined
+            resultCount: Array.isArray(coreResult?.items) ? coreResult.items.length : 0,
+            requestId: isRecord(search) ? search.requestId : undefined
           });
-          if (itemsFromData(candidateResult).length > 0) {
+          if (Array.isArray(coreResult?.items) && coreResult.items.length > 0) {
             break;
           }
         }
-        const items = itemsFromData(search).slice(0, limit);
-        const topics = [];
+        const items = Array.isArray(coreResult?.items) ? coreResult.items.filter(isRecord).slice(0, limit) : [];
+        const coreTopics = Array.isArray(coreResult?.topics) ? coreResult.topics.filter(isRecord) : [];
+        const topics = coreTopics
+          .filter((entry) => isRecord(entry.value))
+          .map((entry) => researchTopicFromData(entry.value, typeof entry.sourceItemIndex === "number" ? entry.sourceItemIndex : 0));
         const topicRequestIds = [];
-        const errors = [];
-        for (const [sourceItemIndex, item] of items.entries()) {
-          const id = topicIdFromSearchItem(item);
-          if (id !== undefined) {
-            try {
-              const topic = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
-              topics.push(researchTopicFromData(topic, sourceItemIndex));
-              if (isRecord(topic) && topic.requestId) {
-                topicRequestIds.push(topic.requestId);
-              }
-            } catch (error) {
-              errors.push(researchTopicError(error, id, sourceItemIndex, session));
-            }
+        const errors = (Array.isArray(coreResult?.failures) ? coreResult.failures.filter(isRecord) : []).map((failure) =>
+          researchTopicError(
+            failure.error,
+            typeof failure.id === "number" ? failure.id : 0,
+            typeof failure.sourceItemIndex === "number" ? failure.sourceItemIndex : 0,
+            session
+          )
+        );
+        for (const entry of coreTopics) {
+          if (isRecord(entry.value) && entry.value.requestId) {
+            topicRequestIds.push(entry.value.requestId);
           }
         }
         const links = researchLinks(items, topics);
@@ -366,10 +371,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
       return;
     }
     await runApi(options, commandOptions, async (session) => {
-      const data = await requestJson(session.baseUrl, "/api/v1/topics", {
-        token: session.token,
-        query: topicFilterQuery(commandOptions)
-      });
+      const data = await listTopics(createApiClient(session), topicFilterQuery(commandOptions));
       printData(options, withReadProvenance(data, "topic-list", itemsFromData(data)), outputFormat(commandOptions), formatTopicListText);
     });
   });
@@ -407,7 +409,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
         return;
       }
       await runApi(options, commandOptions, async (session) => {
-        const data = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
+        const data = await viewTopic(createApiClient(session), id);
         const topic = topicFromData(data);
         printData(options, withReadProvenance(data, "topic-detail", topic ? [topic] : []), outputFormat(commandOptions), formatTopicText);
       });
@@ -733,16 +735,12 @@ export function createAskCommand(options: ApiCommandOptions): Command {
         const apiQuestion = askQuestionWithContext(question, commandOptions.context);
         let data: unknown;
         try {
-          data = await requestJson(session.baseUrl, "/api/v1/ask", {
-            token: session.token,
-            method: "POST",
-            body: compactBody({
-              question: apiQuestion,
-              topK: commandOptions.topK,
-              categoryId: commandOptions.categoryId,
-              ...dateQuery(commandOptions),
-              tag: commandOptions.tag
-            })
+          data = await askCommunity(createApiClient(session), {
+            question: apiQuestion,
+            topK: commandOptions.topK,
+            categoryId: commandOptions.categoryId,
+            ...dateQuery(commandOptions),
+            tag: commandOptions.tag
           });
         } catch (error) {
           if (error instanceof HttpError && error.status === 429) {
@@ -1242,15 +1240,12 @@ async function recentTopics(
     toDate: options.toDate
   });
   try {
-    const topics = await requestJson(session.baseUrl, "/api/v1/topics", {
-      token: session.token,
-      query: {
-        pageSize,
-        categoryId: options.categoryId,
-        cursor: options.cursor,
-        fromDate,
-        toDate: options.toDate
-      }
+    const topics = await recentTopicsCore(createApiClient(session), {
+      pageSize,
+      categoryId: options.categoryId,
+      cursor: options.cursor,
+      fromDate,
+      toDate: options.toDate
     });
     return {
       kind: "topic-recent",
@@ -1283,16 +1278,12 @@ async function recentTopicsFromSearchFallback(
   session: Session,
   options: { pageSize: number; categoryId?: number; sinceHours?: number; since?: Date; cursor?: string; fromDate?: string; toDate?: string }
 ): Promise<Record<string, unknown>> {
-  const search = await requestJson(session.baseUrl, "/api/v1/search", {
-    token: session.token,
-    query: {
-      keyword: "%",
-      pageSize: options.pageSize,
-      categoryId: options.categoryId,
-      cursor: options.cursor,
-      fromDate: options.fromDate,
-      toDate: options.toDate
-    }
+  const search = await searchTopics(createApiClient(session), "%", {
+    pageSize: options.pageSize,
+    categoryId: options.categoryId,
+    cursor: options.cursor,
+    fromDate: options.fromDate,
+    toDate: options.toDate
   });
   const items = itemsFromData(search).filter((item) => !options.since || isOnOrAfter(item.updatedDate ?? item.createdDate, options.since));
   const recentItems = [];
@@ -1305,7 +1296,7 @@ async function recentTopicsFromSearchFallback(
       continue;
     }
     try {
-      const topic = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
+      const topic = await viewTopic(createApiClient(session), id);
       recentItems.push(recentTopicFromData(topic, item, sourceItemIndex));
       if (isRecord(topic) && topic.requestId) {
         topicRequestIds.push(topic.requestId);

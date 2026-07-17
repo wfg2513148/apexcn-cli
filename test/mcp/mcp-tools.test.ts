@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createProgram } from "../../src/index.js";
+import { mcpReadonlyDescriptors } from "../../src/core/command-registry.js";
 import { callMcpTool } from "../../src/mcp/tools.js";
 import { handleMcpRequest } from "../../src/mcp/server.js";
 import { assertMcpCommandRegistryCoverage, mcpPolicy, mcpToolManifest } from "../../src/mcp/tool-registry.js";
@@ -12,10 +13,15 @@ describe("MCP tools", () => {
 
   test("readonly policy exposes only readonly tools", () => {
     const manifest = mcpToolManifest(mcpPolicy(false));
+    const tools = manifest.tools as Array<{ commandId: string; exposure: string }>;
+    const expectedCommandIds = mcpReadonlyDescriptors().map((descriptor) => descriptor.id).sort();
 
     expect(assertMcpCommandRegistryCoverage()).toBe(true);
     expect(manifest).toEqual(expect.objectContaining({ kind: "mcp-tools" }));
-    expect((manifest.tools as Array<{ exposure: string }>).every((tool) => tool.exposure === "readonly")).toBe(true);
+    expect(tools.every((tool) => tool.exposure === "readonly")).toBe(true);
+    expect(tools.map((tool) => tool.commandId).sort()).toEqual(expectedCommandIds);
+    expect(tools).toHaveLength(10);
+    expect(tools.map((tool) => tool.commandId)).toEqual(expect.arrayContaining(["admin.list", "topic.list"]));
   });
 
   test("readonly policy rejects preview-only write tools", async () => {
@@ -27,6 +33,17 @@ describe("MCP tools", () => {
     expect(result).toEqual(expect.objectContaining({ ok: false, error: expect.objectContaining({ code: "MCP_READONLY_BLOCKED" }) }));
     expect(fetch).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+
+  test("tool input schemas reject wrong types and unknown arguments", async () => {
+    await expect(callMcpTool("apexcn_topic_view", { topicId: "1" }, mcpPolicy(false))).resolves.toEqual(expect.objectContaining({
+      ok: false,
+      error: expect.objectContaining({ code: "MCP_VALIDATION_ERROR", message: "topicId must be a finite number" })
+    }));
+    await expect(callMcpTool("apexcn_admin_list", { execute: true }, mcpPolicy(false))).resolves.toEqual(expect.objectContaining({
+      ok: false,
+      error: expect.objectContaining({ code: "MCP_VALIDATION_ERROR", message: "Unknown argument: execute" })
+    }));
   });
 
   test("preview-only write tools produce non-executing plans without network", async () => {

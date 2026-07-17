@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "validationDate": "2026-07-18",
+  "platform": {
+    "name": "macOS",
+    "version": "26.5.2",
+    "build": "25F84",
+    "arch": "arm64"
+  },
+  "clients": [
+    {
+      "name": "VS Code Agent",
+      "version": "1.129.0",
+      "status": "verified",
+      "initialize": "Server shown as Running in MCP: List Servers.",
+      "toolsList": {
+        "count": 10,
+        "screenshots": [
+          {
+            "path": "reports/mcp/client-evidence/vscode-1.129.0-tool-discovery-1.png",
+            "sha256": "2fc0f61fcb42fec6088194e8fe5da5961918006626a17eb28b1f75d9b5b6280b"
+          },
+          {
+            "path": "reports/mcp/client-evidence/vscode-1.129.0-tool-discovery-2.png",
+            "sha256": "002580d684c604da6b682dce1efde98188a1257822be87adfd4f8126cb10b221"
+          }
+        ]
+      },
+      "toolsCall": {
+        "tool": "apexcn_workflow_plan",
+        "input": {
+          "goal": "research-only",
+          "keyword": "MCP readonly validation"
+        },
+        "result": {
+          "goal": "research-only",
+          "mode": "api-read"
+        },
+        "screenshot": {
+          "path": "reports/mcp/client-evidence/vscode-1.129.0-readonly-call.png",
+          "sha256": "1572c892eaa805c531392d06027408d180ffd69a549cda8f15d8325606f43f51"
+        }
+      },
+      "errorEvidence": "Client confirmation gate was displayed before the readonly tool call; no execute-write tool was exposed."
+    },
+    {
+      "name": "Cursor",
+      "version": "3.10.20",
+      "status": "blocked-not-verified",
+      "reason": "The notarized application remained at _dyld_start before creating a UI or connecting to MCP."
+    },
+    {
+      "name": "Claude Desktop",
+      "version": "1.20186.0",
+      "status": "blocked-not-verified",
+      "reason": "The notarized application remained at _dyld_start before creating a UI or connecting to MCP."
+    }
+  ]
+}

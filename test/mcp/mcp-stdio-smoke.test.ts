@@ -5,8 +5,16 @@ import { callMcpTool } from "../../src/mcp/tools.js";
 
 describe("MCP stdio JSON-RPC smoke", () => {
   test("supports initialize and tools/list", async () => {
-    await expect(handleMcpRequest({ jsonrpc: "2.0", id: 1, method: "initialize" }, mcpPolicy(false))).resolves.toEqual(expect.objectContaining({
-      result: expect.objectContaining({ serverInfo: expect.objectContaining({ name: "apexcn-cli" }) })
+    await expect(handleMcpRequest({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "vitest", version: "1" } }
+    }, mcpPolicy(false))).resolves.toEqual(expect.objectContaining({
+      result: expect.objectContaining({
+        protocolVersion: "2025-06-18",
+        serverInfo: expect.objectContaining({ name: "apexcn-cli" })
+      })
     }));
 
     await expect(handleMcpRequest({ jsonrpc: "2.0", id: 2, method: "tools/list" }, mcpPolicy(false))).resolves.toEqual(expect.objectContaining({
@@ -16,6 +24,25 @@ describe("MCP stdio JSON-RPC smoke", () => {
 
   test("notifications/initialized has no response", async () => {
     await expect(handleMcpRequest({ jsonrpc: "2.0", method: "notifications/initialized" }, mcpPolicy(false))).resolves.toBeUndefined();
+  });
+
+  test("unknown notifications have no response", async () => {
+    await expect(handleMcpRequest({
+      jsonrpc: "2.0",
+      method: "notifications/cancelled",
+      params: { requestId: 99, reason: "client cancelled" }
+    }, mcpPolicy(false))).resolves.toBeUndefined();
+  });
+
+  test("supports ping and rejects invalid JSON-RPC envelopes", async () => {
+    await expect(handleMcpRequest({ jsonrpc: "2.0", id: 7, method: "ping" }, mcpPolicy(false))).resolves.toEqual({
+      jsonrpc: "2.0",
+      id: 7,
+      result: {}
+    });
+    await expect(handleMcpRequest({ jsonrpc: "1.0", id: 8, method: "tools/list" }, mcpPolicy(false))).resolves.toEqual(expect.objectContaining({
+      error: expect.objectContaining({ code: -32600 })
+    }));
   });
 
   test("returns JSON-RPC errors for parse and unsupported methods", async () => {

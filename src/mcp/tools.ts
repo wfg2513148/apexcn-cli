@@ -1,9 +1,9 @@
 import { loadApiClient, isApexcnError } from "../core/api-client.js";
+import { createDoctorSnapshot } from "../core/doctor-snapshot.js";
 import { errorBodyFrom } from "../core/errors.js";
 import { previewPlan, readonlyBlocked } from "../core/safety-policy.js";
-import { redactSecrets } from "../core/secret-redaction.js";
-import { askCommunity, listCategories, recentTopics, researchTopics, searchTopics, viewTopic } from "../core/services.js";
-import { CLI_VERSION } from "../version.js";
+import { askCommunity, listAdmins, listCategories, listTopics, recentTopics, researchTopics, searchTopics, viewTopic } from "../core/services.js";
+import { createWorkflowPlan, type WorkflowGoal } from "../core/workflow-plan.js";
 import { mcpToolByName, type McpPolicy } from "./tool-registry.js";
 
 export type McpCallOptions = {
@@ -15,12 +15,17 @@ export async function callMcpTool(name: string, args: unknown = {}, policy: McpP
   if (!tool) {
     return { ok: false, error: { code: "MCP_TOOL_NOT_FOUND", message: `Unknown MCP tool: ${name}` } };
   }
+  if (tool.exposure === "preview-only" && !policy.allowPreviewWrite) {
+    return readonlyBlocked(name);
+  }
+  const value = input(args);
+  const inputIssue = validateInput(tool.inputSchema, value);
+  if (inputIssue) {
+    return validationError(new Error(inputIssue));
+  }
   if (tool.exposure === "preview-only") {
-    if (!policy.allowPreviewWrite) {
-      return readonlyBlocked(name);
-    }
     try {
-      return previewWriteTool(name, input(args));
+      return previewWriteTool(name, value);
     } catch (error) {
       return validationError(error);
     }
@@ -28,16 +33,29 @@ export async function callMcpTool(name: string, args: unknown = {}, policy: McpP
 
   try {
     if (name === "apexcn_doctor_snapshot") {
-      return doctorSnapshot();
+      return await createDoctorSnapshot(options.configPath);
     }
     if (name === "apexcn_workflow_plan") {
-      return workflowPlan(input(args));
+      return createWorkflowPlan({
+        goal: workflowGoal(value.goal),
+        keyword: optionalString(value, "keyword"),
+        topicId: optionalNumber(value, "topicId"),
+        categoryId: optionalNumber(value, "categoryId"),
+        title: optionalString(value, "title"),
+        problem: optionalString(value, "problem"),
+        answer: optionalString(value, "answer"),
+        contentFile: optionalString(value, "contentFile"),
+        outputDir: optionalString(value, "outputDir"),
+        includeExecute: false
+      });
     }
     const client = await loadApiClient(options.configPath);
     if (isApexcnError(client)) {
       return client;
     }
-    const value = input(args);
+    if (name === "apexcn_admin_list") {
+      return await listAdmins(client);
+    }
     if (name === "apexcn_search") {
       return await searchTopics(client, requiredString(value, "query"), queryFilters(value));
     }
@@ -47,8 +65,14 @@ export async function callMcpTool(name: string, args: unknown = {}, policy: McpP
     if (name === "apexcn_topic_recent") {
       return await recentTopics(client, {
         pageSize: optionalNumber(value, "pageSize"),
-        categoryId: optionalNumber(value, "categoryId")
+        categoryId: optionalNumber(value, "categoryId"),
+        cursor: optionalString(value, "cursor"),
+        fromDate: optionalString(value, "from"),
+        toDate: optionalString(value, "to")
       });
+    }
+    if (name === "apexcn_topic_list") {
+      return await listTopics(client, queryFilters(value));
     }
     if (name === "apexcn_category_list") {
       return await listCategories(client);
@@ -112,50 +136,35 @@ function previewWriteTool(name: string, args: Record<string, unknown>): unknown 
   return { ok: false, error: { code: "MCP_TOOL_NOT_IMPLEMENTED", message: `Tool is not implemented: ${name}` } };
 }
 
-function doctorSnapshot(): Record<string, unknown> {
-  return redactSecrets({
-    kind: "doctor-snapshot",
-    schemaVersion: 1,
-    ok: true,
-    diagnostics: {
-      cliVersion: CLI_VERSION,
-      nodeVersion: process.version,
-      platform: process.platform,
-      arch: process.arch,
-      cwd: process.cwd()
-    },
-    environment: {
-      APEXCN_CONFIG_PATH: process.env.APEXCN_CONFIG_PATH,
-      APEXCN_API_KEY: process.env.APEXCN_API_KEY
-    }
-  }) as Record<string, unknown>;
-}
-
-function workflowPlan(args: Record<string, unknown>): Record<string, unknown> {
-  return {
-    kind: "workflow-plan",
-    schemaVersion: 1,
-    mode: "preview",
-    willExecute: false,
-    intent: optionalString(args, "intent") ?? "agent-assisted-workflow",
-    inputs: redactSecrets(args),
-    nextSteps: ["review plan", "run apexcn workflow plan/run from CLI", "approve before execute"]
-  };
-}
-
 function queryFilters(args: Record<string, unknown>): Record<string, string | number | boolean | undefined> {
   return {
     pageSize: optionalNumber(args, "pageSize"),
     categoryId: optionalNumber(args, "categoryId"),
     tag: optionalString(args, "tag"),
     author: optionalString(args, "author"),
+    authorId: optionalNumber(args, "authorId"),
+    cursor: optionalString(args, "cursor"),
+    offset: optionalNumber(args, "offset"),
     fromDate: optionalString(args, "from"),
-    toDate: optionalString(args, "to")
+    toDate: optionalString(args, "to"),
+    tags: optionalString(args, "tags"),
+    sourceDomain: optionalString(args, "sourceDomain"),
+    originalUrl: optionalString(args, "originalUrl"),
+    contentType: optionalString(args, "contentType"),
+    sourceType: optionalString(args, "sourceType"),
+    status: optionalString(args, "status"),
+    view: optionalString(args, "view"),
+    sort: optionalString(args, "sort"),
+    featured: optionalBoolean(args, "featured"),
+    pinned: optionalBoolean(args, "pinned"),
+    locked: optionalBoolean(args, "locked"),
+    unanswered: optionalBoolean(args, "unanswered"),
+    hasUsefulReply: optionalBoolean(args, "hasUsefulReply")
   };
 }
 
 function input(value: unknown): Record<string, unknown> {
-  return typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
 function requiredString(args: Record<string, unknown>, key: string): string {
@@ -190,6 +199,18 @@ function optionalNumber(args: Record<string, unknown>, key: string): number | un
   return undefined;
 }
 
+function optionalBoolean(args: Record<string, unknown>, key: string): boolean | undefined {
+  const value = args[key];
+  return typeof value === "boolean" ? value : undefined;
+}
+
+function workflowGoal(value: unknown): WorkflowGoal {
+  if (value === "ask-question" || value === "reply" || value === "research-only" || value === "publish-topic") {
+    return value;
+  }
+  throw new Error("goal must be ask-question, reply, research-only, or publish-topic");
+}
+
 function compact(input: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined));
 }
@@ -202,4 +223,42 @@ function validationError(error: unknown): Record<string, unknown> {
       message: error instanceof Error ? error.message : String(error)
     }
   };
+}
+
+function validateInput(schema: Record<string, unknown>, value: Record<string, unknown>): string | undefined {
+  const required = Array.isArray(schema.required) ? schema.required.filter((item): item is string => typeof item === "string") : [];
+  for (const key of required) {
+    if (!(key in value)) {
+      return `${key} is required`;
+    }
+  }
+  const properties = typeof schema.properties === "object" && schema.properties !== null
+    ? schema.properties as Record<string, unknown>
+    : {};
+  if (schema.additionalProperties === false) {
+    const unknown = Object.keys(value).find((key) => !(key in properties));
+    if (unknown) {
+      return `Unknown argument: ${unknown}`;
+    }
+  }
+  for (const [key, nestedValue] of Object.entries(value)) {
+    const property = properties[key];
+    if (typeof property !== "object" || property === null) {
+      continue;
+    }
+    const rule = property as { type?: unknown; enum?: unknown };
+    if (Array.isArray(rule.enum) && !rule.enum.includes(nestedValue)) {
+      return `${key} must be one of: ${rule.enum.join(", ")}`;
+    }
+    if (rule.type === "string" && typeof nestedValue !== "string") {
+      return `${key} must be a string`;
+    }
+    if (rule.type === "number" && (typeof nestedValue !== "number" || !Number.isFinite(nestedValue))) {
+      return `${key} must be a finite number`;
+    }
+    if (rule.type === "boolean" && typeof nestedValue !== "boolean") {
+      return `${key} must be a boolean`;
+    }
+  }
+  return undefined;
 }

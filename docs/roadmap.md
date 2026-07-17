@@ -48,7 +48,7 @@
 | `0.2` | `0.20.x` | 可信赖的 CLI 基础 | `completed` | 0 | `approved` | `approved` |
 | `0.3` | `0.30.x` | 社区知识检索 | `completed` | 0 | `approved` | `approved` |
 | `0.4` | `0.40.x` | 个人工作台与能力协商 | `completed` | 0 | `approved` | `approved` |
-| `0.5` | `0.50.x` | AI Agent 只读适配层 | `planned` | 0 | `waiting` | `not_due` |
+| `0.5` | `0.50.x` | AI Agent 只读适配层 | `in_progress` | 0 | `approved` | `not_due` |
 | `0.6` | `0.60.x` | 可审计内容操作 | `planned` | 0 | `waiting` | `not_due` |
 | `0.7` | `0.70.x` | 本地知识资产与只读自动化 | `planned` | 1 | `waiting` | `not_due` |
 | `0.8` | `0.80.x` | 组织治理与生命周期资格化 | `planned` | 0 | `waiting` | `not_due` |
@@ -217,7 +217,7 @@
 
 ### 人工交接门禁
 
-- Activation: `waiting`
+- Activation: `approved`
 - Completion review: `not_due`
 - 完成后必须总结：增强能力、未预估问题、根因、规避措施、下一阶段目标、量化预期和主要风险。
 - 发布验证和上下文压缩完成后，自动批准完成审查并启动下一里程碑。
