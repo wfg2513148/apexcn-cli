@@ -184,8 +184,9 @@ describe("global config path", () => {
     const cliPath = await configPath(root, "cli");
     await writeConfig(cliPath, "https://oracleapex.cn/ords/write-config", "token-from-write-config");
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({ ok: true, id: 42 })));
+    const stdout: string[] = [];
     const program = createProgram({
-      stdout: () => undefined,
+      stdout: (text) => stdout.push(text),
       stderr: () => undefined
     });
 
@@ -201,13 +202,18 @@ describe("global config path", () => {
       "--title",
       "Config path topic",
       "--content",
-      "Config path body"
+      "Config path body",
+      "--preview"
     ]);
 
-    expect(fetch).toHaveBeenCalledWith(
-      "https://oracleapex.cn/ords/write-config/api/v1/topics",
-      expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Bearer token-from-write-config" }) })
-    );
+    expect(fetch).not.toHaveBeenCalled();
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
+      profile: "prod",
+      baseUrl: "https://oracleapex.cn/ords/write-config",
+      method: "POST",
+      path: "/api/v1/topics"
+    }));
+    expect(stdout.join("")).not.toContain("token-from-write-config");
     expect(await fileExists(join(home, ".apexcn", "config.json"))).toBe(false);
   });
 

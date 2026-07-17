@@ -465,25 +465,20 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     examples: [{ command: "apexcn mcp tools --json", mode: "read" }]
   },
   "reply create": {
-    safety: { effects: ["api-write"], preview: "available", confirmation: [] },
+    safety: { effects: ["api-write"], preview: "required", confirmation: [] },
     examples: [
-      { command: 'apexcn reply create 30549 --content "回复内容" --preview', mode: "preview" },
-      { command: "apexcn reply create 30549 --content-file ./reply.md --json", mode: "execute" }
+      { command: 'apexcn reply create 30549 --content "回复内容" --preview', mode: "preview" }
     ]
   },
   "reply delete": {
     safety: { effects: ["api-write", "destructive"], preview: "required", confirmation: ["--yes", "--force"] },
     examples: [
-      { command: "apexcn reply delete 67890 --yes --force --preview", mode: "preview" },
-      { command: "apexcn reply delete 67890 --yes --force --json", mode: "execute" }
+      { command: "apexcn reply delete 67890 --yes --force --preview", mode: "preview" }
     ]
   },
   "reply update": {
-    safety: { effects: ["api-write"], preview: "available", confirmation: [] },
-    examples: [
-      "apexcn reply update 67890 --content-file ./updated-reply.md --preview",
-      "apexcn reply update 67890 --content-file ./updated-reply.md --json"
-    ].map((command, index) => ({ command, mode: index === 0 ? "preview" as const : "execute" as const }))
+    safety: { effects: ["api-write"], preview: "required", confirmation: [] },
+    examples: [{ command: "apexcn reply update 67890 --content-file ./updated-reply.md --preview", mode: "preview" }]
   },
   "research": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
@@ -541,17 +536,15 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     ]
   },
   "topic create": {
-    safety: { effects: ["api-write"], preview: "available", confirmation: [] },
+    safety: { effects: ["api-write"], preview: "required", confirmation: [] },
     examples: [
-      { command: 'apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --preview', mode: "preview" },
-      { command: 'apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --json', mode: "execute" }
+      { command: 'apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --preview', mode: "preview" }
     ]
   },
   "topic delete": {
     safety: { effects: ["api-write", "destructive"], preview: "required", confirmation: ["--yes", "--force", "--confirm-title"] },
     examples: [
-      { command: 'apexcn topic delete 30549 --yes --force --confirm-title "精确标题" --preview', mode: "preview" },
-      { command: 'apexcn topic delete 30549 --yes --force --confirm-title "精确标题" --json', mode: "execute" }
+      { command: 'apexcn topic delete 30549 --yes --force --confirm-title "精确标题" --preview', mode: "preview" }
     ]
   },
   "topic list": {
@@ -569,10 +562,9 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     ]
   },
   "topic update": {
-    safety: { effects: ["api-write"], preview: "available", confirmation: [] },
+    safety: { effects: ["api-write"], preview: "required", confirmation: [] },
     examples: [
-      { command: "apexcn topic update 30549 --content-file ./updated-post.md --preview", mode: "preview" },
-      { command: "apexcn topic update 30549 --content-file ./updated-post.md --json", mode: "execute" }
+      { command: "apexcn topic update 30549 --content-file ./updated-post.md --preview", mode: "preview" }
     ]
   },
   "topic view": {

@@ -109,7 +109,7 @@ describe("MCP stdio JSON-RPC smoke", () => {
       ok: false,
       error: expect.objectContaining({ code: "MCP_VALIDATION_ERROR" })
     }));
-    await expect(callMcpTool("apexcn_reply_delete_preview", { replyId: 3, confirmTitle: "delete reply" }, mcpPolicy(true))).resolves.toEqual(expect.objectContaining({
+    await expect(callMcpTool("apexcn_reply_delete_preview", { replyId: 3, confirmId: 3 }, mcpPolicy(true))).resolves.toEqual(expect.objectContaining({
       ok: true,
       willExecute: false
     }));

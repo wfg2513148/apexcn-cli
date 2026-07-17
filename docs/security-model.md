@@ -21,10 +21,13 @@
 - `preview`：展示即将发送的 request，不执行远端写入。
 - `dry-run`：验证参数与本地安全策略，不执行远端写入。
 - MCP preview-only 工具永远返回 `willExecute: false`。
+- 0.60.x 的 topic/reply 直接命令永远不执行写入；真实 CRUD 仅由已批准 CLI workflow 执行。
 
 ## Workflow Approval
 
-workflow approval 必须绑定 preview request hash。执行前 request 与 approval 中记录的 hash 不一致时应拒绝执行。
+workflow approval 同时绑定 profile、base URL、完整 request、preview hash 和 `expiresAt`。执行前任何目标、正文、版本、确认字段、operationKey、payloadHash 或期限变化都必须拒绝。timeout/5xx 只能复用同一 operationKey 恢复；409 必须创建新 workflow。
+
+topic/reply create/update 的正文副本在 preview 前进行空正文、占位符和疑似密钥扫描。delete workflow 需要版本，并把完整标题或精确回复 ID 纳入批准请求。
 
 ## MCP Readonly 默认值
 

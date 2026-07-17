@@ -47,6 +47,19 @@ type ApiRequestPlan = {
   body?: unknown;
 };
 
+function blockDirectContentWrite(options: ApiCommandOptions, commandOptions: JsonOption & DryRunOption): boolean {
+  if (isRequestPreview(commandOptions)) {
+    return false;
+  }
+  printError(options, {
+    type: "safety",
+    message: "Direct topic/reply writes are disabled; use apexcn workflow run, approve, and resume instead",
+    exitCode: 1
+  }, undefined, commandOptions.json);
+  process.exitCode = 1;
+  return true;
+}
+
 type TopicFilterOptions = {
   categoryId?: number;
   pageSize?: number;
@@ -450,6 +463,9 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
           printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
           return;
         }
+        if (blockDirectContentWrite(options, commandOptions)) {
+          return;
+        }
         const data = await requestJson(session.baseUrl, request.path, {
           token: session.token,
           method: request.method,
@@ -487,6 +503,9 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
           printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
           return;
         }
+        if (blockDirectContentWrite(options, commandOptions)) {
+          return;
+        }
         const data = await requestJson(session.baseUrl, request.path, {
           token: session.token,
           method: request.method,
@@ -513,6 +532,9 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
           return;
         }
         if (processStdin.isTTY === true && !commandOptions.yes && !commandOptions.force) {
+          if (blockDirectContentWrite(options, commandOptions)) {
+            return;
+          }
           await runApi(options, commandOptions, async (session) => {
             const topic = await requestJson<{ topic?: { title?: string; createdByName?: string; categoryName?: string } }>(session.baseUrl, `/api/v1/topics/${id}`, {
               token: session.token
@@ -549,6 +571,9 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
         const request = { method: "DELETE", path: `/api/v1/topics/${id}` };
         if (isRequestPreview(commandOptions)) {
           printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
+          return;
+        }
+        if (blockDirectContentWrite(options, commandOptions)) {
           return;
         }
         const topic = await requestJson<{ topic?: { title?: string } }>(session.baseUrl, `/api/v1/topics/${id}`, {
@@ -593,6 +618,9 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
           printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
           return;
         }
+        if (blockDirectContentWrite(options, commandOptions)) {
+          return;
+        }
         const data = await requestJson(session.baseUrl, request.path, {
           token: session.token,
           method: request.method,
@@ -622,6 +650,9 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
           printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
           return;
         }
+        if (blockDirectContentWrite(options, commandOptions)) {
+          return;
+        }
         const data = await requestJson(session.baseUrl, request.path, {
           token: session.token,
           method: request.method,
@@ -647,6 +678,9 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
           return;
         }
         if (processStdin.isTTY === true && !commandOptions.yes && !commandOptions.force) {
+          if (blockDirectContentWrite(options, commandOptions)) {
+            return;
+          }
           const confirmed = await promptText("Type delete to delete this reply: ");
           if (confirmed !== "delete") {
             printError(options, { type: "safety", message: "Delete cancelled", exitCode: 1 }, undefined, commandOptions.json);
@@ -667,6 +701,9 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
         const request = { method: "DELETE", path: `/api/v1/replies/${id}` };
         if (isRequestPreview(commandOptions)) {
           printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
+          return;
+        }
+        if (blockDirectContentWrite(options, commandOptions)) {
           return;
         }
         const data = await requestJson(session.baseUrl, request.path, { token: session.token, method: request.method });

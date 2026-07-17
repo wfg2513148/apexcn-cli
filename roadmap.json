@@ -1638,11 +1638,11 @@
       "releaseLine": "0.60.x",
       "title": "可审计内容操作",
       "objective": "让授权用户通过可恢复、hash-bound、可审计的 CLI workflow 执行内容变更，同时 Agent 只能生成 preview。",
-      "status": "planned",
+      "status": "in_progress",
       "activationGate": {
-        "status": "waiting",
+        "status": "approved",
         "previousMilestoneId": "0.5",
-        "confirmationRef": null
+        "confirmationRef": "user-delegated-fresh-m060-goal-2026-07-18"
       },
       "completionReview": {
         "status": "not_due",
@@ -1675,7 +1675,8 @@
             "M060-V-WRITE"
           ],
           "evidenceIds": [
-            "M060-E-LOCAL"
+            "M060-E-LOCAL",
+            "M060-E-SERVER"
           ]
         },
         {
@@ -1741,7 +1742,8 @@
             "M060-V-RECOVERY"
           ],
           "evidenceIds": [
-            "M060-E-LOCAL"
+            "M060-E-LOCAL",
+            "M060-E-SERVER"
           ]
         },
         {
@@ -1761,7 +1763,7 @@
             "server:content-write-contracts",
             "server:isolated-write-test-surface"
           ],
-          "status": "not_started",
+          "status": "implemented",
           "acceptanceCriterionIds": [
             "M060-AC-001",
             "M060-AC-008"
@@ -1770,7 +1772,9 @@
             "M060-V-WRITE",
             "M060-V-CLEANUP"
           ],
-          "evidenceIds": []
+          "evidenceIds": [
+            "M060-E-SERVER"
+          ]
         },
         {
           "id": "M060-CAP-VISUAL",
@@ -1797,7 +1801,9 @@
           "validatorScenarioIds": [
             "M060-V-VISUAL"
           ],
-          "evidenceIds": []
+          "evidenceIds": [
+            "M060-E-SERVER"
+          ]
         },
         {
           "id": "M060-CAP-AGENT-PREVIEW",
@@ -1937,7 +1943,7 @@
           "comparator": "eq",
           "target": 0,
           "unit": "issues",
-          "measurementMethod": "issues.json entries scoped to milestone 0.5",
+          "measurementMethod": "issues.json entries scoped to milestone 0.6",
           "status": "pending",
           "evidenceIds": [],
           "measurementProfileId": "PROFILE-WRITE-BACK-DUAL-EVIDENCE"
@@ -2020,6 +2026,14 @@
           "path": "test/mcp/mcp-tools.test.ts",
           "description": "Existing preview-only MCP policy and no-write tests.",
           "commit": "330538c"
+        },
+        {
+          "id": "M060-E-SERVER",
+          "kind": "server_readiness",
+          "path": "/Users/kwang/apexcn-forums/output/m060-dev-write-smoke/m060-dev-write-smoke-20260717T230524Z.json",
+          "description": "Fixed apexcn-forums task 019f2888-ef40-7b20-9af7-e4495f3a1091 delivered API contract 0.6.0-candidate and a dev-only isolated write surface. Real smoke covered anonymous, muted and outside-surface rejection; topic and reply create, update and delete; idempotent replay; stale-version conflict; 404; 429; transport recovery semantics; and zero residual topics, posts, or idempotency records.",
+          "commit": "55cc890aa31033345fd2811b33d35895350079a9",
+          "sha256": "56f92aa57f66eea3387844bc33d90f96b02c097b7d5627e17e787816e3057b62"
         }
       ],
       "userOutcome": "授权用户能够安全完成内容变更，并从最终页面确认写入结果；Agent 无法绕过 workflow。",
@@ -3187,7 +3201,10 @@
       "readinessEvidence": {
         "environmentRef": "dev@oci:dev-eval-readonly",
         "accessAuditArtifact": "/Users/kwang/apexcn-forums/output/m030-readiness/dev107-4200-20260717T204000.json",
-        "smokeArtifact": "/Users/kwang/apexcn-forums/output/m030-search/dev107-4200-safe-20260717T203000.json"
+        "smokeArtifact": "/Users/kwang/apexcn-forums/output/m030-search/dev107-4200-safe-20260717T203000.json",
+        "writeEnvironmentRef": "dev@oci:dev-write-eval",
+        "writeAccessAuditArtifact": "/Users/kwang/apexcn-forums/tests/fixtures/api/m060-content-write-contract.json",
+        "writeSmokeArtifact": "/Users/kwang/apexcn-forums/output/m060-dev-write-smoke/m060-dev-write-smoke-20260717T230524Z.json"
       }
     },
     {
@@ -3228,13 +3245,14 @@
         "0.6"
       ],
       "requiredAt": "activation",
-      "status": "unverified",
+      "status": "ready",
       "resolutionThreadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
       "readinessEvidence": {
-        "apiContractVersion": null,
-        "providerCommit": null,
-        "fixturePath": null,
-        "liveSmokeArtifact": null
+        "apiContractVersion": "0.6.0-candidate",
+        "providerCommit": "55cc890aa31033345fd2811b33d35895350079a9",
+        "fixturePath": "/Users/kwang/apexcn-forums/tests/fixtures/api/m060-content-write-contract.json",
+        "liveSmokeArtifact": "/Users/kwang/apexcn-forums/output/m060-dev-write-smoke/m060-dev-write-smoke-20260717T230524Z.json",
+        "liveSmokeSha256": "56f92aa57f66eea3387844bc33d90f96b02c097b7d5627e17e787816e3057b62"
       }
     },
     {
@@ -3244,13 +3262,17 @@
         "0.6"
       ],
       "requiredAt": "activation",
-      "status": "unverified",
+      "status": "ready",
       "resolutionThreadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
       "readinessEvidence": {
-        "apiContractVersion": null,
-        "providerCommit": null,
-        "fixturePath": null,
-        "liveSmokeArtifact": null
+        "apiContractVersion": "0.6.0-candidate",
+        "providerCommit": "55cc890aa31033345fd2811b33d35895350079a9",
+        "fixturePath": "/Users/kwang/apexcn-forums/tests/fixtures/api/m060-content-write-contract.json",
+        "liveSmokeArtifact": "/Users/kwang/apexcn-forums/output/m060-dev-write-smoke/m060-dev-write-smoke-20260717T230524Z.json",
+        "liveSmokeSha256": "56f92aa57f66eea3387844bc33d90f96b02c097b7d5627e17e787816e3057b62",
+        "surfaceCode": "apexcn-cli-m060-dev-write",
+        "categoryId": "8",
+        "browserUrlPattern": "https://oracleapex.cn/ords/dev/f?p=100:14:::P14_THREAD_ID:<topicId>"
       }
     },
     {

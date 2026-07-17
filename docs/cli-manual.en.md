@@ -351,7 +351,7 @@ apexcn workflow plan \
   --json
 ```
 
-`--goal` accepts `ask-question`, `reply`, `research-only`, and `publish-topic`. JSON output always contains `kind: "workflow-plan"`, `schemaVersion: 1`, `goal`, `steps`, `checkpoints`, `files`, and `safetySummary`. Missing required inputs do not fail the command; they are listed in `checkpoints.missingInputs[]`. `ask-question` needs `--keyword`, `--title`, `--problem`, and `--category-id`; `reply` needs `--topic-id` and `--answer`; `publish-topic` needs `--title`, `--category-id`, and the only body source, `--content-file`.
+`--goal` accepts `ask-question`, `reply`, `research-only`, `publish-topic`, and `topic-create/update/delete` or `reply-create/update/delete`. CRUD plans explicitly include preview, hash-bound approval, and execute; an MCP plan call never executes those steps.
 
 Run a resumable workflow:
 
@@ -372,7 +372,7 @@ apexcn workflow verify-bundle --bundle workflow-bundle.json --json
 apexcn workflow run --resume run --execute --yes --json
 ```
 
-The default run reads the API, generates local Markdown drafts, and writes `run.json`, `research.json`, `review.json`, and `preview.json`; it does not send the final POST. After reviewing `preview.json`, use `workflow approve` to write `approval.json` with a SHA-256 hash of the preview request. Only when the approval `runId` and hash match the current preview will `--resume <run-dir> --execute --yes` perform the final write and record `execute.json`. Resume skips completed steps when their artifacts exist and reruns completed steps whose artifacts are missing.
+The default run generates a Markdown draft or copies the supplied content file, then writes `run.json`, `review.json`, and `preview.json`; it sends no final write request. After reviewing `preview.json`, use `workflow approve` to bind the target, full request, SHA-256 hash, reviewer, and expiry in `approval.json`. Execute succeeds only while the runId, target, request, hash, and expiry remain valid. After 401 or 429, repair the condition and resume the same run. Timeout or 5xx has an uncertain outcome and must reuse the same run and operation key. A 409 requires a fresh object version and a new preview and approval.
 
 `workflow verify` is a local-only verification command. It outputs a `workflow-verification` report that checks artifact file hashes, approval-to-preview consistency, and whether a completed run's execute request equals the approved preview request. `--write-report` writes `verification.json` without modifying `run.json`.
 
@@ -380,7 +380,7 @@ The default run reads the API, generates local Markdown drafts, and writes `run.
 
 `workflow verify-bundle` is a local-only bundle verification command and does not need the original run directory. It checks the bundle schema, artifact content hash/size, embedded verification-to-artifact consistency, and independently replays the preview, approval, and execute evidence chain from bundled content.
 
-Plans use file paths only and never generate commands that inline long content or secrets. `ask-question` plans `research -> draft question -> review topic -> topic create --preview`; `reply` plans `topic view -> draft reply -> reply create --preview`; `publish-topic` plans `review topic -> topic create --preview`. Real API execute steps appear only with `--include-execute`, and those steps are marked `requiresConfirmation: true`.
+Plans use content file paths and never inline long bodies or secrets. `--include-execute` is the only way to add `workflow approve` and the final execute step; both are marked `requiresConfirmation: true`.
 
 ## topic / thread
 
@@ -405,14 +405,15 @@ apexcn topic create \
   --preview
 ```
 
-After the preview looks correct, execute it:
+Starting with 0.60.x, direct topic/reply commands are preview-only. Execute the reviewed content through a workflow:
 
 ```bash
-apexcn topic create \
+apexcn workflow run \
+  --goal topic-create \
   --category-id 4 \
   --title "How do I call a REST API from APEX?" \
   --content-file ./post.md \
-  --tags "APEX,ORDS,REST" \
+  --output-dir ./topic-create-run \
   --json
 ```
 
@@ -423,13 +424,13 @@ apexcn topic create \
   --category-id 4 \
   --title "APEX REST API example" \
   --content "I have a question about calling REST APIs from APEX." \
-  --json
+  --preview
 ```
 
 Create a topic from stdin:
 
 ```bash
-printf 'Body from stdin\n' | apexcn topic create --category-id 4 --title "stdin example" --content-file - --json
+printf 'Body from stdin\n' | apexcn topic create --category-id 4 --title "stdin example" --content-file - --preview
 ```
 
 Choose exactly one body source: `--content-file`, `--content`, or stdin. The CLI rejects `--content` and `--content-file` when both are supplied. `--content-file -` reads stdin explicitly; use `--content-file ./-` for a file literally named `-`.
@@ -437,9 +438,9 @@ Choose exactly one body source: `--content-file`, `--content`, or stdin. The CLI
 Edit a topic:
 
 ```bash
-apexcn topic update 30549 --content "Updated body." --json
-apexcn topic edit 30549 --title "Updated title" --content-file ./updated-post.md --json
-apexcn thread edit 30549 --tags "APEX,REST" --json
+apexcn topic update 30549 --content "Updated body." --preview
+apexcn topic edit 30549 --title "Updated title" --content-file ./updated-post.md --preview
+apexcn thread edit 30549 --tags "APEX,REST" --preview
 ```
 
 Delete a topic:
@@ -449,7 +450,7 @@ apexcn topic delete 30549 \
   --yes \
   --force \
   --confirm-title "Full title" \
-  --json
+  --preview
 ```
 
 ## reply / post
@@ -459,30 +460,30 @@ apexcn topic delete 30549 \
 Create a reply:
 
 ```bash
-apexcn reply create 30549 --content "This approach works." --json
-apexcn reply create 30549 --content-file ./reply.md --json
-printf 'Body from stdin\n' | apexcn reply create 30549 --content-file - --json
+apexcn reply create 30549 --content "This approach works." --preview
+apexcn reply create 30549 --content-file ./reply.md --preview
+printf 'Body from stdin\n' | apexcn reply create 30549 --content-file - --preview
 ```
 
 Create a nested reply:
 
 ```bash
-apexcn reply create 30549 --parent-post-id 201480 --content "One more detail." --json
+apexcn reply create 30549 --parent-post-id 201480 --content "One more detail." --preview
 ```
 
 Edit a reply:
 
 ```bash
-apexcn reply update 201480 --content "Updated reply." --json
-apexcn reply edit 201480 --content-file ./reply-updated.md --json
-apexcn post edit 201480 --content "Updated through the post alias." --json
+apexcn reply update 201480 --content "Updated reply." --preview
+apexcn reply edit 201480 --content-file ./reply-updated.md --preview
+apexcn post edit 201480 --content "Updated through the post alias." --preview
 ```
 
 Delete a reply:
 
 ```bash
-apexcn reply delete 201480 --yes --force --json
-apexcn post delete 201480 --yes --force --json
+apexcn reply delete 201480 --yes --force --preview
+apexcn post delete 201480 --yes --force --preview
 ```
 
 ## favorite
@@ -574,14 +575,14 @@ Check categories before posting:
 
 ```bash
 apexcn category list --json
-apexcn topic create --category-id 4 --title "Title" --content-file ./post.md --json
+apexcn topic create --category-id 4 --title "Title" --content-file ./post.md --preview
 ```
 
 Confirm title before deleting:
 
 ```bash
 apexcn topic view 30549 --json
-apexcn topic delete 30549 --yes --force --confirm-title "Full title" --json
+apexcn topic delete 30549 --yes --force --confirm-title "Full title" --preview
 ```
 
 ## API write dry-run classification

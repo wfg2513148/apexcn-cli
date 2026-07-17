@@ -14,10 +14,10 @@
 | `ask` | read | api-read | yes | yes | no | no | readonly | medium | RAG 问答。 |
 | `research` | read | api-read | yes | yes | no | no | readonly | medium | 研究包。 |
 | `topic list/recent/view` | read | api-read | yes | yes | no | no | readonly | low | topic 只读能力。 |
-| `topic create/update` | write | api-write | yes | yes | yes | yes | preview-only | high | MCP 只生成 preview。 |
-| `topic delete` | write | destructive | yes | yes | yes | yes | preview-only | destructive | 需要强确认。 |
-| `reply create/update` | write | api-write | yes | yes | yes | yes | preview-only | high | MCP 只生成 preview。 |
-| `reply delete` | write | destructive | yes | yes | yes | yes | preview-only | destructive | CLI 强确认。 |
+| `topic create/update` | write | no write in direct command | yes | yes | yes | yes | preview-only | high | 直接命令只生成 preview；真实写入必须使用 hash-bound workflow。 |
+| `topic delete` | write | no write in direct command | yes | yes | yes | yes | preview-only | destructive | 直接命令只预览；workflow 绑定标题、版本和审批。 |
+| `reply create/update` | write | no write in direct command | yes | yes | yes | yes | preview-only | high | 直接命令只生成 preview；真实写入必须使用 hash-bound workflow。 |
+| `reply delete` | write | no write in direct command | yes | yes | yes | yes | preview-only | destructive | 直接命令只预览；workflow 绑定回复 ID、版本和审批。 |
 | `favorite add/remove` | write | api-write | yes | yes | yes | yes | preview-only | medium | MCP 只生成 preview。 |
 | `subscription add/remove` | write | api-write | yes | yes | yes | yes | preview-only | medium | MCP 只生成 preview。 |
 | `me profile/topics/replies/favorites/subscriptions/stats` | read | api-read | yes | yes | no | no | none | low | 个人数据只读；默认隐私脱敏，列表支持 opaque cursor。 |
@@ -31,7 +31,7 @@
 | `collection verify` | local | no-network | no | yes | no | no | none | low | 校验资料包。 |
 | `collection index/query/stats` | local | no-network | no | yes | no | no | none | low | BM25 本地检索、解释和索引统计。 |
 | `workflow plan` | workflow | no-network | no | yes | no | no | readonly | medium | MCP 可生成 plan，不执行。 |
-| `workflow run` | workflow | api-write | yes | yes | required | no | blocked | high | 真实写执行继续走 CLI。 |
+| `workflow run` | workflow | preview or approved api-write | yes | yes | required | no | blocked | high | 支持 topic/reply create/update/delete；仅 `--resume --execute --yes` 且审批有效时写入。 |
 | `workflow approve/verify/export/verify-bundle` | workflow | no-network | no | yes | no | no | none | medium | 本地审计与验证。 |
 | `workflow policy init/diff/audit-log` | workflow | no-network | no | yes | no | no | none | medium | policy 模板、hash diff、NDJSON audit log。 |
 | `commands --json/--json-schema` | local | no-network | no | yes | no | no | none | low | CLI manifest 与 schema export。 |

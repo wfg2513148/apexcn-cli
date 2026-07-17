@@ -108,14 +108,18 @@ const READONLY_TOOLS: McpToolDefinition[] = [
   readonlyTool("apexcn_workflow_plan", "workflow.plan", "Create a local workflow plan preview", {
     type: "object",
     properties: {
-      goal: { enum: ["ask-question", "reply", "research-only", "publish-topic"] },
+      goal: { enum: ["ask-question", "reply", "research-only", "publish-topic", "topic-create", "topic-update", "topic-delete", "reply-create", "reply-update", "reply-delete"] },
       keyword: { type: "string" },
       topicId: { type: "number" },
+      replyId: { type: "number" },
       categoryId: { type: "number" },
       title: { type: "string" },
       problem: { type: "string" },
       answer: { type: "string" },
       contentFile: { type: "string" },
+      ifVersion: { type: "number" },
+      confirmTitle: { type: "string" },
+      confirmId: { type: "number" },
       outputDir: { type: "string" }
     },
     required: ["goal"]
@@ -128,7 +132,7 @@ const PREVIEW_TOOLS: McpToolDefinition[] = [
   previewTool("apexcn_topic_delete_preview", "topic.delete", "Preview topic deletion", ["topicId", "confirmTitle"]),
   previewTool("apexcn_reply_create_preview", "reply.create", "Preview reply creation", ["topicId", "content"]),
   previewTool("apexcn_reply_update_preview", "reply.update", "Preview reply update", ["replyId", "content"]),
-  previewTool("apexcn_reply_delete_preview", "reply.delete", "Preview reply deletion", ["replyId", "confirmTitle"]),
+  previewTool("apexcn_reply_delete_preview", "reply.delete", "Preview reply deletion", ["replyId", "confirmId"]),
   previewTool("apexcn_favorite_add_preview", "favorite.add", "Preview favorite add", ["topicId"]),
   previewTool("apexcn_favorite_remove_preview", "favorite.remove", "Preview favorite removal", ["topicId"]),
   previewTool("apexcn_subscription_add_preview", "subscription.add", "Preview subscription add", ["topicId"]),
@@ -228,7 +232,8 @@ function previewTool(name: string, commandId: string, fallbackDescription: strin
       title: { type: "string" },
       content: { type: "string" },
       categoryId: { type: "number" },
-      confirmTitle: { type: "string" }
+      confirmTitle: { type: "string" },
+      confirmId: { type: "number" }
     },
     required
   });

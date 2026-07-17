@@ -1527,75 +1527,30 @@ describe("content commands", () => {
     }
   });
 
-  test("topic create, update, and delete call the expected API paths", async () => {
-    const responses = [
-      { ok: true, id: 42, requestId: "req-create" },
-      { ok: true, id: 42, requestId: "req-update" },
-      { topic: { id: 42, title: "CLI updated" }, requestId: "req-view" },
-      { ok: true, id: 42, requestId: "req-delete" }
+  test("topic and reply direct writes require an approved workflow", async () => {
+    const cases = [
+      ["topic", "create", "--category-id", "2", "--title", "CLI title", "--content", "CLI body"],
+      ["topic", "update", "42", "--content", "Updated body"],
+      ["topic", "delete", "42", "--yes", "--force", "--confirm-title", "CLI title"],
+      ["reply", "create", "42", "--content", "Reply body"],
+      ["reply", "update", "100", "--content", "Reply updated"],
+      ["reply", "delete", "100", "--yes", "--force"]
     ];
-    const { program, fetch } = await configuredProgram(async () => Response.json(responses.shift()));
 
-    await program.parseAsync([
-      "node",
-      "apexcn",
-      "topic",
-      "create",
-      "--category-id",
-      "2",
-      "--title",
-      "CLI title",
-      "--content",
-      "CLI body",
-      "--tags",
-      "cli,e2e",
-      "--json"
-    ]);
-    await program.parseAsync([
-      "node",
-      "apexcn",
-      "topic",
-      "update",
-      "42",
-      "--title",
-      "CLI updated",
-      "--content",
-      "Updated body",
-      "--json"
-    ]);
-    await program.parseAsync([
-      "node",
-      "apexcn",
-      "topic",
-      "delete",
-      "42",
-      "--yes",
-      "--force",
-      "--confirm-title",
-      "CLI updated",
-      "--json"
-    ]);
+    for (const args of cases) {
+      const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ ok: true }));
 
-    expect(fetch).toHaveBeenNthCalledWith(
-      1,
-      "https://oracleapex.cn/ords/test/api/v1/topics",
-      expect.objectContaining({ method: "POST", body: JSON.stringify({ categoryId: 2, title: "CLI title", content: "CLI body", tags: "cli,e2e" }) })
-    );
-    expect(fetch).toHaveBeenNthCalledWith(
-      2,
-      "https://oracleapex.cn/ords/test/api/v1/topics/42",
-      expect.objectContaining({ method: "POST", body: JSON.stringify({ title: "CLI updated", content: "Updated body" }) })
-    );
-    expect(fetch).toHaveBeenNthCalledWith(
-      3,
-      "https://oracleapex.cn/ords/test/api/v1/topics/42",
-      expect.objectContaining({ headers: expect.any(Object) })
-    );
-    expect(fetch).toHaveBeenNthCalledWith(
-      4,
-      "https://oracleapex.cn/ords/test/api/v1/topics/42",
-      expect.objectContaining({ method: "DELETE" })
-    );
+      await program.parseAsync(["node", "apexcn", ...args]);
+
+      expect(fetch).not.toHaveBeenCalled();
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).toBe(
+        "Direct topic/reply writes are disabled; use apexcn workflow run, approve, and resume instead\n"
+      );
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+      vi.unstubAllGlobals();
+    }
   });
 
   test("topic view supports text format", async () => {
@@ -1853,7 +1808,7 @@ describe("content commands", () => {
     const dir = await mkdtemp(join(tmpdir(), "apexcn-content-file-"));
     const file = join(dir, "body.md");
     await writeFile(file, "file body", "utf8");
-    const { program, fetch } = await configuredProgram(async () => Response.json({ ok: true, id: 42 }));
+    const { program, stdout, fetch } = await configuredProgram(async () => Response.json({ ok: true, id: 42 }));
 
     await program.parseAsync([
       "node",
@@ -1865,15 +1820,15 @@ describe("content commands", () => {
       "--title",
       "CLI title",
       "--content-file",
-      file
+      file,
+      "--preview"
     ]);
 
-    expect(fetch).toHaveBeenLastCalledWith(
-      "https://oracleapex.cn/ords/test/api/v1/topics",
-      expect.objectContaining({
-        body: JSON.stringify({ categoryId: 2, title: "CLI title", content: "file body" })
-      })
-    );
+    expect(fetch).not.toHaveBeenCalled();
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
+      path: "/api/v1/topics",
+      body: { categoryId: 2, title: "CLI title", content: "file body" }
+    }));
   });
 
   test("content-file dash reads explicit stdin for write commands", async () => {
@@ -1888,37 +1843,24 @@ describe("content commands", () => {
       .mockResolvedValueOnce("reply stdin body")
       .mockResolvedValueOnce("topic update stdin body")
       .mockResolvedValueOnce("reply update stdin body");
-    const { program, fetch } = await configuredProgram(
+    const { program, stdout, fetch } = await configuredProgram(
       async () => Response.json(responses.shift()),
       { readStdin, isStdinTTY: () => true }
     );
 
-    await program.parseAsync(["node", "apexcn", "topic", "create", "--category-id", "2", "--title", "CLI title", "--content-file", "-"]);
-    await program.parseAsync(["node", "apexcn", "reply", "create", "42", "--content-file", "-"]);
-    await program.parseAsync(["node", "apexcn", "topic", "update", "42", "--content-file", "-"]);
-    await program.parseAsync(["node", "apexcn", "post", "edit", "100", "--content-file", "-"]);
+    await program.parseAsync(["node", "apexcn", "topic", "create", "--category-id", "2", "--title", "CLI title", "--content-file", "-", "--preview"]);
+    await program.parseAsync(["node", "apexcn", "reply", "create", "42", "--content-file", "-", "--preview"]);
+    await program.parseAsync(["node", "apexcn", "topic", "update", "42", "--content-file", "-", "--preview"]);
+    await program.parseAsync(["node", "apexcn", "post", "edit", "100", "--content-file", "-", "--preview"]);
 
     expect(readStdin).toHaveBeenCalledTimes(4);
-    expect(fetch).toHaveBeenNthCalledWith(
-      1,
-      "https://oracleapex.cn/ords/test/api/v1/topics",
-      expect.objectContaining({ body: JSON.stringify({ categoryId: 2, title: "CLI title", content: "topic stdin body" }) })
-    );
-    expect(fetch).toHaveBeenNthCalledWith(
-      2,
-      "https://oracleapex.cn/ords/test/api/v1/topics/42/replies",
-      expect.objectContaining({ body: JSON.stringify({ content: "reply stdin body" }) })
-    );
-    expect(fetch).toHaveBeenNthCalledWith(
-      3,
-      "https://oracleapex.cn/ords/test/api/v1/topics/42",
-      expect.objectContaining({ body: JSON.stringify({ content: "topic update stdin body" }) })
-    );
-    expect(fetch).toHaveBeenNthCalledWith(
-      4,
-      "https://oracleapex.cn/ords/test/api/v1/replies/100",
-      expect.objectContaining({ body: JSON.stringify({ content: "reply update stdin body" }) })
-    );
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stdout.join("").trim().split("\n").map((line) => JSON.parse(line).body)).toEqual([
+      { categoryId: 2, title: "CLI title", content: "topic stdin body" },
+      { content: "reply stdin body" },
+      { content: "topic update stdin body" },
+      { content: "reply update stdin body" }
+    ]);
   });
 
   test("required content-file dash rejects zero-length stdin without calling the API", async () => {
@@ -1946,17 +1888,19 @@ describe("content commands", () => {
   });
 
   test("topic update content-file dash can send zero-length content", async () => {
-    const { program, fetch } = await configuredProgram(
+    const { program, stdout, fetch } = await configuredProgram(
       async () => Response.json({ ok: true }),
       { readStdin: async () => "", isStdinTTY: () => true }
     );
 
-    await program.parseAsync(["node", "apexcn", "topic", "update", "42", "--content-file", "-"]);
+    await program.parseAsync(["node", "apexcn", "topic", "update", "42", "--content-file", "-", "--preview"]);
 
-    expect(fetch).toHaveBeenLastCalledWith(
-      "https://oracleapex.cn/ords/test/api/v1/topics/42",
-      expect.objectContaining({ method: "POST", body: JSON.stringify({ content: "" }) })
-    );
+    expect(fetch).not.toHaveBeenCalled();
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
+      method: "POST",
+      path: "/api/v1/topics/42",
+      body: { content: "" }
+    }));
   });
 
   test("topic update preview without content does not read implicit stdin", async () => {
@@ -1986,18 +1930,18 @@ describe("content commands", () => {
     const file = join(dir, "-");
     await writeFile(file, "dash file body", "utf8");
     const readStdin = vi.fn(async () => "stdin body");
-    const { program, fetch } = await configuredProgram(
+    const { program, stdout, fetch } = await configuredProgram(
       async () => Response.json({ ok: true, id: 42 }),
       { readStdin, isStdinTTY: () => true }
     );
 
-    await program.parseAsync(["node", "apexcn", "topic", "create", "--category-id", "2", "--title", "CLI title", "--content-file", file]);
+    await program.parseAsync(["node", "apexcn", "topic", "create", "--category-id", "2", "--title", "CLI title", "--content-file", file, "--preview"]);
 
     expect(readStdin).not.toHaveBeenCalled();
-    expect(fetch).toHaveBeenLastCalledWith(
-      "https://oracleapex.cn/ords/test/api/v1/topics",
-      expect.objectContaining({ body: JSON.stringify({ categoryId: 2, title: "CLI title", content: "dash file body" }) })
-    );
+    expect(fetch).not.toHaveBeenCalled();
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
+      body: { categoryId: 2, title: "CLI title", content: "dash file body" }
+    }));
   });
 
   test("write commands reject both content and content-file", async () => {
@@ -2051,44 +1995,30 @@ describe("content commands", () => {
     }
   });
 
-  test("reply, favorite, subscription, and ask commands call their endpoints", async () => {
+  test("favorite, subscription, and ask commands call their endpoints", async () => {
     const responses = [
-      { ok: true, id: 100, requestId: "req-reply" },
-      { ok: true, id: 100, requestId: "req-reply-update" },
       { ok: true, id: 42, changed: true, requestId: "req-fav" },
       { ok: true, id: 42, changed: true, requestId: "req-sub" },
       { answer: "APEX answer", requestId: "req-ask" }
     ];
     const { program, fetch } = await configuredProgram(async () => Response.json(responses.shift()));
 
-    await program.parseAsync(["node", "apexcn", "reply", "create", "42", "--content", "Reply body", "--json"]);
-    await program.parseAsync(["node", "apexcn", "post", "edit", "100", "--content", "Reply updated", "--json"]);
     await program.parseAsync(["node", "apexcn", "favorite", "add", "42", "--json"]);
     await program.parseAsync(["node", "apexcn", "subscription", "add", "42", "--json"]);
     await program.parseAsync(["node", "apexcn", "ask", "How to use APEX?", "--top-k", "3", "--json"]);
 
     expect(fetch).toHaveBeenNthCalledWith(
       1,
-      "https://oracleapex.cn/ords/test/api/v1/topics/42/replies",
-      expect.objectContaining({ method: "POST", body: JSON.stringify({ content: "Reply body" }) })
-    );
-    expect(fetch).toHaveBeenNthCalledWith(
-      2,
-      "https://oracleapex.cn/ords/test/api/v1/replies/100",
-      expect.objectContaining({ method: "POST", body: JSON.stringify({ content: "Reply updated" }) })
-    );
-    expect(fetch).toHaveBeenNthCalledWith(
-      3,
       "https://oracleapex.cn/ords/test/api/v1/topics/42/favorite",
       expect.objectContaining({ method: "POST" })
     );
     expect(fetch).toHaveBeenNthCalledWith(
-      4,
+      2,
       "https://oracleapex.cn/ords/test/api/v1/topics/42/subscription",
       expect.objectContaining({ method: "POST" })
     );
     expect(fetch).toHaveBeenNthCalledWith(
-      5,
+      3,
       "https://oracleapex.cn/ords/test/api/v1/ask",
       expect.objectContaining({ method: "POST", body: JSON.stringify({ question: "How to use APEX?", topK: 3 }) })
     );

@@ -40,11 +40,15 @@ export async function callMcpTool(name: string, args: unknown = {}, policy: McpP
         goal: workflowGoal(value.goal),
         keyword: optionalString(value, "keyword"),
         topicId: optionalNumber(value, "topicId"),
+        replyId: optionalNumber(value, "replyId"),
         categoryId: optionalNumber(value, "categoryId"),
         title: optionalString(value, "title"),
         problem: optionalString(value, "problem"),
         answer: optionalString(value, "answer"),
         contentFile: optionalString(value, "contentFile"),
+        ifVersion: optionalNumber(value, "ifVersion"),
+        confirmTitle: optionalString(value, "confirmTitle"),
+        confirmId: optionalNumber(value, "confirmId"),
         outputDir: optionalString(value, "outputDir"),
         includeExecute: false
       });
@@ -107,7 +111,7 @@ function previewWriteTool(name: string, args: Record<string, unknown>): unknown 
     if (Object.keys(body).length === 0) {
       throw new Error("At least one of title, content, or categoryId is required");
     }
-    return previewPlan({ method: "PATCH", path: `/api/v1/topics/${requiredNumber(args, "topicId")}`, body });
+    return previewPlan({ method: "POST", path: `/api/v1/topics/${requiredNumber(args, "topicId")}`, body });
   }
   if (name === "apexcn_topic_delete_preview") {
     return previewPlan({ method: "DELETE", path: `/api/v1/topics/${requiredNumber(args, "topicId")}`, body: { confirmTitle: requiredString(args, "confirmTitle") } });
@@ -116,10 +120,15 @@ function previewWriteTool(name: string, args: Record<string, unknown>): unknown 
     return previewPlan({ method: "POST", path: `/api/v1/topics/${requiredNumber(args, "topicId")}/replies`, body: { content: requiredString(args, "content") } });
   }
   if (name === "apexcn_reply_update_preview") {
-    return previewPlan({ method: "PATCH", path: `/api/v1/replies/${requiredNumber(args, "replyId")}`, body: { content: requiredString(args, "content") } });
+    return previewPlan({ method: "POST", path: `/api/v1/replies/${requiredNumber(args, "replyId")}`, body: { content: requiredString(args, "content") } });
   }
   if (name === "apexcn_reply_delete_preview") {
-    return previewPlan({ method: "DELETE", path: `/api/v1/replies/${requiredNumber(args, "replyId")}`, body: { confirmTitle: requiredString(args, "confirmTitle") } });
+    const replyId = requiredNumber(args, "replyId");
+    const confirmId = requiredNumber(args, "confirmId");
+    if (confirmId !== replyId) {
+      throw new Error("confirmId must match replyId");
+    }
+    return previewPlan({ method: "DELETE", path: `/api/v1/replies/${replyId}`, body: { confirmId } });
   }
   if (name === "apexcn_favorite_add_preview") {
     return previewPlan({ method: "POST", path: `/api/v1/topics/${requiredNumber(args, "topicId")}/favorite` });
@@ -205,10 +214,21 @@ function optionalBoolean(args: Record<string, unknown>, key: string): boolean | 
 }
 
 function workflowGoal(value: unknown): WorkflowGoal {
-  if (value === "ask-question" || value === "reply" || value === "research-only" || value === "publish-topic") {
+  if (
+    value === "ask-question"
+    || value === "reply"
+    || value === "research-only"
+    || value === "publish-topic"
+    || value === "topic-create"
+    || value === "topic-update"
+    || value === "topic-delete"
+    || value === "reply-create"
+    || value === "reply-update"
+    || value === "reply-delete"
+  ) {
     return value;
   }
-  throw new Error("goal must be ask-question, reply, research-only, or publish-topic");
+  throw new Error("goal must be ask-question, reply, research-only, publish-topic, topic-create/update/delete, or reply-create/update/delete");
 }
 
 function compact(input: Record<string, unknown>): Record<string, unknown> {

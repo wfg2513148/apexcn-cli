@@ -2,7 +2,7 @@
 
 MCP 是 `apexcn-cli` 的薄适配层，不是主产品。CLI 继续作为人工、脚本和 workflow 的主入口；MCP 只为 AI Agent 提供结构化工具。
 
-## 0.50.x 稳定边界
+## 0.50.x / 0.60.x 稳定边界
 
 - 仅支持本地 stdio，不开放网络 MCP transport。
 - server 默认 readonly；execute-write 始终不可用。
@@ -64,13 +64,13 @@ stdio 使用每行一个 JSON-RPC 2.0 消息。server 支持 `2024-11-05`、`202
 | `apexcn_topic_delete_preview` | 只生成 preview request，要求 `confirmTitle` |
 | `apexcn_reply_create_preview` | 只生成 preview request |
 | `apexcn_reply_update_preview` | 只生成 preview request |
-| `apexcn_reply_delete_preview` | 只生成 preview request |
+| `apexcn_reply_delete_preview` | 只生成 preview request，要求 `confirmId` 与 `replyId` 完全一致 |
 | `apexcn_favorite_add_preview` | 只生成 preview request |
 | `apexcn_favorite_remove_preview` | 只生成 preview request |
 | `apexcn_subscription_add_preview` | 只生成 preview request |
 | `apexcn_subscription_remove_preview` | 只生成 preview request |
 
-preview 返回必须包含 `willExecute: false`。真实发布、删除、收藏、订阅仍走 CLI workflow。
+preview 返回必须包含 `willExecute: false`，且工具调用期间写请求数必须为零。topic/reply update preview 使用 ORDS 已验证的 `POST` 合约。真实 topic/reply 创建、修改、删除只能走 CLI hash-bound workflow；MCP 没有 approve 或 execute-write 能力。
 
 ## Client Compatibility
 

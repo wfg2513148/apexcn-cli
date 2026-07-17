@@ -17,7 +17,7 @@ describe("CLI entrypoint detection", () => {
 
     await expect(program.parseAsync(["node", "apexcn", "--version"])).rejects.toMatchObject({ code: "commander.version" });
 
-    expect(output.join("")).toBe("0.50.0\n");
+    expect(output.join("")).toBe("0.60.0\n");
   });
 
   test("prints a machine-readable command manifest", async () => {
@@ -31,7 +31,7 @@ describe("CLI entrypoint detection", () => {
 
     const manifest = JSON.parse(output.join(""));
     expect(manifest.schemaVersion).toBe(1);
-    expect(manifest.version).toBe("0.50.0");
+    expect(manifest.version).toBe("0.60.0");
     expect(manifest.schema).toEqual({
       safetyEffects: ["read", "api-write", "destructive", "config-read", "config-write", "auth", "secret", "diagnostic", "manifest"],
       previewPolicies: ["required", "available", "none"],
@@ -42,7 +42,7 @@ describe("CLI entrypoint detection", () => {
         path: "topic create",
         aliases: expect.arrayContaining(["thread create"]),
         options: expect.arrayContaining(["--json", "--dry-run", "--preview"]),
-        safety: expect.objectContaining({ effects: expect.arrayContaining(["api-write"]), preview: "available" }),
+        safety: expect.objectContaining({ effects: expect.arrayContaining(["api-write"]), preview: "required" }),
         examples: expect.arrayContaining([
           expect.objectContaining({ command: 'apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --preview', mode: "preview" })
         ])
@@ -51,7 +51,7 @@ describe("CLI entrypoint detection", () => {
         path: "topic update",
         aliases: expect.arrayContaining(["topic edit", "thread update", "thread edit"]),
         options: expect.arrayContaining(["--content <text>", "--content-file <path>"]),
-        safety: expect.objectContaining({ effects: expect.arrayContaining(["api-write"]), preview: "available" })
+        safety: expect.objectContaining({ effects: expect.arrayContaining(["api-write"]), preview: "required" })
       }),
       expect.objectContaining({
         path: "ask",

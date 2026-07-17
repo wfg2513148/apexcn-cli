@@ -242,12 +242,12 @@ apexcn workflow run --resume ./run --execute --yes --json
 需要查看最新帖子时，用 `apexcn topic recent --since-hours 48 --json`；CLI 会优先调用 `GET /api/v1/topics`，旧服务端会自动降级到搜索和帖子详情组合。
 需要给 AI agent 一次性整理可引用资料时，用 `research` 直接生成搜索结果和帖子详情组合的研究包。
 需要把多个搜索词和指定帖子整理成可离线复用的资料库时，用 `collection build`；使用前可用 `collection verify` 本地校验文件 hash 和 topic artifact。
-需要把问题信息和研究包整理成可发帖正文时，用本地 `draft question` 生成 Markdown 草稿。该命令不需要认证、不调用 API；`--format text` 输出可保存为 `question.md` 并传给 `topic create --content-file`。
-需要先起草回帖时，用本地 `draft reply --format text` 生成 Markdown 回复，再传给 `reply create --content-file` 做 API 预览。
+需要把问题信息和研究包整理成可发帖正文时，用本地 `draft question` 生成 Markdown 草稿。该命令不需要认证、不调用 API；`--format text` 输出可保存为 `question.md` 并传给 `workflow run --goal topic-create --content-file`。
+需要先起草回帖时，用本地 `draft reply --format text` 生成 Markdown 回复，再传给 `workflow run --goal reply-create --content-file`。
 发布预览前，用本地 `review topic` 检查 Markdown 草稿是否仍含 `待补充`、过短正文或疑似密钥；该命令不替代 `topic create --preview`。
 发布回复前，用本地 `review reply` 检查回复草稿、topic id、parent post id、重复行和疑似密钥；普通 Markdown 文件输入会给出 `reply create --dry-run` 建议命令。
 需要让 AI agent 先给出完整可审计步骤时，用本地 `workflow plan` 生成机器可读计划；它只规划，不执行命令。
-需要让 CLI 直接执行可恢复工作流时，用 `workflow run`；默认只读取 API 并写入本地产物和 `preview.json`。审查后用 `workflow approve` 写入 hash 绑定的 `approval.json`，只有批准未过期时 `--resume <run-dir> --execute --yes` 才会发送最终 POST。
+需要让 CLI 直接执行可恢复工作流时，用 `workflow run`；默认只生成本地产物和 `preview.json`。审查后用 `workflow approve` 写入同时绑定目标、请求和期限的 `approval.json`，只有批准未过期时 `--resume <run-dir> --execute --yes` 才会发送最终请求。timeout/5xx 只能复用同一 run 重试，409 必须重新读取版本并创建新 workflow。
 需要归档或复核工作流证据时，用 `workflow verify` 本地校验 artifact 图、approval hash 和 execute 请求一致性；`--write-report` 会写入 `verification.json`。
 需要把工作流证据交给外部系统或人工审计时，用 `workflow export` 生成单文件 `workflow-bundle`，其中包含 verification report 和 artifact 内容/hash。
 只拿到 bundle 文件时，用 `workflow verify-bundle` 独立校验 bundle schema、artifact content/hash、embedded verification 和 preview/approval/execute 链。
@@ -273,106 +273,103 @@ apexcn ask "Oracle APEX 如何调用 REST API？" --format text
 
 ## 5. 发帖与编辑
 
-创建话题：
+0.60.x 起，topic/reply 的直接写命令只允许 `--preview` / `--dry-run`。真实创建、编辑和删除必须使用可审计 workflow。
+
+创建话题预览：
 
 ```bash
-apexcn topic create \
+apexcn workflow run \
+  --goal topic-create \
   --category-id 4 \
   --title "APEX 中如何使用 OPEN_QUERY_CONTEXT？" \
   --content-file ./post.md \
-  --tags "APEX,SQL,AI" \
+  --output-dir ./topic-create-run \
   --json
 ```
 
-人类在 TTY 终端里可以省略 `--category-id`，CLI 会列出可发帖板块让你选择。
-
-AI agent 必须传 `--category-id`，不要依赖交互选择。
-
-编辑话题：
+检查 `review.json` 和 `preview.json` 后批准、执行：
 
 ```bash
-apexcn topic edit 30687 \
+apexcn workflow approve --run-dir ./topic-create-run --approved-by reviewer --json
+apexcn workflow run --resume ./topic-create-run --execute --yes --json
+```
+
+编辑话题需要当前对象版本：
+
+```bash
+apexcn workflow run \
+  --goal topic-update \
+  --topic-id 30687 \
+  --if-version 3 \
   --title "新的标题" \
   --content-file ./updated.md \
-  --tags "APEX,ORDS" \
+  --output-dir ./topic-update-run \
   --json
 ```
 
-也可以用 `update`：
+直接命令仍可查看业务请求，但不会写入：
 
 ```bash
-apexcn topic update 30687 --content "新的正文" --json
-```
-
-正文来源三选一：
-
-- 长正文用 `--content-file`
-- 短正文用 `--content`
-- 批处理可用 `--content-file -` 明确读取 stdin
-
-不要同时传 `--content` 和 `--content-file`，CLI 会拒绝执行。
-如果文件名真的叫 `-`，请写成 `--content-file ./-`。
-
-示例：
-
-```bash
-printf '从 stdin 提交正文\n' | apexcn topic create --category-id 4 --title "stdin 示例" --content-file - --json
+apexcn topic create --category-id 4 --title "预览" --content-file ./post.md --preview
+apexcn topic update 30687 --content-file ./updated.md --preview
 ```
 
 ## 6. 删除话题
 
-删除话题是高风险操作。非交互模式必须同时提供：
-
-- `--yes`
-- `--force`
-- `--confirm-title <完整标题>`
+删除 workflow 同时绑定对象版本与完整标题：
 
 ```bash
-apexcn topic delete 30687 \
-  --yes \
-  --force \
+apexcn workflow run \
+  --goal topic-delete \
+  --topic-id 30687 \
+  --if-version 4 \
   --confirm-title "新的标题" \
+  --output-dir ./topic-delete-run \
   --json
 ```
 
-如果 `--confirm-title` 与线上当前标题不一致，CLI 会拒绝删除。话题编辑过标题时，要使用编辑后的完整标题。
-
-人类在 TTY 终端里可以不传这些参数，CLI 会加载话题并要求输入完整标题确认。
-
-AI agent 必须使用非交互确认参数；不要模拟人工输入。
+缺少标题、审批过期、版本冲突或请求 hash 变化都会阻断。
 
 ## 7. 回复
 
 创建回复：
 
 ```bash
-apexcn reply create 30687 --content "这个方法可行。" --json
-printf '从 stdin 回复\n' | apexcn reply create 30687 --content-file - --json
-apexcn reply create 30687 --content-file ./reply.md --json
-```
-
-回复指定父回复：
-
-```bash
-apexcn reply create 30687 --parent-post-id 201480 --content "补充说明" --json
+apexcn workflow run \
+  --goal reply-create \
+  --topic-id 30687 \
+  --content-file ./reply.md \
+  --output-dir ./reply-create-run \
+  --json
 ```
 
 编辑回复：
 
 ```bash
-apexcn reply edit 201480 --content "更新后的回复" --json
-apexcn post edit 201480 --content-file ./reply-updated.md --json
+apexcn workflow run \
+  --goal reply-update \
+  --reply-id 201480 \
+  --if-version 2 \
+  --content-file ./reply-updated.md \
+  --output-dir ./reply-update-run \
+  --json
 ```
 
 `post` 是 `reply` 的别名。
 
-删除回复：
+删除回复时，确认 ID 必须与目标 ID 完全一致：
 
 ```bash
-apexcn reply delete 201480 --yes --force --json
+apexcn workflow run \
+  --goal reply-delete \
+  --reply-id 201480 \
+  --confirm-id 201480 \
+  --if-version 3 \
+  --output-dir ./reply-delete-run \
+  --json
 ```
 
-人类 TTY 模式下可以交互输入 `delete` 确认。AI agent 必须传 `--yes --force`。
+每个 run 都使用相同的 `workflow approve` 和 `workflow run --resume ... --execute --yes` 完成审批与执行。
 
 ## 8. 收藏与订阅
 
@@ -487,12 +484,12 @@ apexcn search "APEX" --page-size 3 --json
 | RAG 问答 | `apexcn ask "问题" --top-k 3 --json` |
 | 范围问答 | `apexcn ask "问题" --tag ORDS --from 2026-07-01 --to 2026-07-05 --json` |
 | 查看话题 | `apexcn topic view <thread_id> --json` |
-| 发帖 | `apexcn topic create --category-id <id> --title <title> --content-file <file> --json` |
-| 编辑话题 | `apexcn topic edit <thread_id> --content-file <file> --json` |
-| 删除话题 | `apexcn topic delete <thread_id> --yes --force --confirm-title <title> --json` |
-| 回复 | `apexcn reply create <thread_id> --content <text> --json` |
-| 编辑回复 | `apexcn post edit <post_id> --content <text> --json` |
-| 删除回复 | `apexcn reply delete <post_id> --yes --force --json` |
+| 发帖 workflow | `apexcn workflow run --goal topic-create --category-id <id> --title <title> --content-file <file> --output-dir <dir> --json` |
+| 编辑话题 workflow | `apexcn workflow run --goal topic-update --topic-id <id> --if-version <n> --content-file <file> --output-dir <dir> --json` |
+| 删除话题 workflow | `apexcn workflow run --goal topic-delete --topic-id <id> --if-version <n> --confirm-title <title> --output-dir <dir> --json` |
+| 回复 workflow | `apexcn workflow run --goal reply-create --topic-id <id> --content-file <file> --output-dir <dir> --json` |
+| 编辑回复 workflow | `apexcn workflow run --goal reply-update --reply-id <id> --if-version <n> --content-file <file> --output-dir <dir> --json` |
+| 删除回复 workflow | `apexcn workflow run --goal reply-delete --reply-id <id> --confirm-id <id> --if-version <n> --output-dir <dir> --json` |
 | 收藏 | `apexcn favorite add <thread_id> --json` |
 | 取消收藏 | `apexcn favorite remove <thread_id> --json` |
 | 订阅 | `apexcn subscription add <thread_id> --json` |

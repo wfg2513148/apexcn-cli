@@ -365,7 +365,7 @@ apexcn workflow plan \
   --json
 ```
 
-`--goal` 支持 `ask-question`、`reply`、`research-only` 和 `publish-topic`。JSON 输出固定包含 `kind: "workflow-plan"`、`schemaVersion: 1`、`goal`、`steps`、`checkpoints`、`files` 和 `safetySummary`。缺少必要输入时命令不会失败，而是在 `checkpoints.missingInputs[]` 中列出。`ask-question` 需要 `--keyword`、`--title`、`--problem` 和 `--category-id`；`reply` 需要 `--topic-id` 和 `--answer`；`publish-topic` 需要 `--title`、`--category-id` 和唯一正文来源 `--content-file`。
+`--goal` 支持 `ask-question`、`reply`、`research-only`、`publish-topic`，以及 `topic-create/update/delete`、`reply-create/update/delete`。JSON 输出固定包含 `kind: "workflow-plan"`、`schemaVersion: 1`、`goal`、`steps`、`checkpoints`、`files` 和 `safetySummary`。CRUD 计划会明确列出 preview、hash-bound approval 和 execute；MCP 调用 plan 时永远不会执行这些步骤。
 
 运行可恢复工作流：
 
@@ -386,7 +386,7 @@ apexcn workflow verify-bundle --bundle workflow-bundle.json --json
 apexcn workflow run --resume run --execute --yes --json
 ```
 
-默认运行只读取 API、生成 Markdown 草稿、写入 `run.json`、`research.json`、`review.json` 和 `preview.json`，不会发送最终 POST。确认 `preview.json` 后，用 `workflow approve` 写入包含 preview request SHA-256 的 `approval.json`。只有 approval 的 `runId` 和 hash 都匹配当前 preview 时，`--resume <run-dir> --execute --yes` 才会执行最终写入，并写入 `execute.json`。如果已完成步骤的产物仍存在，resume 会跳过该步骤；如果产物缺失，会重新执行该步骤。
+默认运行生成 Markdown 草稿或读取内容文件副本，写入 `run.json`、`review.json` 和 `preview.json`，不会发送最终写请求。确认 `preview.json` 后，用 `workflow approve` 写入包含目标、完整请求、preview SHA-256 和 `expiresAt` 的 `approval.json`。只有 approval 的 runId、目标、请求、hash 和期限都有效时，`--resume <run-dir> --execute --yes` 才会执行最终写入，并写入 `execute.json`。401/429 修复后复用同一 run；timeout/5xx 结果不确定时也只能复用同一 run 和 operationKey；409 必须重新读取版本并创建、审核、批准新 workflow。
 
 `workflow verify` 是纯本地校验命令，会输出 `workflow-verification` 报告，检查 artifact 文件 hash、approval 与 preview 是否匹配、completed run 的 execute request 是否等于已批准 preview request。`--write-report` 会写入 `verification.json`，但不会修改 `run.json`。
 
@@ -394,7 +394,7 @@ apexcn workflow run --resume run --execute --yes --json
 
 `workflow verify-bundle` 是纯本地 bundle 校验命令，不需要原始 run 目录。它会校验 bundle schema、artifact 内容 hash/size、embedded verification 是否匹配 artifact，并从 bundle 内的 preview、approval、execute 内容重新复核审批和执行链。
 
-计划只使用文件路径，不会生成内联长正文或密钥的命令。`ask-question` 会规划 `research -> draft question -> review topic -> topic create --preview`；`reply` 会规划 `topic view -> draft reply -> reply create --preview`；`publish-topic` 会规划 `review topic -> topic create --preview`。只有显式加 `--include-execute` 才会加入真正写入 API 的 execute 步骤，且该步骤会标记 `requiresConfirmation: true`。
+计划只使用正文文件路径，不会内联长正文或密钥。只有显式加 `--include-execute` 才会加入 `workflow approve` 和最终 execute 步骤，两步都会标记 `requiresConfirmation: true`。
 
 ## topic / thread
 
@@ -419,14 +419,15 @@ apexcn topic create \
   --preview
 ```
 
-确认预览输出无误后再执行：
+0.60.x 起，直接 topic/reply 命令只允许预览，不再执行真实写入。真实写入请使用 `workflow run --goal topic-create`：
 
 ```bash
-apexcn topic create \
+apexcn workflow run \
+  --goal topic-create \
   --category-id 4 \
   --title "APEX 中如何调用 REST API？" \
   --content-file ./post.md \
-  --tags "APEX,ORDS,REST" \
+  --output-dir ./topic-create-run \
   --json
 ```
 
@@ -437,13 +438,13 @@ apexcn topic create \
   --category-id 4 \
   --title "APEX REST API 示例" \
   --content "想请教一个 APEX 调用 REST API 的问题。" \
-  --json
+  --preview
 ```
 
 创建帖子，正文来自 stdin：
 
 ```bash
-printf '正文来自 stdin\n' | apexcn topic create --category-id 4 --title "stdin 示例" --content-file - --json
+printf '正文来自 stdin\n' | apexcn topic create --category-id 4 --title "stdin 示例" --content-file - --preview
 ```
 
 正文来源三选一：`--content-file`、`--content` 或 stdin。不要同时传 `--content` 和 `--content-file`，CLI 会拒绝执行。`--content-file -` 会明确读取 stdin；如果文件名真的叫 `-`，请写成 `--content-file ./-`。
@@ -451,9 +452,9 @@ printf '正文来自 stdin\n' | apexcn topic create --category-id 4 --title "std
 编辑帖子：
 
 ```bash
-apexcn topic update 30549 --content "更新后的正文。" --json
-apexcn topic edit 30549 --title "更新后的标题" --content-file ./updated-post.md --json
-apexcn thread edit 30549 --tags "APEX,REST" --json
+apexcn topic update 30549 --content "更新后的正文。" --preview
+apexcn topic edit 30549 --title "更新后的标题" --content-file ./updated-post.md --preview
+apexcn thread edit 30549 --tags "APEX,REST" --preview
 ```
 
 删除帖子：
@@ -463,7 +464,7 @@ apexcn topic delete 30549 \
   --yes \
   --force \
   --confirm-title "完整标题" \
-  --json
+  --preview
 ```
 
 ## reply / post
@@ -473,30 +474,30 @@ apexcn topic delete 30549 \
 创建回复：
 
 ```bash
-apexcn reply create 30549 --content "这个方法可行。" --json
-apexcn reply create 30549 --content-file ./reply.md --json
-printf '正文来自 stdin\n' | apexcn reply create 30549 --content-file - --json
+apexcn reply create 30549 --content "这个方法可行。" --preview
+apexcn reply create 30549 --content-file ./reply.md --preview
+printf '正文来自 stdin\n' | apexcn reply create 30549 --content-file - --preview
 ```
 
 创建楼中楼回复：
 
 ```bash
-apexcn reply create 30549 --parent-post-id 201480 --content "补充说明。" --json
+apexcn reply create 30549 --parent-post-id 201480 --content "补充说明。" --preview
 ```
 
 编辑回复：
 
 ```bash
-apexcn reply update 201480 --content "更新后的回复。" --json
-apexcn reply edit 201480 --content-file ./reply-updated.md --json
-apexcn post edit 201480 --content "使用 post 别名更新。" --json
+apexcn reply update 201480 --content "更新后的回复。" --preview
+apexcn reply edit 201480 --content-file ./reply-updated.md --preview
+apexcn post edit 201480 --content "使用 post 别名更新。" --preview
 ```
 
 删除回复：
 
 ```bash
-apexcn reply delete 201480 --yes --force --json
-apexcn post delete 201480 --yes --force --json
+apexcn reply delete 201480 --yes --force --preview
+apexcn post delete 201480 --yes --force --preview
 ```
 
 ## favorite
@@ -588,14 +589,14 @@ apexcn topic view 30354 --json
 
 ```bash
 apexcn category list --json
-apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --json
+apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --preview
 ```
 
 删除前确认标题：
 
 ```bash
 apexcn topic view 30549 --json
-apexcn topic delete 30549 --yes --force --confirm-title "完整标题" --json
+apexcn topic delete 30549 --yes --force --confirm-title "完整标题" --preview
 ```
 
 ## API 写操作 dry-run 分类

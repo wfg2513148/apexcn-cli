@@ -61,10 +61,39 @@ describe("MCP tools", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  test("update previews use the verified ORDS POST contract without network", async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(callMcpTool(
+      "apexcn_topic_update_preview",
+      { topicId: 42, title: "Updated" },
+      mcpPolicy(true)
+    )).resolves.toEqual(expect.objectContaining({
+      ok: true,
+      willExecute: false,
+      request: { method: "POST", path: "/api/v1/topics/42", body: { title: "Updated" } }
+    }));
+    await expect(callMcpTool(
+      "apexcn_reply_update_preview",
+      { replyId: 100, content: "Updated reply" },
+      mcpPolicy(true)
+    )).resolves.toEqual(expect.objectContaining({
+      ok: true,
+      willExecute: false,
+      request: { method: "POST", path: "/api/v1/replies/100", body: { content: "Updated reply" } }
+    }));
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   test("delete preview requires strong confirmation", async () => {
     await expect(callMcpTool("apexcn_topic_delete_preview", { topicId: 1 }, mcpPolicy(true))).resolves.toEqual(expect.objectContaining({
       ok: false,
       error: expect.objectContaining({ code: "MCP_VALIDATION_ERROR" })
+    }));
+    await expect(callMcpTool("apexcn_reply_delete_preview", { replyId: 2, confirmId: 3 }, mcpPolicy(true))).resolves.toEqual(expect.objectContaining({
+      ok: false,
+      error: expect.objectContaining({ code: "MCP_VALIDATION_ERROR", message: "confirmId must match replyId" })
     }));
   });
 

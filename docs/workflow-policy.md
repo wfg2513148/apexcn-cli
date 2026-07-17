@@ -46,15 +46,17 @@ apexcn workflow audit-log --run-dir ./run --format ndjson
 
 `mcp.allowExecute` 必须保持 `false`。MCP 不支持真实 execute-write。
 
+0.60.x 的 `approval.json` 还会记录 `target`、完整 `request` 和 `expiresAt`。执行时使用 artifact 中的期限；policy 的 `approvalExpiresInMinutes` 是本地 policy verify 的最大审批年龄。
+
 ## Verify
 
 `workflow verify --policy` 会检查：
 
 - runId 是否一致。
-- preview request hash 是否与 approval 匹配。
+- preview 的 target 和完整 request hash 是否与 approval 匹配。
 - approval 是否过期。
 - command 是否被 policy 允许。
-- destructive 命令是否具备确认字段。
+- destructive 请求中的确认字段、对象版本和批准 hash 是否一致。
 - artifact 是否包含未脱敏 secret。
 - 双人审批要求是否满足。
 

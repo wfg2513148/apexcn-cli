@@ -17,7 +17,15 @@ type WorkflowCommandOptions = CommandIo & {
   configPath?: string;
 };
 
-type WorkflowRunGoal = "ask-question" | "reply";
+type WorkflowRunGoal =
+  | "ask-question"
+  | "reply"
+  | "topic-create"
+  | "topic-update"
+  | "topic-delete"
+  | "reply-create"
+  | "reply-update"
+  | "reply-delete";
 
 type WorkflowPlanOptions = FormatOption & WorkflowPlanInput;
 
@@ -26,10 +34,15 @@ type WorkflowRunOptions = FormatOption & {
   resume?: string;
   keyword?: string;
   topicId?: number;
+  replyId?: number;
   categoryId?: number;
   title?: string;
   problem?: string;
   answer?: string;
+  contentFile?: string;
+  ifVersion?: number;
+  confirmTitle?: string;
+  confirmId?: number;
   outputDir?: string;
   execute?: boolean;
   yes?: boolean;
@@ -39,6 +52,7 @@ type WorkflowApproveOptions = {
   runDir: string;
   approvedBy?: string;
   note?: string;
+  expiresInMinutes?: number;
   json?: boolean;
 };
 
@@ -82,8 +96,15 @@ type Session = {
   token: string;
 };
 
-type WorkflowRunStatus = "running" | "preview-ready" | "completed" | "failed";
+type WorkflowRunStatus = "running" | "preview-ready" | "completed" | "failed" | "execution-uncertain";
 type WorkflowRunStepStatus = "pending" | "running" | "completed" | "failed" | "skipped";
+
+class WorkflowReviewError extends Error {
+  constructor() {
+    super("Workflow content review failed.");
+    this.name = "WorkflowReviewError";
+  }
+}
 
 type WorkflowRunStep = {
   id: string;
@@ -97,10 +118,15 @@ type WorkflowRunStep = {
 type WorkflowRunInputs = {
   keyword?: string;
   topicId?: number;
+  replyId?: number;
   categoryId?: number;
   title?: string;
   problem?: string;
   answer?: string;
+  contentFile?: string;
+  ifVersion?: number;
+  confirmTitle?: string;
+  confirmId?: number;
 };
 
 type WorkflowRunState = {
@@ -122,16 +148,23 @@ type WorkflowApproval = {
   schemaVersion: 1;
   runId: string;
   approvedAt: string;
+  expiresAt: string;
   approvedBy: string;
   note?: string;
   previewHash: string;
+  target: WorkflowTarget;
   request: WorkflowPreviewRequest;
 };
 
 type WorkflowPreviewRequest = {
-  method: "POST";
+  method: "POST" | "DELETE";
   path: string;
-  body: unknown;
+  body: Record<string, unknown>;
+};
+
+type WorkflowTarget = {
+  profile: string;
+  baseUrl: string;
 };
 
 type WorkflowVerificationIssue = {
@@ -145,14 +178,18 @@ export function createWorkflowCommand(options: WorkflowCommandOptions): Command 
 
   workflow
     .command("plan")
-    .requiredOption("--goal <goal>", "workflow goal: ask-question, reply, research-only, publish-topic", parseWorkflowGoal)
+    .requiredOption("--goal <goal>", "workflow goal: ask-question, reply, research-only, publish-topic, topic-create/update/delete, reply-create/update/delete", parseWorkflowGoal)
     .option("--keyword <keyword>", "search or research keyword")
     .option("--topic-id <id>", "topic id", parsePositiveInteger)
+    .option("--reply-id <id>", "reply id", parsePositiveInteger)
     .option("--category-id <id>", "category id", parsePositiveInteger)
     .option("--title <title>", "topic title")
     .option("--problem <text>", "question problem text for ask-question")
     .option("--answer <text>", "reply answer text for reply")
     .option("--content-file <path>", "existing Markdown content file for publish-topic")
+    .option("--if-version <n>", "current object version for update/delete", parsePositiveInteger)
+    .option("--confirm-title <title>", "exact topic title confirmation for topic delete")
+    .option("--confirm-id <id>", "exact reply id confirmation for reply delete", parsePositiveInteger)
     .option("--output-dir <path>", "directory for planned local files")
     .option("--include-execute", "include final API execute steps after preview")
     .option("--json", "pretty-print JSON")
@@ -167,14 +204,19 @@ export function createWorkflowCommand(options: WorkflowCommandOptions): Command 
 
   workflow
     .command("run")
-    .option("--goal <goal>", "workflow goal: ask-question, reply", parseWorkflowRunGoal)
+    .option("--goal <goal>", "workflow goal: ask-question, reply, topic-create, topic-update, topic-delete, reply-create, reply-update, reply-delete", parseWorkflowRunGoal)
     .option("--resume <run-dir>", "resume an existing workflow run directory")
     .option("--keyword <keyword>", "search or research keyword for ask-question")
-    .option("--topic-id <id>", "topic id for reply", parsePositiveInteger)
+    .option("--topic-id <id>", "topic id for reply or topic update/delete", parsePositiveInteger)
+    .option("--reply-id <id>", "reply id for reply update/delete", parsePositiveInteger)
     .option("--category-id <id>", "category id for topic create preview", parsePositiveInteger)
     .option("--title <title>", "topic title for ask-question")
     .option("--problem <text>", "question problem text for ask-question")
     .option("--answer <text>", "reply answer text for reply")
+    .option("--content-file <path>", "Markdown content for topic/reply update")
+    .option("--if-version <n>", "current object version for update/delete", parsePositiveInteger)
+    .option("--confirm-title <title>", "exact topic title confirmation for topic delete")
+    .option("--confirm-id <id>", "exact reply id confirmation for reply delete", parsePositiveInteger)
     .option("--output-dir <path>", "directory for run artifacts")
     .option("--execute", "execute the final API write after preview")
     .option("--yes", "confirm --execute")
@@ -191,6 +233,7 @@ export function createWorkflowCommand(options: WorkflowCommandOptions): Command 
     .requiredOption("--run-dir <run-dir>", "workflow run directory to approve")
     .option("--approved-by <name>", "name recorded in approval artifact")
     .option("--note <text>", "approval note")
+    .option("--expires-in-minutes <n>", "approval lifetime in minutes", parsePositiveInteger, 120)
     .option("--json", "pretty-print JSON")
     .action(async (commandOptions: WorkflowApproveOptions) => {
       await approveWorkflow(options, commandOptions);
@@ -370,10 +413,22 @@ async function diffWorkflow(io: CommandIo, options: WorkflowDiffOptions): Promis
   const preview = await readOptionalJson(loaded.state.artifacts.preview);
   const approval = await readOptionalJson(loaded.state.artifacts.approval);
   const previewRequest = verificationPreviewRequest(preview, loaded.state.artifacts.preview, []);
-  const approvalRequest = isRecord(approval) && isRecord(approval.request) ? approval.request as WorkflowPreviewRequest : undefined;
-  const currentHash = previewRequest ? workflowPreviewHash(previewRequest) : undefined;
+  const previewTarget = isRecord(preview) ? verificationWorkflowTarget({ profile: preview.profile, baseUrl: preview.baseUrl }) : undefined;
+  const approvalRequest = isRecord(approval) ? verificationApprovalRequest(approval.request) : undefined;
+  const approvalTarget = isRecord(approval) ? verificationWorkflowTarget(approval.target) : undefined;
+  const currentHash = previewRequest && previewTarget ? workflowPreviewHash(previewTarget, previewRequest) : undefined;
   const approvalHash = isRecord(approval) && typeof approval.previewHash === "string" ? approval.previewHash : undefined;
-  const allowed = Boolean(currentHash && approvalHash && currentHash === approvalHash);
+  const allowed = Boolean(
+    currentHash
+    && approvalHash
+    && currentHash === approvalHash
+    && previewTarget
+    && approvalTarget
+    && canonicalJson(previewTarget) === canonicalJson(approvalTarget)
+    && previewRequest
+    && approvalRequest
+    && canonicalJson(previewRequest) === canonicalJson(approvalRequest)
+  );
   const differences = requestDifferences(previewRequest, approvalRequest);
   if (!allowed) {
     process.exitCode = 1;
@@ -430,9 +485,9 @@ async function approveWorkflow(io: CommandIo, options: WorkflowApproveOptions): 
     return;
   }
 
-  let request: WorkflowPreviewRequest;
+  let preview: { target: WorkflowTarget; request: WorkflowPreviewRequest };
   try {
-    request = await workflowPreviewRequest(state.artifacts.preview);
+    preview = await workflowPreviewEnvelope(state.artifacts.preview);
   } catch (error) {
     printError(io, { type: "validation", message: errorMessage(error) });
     process.exitCode = 1;
@@ -444,10 +499,12 @@ async function approveWorkflow(io: CommandIo, options: WorkflowApproveOptions): 
     schemaVersion: 1,
     runId: state.runId,
     approvedAt: now(),
+    expiresAt: new Date(Date.now() + (options.expiresInMinutes ?? 120) * 60_000).toISOString(),
     approvedBy: fieldText(options.approvedBy).trim() || process.env.USER || "unknown",
     note: fieldText(options.note).trim() || undefined,
-    previewHash: workflowPreviewHash(request),
-    request
+    previewHash: workflowPreviewHash(preview.target, preview.request),
+    target: preview.target,
+    request: preview.request
   }) as WorkflowApproval;
   await writeJson(state.artifacts.approval, approval);
   state.nextAction = `Run apexcn workflow run --resume ${shellArg(runDir)} --execute --yes --json to publish the approved preview.`;
@@ -490,6 +547,11 @@ async function runWorkflow(io: WorkflowCommandOptions, options: WorkflowRunOptio
     return;
   }
   if (options.execute && loaded) {
+    if (loaded.state.status === "completed" || await fileExists(loaded.state.artifacts.execute)) {
+      printError(io, { type: "safety", message: "Workflow execution is already completed; refusing duplicate execution." });
+      process.exitCode = 1;
+      return;
+    }
     const approvalError = await workflowApprovalError(loaded.state);
     if (approvalError) {
       loaded.state.nextAction = approvalError.includes("hash mismatch")
@@ -505,6 +567,16 @@ async function runWorkflow(io: WorkflowCommandOptions, options: WorkflowRunOptio
   if (!session) {
     return;
   }
+  if (options.execute && loaded) {
+    const targetError = await workflowTargetError(loaded.state, session);
+    if (targetError) {
+      loaded.state.nextAction = "Restore the approved profile and base URL, or create and approve a new workflow.";
+      await writeRunState(loaded.runDir, loaded.state);
+      printError(io, { type: "safety", message: targetError });
+      process.exitCode = 1;
+      return;
+    }
+  }
   const runDir = loaded?.runDir ?? (options.outputDir ?? `apexcn-run-${new Date().toISOString().replace(/[:.]/g, "-")}`);
   await mkdir(runDir, { recursive: true });
   const state = loaded?.state ?? initialRunState(goal, runDir, options);
@@ -514,8 +586,9 @@ async function runWorkflow(io: WorkflowCommandOptions, options: WorkflowRunOptio
   try {
     await executeRunSteps(state, runDir, session, options);
   } catch (error) {
-    state.status = "failed";
-    state.nextAction = "Fix the failed step and rerun with --resume.";
+    const uncertain = options.execute === true && isUncertainWriteError(error);
+    state.status = uncertain ? "execution-uncertain" : "failed";
+    state.nextAction = workflowRecoveryNextAction(error, runDir, options.execute === true, uncertain);
     await writeRunState(runDir, state);
     handleRunError(io, error, session);
     return;
@@ -530,21 +603,31 @@ async function workflowVerificationReport(runDir: string, state: WorkflowRunStat
   const issues: WorkflowVerificationIssue[] = [];
   const warnings: WorkflowVerificationIssue[] = [];
   const artifacts = await workflowArtifactEvidence(state);
-  const preview = await readVerificationJson(state.artifacts.preview, issues, "invalid-preview", state.status === "preview-ready" || state.status === "completed");
+  const executionAttempted = state.steps.some((step) => step.id.startsWith("execute-") && step.status !== "pending");
+  const previewRequired = state.status === "preview-ready"
+    || state.status === "completed"
+    || state.status === "execution-uncertain"
+    || executionAttempted;
+  const approvalRequired = state.status === "completed" || state.status === "execution-uncertain" || executionAttempted;
+  const preview = await readVerificationJson(state.artifacts.preview, issues, "invalid-preview", previewRequired);
   const previewRequest = preview ? verificationPreviewRequest(preview, state.artifacts.preview, issues) : undefined;
-  const previewHash = previewRequest ? workflowPreviewHash(previewRequest) : undefined;
+  const previewTarget = isRecord(preview) ? verificationWorkflowTarget({ profile: preview.profile, baseUrl: preview.baseUrl }) : undefined;
+  if (preview && !previewTarget) {
+    issues.push({ code: "invalid-preview-target", message: "Preview target is invalid.", path: state.artifacts.preview });
+  }
+  const previewHash = previewRequest && previewTarget ? workflowPreviewHash(previewTarget, previewRequest) : undefined;
 
-  const approval = await readVerificationJson(state.artifacts.approval, issues, "invalid-approval", state.status === "completed");
+  const approval = await readVerificationJson(state.artifacts.approval, issues, "invalid-approval", approvalRequired);
   if (!approval && state.status === "preview-ready") {
     warnings.push({ code: "approval-missing", message: "Workflow preview has not been approved.", path: state.artifacts.approval });
   }
-  const approvalSummary = approval ? verificationApproval(approval, state, previewHash, issues) : undefined;
+  const approvalSummary = approval ? verificationApproval(approval, state, previewTarget, previewHash, issues) : undefined;
 
   const execute = await readVerificationJson(state.artifacts.execute, issues, "invalid-execute", state.status === "completed");
   if (!execute && state.status !== "completed") {
     warnings.push({ code: "execute-missing", message: "Workflow has not executed yet.", path: state.artifacts.execute });
   }
-  const executeSummary = execute ? verificationExecute(execute, approvalSummary?.request, issues) : undefined;
+  const executeSummary = execute ? verificationExecute(execute, approvalSummary?.target, approvalSummary?.request, issues) : undefined;
 
   return {
     kind: "workflow-verification",
@@ -671,7 +754,7 @@ async function verifyWorkflowPolicy(runDir: string, state: WorkflowRunState, rep
   if (approvalSummary && approvalSummary.hashMatches === false) {
     issues.push({ code: "policy-hash-mismatch", message: "Approval hash does not match preview request.", path: state.artifacts.approval });
   }
-  const commandId = state.goal === "reply" ? "reply.create" : "topic.create";
+  const commandId = workflowCommandId(state.goal);
   const commandPolicy = policy.commands[commandId];
   if (commandPolicy?.allowed === false) {
     issues.push({ code: "policy-command-blocked", message: `Policy blocks ${commandId}.`, path: policyPath });
@@ -733,7 +816,7 @@ function requestDifferences(left: WorkflowPreviewRequest | undefined, right: Wor
 
 function workflowAuditEvents(state: WorkflowRunState, report: Record<string, unknown>): Array<Record<string, unknown>> {
   const time = state.updatedAt;
-  const command = state.goal === "reply" ? "reply.create" : "topic.create";
+  const command = workflowCommandId(state.goal);
   const previewHash = typeof report.previewHash === "string" ? report.previewHash : undefined;
   const events = [
     auditEvent(time, state.runId, "plan", command, previewHash, "ok", "workflow state exists"),
@@ -758,6 +841,15 @@ function auditEvent(time: string, runId: string, event: string, command: string,
     result,
     reason
   };
+}
+
+function workflowCommandId(goal: WorkflowRunGoal): string {
+  if (goal === "ask-question" || goal === "topic-create") return "topic.create";
+  if (goal === "topic-update") return "topic.update";
+  if (goal === "topic-delete") return "topic.delete";
+  if (goal === "reply" || goal === "reply-create") return "reply.create";
+  if (goal === "reply-update") return "reply.update";
+  return "reply.delete";
 }
 
 function parseAuditLogFormat(value: string): "ndjson" | "json" {
@@ -827,20 +919,21 @@ function verifyBundleArtifact(artifact: Record<string, unknown>, verification: R
 }
 
 function verifyBundleWorkflowChain(runId: string, status: string, artifacts: Map<string, Record<string, unknown>>, issues: WorkflowVerificationIssue[], warnings: WorkflowVerificationIssue[]): void {
-  const preview = bundleJsonArtifact(artifacts, "preview", issues, status === "preview-ready" || status === "completed");
+  const preview = bundleJsonArtifact(artifacts, "preview", issues, status === "preview-ready" || status === "completed" || status === "execution-uncertain");
   const previewRequest = preview ? verificationPreviewRequest(preview, "bundle:preview", issues) : undefined;
-  const previewHash = previewRequest ? workflowPreviewHash(previewRequest) : undefined;
-  const approval = bundleJsonArtifact(artifacts, "approval", issues, status === "completed");
+  const previewTarget = isRecord(preview) ? verificationWorkflowTarget({ profile: preview.profile, baseUrl: preview.baseUrl }) : undefined;
+  const previewHash = previewRequest && previewTarget ? workflowPreviewHash(previewTarget, previewRequest) : undefined;
+  const approval = bundleJsonArtifact(artifacts, "approval", issues, status === "completed" || status === "execution-uncertain");
   if (!approval && status === "preview-ready") {
     warnings.push({ code: "approval-missing", message: "Bundle preview has not been approved." });
   }
-  const approvedRequest = approval ? verifyBundleApproval(runId, approval, previewHash, issues) : undefined;
+  const approved = approval ? verifyBundleApproval(runId, approval, previewTarget, previewHash, issues) : undefined;
   const execute = bundleJsonArtifact(artifacts, "execute", issues, status === "completed");
   if (!execute && status !== "completed") {
     warnings.push({ code: "execute-missing", message: "Bundle workflow has not executed yet." });
   }
   if (execute) {
-    verifyBundleExecute(execute, approvedRequest, issues);
+    verifyBundleExecute(execute, approved?.target, approved?.request, issues);
   }
 }
 
@@ -864,7 +957,13 @@ function bundleJsonArtifact(artifacts: Map<string, Record<string, unknown>>, key
   }
 }
 
-function verifyBundleApproval(runId: string, approval: unknown, previewHash: string | undefined, issues: WorkflowVerificationIssue[]): WorkflowPreviewRequest | undefined {
+function verifyBundleApproval(
+  runId: string,
+  approval: unknown,
+  previewTarget: WorkflowTarget | undefined,
+  previewHash: string | undefined,
+  issues: WorkflowVerificationIssue[]
+): { target: WorkflowTarget; request: WorkflowPreviewRequest } | undefined {
   if (!isRecord(approval) || approval.kind !== "workflow-approval" || approval.schemaVersion !== 1) {
     issues.push({ code: "invalid-approval", message: "Bundle approval artifact has an invalid schema." });
     return undefined;
@@ -875,21 +974,38 @@ function verifyBundleApproval(runId: string, approval: unknown, previewHash: str
   if (typeof approval.previewHash !== "string" || approval.previewHash !== previewHash) {
     issues.push({ code: "approval-hash-mismatch", message: "Bundle approval hash does not match bundled preview." });
   }
+  const target = verificationWorkflowTarget(approval.target);
+  if (!target || !previewTarget || canonicalJson(target) !== canonicalJson(previewTarget)) {
+    issues.push({ code: "approval-target-mismatch", message: "Bundle approval target does not match bundled preview." });
+    return undefined;
+  }
   const request = verificationApprovalRequest(approval.request);
-  if (!request || workflowPreviewHash(request) !== approval.previewHash) {
+  if (!request || workflowPreviewHash(target, request) !== approval.previewHash) {
     issues.push({ code: "approval-request-mismatch", message: "Bundle approval request does not match approval hash." });
     return undefined;
   }
-  return request;
+  return { target, request };
 }
 
-function verifyBundleExecute(execute: unknown, approvedRequest: WorkflowPreviewRequest | undefined, issues: WorkflowVerificationIssue[]): void {
+function verifyBundleExecute(
+  execute: unknown,
+  approvedTarget: WorkflowTarget | undefined,
+  approvedRequest: WorkflowPreviewRequest | undefined,
+  issues: WorkflowVerificationIssue[]
+): void {
   if (!isRecord(execute) || execute.kind !== "workflow-execute" || execute.schemaVersion !== 1 || !isRecord(execute.request)) {
     issues.push({ code: "invalid-execute", message: "Bundle execute artifact has an invalid schema." });
     return;
   }
   if (approvedRequest && canonicalJson(execute.request) !== canonicalJson(approvedRequest)) {
     issues.push({ code: "execute-request-mismatch", message: "Bundle execute request does not match approved preview request." });
+  }
+  const target = verificationWorkflowTarget(execute.target);
+  if (approvedTarget && (!target || canonicalJson(target) !== canonicalJson(approvedTarget))) {
+    issues.push({ code: "execute-target-mismatch", message: "Bundle execute target does not match approved preview target." });
+  }
+  if (approvedTarget && approvedRequest && execute.requestHash !== workflowPreviewHash(approvedTarget, approvedRequest)) {
+    issues.push({ code: "execute-hash-mismatch", message: "Bundle execute hash does not match approved preview hash." });
   }
 }
 
@@ -962,15 +1078,26 @@ async function readVerificationJson(path: string, issues: WorkflowVerificationIs
 }
 
 function verificationPreviewRequest(preview: unknown, path: string, issues: WorkflowVerificationIssue[]): WorkflowPreviewRequest | undefined {
-  if (!isRecord(preview) || preview.kind !== "workflow-preview" || !isRecord(preview.request) || preview.request.method !== "POST" || typeof preview.request.path !== "string") {
-    issues.push({ code: "invalid-preview", message: "Preview artifact does not contain a valid POST request.", path });
+  if (!isRecord(preview)
+      || preview.kind !== "workflow-preview"
+      || !isRecord(preview.request)
+      || (preview.request.method !== "POST" && preview.request.method !== "DELETE")
+      || typeof preview.request.path !== "string"
+      || !isRecord(preview.request.body)) {
+    issues.push({ code: "invalid-preview", message: "Preview artifact does not contain a valid write request.", path });
     return undefined;
   }
-  return { method: "POST", path: preview.request.path, body: preview.request.body };
+  return { method: preview.request.method, path: preview.request.path, body: preview.request.body };
 }
 
-function verificationApproval(approval: unknown, state: WorkflowRunState, previewHash: string | undefined, issues: WorkflowVerificationIssue[]): { runId?: unknown; previewHash?: unknown; request?: WorkflowPreviewRequest } {
-  const summary: { runId?: unknown; previewHash?: unknown; request?: WorkflowPreviewRequest } = {};
+function verificationApproval(
+  approval: unknown,
+  state: WorkflowRunState,
+  previewTarget: WorkflowTarget | undefined,
+  previewHash: string | undefined,
+  issues: WorkflowVerificationIssue[]
+): { runId?: unknown; previewHash?: unknown; target?: WorkflowTarget; request?: WorkflowPreviewRequest } {
+  const summary: { runId?: unknown; previewHash?: unknown; target?: WorkflowTarget; request?: WorkflowPreviewRequest } = {};
   if (!isRecord(approval) || approval.kind !== "workflow-approval" || approval.schemaVersion !== 1) {
     issues.push({ code: "invalid-approval", message: "Approval artifact has an invalid schema.", path: state.artifacts.approval });
     return summary;
@@ -983,8 +1110,19 @@ function verificationApproval(approval: unknown, state: WorkflowRunState, previe
   if (typeof approval.previewHash !== "string" || approval.previewHash !== previewHash) {
     issues.push({ code: "approval-hash-mismatch", message: "Approval hash does not match current preview request.", path: state.artifacts.approval });
   }
+  if (typeof approval.expiresAt !== "string" || !Number.isFinite(Date.parse(approval.expiresAt))) {
+    issues.push({ code: "approval-expiry-invalid", message: "Approval expiry is invalid.", path: state.artifacts.approval });
+  } else if (Date.parse(approval.expiresAt) <= Date.now()) {
+    issues.push({ code: "approval-expired", message: "Approval is expired.", path: state.artifacts.approval });
+  }
+  const target = verificationWorkflowTarget(approval.target);
+  if (!target || !previewTarget || canonicalJson(target) !== canonicalJson(previewTarget)) {
+    issues.push({ code: "approval-target-mismatch", message: "Approval target does not match preview target.", path: state.artifacts.approval });
+  } else {
+    summary.target = target;
+  }
   const request = verificationApprovalRequest(approval.request);
-  if (!request || workflowPreviewHash(request) !== approval.previewHash) {
+  if (!request || !target || workflowPreviewHash(target, request) !== approval.previewHash) {
     issues.push({ code: "approval-request-mismatch", message: "Approval request does not match its recorded preview hash.", path: state.artifacts.approval });
   } else {
     summary.request = request;
@@ -993,27 +1131,54 @@ function verificationApproval(approval: unknown, state: WorkflowRunState, previe
 }
 
 function verificationApprovalRequest(value: unknown): WorkflowPreviewRequest | undefined {
-  if (!isRecord(value) || value.method !== "POST" || typeof value.path !== "string") {
+  if (!isRecord(value)
+      || (value.method !== "POST" && value.method !== "DELETE")
+      || typeof value.path !== "string"
+      || !isRecord(value.body)) {
     return undefined;
   }
-  return { method: "POST", path: value.path, body: value.body };
+  return { method: value.method, path: value.path, body: value.body };
 }
 
-function verificationExecute(execute: unknown, approvedRequest: WorkflowPreviewRequest | undefined, issues: WorkflowVerificationIssue[]): { request?: unknown; requestId?: unknown } {
-  const summary: { request?: unknown; requestId?: unknown } = {};
+function verificationWorkflowTarget(value: unknown): WorkflowTarget | undefined {
+  if (!isRecord(value) || typeof value.profile !== "string" || typeof value.baseUrl !== "string") {
+    return undefined;
+  }
+  return { profile: value.profile, baseUrl: value.baseUrl };
+}
+
+function verificationExecute(
+  execute: unknown,
+  approvedTarget: WorkflowTarget | undefined,
+  approvedRequest: WorkflowPreviewRequest | undefined,
+  issues: WorkflowVerificationIssue[]
+): { request?: unknown; requestId?: unknown; requestHash?: unknown } {
+  const summary: { request?: unknown; requestId?: unknown; requestHash?: unknown } = {};
   if (!isRecord(execute) || execute.kind !== "workflow-execute" || execute.schemaVersion !== 1 || !isRecord(execute.request)) {
     issues.push({ code: "invalid-execute", message: "Execute artifact has an invalid schema." });
     return summary;
   }
   summary.request = execute.request;
   summary.requestId = execute.requestId;
+  summary.requestHash = execute.requestHash;
+  const target = verificationWorkflowTarget(execute.target);
+  if (approvedTarget && (!target || canonicalJson(target) !== canonicalJson(approvedTarget))) {
+    issues.push({ code: "execute-target-mismatch", message: "Execute target does not match approved preview target." });
+  }
   if (approvedRequest && canonicalJson(execute.request) !== canonicalJson(approvedRequest)) {
     issues.push({ code: "execute-request-mismatch", message: "Execute request does not match approved preview request." });
+  }
+  if (approvedTarget && approvedRequest && execute.requestHash !== workflowPreviewHash(approvedTarget, approvedRequest)) {
+    issues.push({ code: "execute-hash-mismatch", message: "Execute request hash does not match approved preview hash." });
   }
   return summary;
 }
 
 async function executeRunSteps(state: WorkflowRunState, runDir: string, session: Session, options: WorkflowRunOptions): Promise<void> {
+  if (isContentMutationGoal(state.goal)) {
+    await executeContentMutationSteps(state, runDir, session, options);
+    return;
+  }
   if (state.goal === "ask-question") {
     await runStep(state, runDir, "research", state.artifacts.research, async () => {
       const research = await runResearch(session, state, options);
@@ -1026,7 +1191,9 @@ async function executeRunSteps(state: WorkflowRunState, runDir: string, session:
     });
     await runStep(state, runDir, "review-topic", state.artifacts.review, async () => {
       const content = await readFile(state.artifacts.question, "utf8");
-      await writeJson(state.artifacts.review, reviewArtifact(state, options, state.artifacts.question, content));
+      const review = reviewArtifact(state, options, state.artifacts.question, content);
+      await writeJson(state.artifacts.review, review);
+      await requirePassingWorkflowReview(state, review, state.artifacts.question);
     });
     await runStep(state, runDir, "preview-topic-create", state.artifacts.preview, async () => {
       const content = await readFile(state.artifacts.question, "utf8");
@@ -1035,32 +1202,19 @@ async function executeRunSteps(state: WorkflowRunState, runDir: string, session:
         title: effectiveTitle(state, options),
         content
       };
+      const request = replaySafeRequest(state, "POST", "/api/v1/topics", body);
       await writeJson(state.artifacts.preview, {
         kind: "workflow-preview",
         schemaVersion: 1,
         profile: session.profile,
         baseUrl: session.baseUrl,
-        request: { method: "POST", path: "/api/v1/topics", body },
+        request,
         result: null
       });
     });
     if (options.execute) {
       await runStep(state, runDir, "execute-topic-create", state.artifacts.execute, async () => {
-        const request = await previewRequest(state.artifacts.preview, "/api/v1/topics");
-        const response = await requestJson(session.baseUrl, request.path, {
-          token: session.token,
-          method: "POST",
-          body: request.body
-        });
-        const artifact = {
-          kind: "workflow-execute",
-          schemaVersion: 1,
-          requestId: requestIdFrom(response),
-          request: { method: "POST", path: request.path, body: request.body },
-          result: response
-        };
-        await writeJson(state.artifacts.execute, artifact);
-        return requestIdFrom(response);
+        return executePreviewRequest(state, session, "POST", "/api/v1/topics");
       });
     }
     return;
@@ -1084,16 +1238,23 @@ async function executeRunSteps(state: WorkflowRunState, runDir: string, session:
     const topic = await readJson(state.artifacts.topic);
     await writeFile(state.artifacts.reply, replyMarkdown(state, options, topic), "utf8");
   });
+  await runStep(state, runDir, "review-reply", state.artifacts.review, async () => {
+    const content = await readFile(state.artifacts.reply, "utf8");
+    const review = workflowContentReview(state.goal, content, state.artifacts.reply);
+    await writeJson(state.artifacts.review, review);
+    await requirePassingWorkflowReview(state, review, state.artifacts.reply);
+  });
   await runStep(state, runDir, "preview-reply-create", state.artifacts.preview, async () => {
     const content = await readFile(state.artifacts.reply, "utf8");
     const topicId = effectiveTopicId(state, options);
     const path = `/api/v1/topics/${topicId}/replies`;
+    const request = replaySafeRequest(state, "POST", path, { content });
     await writeJson(state.artifacts.preview, {
       kind: "workflow-preview",
       schemaVersion: 1,
       profile: session.profile,
       baseUrl: session.baseUrl,
-      request: { method: "POST", path, body: { content } },
+      request,
       result: null
     });
   });
@@ -1101,23 +1262,163 @@ async function executeRunSteps(state: WorkflowRunState, runDir: string, session:
     await runStep(state, runDir, "execute-reply-create", state.artifacts.execute, async () => {
       const topicId = effectiveTopicId(state, options);
       const path = `/api/v1/topics/${topicId}/replies`;
-      const request = await previewRequest(state.artifacts.preview, path);
-      const response = await requestJson(session.baseUrl, request.path, {
-        token: session.token,
-        method: "POST",
-        body: request.body
-      });
-      const artifact = {
-        kind: "workflow-execute",
-        schemaVersion: 1,
-        requestId: requestIdFrom(response),
-        request: { method: "POST", path: request.path, body: request.body },
-        result: response
-      };
-      await writeJson(state.artifacts.execute, artifact);
-      return requestIdFrom(response);
+      return executePreviewRequest(state, session, "POST", path);
     });
   }
+}
+
+async function executeContentMutationSteps(
+  state: WorkflowRunState,
+  runDir: string,
+  session: Session,
+  options: WorkflowRunOptions
+): Promise<void> {
+  const contentArtifact = state.inputs.contentFile ? state.artifacts.content : undefined;
+  if (contentArtifact) {
+    await runStep(state, runDir, "capture-content", contentArtifact, async () => {
+      const source = state.inputs.contentFile;
+      if (!source) {
+        throw new Error("Workflow run is missing content file input.");
+      }
+      await writeFile(contentArtifact, await readFile(source, "utf8"), "utf8");
+    });
+    await runStep(state, runDir, "review-content", state.artifacts.review, async () => {
+      const content = await readFile(contentArtifact, "utf8");
+      const review = workflowContentReview(state.goal, content, contentArtifact);
+      await writeJson(state.artifacts.review, review);
+      await requirePassingWorkflowReview(state, review, contentArtifact);
+    });
+  } else if (state.goal === "topic-update") {
+    for (const id of ["capture-content", "review-content"]) {
+      const step = stepState(state, id);
+      step.status = "skipped";
+      step.endedAt = now();
+    }
+    await writeRunState(runDir, state);
+  }
+
+  const request = await contentMutationRequest(state);
+  const previewStep = `preview-${state.goal}`;
+  await runStep(state, runDir, previewStep, state.artifacts.preview, async () => {
+    await writeJson(state.artifacts.preview, {
+      kind: "workflow-preview",
+      schemaVersion: 1,
+      profile: session.profile,
+      baseUrl: session.baseUrl,
+      request,
+      result: null
+    });
+  });
+  if (options.execute) {
+    await runStep(state, runDir, `execute-${state.goal}`, state.artifacts.execute, async () =>
+      executePreviewRequest(state, session, request.method, request.path)
+    );
+  }
+}
+
+async function contentMutationRequest(state: WorkflowRunState): Promise<WorkflowPreviewRequest> {
+  if (state.goal === "topic-create") {
+    const content = state.artifacts.content ? await readFile(state.artifacts.content, "utf8") : "";
+    return replaySafeRequest(state, "POST", "/api/v1/topics", {
+      categoryId: requiredWorkflowId(state.inputs.categoryId, "category id"),
+      title: fieldText(state.inputs.title),
+      content
+    });
+  }
+  if (state.goal === "topic-update") {
+    const body = compactObject({
+      categoryId: state.inputs.categoryId,
+      title: state.inputs.title,
+      content: state.inputs.contentFile && state.artifacts.content ? await readFile(state.artifacts.content, "utf8") : undefined
+    });
+    return replaySafeRequest(state, "POST", `/api/v1/topics/${requiredWorkflowId(state.inputs.topicId, "topic id")}`, body, state.inputs.ifVersion);
+  }
+  if (state.goal === "topic-delete") {
+    return replaySafeRequest(
+      state,
+      "DELETE",
+      `/api/v1/topics/${requiredWorkflowId(state.inputs.topicId, "topic id")}`,
+      { confirmTitle: fieldText(state.inputs.confirmTitle) },
+      state.inputs.ifVersion
+    );
+  }
+  if (state.goal === "reply-update") {
+    const content = state.artifacts.content ? await readFile(state.artifacts.content, "utf8") : "";
+    return replaySafeRequest(
+      state,
+      "POST",
+      `/api/v1/replies/${requiredWorkflowId(state.inputs.replyId, "reply id")}`,
+      { content },
+      state.inputs.ifVersion
+    );
+  }
+  if (state.goal === "reply-create") {
+    const content = state.artifacts.content ? await readFile(state.artifacts.content, "utf8") : "";
+    return replaySafeRequest(
+      state,
+      "POST",
+      `/api/v1/topics/${requiredWorkflowId(state.inputs.topicId, "topic id")}/replies`,
+      { content }
+    );
+  }
+  return replaySafeRequest(
+    state,
+    "DELETE",
+    `/api/v1/replies/${requiredWorkflowId(state.inputs.replyId, "reply id")}`,
+    { confirmId: requiredWorkflowId(state.inputs.confirmId, "confirmed reply id") },
+    state.inputs.ifVersion
+  );
+}
+
+function replaySafeRequest(
+  state: WorkflowRunState,
+  method: WorkflowPreviewRequest["method"],
+  path: string,
+  payload: Record<string, unknown>,
+  ifVersion?: number
+): WorkflowPreviewRequest {
+  const payloadHash = createHash("sha256").update(canonicalJson(payload), "utf8").digest("hex");
+  const operationSeed = canonicalJson({ runId: state.runId, method, path, payloadHash });
+  const operationKey = `m060:${createHash("sha256").update(operationSeed, "utf8").digest("hex").slice(0, 48)}`;
+  return {
+    method,
+    path,
+    body: compactObject({
+      ...payload,
+      operationKey,
+      payloadHash,
+      ifVersion
+    })
+  };
+}
+
+async function executePreviewRequest(
+  state: WorkflowRunState,
+  session: Session,
+  expectedMethod: WorkflowPreviewRequest["method"],
+  expectedPath: string
+): Promise<string | undefined> {
+  const preview = await workflowPreviewEnvelope(state.artifacts.preview);
+  const request = preview.request;
+  if (request.method !== expectedMethod || request.path !== expectedPath) {
+    throw new Error(`Workflow preview artifact does not match expected ${expectedMethod} ${expectedPath}.`);
+  }
+  const response = await requestJson(session.baseUrl, request.path, {
+    token: session.token,
+    method: request.method,
+    body: request.body
+  });
+  const artifact = {
+    kind: "workflow-execute",
+    schemaVersion: 1,
+    requestId: requestIdFrom(response),
+    requestHash: workflowPreviewHash(preview.target, request),
+    target: preview.target,
+    request,
+    result: response
+  };
+  await writeJson(state.artifacts.execute, artifact);
+  return requestIdFrom(response);
 }
 
 async function runResearch(session: Session, state: WorkflowRunState, options: WorkflowRunOptions): Promise<Record<string, unknown>> {
@@ -1226,10 +1527,15 @@ function workflowRunInputs(options: WorkflowRunOptions): WorkflowRunInputs {
   return compactObject({
     keyword: fieldText(options.keyword).trim() || undefined,
     topicId: options.topicId,
+    replyId: options.replyId,
     categoryId: options.categoryId,
     title: fieldText(options.title).trim() || undefined,
     problem: fieldText(options.problem).trim() || undefined,
-    answer: fieldText(options.answer).trim() || undefined
+    answer: fieldText(options.answer).trim() || undefined,
+    contentFile: fieldText(options.contentFile).trim() || undefined,
+    ifVersion: options.ifVersion,
+    confirmTitle: fieldText(options.confirmTitle).trim() || undefined,
+    confirmId: options.confirmId
   }) as WorkflowRunInputs;
 }
 
@@ -1245,10 +1551,21 @@ function runArtifacts(goal: WorkflowRunGoal, runDir: string): Record<string, str
       execute: join(runDir, "execute.json")
     };
   }
+  if (isContentMutationGoal(goal)) {
+    return compactObject({
+      state: join(runDir, "run.json"),
+      content: goal.endsWith("-create") || goal.endsWith("-update") ? join(runDir, "content.md") : undefined,
+      review: goal.endsWith("-create") || goal.endsWith("-update") ? join(runDir, "review.json") : undefined,
+      preview: join(runDir, "preview.json"),
+      approval: join(runDir, "approval.json"),
+      execute: join(runDir, "execute.json")
+    }) as Record<string, string>;
+  }
   return {
     state: join(runDir, "run.json"),
     topic: join(runDir, "topic.json"),
     reply: join(runDir, "reply.md"),
+    review: join(runDir, "review.json"),
     preview: join(runDir, "preview.json"),
     approval: join(runDir, "approval.json"),
     execute: join(runDir, "execute.json")
@@ -1261,9 +1578,15 @@ function runStepIds(goal: WorkflowRunGoal, execute: boolean): string[] {
       ? ["research", "draft-question", "review-topic", "preview-topic-create", "execute-topic-create"]
       : ["research", "draft-question", "review-topic", "preview-topic-create"];
   }
+  if (isContentMutationGoal(goal)) {
+    const steps = goal.endsWith("-create") || goal.endsWith("-update")
+      ? ["capture-content", "review-content", `preview-${goal}`]
+      : [`preview-${goal}`];
+    return execute ? [...steps, `execute-${goal}`] : steps;
+  }
   return execute
-    ? ["topic-view", "draft-reply", "preview-reply-create", "execute-reply-create"]
-    : ["topic-view", "draft-reply", "preview-reply-create"];
+    ? ["topic-view", "draft-reply", "review-reply", "preview-reply-create", "execute-reply-create"]
+    : ["topic-view", "draft-reply", "review-reply", "preview-reply-create"];
 }
 
 function missingInputsForRun(options: WorkflowRunOptions, goal: WorkflowRunGoal): string[] {
@@ -1281,12 +1604,40 @@ function missingInputsForRun(options: WorkflowRunOptions, goal: WorkflowRunGoal)
     if (options.categoryId === undefined) {
       missing.push("--category-id");
     }
-  } else {
+  } else if (goal === "reply") {
     if (options.topicId === undefined) {
       missing.push("--topic-id");
     }
     if (!fieldText(options.answer).trim()) {
       missing.push("--answer");
+    }
+  } else if (goal === "topic-create") {
+    if (options.categoryId === undefined) missing.push("--category-id");
+    if (!fieldText(options.title).trim()) missing.push("--title");
+    if (!options.contentFile) missing.push("--content-file");
+  } else if (goal === "topic-update") {
+    if (options.topicId === undefined) missing.push("--topic-id");
+    if (options.ifVersion === undefined) missing.push("--if-version");
+    if (!options.contentFile && !fieldText(options.title).trim() && options.categoryId === undefined) {
+      missing.push("--content-file|--title|--category-id");
+    }
+  } else if (goal === "topic-delete") {
+    if (options.topicId === undefined) missing.push("--topic-id");
+    if (options.ifVersion === undefined) missing.push("--if-version");
+    if (!fieldText(options.confirmTitle).trim()) missing.push("--confirm-title");
+  } else if (goal === "reply-create") {
+    if (options.topicId === undefined) missing.push("--topic-id");
+    if (!options.contentFile) missing.push("--content-file");
+  } else if (goal === "reply-update") {
+    if (options.replyId === undefined) missing.push("--reply-id");
+    if (options.ifVersion === undefined) missing.push("--if-version");
+    if (!options.contentFile) missing.push("--content-file");
+  } else {
+    if (options.replyId === undefined) missing.push("--reply-id");
+    if (options.ifVersion === undefined) missing.push("--if-version");
+    if (options.confirmId === undefined) missing.push("--confirm-id");
+    if (options.replyId !== undefined && options.confirmId !== undefined && options.replyId !== options.confirmId) {
+      missing.push("--confirm-id must match --reply-id");
     }
   }
   return missing;
@@ -1395,6 +1746,9 @@ function reviewArtifact(state: WorkflowRunState, options: WorkflowRunOptions, co
   if (content.includes("待补充")) {
     issues.push({ code: "placeholder-content", severity: "issue", message: "Content still contains 待补充 placeholders" });
   }
+  if (containsPotentialSecret(content)) {
+    issues.push({ code: "possible-secret", severity: "issue", message: "Content appears to contain a token, Authorization header, or password." });
+  }
   return {
     kind: "workflow-review",
     schemaVersion: 1,
@@ -1416,15 +1770,92 @@ function reviewArtifact(state: WorkflowRunState, options: WorkflowRunOptions, co
   };
 }
 
+function workflowContentReview(goal: WorkflowRunGoal, content: string, contentFile: string): Record<string, unknown> {
+  const issues = [];
+  if (!content.trim()) {
+    issues.push({ code: "blank-content", severity: "issue", message: "Content must not be blank." });
+  }
+  if (content.includes("待补充")) {
+    issues.push({ code: "placeholder-content", severity: "issue", message: "Content still contains 待补充 placeholders." });
+  }
+  if (containsPotentialSecret(content)) {
+    issues.push({ code: "possible-secret", severity: "issue", message: "Content appears to contain a token, Authorization header, or password." });
+  }
+  return {
+    kind: "workflow-review",
+    schemaVersion: 1,
+    request: {
+      goal,
+      contentFile
+    },
+    result: {
+      ok: issues.length === 0,
+      issues,
+      warnings: [],
+      metrics: {
+        contentLength: content.length,
+        referenceCount: (content.match(/https?:\/\/\S+/g) ?? []).length
+      }
+    }
+  };
+}
+
+async function requirePassingWorkflowReview(
+  state: WorkflowRunState,
+  review: Record<string, unknown>,
+  contentArtifact: string
+): Promise<void> {
+  if (isRecord(review.result) && review.result.ok === true) {
+    return;
+  }
+  const issues = isRecord(review.result) && Array.isArray(review.result.issues) ? review.result.issues : [];
+  if (issues.some((issue) => isRecord(issue) && issue.code === "possible-secret")) {
+    if (state.goal === "ask-question") {
+      state.inputs.problem = "[redacted]";
+    } else if (state.goal === "reply") {
+      state.inputs.answer = "[redacted]";
+    }
+    await writeFile(contentArtifact, "[redacted unsafe content]\n", "utf8");
+  }
+  throw new WorkflowReviewError();
+}
+
+function containsPotentialSecret(content: string): boolean {
+  return /\b(Authorization:\s*Bearer\s+\S+|Bearer\s+[A-Za-z0-9._~+/=-]{16,}|APEXCN_API_KEY\s*=|password\s*=|token\s*=)\b/i.test(content);
+}
+
 function parseWorkflowRunGoal(value: string): WorkflowRunGoal {
-  if (value === "ask-question" || value === "reply") {
+  if (isWorkflowRunGoal(value)) {
     return value;
   }
-  throw new InvalidArgumentError(`Expected workflow run goal ask-question or reply: ${value}`);
+  throw new InvalidArgumentError(`Expected workflow run goal ask-question, reply, topic-create, topic-update, topic-delete, reply-create, reply-update, or reply-delete: ${value}`);
 }
 
 function isWorkflowRunGoal(value: unknown): value is WorkflowRunGoal {
-  return value === "ask-question" || value === "reply";
+  return value === "ask-question"
+    || value === "reply"
+    || value === "topic-create"
+    || value === "topic-update"
+    || value === "topic-delete"
+    || value === "reply-create"
+    || value === "reply-update"
+    || value === "reply-delete";
+}
+
+function isContentMutationGoal(goal: WorkflowRunGoal): goal is Exclude<WorkflowRunGoal, "ask-question" | "reply"> {
+  return goal === "topic-create"
+    || goal === "topic-update"
+    || goal === "topic-delete"
+    || goal === "reply-create"
+    || goal === "reply-update"
+    || goal === "reply-delete";
+}
+
+function requiredWorkflowId(value: number | undefined, label: string): number {
+  if (value === undefined) {
+    throw new Error(`Workflow run is missing ${label}.`);
+  }
+  return value;
 }
 
 async function writeRunState(runDir: string, state: WorkflowRunState): Promise<void> {
@@ -1473,23 +1904,37 @@ async function workflowApprovalError(state: WorkflowRunState): Promise<string | 
   if (typeof approvalData.previewHash !== "string") {
     return `Invalid workflow approval artifact: ${state.artifacts.approval}`;
   }
-  const request = await workflowPreviewRequest(state.artifacts.preview);
-  const currentHash = workflowPreviewHash(request);
+  if (typeof approvalData.expiresAt !== "string" || !Number.isFinite(Date.parse(approvalData.expiresAt))) {
+    return `Invalid workflow approval expiry: ${state.artifacts.approval}`;
+  }
+  if (Date.parse(approvalData.expiresAt) <= Date.now()) {
+    return "Workflow approval expired; create and review a new approval before execution.";
+  }
+  const preview = await workflowPreviewEnvelope(state.artifacts.preview);
+  const currentHash = workflowPreviewHash(preview.target, preview.request);
   if (approvalData.previewHash !== currentHash) {
     return "Workflow approval hash mismatch; review and approve the current preview again.";
+  }
+  const approvalTarget = verificationWorkflowTarget(approvalData.target);
+  const approvalRequest = verificationApprovalRequest(approvalData.request);
+  if (!approvalTarget || canonicalJson(approvalTarget) !== canonicalJson(preview.target)) {
+    return "Workflow approval target does not match the current preview target.";
+  }
+  if (!approvalRequest || canonicalJson(approvalRequest) !== canonicalJson(preview.request)) {
+    return "Workflow approval request does not match the current preview request.";
   }
   return undefined;
 }
 
-async function previewRequest(path: string, expectedPath: string): Promise<WorkflowPreviewRequest> {
-  const request = await workflowPreviewRequest(path);
-  if (request.path !== expectedPath) {
-    throw new Error(`Workflow preview artifact does not match expected POST ${expectedPath}.`);
+async function workflowTargetError(state: WorkflowRunState, session: Session): Promise<string | undefined> {
+  const preview = await workflowPreviewEnvelope(state.artifacts.preview);
+  if (preview.target.profile !== session.profile || preview.target.baseUrl !== session.baseUrl) {
+    return "Workflow execution target does not match the approved profile and base URL.";
   }
-  return request;
+  return undefined;
 }
 
-async function workflowPreviewRequest(path: string): Promise<WorkflowPreviewRequest> {
+async function workflowPreviewEnvelope(path: string): Promise<{ target: WorkflowTarget; request: WorkflowPreviewRequest }> {
   let preview: unknown;
   try {
     preview = await readJson(path);
@@ -1504,14 +1949,18 @@ async function workflowPreviewRequest(path: string): Promise<WorkflowPreviewRequ
   }
   const method = preview.request.method;
   const requestPath = preview.request.path;
-  if (method !== "POST" || typeof requestPath !== "string") {
+  if ((method !== "POST" && method !== "DELETE") || typeof requestPath !== "string" || !isRecord(preview.request.body)) {
     throw new Error(`Invalid workflow preview artifact: ${path}`);
   }
-  return { method, path: requestPath, body: preview.request.body };
+  const target = verificationWorkflowTarget({ profile: preview.profile, baseUrl: preview.baseUrl });
+  if (!target) {
+    throw new Error(`Invalid workflow preview target: ${path}`);
+  }
+  return { target, request: { method, path: requestPath, body: preview.request.body } };
 }
 
-function workflowPreviewHash(request: WorkflowPreviewRequest): string {
-  return createHash("sha256").update(canonicalJson(request), "utf8").digest("hex");
+function workflowPreviewHash(target: WorkflowTarget, request: WorkflowPreviewRequest): string {
+  return createHash("sha256").update(canonicalJson({ target, request }), "utf8").digest("hex");
 }
 
 function canonicalJson(value: unknown): string {
@@ -1526,6 +1975,36 @@ function canonicalValue(value: unknown): unknown {
     return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalValue(value[key])]));
   }
   return value;
+}
+
+function isUncertainWriteError(error: unknown): boolean {
+  return error instanceof NetworkError
+    || error instanceof TimeoutError
+    || (error instanceof HttpError && error.status >= 500);
+}
+
+function workflowRecoveryNextAction(error: unknown, runDir: string, executing: boolean, uncertain: boolean): string {
+  const retry = `apexcn workflow run --resume ${shellArg(runDir)} --execute --yes --json`;
+  if (uncertain) {
+    return `Execution outcome is uncertain. Retry only with ${retry} so the identical operationKey is reused.`;
+  }
+  if (!executing || !(error instanceof HttpError)) {
+    return "Fix the failed step and rerun with --resume.";
+  }
+  if (error.status === 401) {
+    return `Refresh the active profile credential, then rerun ${retry}; the identical operationKey and approved request will be reused.`;
+  }
+  if (error.status === 409) {
+    return "Fetch the latest resource version and create and approve a new workflow. Do not retry the stale approval.";
+  }
+  if (error.status === 429) {
+    const wait = error.retryAfterSeconds === undefined ? "Wait for the rate-limit window" : `Wait at least ${error.retryAfterSeconds} seconds`;
+    return `${wait}, then rerun ${retry}; the identical operationKey and approved request will be reused.`;
+  }
+  if (error.status === 403) {
+    return `Restore the required permission, then rerun ${retry}; do not create a replacement operation.`;
+  }
+  return "Fix the failed step and rerun with --resume.";
 }
 
 async function fileExists(path: string): Promise<boolean> {
@@ -1655,6 +2134,11 @@ function errorMessage(error: unknown): string {
 }
 
 function handleRunError(io: CommandIo, error: unknown, session: Session): void {
+  if (error instanceof WorkflowReviewError) {
+    printError(io, { type: "safety", message: error.message });
+    process.exitCode = 1;
+    return;
+  }
   if (error instanceof HttpError) {
     printError(io, {
       type: "http",
@@ -1714,10 +2198,21 @@ function formatWorkflowPlanText(data: unknown): string {
 }
 
 function parseWorkflowGoal(value: string): WorkflowGoal {
-  if (value === "ask-question" || value === "reply" || value === "research-only" || value === "publish-topic") {
+  if (
+    value === "ask-question"
+    || value === "reply"
+    || value === "research-only"
+    || value === "publish-topic"
+    || value === "topic-create"
+    || value === "topic-update"
+    || value === "topic-delete"
+    || value === "reply-create"
+    || value === "reply-update"
+    || value === "reply-delete"
+  ) {
     return value;
   }
-  throw new InvalidArgumentError(`Expected goal ask-question, reply, research-only, or publish-topic: ${value}`);
+  throw new InvalidArgumentError(`Expected goal ask-question, reply, research-only, publish-topic, topic-create/update/delete, or reply-create/update/delete: ${value}`);
 }
 
 function parsePositiveInteger(value: string): number {

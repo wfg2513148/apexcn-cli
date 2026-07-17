@@ -220,17 +220,17 @@ const workflowScenarios: Scenario[] = [
 ];
 
 const writePreviewScenarios: Scenario[] = [
-  scenario("preview topic create", "把确认前的发帖请求预览出来，不要发布", "topic create", "preview", ["api-write"], "available", ["--category-id <id>", "--title <title>", "--content-file <path>", "--preview"]),
-  scenario("preview topic create stdin", "通过 stdin 传正文预览发帖请求", "topic create", "preview", ["api-write"], "available", ["--content-file <path>", "--preview"]),
-  scenario("preview topic create tags", "预览带标签的新帖请求", "topic create", "preview", ["api-write"], "available", ["--tags <csv>", "--preview"]),
-  scenario("preview topic update content", "预览编辑帖子正文，不要提交", "topic update", "preview", ["api-write"], "available", ["--content-file <path>", "--preview"]),
-  scenario("preview topic edit alias", "预览修改帖子标题和板块", "topic update", "preview", ["api-write"], "available", ["--title <title>", "--category-id <id>", "--preview"]),
-  scenario("preview thread update alias intent", "用户说编辑 thread 时应走 topic update 能力", "topic update", "preview", ["api-write"], "available", ["--preview"]),
-  scenario("preview reply create", "预览给帖子 30549 的回复，不要发布", "reply create", "preview", ["api-write"], "available", ["--content <text>", "--preview"]),
-  scenario("preview reply create file", "预览用 Markdown 文件创建回复", "reply create", "preview", ["api-write"], "available", ["--content-file <path>", "--preview"]),
-  scenario("preview child reply", "预览针对某层楼的回复", "reply create", "preview", ["api-write"], "available", ["--parent-post-id <id>", "--preview"]),
-  scenario("preview reply update", "预览更新已有回复", "reply update", "preview", ["api-write"], "available", ["--content-file <path>", "--preview"]),
-  scenario("preview post update alias intent", "用户说编辑 post 时应走 reply update 能力", "reply update", "preview", ["api-write"], "available", ["--preview"]),
+  scenario("preview topic create", "把确认前的发帖请求预览出来，不要发布", "topic create", "preview", ["api-write"], "required", ["--category-id <id>", "--title <title>", "--content-file <path>", "--preview"]),
+  scenario("preview topic create stdin", "通过 stdin 传正文预览发帖请求", "topic create", "preview", ["api-write"], "required", ["--content-file <path>", "--preview"]),
+  scenario("preview topic create tags", "预览带标签的新帖请求", "topic create", "preview", ["api-write"], "required", ["--tags <csv>", "--preview"]),
+  scenario("preview topic update content", "预览编辑帖子正文，不要提交", "topic update", "preview", ["api-write"], "required", ["--content-file <path>", "--preview"]),
+  scenario("preview topic edit alias", "预览修改帖子标题和板块", "topic update", "preview", ["api-write"], "required", ["--title <title>", "--category-id <id>", "--preview"]),
+  scenario("preview thread update alias intent", "用户说编辑 thread 时应走 topic update 能力", "topic update", "preview", ["api-write"], "required", ["--preview"]),
+  scenario("preview reply create", "预览给帖子 30549 的回复，不要发布", "reply create", "preview", ["api-write"], "required", ["--content <text>", "--preview"]),
+  scenario("preview reply create file", "预览用 Markdown 文件创建回复", "reply create", "preview", ["api-write"], "required", ["--content-file <path>", "--preview"]),
+  scenario("preview child reply", "预览针对某层楼的回复", "reply create", "preview", ["api-write"], "required", ["--parent-post-id <id>", "--preview"]),
+  scenario("preview reply update", "预览更新已有回复", "reply update", "preview", ["api-write"], "required", ["--content-file <path>", "--preview"]),
+  scenario("preview post update alias intent", "用户说编辑 post 时应走 reply update 能力", "reply update", "preview", ["api-write"], "required", ["--preview"]),
   scenario("preview favorite add", "预览收藏帖子请求", "favorite add", "preview", ["api-write"], "available", ["--preview"]),
   scenario("preview favorite remove", "预览取消收藏帖子请求", "favorite remove", "preview", ["api-write"], "available", ["--preview"]),
   scenario("preview subscription add", "预览订阅帖子请求", "subscription add", "preview", ["api-write"], "available", ["--preview"]),
@@ -239,21 +239,21 @@ const writePreviewScenarios: Scenario[] = [
   scenario("preview thread delete alias intent", "删除 thread 前需要强确认", "topic delete", "preview", ["api-write", "destructive"], "required", ["--yes", "--force", "--confirm-title <title>"], ["--yes", "--force", "--confirm-title"]),
   scenario("preview reply delete", "删除回复前先预览请求", "reply delete", "preview", ["api-write", "destructive"], "required", ["--yes", "--force", "--preview"], ["--yes", "--force"]),
   scenario("preview post delete alias intent", "删除 post 前需要 yes 和 force", "reply delete", "preview", ["api-write", "destructive"], "required", ["--yes", "--force"], ["--yes", "--force"]),
-  scenario("dry run topic create", "用 dry-run 检查创建帖子请求体", "topic create", "preview", ["api-write"], "available", ["--dry-run"]),
-  scenario("dry run reply create", "用 dry-run 检查回复请求体", "reply create", "preview", ["api-write"], "available", ["--dry-run"])
+  scenario("dry run topic create", "用 dry-run 检查创建帖子请求体", "topic create", "preview", ["api-write"], "required", ["--dry-run"]),
+  scenario("dry run reply create", "用 dry-run 检查回复请求体", "reply create", "preview", ["api-write"], "required", ["--dry-run"])
 ];
 
 const writeExecuteScenarios: Scenario[] = [
-  scenario("execute topic create after approval", "我确认了，发布这个新帖子", "topic create", "execute", ["api-write"], "available", ["--json"]),
-  scenario("execute topic update after approval", "我确认了，提交帖子编辑", "topic update", "execute", ["api-write"], "available", ["--json"]),
-  scenario("execute reply create after approval", "我确认了，发布这条回复", "reply create", "execute", ["api-write"], "available", ["--json"]),
-  scenario("execute reply update after approval", "我确认了，更新这条回复", "reply update", "execute", ["api-write"], "available", ["--json"]),
+  scenario("execute topic create after approval", "我确认了，发布这个新帖子", "workflow run", "execute", ["api-write"], "required", ["--resume <run-dir>", "--execute", "--yes", "--json"], ["--execute", "--yes"]),
+  scenario("execute topic update after approval", "我确认了，提交帖子编辑", "workflow run", "execute", ["api-write"], "required", ["--resume <run-dir>", "--execute", "--yes", "--json"], ["--execute", "--yes"]),
+  scenario("execute reply create after approval", "我确认了，发布这条回复", "workflow run", "execute", ["api-write"], "required", ["--resume <run-dir>", "--execute", "--yes", "--json"], ["--execute", "--yes"]),
+  scenario("execute reply update after approval", "我确认了，更新这条回复", "workflow run", "execute", ["api-write"], "required", ["--resume <run-dir>", "--execute", "--yes", "--json"], ["--execute", "--yes"]),
   scenario("execute favorite add", "帮我收藏帖子 30549", "favorite add", "execute", ["api-write"], "available", ["--json"]),
   scenario("execute favorite remove", "帮我取消收藏帖子 30549", "favorite remove", "execute", ["api-write"], "available", ["--json"]),
   scenario("execute subscription add", "帮我订阅帖子 30549", "subscription add", "execute", ["api-write"], "available", ["--json"]),
   scenario("execute subscription remove", "帮我取消订阅帖子 30549", "subscription remove", "execute", ["api-write"], "available", ["--json"]),
-  scenario("execute topic delete confirmed", "确认删除这个帖子，标题完全匹配", "topic delete", "execute", ["api-write", "destructive"], "required", ["--yes", "--force", "--confirm-title <title>", "--json"], ["--yes", "--force", "--confirm-title"]),
-  scenario("execute reply delete confirmed", "确认删除这条回复", "reply delete", "execute", ["api-write", "destructive"], "required", ["--yes", "--force", "--json"], ["--yes", "--force"])
+  scenario("execute topic delete confirmed", "确认删除这个帖子，标题完全匹配", "workflow run", "execute", ["api-write"], "required", ["--resume <run-dir>", "--execute", "--yes", "--json"], ["--execute", "--yes"]),
+  scenario("execute reply delete confirmed", "确认删除这条回复", "workflow run", "execute", ["api-write"], "required", ["--resume <run-dir>", "--execute", "--yes", "--json"], ["--execute", "--yes"])
 ];
 
 const authWriteScenarios: Scenario[] = [
