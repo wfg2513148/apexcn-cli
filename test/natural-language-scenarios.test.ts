@@ -867,7 +867,8 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
       assertFeedback: ({ stdout, stderr, fetch, exitCode }) => {
         expect(fetch).not.toHaveBeenCalled();
         expect(stdout).toBe("");
-        expect(stderr).toContain("MCP execute-write is disabled");
+        expect(stderr).toContain("MCP execute-write is intentionally unavailable");
+        expect(stderr).toContain("apexcn workflow");
         expect(exitCode).toBe(1);
       }
     },

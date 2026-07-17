@@ -59,6 +59,38 @@ describe("me command", () => {
     expect(process.exitCode).toBeUndefined();
   });
 
+  test("can redact email for privacy-safe JSON output", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          user: { id: 11, email: "test@example.test", nickname: "Tester", roleLevel: 10, isMuted: false },
+          requestId: "req-ok"
+        })
+      )
+    );
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me", "--json", "--redact"]);
+
+    expect(JSON.parse(stdout.join(""))).toEqual({
+      user: { id: 11, email: "t***@example.test", nickname: "Tester", roleLevel: 10, isMuted: false },
+      requestId: "req-ok"
+    });
+    expect(stdout.join("")).not.toContain("test@example.test");
+    expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBeUndefined();
+  });
+
   test("supports text format while preserving verbose diagnostics", async () => {
     const configPath = await tempConfigPath();
     const stdout: string[] = [];

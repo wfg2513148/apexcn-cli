@@ -53,7 +53,9 @@ if (!releaseWorkflow.includes("artifacts/checksums.txt")) {
 if (!ciWorkflow.includes("npm run eval:rag")) {
   problems.push("CI does not run npm run eval:rag");
 }
-if (!mcpCommand.includes("MCP execute-write is disabled")) {
+const mcpExecuteWriteDisabled = /MCP execute-write is (?:disabled|intentionally unavailable)/.test(mcpCommand)
+  && mcpCommand.includes("apexcn workflow");
+if (!mcpExecuteWriteDisabled) {
   problems.push("MCP execute-write disabled message was not found");
 }
 
@@ -71,7 +73,7 @@ const report = {
   readmeReleaseUrls,
   releaseWorkflowUploadsChecksums: releaseWorkflow.includes("artifacts/checksums.txt"),
   ciRunsRagEval: ciWorkflow.includes("npm run eval:rag"),
-  mcpExecuteWriteDisabled: mcpCommand.includes("MCP execute-write is disabled"),
+  mcpExecuteWriteDisabled,
   issuesBacklogAccurate: !/No open CLI backlog items\./.test(issues),
   commands: {
     total: descriptors.length,

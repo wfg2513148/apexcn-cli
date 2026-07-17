@@ -1037,7 +1037,20 @@ function formatAdminListText(data: unknown): string {
 }
 
 function formatSearchText(data: unknown): string {
+  if (isRecord(data) && itemsFromData(data).length === 0 && isRecord(data.emptyResult)) {
+    return formatEmptySearchText(data);
+  }
   return formatTopicListText(data);
+}
+
+function formatEmptySearchText(data: Record<string, unknown>): string {
+  const emptyResult = isRecord(data.emptyResult) ? data.emptyResult : {};
+  return lines([
+    fieldText(emptyResult.message) || "No search results.",
+    textListBlock("Try:", emptyResult.suggestions),
+    textListBlock("Related commands:", emptyResult.commands),
+    line("requestId", data.requestId)
+  ]);
 }
 
 function formatTopicListText(data: unknown): string {
@@ -1091,18 +1104,58 @@ function formatResearchText(data: unknown): string {
 }
 
 function searchOutput(data: unknown, originalKeyword: string, normalizedKeyword: string): unknown {
-  if (originalKeyword === normalizedKeyword || !isRecord(data)) {
+  if (!isRecord(data)) {
     return data;
   }
   const query = isRecord(data.query) ? data.query : {};
-  return {
+  const output = {
     ...data,
     query: compactBody({
       ...query,
       keyword: originalKeyword,
-      normalizedKeyword
+      normalizedKeyword: originalKeyword === normalizedKeyword ? undefined : normalizedKeyword
     })
   };
+  if (itemsFromData(data).length === 0) {
+    return {
+      ...output,
+      emptyResult: emptySearchResult(originalKeyword, normalizedKeyword)
+    };
+  }
+  if (originalKeyword === normalizedKeyword) {
+    return data;
+  }
+  return output;
+}
+
+function emptySearchResult(originalKeyword: string, normalizedKeyword: string): Record<string, unknown> {
+  const keyword = fieldText(originalKeyword).trim();
+  const fallbackKeyword = normalizedKeyword !== originalKeyword ? normalizedKeyword : keyword;
+  return {
+    message: `No results for "${keyword}".`,
+    suggestions: [
+      "Try fewer or broader keywords.",
+      "Try related Chinese and English terms.",
+      "Remove category, tag, author, or date filters if you used them.",
+      fallbackKeyword && fallbackKeyword !== keyword ? `Try normalized keyword: ${fallbackKeyword}` : undefined
+    ].filter(Boolean),
+    commands: [
+      `apexcn search ${quoteCliArgForHelp(keyword)} --page-size 10 --json`,
+      `apexcn research ${quoteCliArgForHelp(keyword)} --limit 5 --json`,
+      `apexcn topic recent --page-size 10 --json`
+    ]
+  };
+}
+
+function quoteCliArgForHelp(value: string): string {
+  return `"${value.replace(/(["\\$`])/g, "\\$1")}"`;
+}
+
+function textListBlock(label: string, value: unknown): string | undefined {
+  if (!Array.isArray(value) || value.length === 0) {
+    return undefined;
+  }
+  return `${label}\n${value.map((item) => `- ${fieldText(item)}`).filter((lineText) => lineText !== "- ").join("\n")}`;
 }
 
 async function recentTopics(

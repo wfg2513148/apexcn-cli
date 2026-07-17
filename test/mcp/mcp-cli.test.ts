@@ -36,7 +36,9 @@ describe("MCP CLI", () => {
     await program.parseAsync(["node", "apexcn", "mcp", "serve", "--allow-execute-write"]);
 
     expect(stdout.join("")).toBe("");
-    expect(stderr.join("")).toContain("MCP execute-write is disabled");
+    expect(stderr.join("")).toContain("MCP execute-write is intentionally unavailable");
+    expect(stderr.join("")).toContain("preview-only write plans");
+    expect(stderr.join("")).toContain("apexcn workflow");
     expect(process.exitCode).toBe(1);
     process.exitCode = undefined;
   });

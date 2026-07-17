@@ -557,9 +557,24 @@ describe("content commands", () => {
     }
   });
 
-  test("search text output is empty for empty lists and sanitizes fields", async () => {
+  test("search text output suggests fallbacks for empty lists and sanitizes fields", async () => {
     const cases = [
-      { payload: { items: [] }, expected: "" },
+      {
+        payload: { items: [], requestId: "req-empty" },
+        expected: [
+          "No results for \"APEX\".",
+          "Try:",
+          "- Try fewer or broader keywords.",
+          "- Try related Chinese and English terms.",
+          "- Remove category, tag, author, or date filters if you used them.",
+          "Related commands:",
+          "- apexcn search \"APEX\" --page-size 10 --json",
+          "- apexcn research \"APEX\" --limit 5 --json",
+          "- apexcn topic recent --page-size 10 --json",
+          "requestId: req-empty",
+          ""
+        ].join("\n")
+      },
       {
         payload: { items: [{ id: 42, title: "APEX\ttopic\none", url: "https://oracleapex.cn/t/42\nref" }] },
         expected: `${["42", "APEX topic one", "", "", "", "", "", "", "", "", "", "https://oracleapex.cn/t/42 ref"].join("\t")}\n`
@@ -574,6 +589,26 @@ describe("content commands", () => {
       expect(stdout.join("")).toBe(item.expected);
       vi.unstubAllGlobals();
     }
+  });
+
+  test("search JSON includes empty result guidance", async () => {
+    const { program, stdout } = await configuredProgram(async () => Response.json({ items: [], requestId: "req-empty-json" }));
+
+    await program.parseAsync(["node", "apexcn", "search", "APEX", "--json"]);
+
+    const output = JSON.parse(stdout.join(""));
+    expect(output).toEqual(expect.objectContaining({
+      items: [],
+      requestId: "req-empty-json",
+      query: { keyword: "APEX" },
+      emptyResult: expect.objectContaining({
+        message: "No results for \"APEX\".",
+        suggestions: expect.arrayContaining(["Try fewer or broader keywords."]),
+        commands: expect.arrayContaining([
+          "apexcn research \"APEX\" --limit 5 --json"
+        ])
+      })
+    }));
   });
 
   test("search accepts the maximum page size", async () => {

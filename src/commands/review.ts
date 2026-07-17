@@ -10,6 +10,7 @@ type ReviewCommandOptions = CommandIo & {
 
 type ReviewTopicOptions = FormatOption & {
   title?: string;
+  content?: string;
   contentFile?: string;
   draftFile?: string;
   categoryId?: number;
@@ -108,9 +109,10 @@ export function createReviewCommand(options: ReviewCommandOptions): Command {
 
   review
     .command("topic")
-    .option("--title <title>", "topic title when using --content-file")
-    .addOption(new Option("--content-file <path>", "read Markdown content from a file or - for stdin").conflicts("draftFile"))
-    .addOption(new Option("--draft-file <path>", "read a question-draft JSON file or - for stdin").conflicts(["title", "contentFile"]))
+    .option("--title <title>", "topic title when using --content or --content-file")
+    .addOption(new Option("--content <markdown>", "review inline Markdown content").conflicts(["contentFile", "draftFile"]))
+    .addOption(new Option("--content-file <path>", "read Markdown content from a file or - for stdin").conflicts(["content", "draftFile"]))
+    .addOption(new Option("--draft-file <path>", "read a question-draft JSON file or - for stdin").conflicts(["title", "content", "contentFile"]))
     .option("--category-id <id>", "category id for the local request plan", parsePositiveInteger)
     .option("--tags <csv>", "topic tags for the local request plan")
     .option("--json", "pretty-print JSON")
@@ -156,18 +158,20 @@ async function topicInput(commandOptions: ReviewTopicOptions, options: ReviewCom
   if (commandOptions.draftFile) {
     return topicInputFromDraft(commandOptions.draftFile, options);
   }
-  if (!commandOptions.contentFile) {
-    printError(options, { type: "validation", message: "Missing --content-file or --draft-file" });
+  if (!commandOptions.contentFile && commandOptions.content === undefined) {
+    printError(options, { type: "validation", message: "Missing --content, --content-file, or --draft-file" });
     process.exitCode = 1;
     return undefined;
   }
   if (commandOptions.title === undefined) {
-    printError(options, { type: "validation", message: "--title is required when using --content-file" });
+    printError(options, { type: "validation", message: "--title is required when using --content or --content-file" });
     process.exitCode = 1;
     return undefined;
   }
   const title = blockText(commandOptions.title);
-  const rawContent = await readReviewFile(commandOptions.contentFile, options, "Content");
+  const rawContent = commandOptions.content === undefined
+    ? await readReviewFile(commandOptions.contentFile as string, options, "Content")
+    : commandOptions.content;
   if (rawContent === undefined) {
     return undefined;
   }
@@ -175,8 +179,8 @@ async function topicInput(commandOptions: ReviewTopicOptions, options: ReviewCom
   return {
     title,
     content,
-    contentFileForCommand: commandOptions.contentFile === "-" ? undefined : commandOptions.contentFile,
-    source: commandOptions.contentFile === "-" ? "stdin" : "content-file"
+    contentFileForCommand: commandOptions.contentFile === "-" || commandOptions.content !== undefined ? undefined : commandOptions.contentFile,
+    source: commandOptions.content === undefined ? (commandOptions.contentFile === "-" ? "stdin" : "content-file") : "stdin"
   };
 }
 

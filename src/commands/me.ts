@@ -14,7 +14,8 @@ export function createMeCommand(options: MeCommandOptions): Command {
     .option("--json", "pretty-print JSON")
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
     .option("--verbose", "print request diagnostics")
-    .action(async (commandOptions: FormatOption & { verbose?: boolean }) => {
+    .option("--redact", "redact privacy-sensitive account fields such as email")
+    .action(async (commandOptions: FormatOption & { verbose?: boolean; redact?: boolean }) => {
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
@@ -23,7 +24,7 @@ export function createMeCommand(options: MeCommandOptions): Command {
         if (commandOptions.verbose) {
           options.stderr(`GET ${session.baseUrl.replace(/\/+$/, "")}/api/v1/me\n`);
         }
-        printData(options, data, outputFormat(commandOptions), formatMeText);
+        printData(options, commandOptions.redact ? redactMeOutput(data) : data, outputFormat(commandOptions), formatMeText);
       });
     });
 
@@ -147,6 +148,33 @@ function formatMeText(data: unknown): string {
     line("isMuted", user.isMuted),
     line("requestId", data.requestId)
   ].filter((value): value is string => Boolean(value)).join("\n");
+}
+
+function redactMeOutput(data: unknown): unknown {
+  if (!isRecord(data)) {
+    return data;
+  }
+  const user = isRecord(data.user) ? data.user : data;
+  const redactedUser = {
+    ...user,
+    email: maskEmail(user.email)
+  };
+  if (isRecord(data.user)) {
+    return { ...data, user: redactedUser };
+  }
+  return { ...data, ...redactedUser };
+}
+
+function maskEmail(value: unknown): unknown {
+  const email = fieldText(value);
+  if (!email) {
+    return value;
+  }
+  const at = email.indexOf("@");
+  if (at <= 0) {
+    return "[redacted]";
+  }
+  return `${email.slice(0, 1)}***@${email.slice(at + 1)}`;
 }
 
 function formatMeStatsText(data: unknown): string {

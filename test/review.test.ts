@@ -113,6 +113,36 @@ describe("review commands", () => {
     expect(data.suggestedCommand.command).toContain("--preview");
   });
 
+  test("review topic accepts novice-friendly inline --content", async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const { program, stdout, stderr } = reviewProgram();
+
+    await program.parseAsync([
+      "node",
+      "apexcn",
+      "review",
+      "topic",
+      "--title",
+      "APEX REST API returns 403",
+      "--content",
+      GOOD_CONTENT,
+      "--category-id",
+      "4",
+      "--json"
+    ]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(stderr.join("")).toBe("");
+    const data = JSON.parse(stdout.join(""));
+    expect(data.ok).toBe(true);
+    expect(data.requestPlan.body.content).toBe(GOOD_CONTENT);
+    expect(data.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "unsaved-content-file" })
+    ]));
+    expect(data.suggestedCommand).toBeNull();
+  });
+
   test("review topic supports text output and stdin content without suggesting a publish command", async () => {
     const { program, stdout, stderr } = reviewProgram({
       readStdin: async () => GOOD_CONTENT
@@ -248,7 +278,7 @@ describe("review commands", () => {
     await program.parseAsync(["node", "apexcn", "review", "topic", "--content-file", "-"]);
 
     expect(stdout.join("")).toBe("");
-    expect(stderr.join("")).toBe("--title is required when using --content-file\n");
+    expect(stderr.join("")).toBe("--title is required when using --content or --content-file\n");
     expect(process.exitCode).toBe(1);
   });
 

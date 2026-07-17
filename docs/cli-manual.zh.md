@@ -75,9 +75,12 @@ apexcn auth logout
 ```bash
 apexcn me
 apexcn me --json
+apexcn me --json --redact
 apexcn me --verbose --json
 apexcn me --format text
 ```
+
+`--redact` 会遮蔽账号邮箱，适合把 `me --json` 放进日志、审计或支持材料。
 
 ## doctor
 
@@ -191,6 +194,8 @@ apexcn search "ApexLang" --page-size 5 --cursor "next-cursor" --json
 
 `--page-size` 支持 1 到 50。常见写法 `ApexLang`、`APEXLang`、`APEX Lang` 会归一化为 `ApexLang` 发起搜索；JSON 输出会在发生归一化时包含 `query.normalizedKeyword`。`--cursor` 使用服务端 `page.nextCursor` 读取下一页，是 0.2.0-candidate 起推荐的分页方式；`--offset` 保留为兼容参数。后端返回 `createdDate` 表示话题创建时间，`updatedDate` 表示最近更新时间。需要缩小范围时，优先使用 `--category-id`、`--from-date` 和 `--to-date`。
 
+如果搜索结果为空，JSON 输出会包含 `emptyResult`，文本输出会提示放宽关键词、移除过滤条件，并建议尝试 `search`、`research` 或 `topic recent`。
+
 ## topic recent
 
 读取最近更新的话题：
@@ -290,11 +295,17 @@ apexcn review topic \
   --json
 ```
 
-输入模式二选一：`--title` + `--content-file <path|->`，或 `--draft-file <path|->`。`--draft-file` 只接受 v2 草稿 JSON：`kind === "question-draft"`、`schemaVersion === 1`、并包含字符串 `title` 和 `content`。
+也可以直接审查 inline Markdown：
+
+```bash
+apexcn review topic --title "APEX 中调用 REST API 返回 403" --content "## 问题..." --json
+```
+
+输入模式三选一：`--title` + `--content <markdown>`、`--title` + `--content-file <path|->`，或 `--draft-file <path|->`。`--draft-file` 只接受 v2 草稿 JSON：`kind === "question-draft"`、`schemaVersion === 1`、并包含字符串 `title` 和 `content`。
 
 JSON 输出固定包含 `kind`、`schemaVersion`、`ok`、`issues`、`warnings`、`metrics`、`requestPlan` 和 `suggestedCommand`。`issues[].severity` 为 `issue`，会导致 `ok=false` 和非零退出码；`warnings[].severity` 为 `warning`，只提醒。硬性问题包括空标题、空正文、正文少于 80 个字符、仍含 `待补充`、以及疑似 `Authorization: Bearer ...`、`Bearer ...`、`APEXCN_API_KEY=`、`token=`、`password=`。如果命中疑似密钥，`requestPlan.body.content` 会脱敏。
 
-`suggestedCommand` 只在输入来自可复用 Markdown 文件时生成。stdin 或 draft JSON 输入不会把内容直接拼进 shell 命令，也不会把 draft JSON 当作 `--content-file`；此时 `suggestedCommand` 为 `null`，需要先把 Markdown 正文保存到文件再执行 `topic create --content-file`。`review topic` 不替代 `topic create --preview`，只是在 API 预览前做本地质量和安全闸门。
+`suggestedCommand` 只在输入来自可复用 Markdown 文件时生成。inline 内容、stdin 或 draft JSON 输入不会把内容直接拼进 shell 命令，也不会把 draft JSON 当作 `--content-file`；此时 `suggestedCommand` 为 `null`，需要先把 Markdown 正文保存到文件再执行 `topic create --content-file`。`review topic` 不替代 `topic create --preview`，只是在 API 预览前做本地质量和安全闸门。
 
 回复也有独立的本地审查门禁，用于 `draft reply` 和 `reply create --dry-run` 之间：
 

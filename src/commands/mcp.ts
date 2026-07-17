@@ -62,7 +62,10 @@ export function createMcpCommand(options: McpCommandOptions): Command {
         return;
       }
       if (commandOptions.allowExecuteWrite) {
-        printError(options, { type: "mcp-policy", message: "MCP execute-write is disabled. Use CLI workflow for real write execution." });
+        printError(options, {
+          type: "mcp-policy",
+          message: "MCP execute-write is intentionally unavailable: MCP can only expose readonly tools or preview-only write plans. Use apexcn workflow preview/approve/run for audited real write execution."
+        });
         process.exitCode = 1;
         return;
       }

@@ -61,9 +61,12 @@ Show current account:
 ```bash
 apexcn me
 apexcn me --json
+apexcn me --json --redact
 apexcn me --verbose --json
 apexcn me --format text
 ```
+
+`--redact` masks the account email for logs, audits, and support bundles.
 
 ## doctor
 
@@ -177,6 +180,8 @@ apexcn search "ApexLang" --page-size 5 --cursor "next-cursor" --json
 
 `--page-size` accepts 1 to 50. Common variants `ApexLang`, `APEXLang`, and `APEX Lang` are normalized to `ApexLang` before searching; JSON output includes `query.normalizedKeyword` when normalization happens. `--cursor` uses the backend `page.nextCursor` and is the preferred pagination contract starting with 0.2.0-candidate; `--offset` remains available for compatibility. Backend `createdDate` is the original topic creation timestamp, and `updatedDate` is the latest update timestamp. Narrow large result sets with `--category-id`, `--from-date`, and `--to-date`.
 
+When a search returns no rows, JSON output includes `emptyResult`, and text output suggests broader keywords, removing filters, and trying `search`, `research`, or `topic recent`.
+
 ## topic recent
 
 Read recently updated topics:
@@ -276,11 +281,17 @@ apexcn review topic \
   --json
 ```
 
-Choose one input mode: `--title` + `--content-file <path|->`, or `--draft-file <path|->`. `--draft-file` only accepts v2 draft JSON where `kind === "question-draft"`, `schemaVersion === 1`, and `title` and `content` are strings.
+You can also review inline Markdown directly:
+
+```bash
+apexcn review topic --title "APEX REST API returns 403" --content "## Problem..." --json
+```
+
+Choose one input mode: `--title` + `--content <markdown>`, `--title` + `--content-file <path|->`, or `--draft-file <path|->`. `--draft-file` only accepts v2 draft JSON where `kind === "question-draft"`, `schemaVersion === 1`, and `title` and `content` are strings.
 
 JSON output always contains `kind`, `schemaVersion`, `ok`, `issues`, `warnings`, `metrics`, `requestPlan`, and `suggestedCommand`. `issues[].severity` is `issue` and causes `ok=false` plus a non-zero exit code. `warnings[].severity` is `warning` and does not fail the review by itself. Hard issues include blank title, blank content, content under 80 characters, remaining `待补充` placeholders, and possible `Authorization: Bearer ...`, `Bearer ...`, `APEXCN_API_KEY=`, `token=`, or `password=` secrets. When possible secrets are detected, `requestPlan.body.content` is redacted.
 
-`suggestedCommand` is generated only when the input came from a reusable Markdown file. For stdin or draft JSON input, the command does not inline content into the shell and does not treat draft JSON as `--content-file`; `suggestedCommand` is `null`, and you should save the Markdown body to a file before running `topic create --content-file`. `review topic` does not replace `topic create --preview`; it is a local quality and safety gate before API preview.
+`suggestedCommand` is generated only when the input came from a reusable Markdown file. For inline content, stdin, or draft JSON input, the command does not inline content into the shell and does not treat draft JSON as `--content-file`; `suggestedCommand` is `null`, and you should save the Markdown body to a file before running `topic create --content-file`. `review topic` does not replace `topic create --preview`; it is a local quality and safety gate before API preview.
 
 Replies have a separate local gate between `draft reply` and `reply create --dry-run`:
 

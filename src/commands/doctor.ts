@@ -20,6 +20,7 @@ type DoctorCheck = {
   requestId?: string;
   retryAfterSeconds?: number;
   windowSeconds?: number;
+  suggestions?: string[];
 };
 
 type DoctorOutput = {
@@ -216,7 +217,7 @@ async function checkApi(
       return { name, ok: false, message: error.message };
     }
     if (error instanceof TimeoutError) {
-      return { name, ok: false, message: error.message };
+      return { name, ok: false, message: error.message, suggestions: doctorTimeoutSuggestions(name) };
     }
     throw error;
   }
@@ -240,7 +241,24 @@ function printDoctor(options: CommandIo, result: DoctorOutput, commandOptions: F
     const retry = check.retryAfterSeconds === undefined ? "" : ` retryAfterSeconds=${check.retryAfterSeconds}`;
     const window = check.windowSeconds === undefined ? "" : ` windowSeconds=${check.windowSeconds}`;
     options.stdout(`${check.ok ? "OK" : "FAIL"} ${check.name}${detail}${requestId}${retry}${window}\n`);
+    for (const suggestion of check.suggestions ?? []) {
+      options.stdout(`  - ${suggestion}\n`);
+    }
   }
+}
+
+function doctorTimeoutSuggestions(name: string): string[] {
+  const common = [
+    "Retry with a larger --timeout-ms value when the network or ORDS endpoint is slow.",
+    "Run apexcn doctor snapshot --json to collect local diagnostics without making API calls."
+  ];
+  if (name === "ask") {
+    return [
+      ...common,
+      "Use apexcn search <keywords> --json or apexcn research <keywords> --json as a bounded fallback."
+    ];
+  }
+  return common;
 }
 
 function doctorOutputFormat(options: FormatOption): OutputFormat {

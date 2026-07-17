@@ -189,6 +189,40 @@ describe("doctor command", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("suggests bounded search fallback when ask check times out", async () => {
+    const responses: Array<unknown> = [
+      { user: { id: 1, nickname: "Tester" }, requestId: "req-me" },
+      { items: [{ id: 4, name: "APEX 进阶技巧" }], requestId: "req-categories" },
+      { items: [{ id: 42, title: "APEX REST" }], requestId: "req-search" }
+    ];
+    const timeout = new Error("timed out");
+    timeout.name = "TimeoutError";
+    const { program, stdout, stderr } = await configuredProgram(async () => {
+      const next = responses.shift();
+      if (next) {
+        return Response.json(next);
+      }
+      throw timeout;
+    });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "--check-ask", "mail notification", "--timeout-ms", "5", "--json"]);
+
+    const data = JSON.parse(stdout.join(""));
+    expect(data.ok).toBe(false);
+    expect(data.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: "ask",
+        ok: false,
+        message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/ask",
+        suggestions: expect.arrayContaining([
+          "Use apexcn search <keywords> --json or apexcn research <keywords> --json as a bounded fallback."
+        ])
+      })
+    ]));
+    expect(stderr.join("")).toBe("");
+    expect(process.exitCode).toBe(1);
+  });
+
   test("checks ask only when explicitly requested", async () => {
     const responses = [
       { user: { id: 1, nickname: "Tester" }, requestId: "req-me" },
@@ -418,9 +452,24 @@ describe("doctor command", () => {
     expect(data.ok).toBe(false);
     expect(data.checks).toEqual([
       { name: "profile", ok: true },
-      { name: "me", ok: false, message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/me" },
-      { name: "categories", ok: false, message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/categories" },
-      { name: "search", ok: false, message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&pageSize=1" }
+      expect.objectContaining({
+        name: "me",
+        ok: false,
+        message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/me",
+        suggestions: expect.arrayContaining(["Retry with a larger --timeout-ms value when the network or ORDS endpoint is slow."])
+      }),
+      expect.objectContaining({
+        name: "categories",
+        ok: false,
+        message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/categories",
+        suggestions: expect.arrayContaining(["Retry with a larger --timeout-ms value when the network or ORDS endpoint is slow."])
+      }),
+      expect.objectContaining({
+        name: "search",
+        ok: false,
+        message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&pageSize=1",
+        suggestions: expect.arrayContaining(["Retry with a larger --timeout-ms value when the network or ORDS endpoint is slow."])
+      })
     ]);
     expect(fetch).toHaveBeenCalledTimes(3);
     expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
@@ -442,9 +491,9 @@ describe("doctor command", () => {
     expect(data.ok).toBe(false);
     expect(data.checks).toEqual([
       { name: "profile", ok: true },
-      { name: "me", ok: false, message: "Request timed out after 7ms: https://oracleapex.cn/ords/test/api/v1/me" },
-      { name: "categories", ok: false, message: "Request timed out after 7ms: https://oracleapex.cn/ords/test/api/v1/categories" },
-      { name: "search", ok: false, message: "Request timed out after 7ms: https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&pageSize=1" }
+      expect.objectContaining({ name: "me", ok: false, message: "Request timed out after 7ms: https://oracleapex.cn/ords/test/api/v1/me" }),
+      expect.objectContaining({ name: "categories", ok: false, message: "Request timed out after 7ms: https://oracleapex.cn/ords/test/api/v1/categories" }),
+      expect.objectContaining({ name: "search", ok: false, message: "Request timed out after 7ms: https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&pageSize=1" })
     ]);
     expect(fetch).toHaveBeenCalledTimes(3);
     expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
@@ -636,7 +685,7 @@ describe("doctor command", () => {
 
     const data = JSON.parse(stdout.join(""));
     expect(data.checks).toEqual(expect.arrayContaining([
-      { name: "me", ok: false, message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/me" }
+      expect.objectContaining({ name: "me", ok: false, message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/me" })
     ]));
     expect(stdout.join("")).not.toContain("2500ms");
     expect(stderr.join("")).toBe("");
