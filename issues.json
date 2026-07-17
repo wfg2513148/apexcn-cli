@@ -94,6 +94,47 @@
       }
     },
     {
+      "id": "ISSUE-040-004",
+      "kind": "error_contract_gap",
+      "title": "Stabilize no-profile JSON error envelope",
+      "priority": "P1",
+      "status": "open",
+      "owner": "cli",
+      "milestoneId": "0.4",
+      "blockingMilestones": [
+        "0.4"
+      ],
+      "rootCauseStatus": "known",
+      "description": "The personal command preflight emitted a one-line JSON error without a stable error code or actionable remediation when no profile was active.",
+      "acceptanceCriterionIds": [
+        "M040-AC-003"
+      ],
+      "dependencies": [],
+      "serverThreadId": null,
+      "serverCommit": null,
+      "apiContractVersion": null,
+      "cliCommit": "da4b5983f2f5728d440c2c864956c48878c0f7ad",
+      "validatorRound": "M040-VAL-R1-20260718",
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "019f70e9-258f-7832-838d-aef55f44f06f",
+        "assignmentRef": "M040-VAL-R1-20260718",
+        "report": "reports/milestone-0.4-validator-20260718T003956.md",
+        "findingRefs": [
+          "M040-R1-PROTOCOL-ERROR-ENVELOPE"
+        ],
+        "observedCliVersion": "0.40.0",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "apexcn me --json exited 1 with a single JSON error line containing only type and message; stable error.code and requestId/remediation were absent.",
+        "expectedUserOutcome": "Machine-readable no-profile failures expose a stable code and actionable remediation without leaking credentials.",
+        "responsibilityAssessment": "cli",
+        "scenarioOrExplorationRef": [
+          "protocol-preflight"
+        ]
+      }
+    },
+    {
       "id": "ISSUE-070-002",
       "kind": "cross_repo_capability_gap",
       "title": "Add favorites-to-collection flow",

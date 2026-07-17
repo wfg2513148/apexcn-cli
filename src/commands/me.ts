@@ -127,7 +127,20 @@ async function runMeApi(options: MeCommandOptions, commandOptions: { json?: bool
     const current = profile ? config.profiles[profile] : undefined;
 
     if (!profile || !current) {
-      printError(options, { type: "no-profile", message: "No active profile" }, undefined, commandOptions.json);
+      printError(options, {
+        type: "no-profile",
+        code: "NO_ACTIVE_PROFILE",
+        message: "No active profile",
+        remediation: {
+          code: "PROFILE_CONFIGURATION_REQUIRED",
+          message: "Select or configure an authenticated profile before using personal commands.",
+          actions: [
+            "Run `apexcn auth show --json` to inspect configured profiles.",
+            "Run `apexcn auth use <profile>` to select an existing profile.",
+            "Run `apexcn auth set-token --token <token> --profile <profile>` to configure a profile."
+          ]
+        }
+      }, undefined, commandOptions.json);
       process.exitCode = 1;
       return;
     }
