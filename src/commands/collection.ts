@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { isAbsolute, join, normalize, sep } from "node:path";
 import { Command, InvalidArgumentError } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
-import { formatHttpErrorText, remediationForHttpError } from "../core/errors.js";
+import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { buildIndexRecord, createIndexMeta, isCollectionIndexRecord, queryIndex, type CollectionIndexRecord } from "../core/knowledge/collection-index.js";
 import { fieldText, isRecord, itemsFromData, printData, printError } from "../output.js";
@@ -818,6 +818,7 @@ function handleCollectionError(io: CommandIo, error: unknown): void {
   if (error instanceof HttpError) {
     printError(io, {
       type: "http",
+      code: stableErrorCode(error),
       message: redactSecret(error.message),
       status: error.status,
       requestId: error.requestId,
@@ -827,7 +828,12 @@ function handleCollectionError(io: CommandIo, error: unknown): void {
     return;
   }
   if (error instanceof NetworkError || error instanceof TimeoutError) {
-    printError(io, { type: error instanceof TimeoutError ? "timeout" : "network", message: error.message });
+    printError(io, {
+      type: error instanceof TimeoutError ? "timeout" : "network",
+      code: stableErrorCode(error),
+      message: error.message,
+      remediation: remediationForTransportError(error)
+    }, formatTransportErrorText(error));
     process.exitCode = 1;
     return;
   }

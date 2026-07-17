@@ -1,6 +1,6 @@
 import { Command, InvalidArgumentError, Option } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
-import { formatHttpErrorText, remediationForHttpError } from "../core/errors.js";
+import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { fieldText, isRecord, itemsFromData, outputFormat, parseOutputFormat, printData, printError, validateFormatOptions, type FormatOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
@@ -106,6 +106,7 @@ async function runMeApi(options: MeCommandOptions, commandOptions: { json?: bool
     if (error instanceof HttpError) {
       printError(options, {
         type: "http",
+        code: stableErrorCode(error),
         message: redactSecret(error.message, token),
         status: error.status,
         requestId: error.requestId,
@@ -122,12 +123,22 @@ async function runMeApi(options: MeCommandOptions, commandOptions: { json?: bool
       return;
     }
     if (error instanceof NetworkError) {
-      printError(options, { type: "network", message: error.message }, undefined, commandOptions.json);
+      printError(options, {
+        type: "network",
+        code: stableErrorCode(error),
+        message: error.message,
+        remediation: remediationForTransportError(error)
+      }, formatTransportErrorText(error), commandOptions.json);
       process.exitCode = 1;
       return;
     }
     if (error instanceof TimeoutError) {
-      printError(options, { type: "timeout", message: error.message }, undefined, commandOptions.json);
+      printError(options, {
+        type: "timeout",
+        code: stableErrorCode(error),
+        message: error.message,
+        remediation: remediationForTransportError(error)
+      }, formatTransportErrorText(error), commandOptions.json);
       process.exitCode = 1;
       return;
     }

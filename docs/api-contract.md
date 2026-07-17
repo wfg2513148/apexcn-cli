@@ -23,6 +23,7 @@
 - `commands[].supportsPreview`
 - `commands[].supportsDryRun`
 - `commands[].mcpExposure`
+- `commands[].jsonContract.successSchemaId/errorSchemaId/testFile`
 
 这些字段是 additive change，不删除旧字段。
 
@@ -36,6 +37,7 @@
 
 - `src/schemas/common.ts`: shared runtime assertions
 - `src/schemas/error.ts`: stable error envelope
+- `src/schemas/guide.ts`: curated novice guide
 - `src/schemas/command-manifest.ts`: command manifest and JSON Schema export
 - `src/schemas/search.ts`: search response
 - `src/schemas/topic.ts`: topic response
@@ -49,6 +51,8 @@
 
 策略：宽进严出。服务端额外字段允许存在，关键字段必须可验证。
 
+每个 `supportsJson: true` 的公开命令都必须在 manifest 中提供非空 `jsonContract`，并指向已存在的契约测试文件。不支持 JSON 的命令必须返回 `jsonContract: null`，避免能力声明与真实选项不一致。
+
 ## Error Envelope
 
 核心错误对象：
@@ -57,16 +61,21 @@
 {
   "ok": false,
   "error": {
-    "code": "HTTP_401",
+    "type": "http",
+    "code": "AUTH_REQUIRED",
     "message": "Unauthorized",
     "status": 401,
     "requestId": "req-1",
-    "retryable": false
+    "remediation": {
+      "code": "AUTH_TOKEN_REQUIRED",
+      "message": "The server requires a valid API token.",
+      "actions": ["Run `apexcn auth show --json` to confirm the active profile and baseUrl."]
+    }
   }
 }
 ```
 
-错误对象不得包含 API key、Authorization、Cookie 或 password。
+CLI 对 401、403、404、409、429、5xx、network 和 timeout 使用稳定 `code`，并提供可执行的 `remediation.actions`。错误对象不得包含 API key、Authorization、Cookie 或 password。
 
 ## Contract Tests
 

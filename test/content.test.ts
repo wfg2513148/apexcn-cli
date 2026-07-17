@@ -117,6 +117,7 @@ const neverApiDryRunCommands = [
   "doctor snapshot",
   "draft reply",
   "draft question",
+  "guide",
   "me",
   "me favorites",
   "me replies",
@@ -272,7 +273,9 @@ describe("content commands", () => {
 
     expect(fetch).toHaveBeenCalledOnce();
     expect(stdout.join("")).toBe("");
-    expect(stderr.join("")).toBe("HTTP 502: Bad Gateway requestId=req-html\n");
+    expect(stderr.join("")).toContain("HTTP 502: Bad Gateway requestId=req-html\n");
+    expect(stderr.join("")).toContain("server failed to complete");
+    expect(stderr.join("")).toContain("apexcn doctor --json");
     expect(stderr.join("")).not.toContain("SyntaxError");
     expect(stderr.join("")).not.toContain("<html>");
     expect(process.exitCode).toBe(1);
@@ -290,7 +293,8 @@ describe("content commands", () => {
 
     expect(fetch).toHaveBeenCalledOnce();
     expect(stdout.join("")).toBe("");
-    expect(stderr.join("")).toBe("HTTP 403: token [redacted] is not allowed requestId=req-token\n");
+    expect(stderr.join("")).toContain("HTTP 403: token [redacted] is not allowed requestId=req-token\n");
+    expect(stderr.join("")).toContain("apexcn auth audit --json");
     expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(process.exitCode).toBe(1);
   });
@@ -303,7 +307,8 @@ describe("content commands", () => {
     await textCase.program.parseAsync(["node", "apexcn", "search", "APEX"]);
 
     expect(textCase.stdout.join("")).toBe("");
-    expect(textCase.stderr.join("")).toBe("HTTP 429: Too many requests requestId=req-rate retryAfterSeconds=12 windowSeconds=60 Retry after 12s.\n");
+    expect(textCase.stderr.join("")).toContain("HTTP 429: Too many requests requestId=req-rate retryAfterSeconds=12 windowSeconds=60 Retry after 12s.\n");
+    expect(textCase.stderr.join("")).toContain("Wait at least 12 seconds");
     expect(process.exitCode).toBe(1);
 
     process.exitCode = undefined;
@@ -317,7 +322,7 @@ describe("content commands", () => {
 
     expect(JSON.parse(jsonCase.stderr.join(""))).toEqual({
       ok: false,
-      error: {
+      error: expect.objectContaining({
         type: "http",
         message: "Too many requests",
         status: 429,
@@ -325,8 +330,9 @@ describe("content commands", () => {
         retryAfterSeconds: 9,
         windowSeconds: 30,
         exitCode: 1
-      }
+      })
     });
+    expect(JSON.parse(jsonCase.stderr.join("")).error.remediation.code).toBe("RATE_LIMIT_BACKOFF");
   });
 
   test("category list can print API errors as JSON", async () => {
@@ -344,14 +350,15 @@ describe("content commands", () => {
     expect(stdout.join("")).toBe("");
     expect(JSON.parse(stderr.join(""))).toEqual({
       ok: false,
-      error: {
+      error: expect.objectContaining({
         type: "http",
         message: "token [redacted] is not allowed",
         status: 403,
         requestId: "req-token",
         exitCode: 1
-      }
+      })
     });
+    expect(JSON.parse(stderr.join("")).error.remediation.code).toBe("PERMISSION_DENIED");
     expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(process.exitCode).toBe(1);
   });
@@ -421,7 +428,8 @@ describe("content commands", () => {
 
     expect(fetch).toHaveBeenCalledOnce();
     expect(stdout.join("")).toBe("");
-    expect(stderr.join("")).toBe("Network error: failed to reach https://oracleapex.cn/ords/test/api/v1/categories\n");
+    expect(stderr.join("")).toContain("Network error: failed to reach https://oracleapex.cn/ords/test/api/v1/categories\n");
+    expect(stderr.join("")).toContain("apexcn doctor --json");
     expect(stderr.join("")).not.toContain("TypeError");
     expect(stderr.join("")).not.toContain("fetch failed");
     expect(stderr.join("")).not.toContain("src/");
@@ -440,12 +448,13 @@ describe("content commands", () => {
     expect(stdout.join("")).toBe("");
     expect(JSON.parse(stderr.join(""))).toEqual({
       ok: false,
-      error: {
+      error: expect.objectContaining({
         type: "network",
         message: "Network error: failed to reach https://oracleapex.cn/ords/test/api/v1/categories",
         exitCode: 1
-      }
+      })
     });
+    expect(JSON.parse(stderr.join("")).error.remediation.code).toBe("NETWORK_UNREACHABLE");
     expect(stderr.join("")).not.toContain("TypeError");
     expect(stderr.join("")).not.toContain("fetch failed");
     expect(process.exitCode).toBe(1);
@@ -463,7 +472,8 @@ describe("content commands", () => {
 
     expect(fetch).toHaveBeenCalledOnce();
     expect(stdout.join("")).toBe("");
-    expect(stderr.join("")).toBe("Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/categories\n");
+    expect(stderr.join("")).toContain("Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/categories\n");
+    expect(stderr.join("")).toContain("APEXCN_HTTP_TIMEOUT_MS");
     expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(process.exitCode).toBe(1);
   });
@@ -483,12 +493,13 @@ describe("content commands", () => {
     expect(stdout.join("")).toBe("");
     expect(JSON.parse(stderr.join(""))).toEqual({
       ok: false,
-      error: {
+      error: expect.objectContaining({
         type: "timeout",
         message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/categories",
         exitCode: 1
-      }
+      })
     });
+    expect(JSON.parse(stderr.join("")).error.remediation.code).toBe("REQUEST_TIMEOUT");
     expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(process.exitCode).toBe(1);
   });
@@ -1173,7 +1184,7 @@ describe("content commands", () => {
 
   test("format option is exposed only on read commands with text output", () => {
     const program = createProgram();
-    const formatCommands = ["doctor", "doctor snapshot", "draft reply", "draft question", "review reply", "review topic", "workflow audit-log", "workflow plan", "admin list", "me", "me favorites", "me replies", "me stats", "me subscriptions", "me topics", "category list", "search", "stats category", "stats tag", "stats topic", "research", "topic list", "topic recent", "topic view", "thread list", "thread recent", "thread view", "ask"];
+    const formatCommands = ["doctor", "doctor snapshot", "draft reply", "draft question", "guide", "review reply", "review topic", "workflow audit-log", "workflow plan", "admin list", "me", "me favorites", "me replies", "me stats", "me subscriptions", "me topics", "category list", "search", "stats category", "stats tag", "stats topic", "research", "topic list", "topic recent", "topic view", "thread list", "thread recent", "thread view", "ask"];
 
     for (const path of leafCommandPaths(program)) {
       if (formatCommands.includes(path)) {

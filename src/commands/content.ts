@@ -3,7 +3,7 @@ import { stdin as processStdin, stdout as processStdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { Command, InvalidArgumentError, Option } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
-import { formatHttpErrorText, remediationForHttpError } from "../core/errors.js";
+import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { blockText, fieldText, isRecord, itemsFromData, outputFormat, parseOutputFormat, printData, printError, validateFormatOptions, type FormatOption, type JsonOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
@@ -749,6 +749,7 @@ async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOpt
     if (error instanceof HttpError) {
       printError(options, {
         type: "http",
+        code: stableErrorCode(error),
         message: redactSecret(error.message, session?.token),
         status: error.status,
         requestId: error.requestId,
@@ -771,12 +772,24 @@ async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOpt
       return;
     }
     if (error instanceof NetworkError) {
-      printError(options, { type: "network", message: error.message, exitCode: 1 }, undefined, commandOptions.json);
+      printError(options, {
+        type: "network",
+        code: stableErrorCode(error),
+        message: error.message,
+        remediation: remediationForTransportError(error),
+        exitCode: 1
+      }, formatTransportErrorText(error), commandOptions.json);
       process.exitCode = 1;
       return;
     }
     if (error instanceof TimeoutError) {
-      printError(options, { type: "timeout", message: error.message, exitCode: 1 }, undefined, commandOptions.json);
+      printError(options, {
+        type: "timeout",
+        code: stableErrorCode(error),
+        message: error.message,
+        remediation: remediationForTransportError(error),
+        exitCode: 1
+      }, formatTransportErrorText(error), commandOptions.json);
       process.exitCode = 1;
       return;
     }

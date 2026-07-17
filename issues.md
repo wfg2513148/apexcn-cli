@@ -9,8 +9,6 @@
 
 | ID | Milestone | Owner | Status | Title |
 |---|---|---|---|---|
-| `ISSUE-020-001` | `0.2` | `cli` | `open` | Complete the public JSON contract inventory |
-| `ISSUE-020-002` | `0.2` | `cli` | `open` | Add curated novice learning and deployment views |
 | `ISSUE-030-001` | `0.3` | `cross_repo` | `open` | Add real readonly retrieval evaluation |
 | `ISSUE-040-001` | `0.4` | `server` | `open` | Expose notifications, rules, and privacy contracts |
 | `ISSUE-070-002` | `0.7` | `cross_repo` | `open` | Add favorites-to-collection flow |

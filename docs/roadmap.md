@@ -45,7 +45,7 @@
 
 | Stage | Release line | Theme | Status | Active issues | Activation | Completion review |
 |---|---|---|---|---:|---|---|
-| `0.2` | `0.20.x` | 可信赖的 CLI 基础 | `planned` | 2 | `approved` | `not_due` |
+| `0.2` | `0.20.x` | 可信赖的 CLI 基础 | `completed` | 0 | `approved` | `pending` |
 | `0.3` | `0.30.x` | 社区知识检索 | `planned` | 1 | `waiting` | `not_due` |
 | `0.4` | `0.40.x` | 个人工作台与能力协商 | `planned` | 2 | `waiting` | `not_due` |
 | `0.5` | `0.50.x` | AI Agent 只读适配层 | `planned` | 0 | `waiting` | `not_due` |
@@ -66,37 +66,34 @@
 
 | ID | Capability | Status | User value |
 |---|---|---|---|
-| `M020-CAP-INSTALL` | 无版本号安装与发布可信链 | `partial` | 用户始终安装最新稳定版本，并能验证下载资产完整性。 |
-| `M020-CAP-CONTRACT` | 稳定命令与 JSON 契约 | `partial` | 终端、脚本和 Agent 能依赖一致的命令清单、schema、退出码和错误结构。 |
-| `M020-CAP-AUTH` | 认证、profile 与诊断 | `partial` | 用户能安全配置身份并获得不泄密的可执行诊断。 |
-| `M020-CAP-UX` | 可执行的新手反馈 | `partial` | 空结果、权限、限流、超时和服务错误都给出下一步操作。 |
-| `M020-CAP-FEEDBACK` | 独立黑盒反馈闭环 | `partial` | 产品结论由独立项目中的自然语言黑盒验证支撑。 |
+| `M020-CAP-INSTALL` | 无版本号安装与发布可信链 | `validated` | 用户始终安装最新稳定版本，并能验证下载资产完整性。 |
+| `M020-CAP-CONTRACT` | 稳定命令与 JSON 契约 | `validated` | 终端、脚本和 Agent 能依赖一致的命令清单、schema、退出码和错误结构。 |
+| `M020-CAP-AUTH` | 认证、profile 与诊断 | `validated` | 用户能安全配置身份并获得不泄密的可执行诊断。 |
+| `M020-CAP-UX` | 可执行的新手反馈 | `validated` | 空结果、权限、限流、超时和服务错误都给出下一步操作。 |
+| `M020-CAP-FEEDBACK` | 独立黑盒反馈闭环 | `validated` | 产品结论由独立项目中的自然语言黑盒验证支撑。 |
 
 ### 核心验收
 
 | ID | Status | Metric | Target | Measurement |
 |---|---|---|---|---|
-| `M020-AC-001` | `pending` | 公开命令全部进入 command registry。 | `>= 100 percent` | compare executable public commands with command registry descriptors |
-| `M020-AC-002` | `pending` | 公开 JSON 命令全部有契约测试。 | `>= 100 percent` | map public JSON commands to schema and contract tests |
-| `M020-AC-003` | `pending` | 401/403/404/409/429/5xx/network/timeout 均产生稳定且可执行的反馈。 | `= 8 cases` | black-box error matrix |
-| `M020-AC-004` | `pending` | CLI、JSON、doctor、MCP、workflow、日志和 fixture 中无密钥泄露。 | `= 0 findings` | automated redaction tests and artifact scan |
-| `M020-AC-005` | `pending` | macOS/Linux 安装测试和 PowerShell 静态门禁通过。 | `= 2 gates` | installer integration and PowerShell static checks |
-| `M020-AC-006` | `pending` | 至少执行 60 个 L0/L1 自然语言首次尝试任务。 | `>= 60 tasks` | fresh independent validator report with frozen baseline suite and dynamically assigned milestone suite |
-| `M020-AC-007` | `pending` | L0/L1 自然语言任务首次成功率至少 95%。 | `>= 95 percent` | fresh independent validator report with frozen baseline suite and dynamically assigned milestone suite |
-| `M020-AC-008` | `pending` | 当前里程碑不存在活动 P0/P1 问题。 | `= 0 issues` | issues.json entries scoped to milestone 0.2 |
-| `M020-AC-009` | `pending` | command registry、JSON schema、capability matrix、MCP manifest 和用户文档漂移为零。 | `= 0 findings` | generated consistency inventory |
+| `M020-AC-001` | `pass` | 公开命令全部进入 command registry。 | `>= 100 percent` | compare executable public commands with command registry descriptors |
+| `M020-AC-002` | `pass` | 公开 JSON 命令全部有契约测试。 | `>= 100 percent` | map public JSON commands to schema and contract tests |
+| `M020-AC-003` | `pass` | 401/403/404/409/429/5xx/network/timeout 均产生稳定且可执行的反馈。 | `= 8 cases` | black-box error matrix |
+| `M020-AC-004` | `pass` | CLI、JSON、doctor、MCP、workflow、日志和 fixture 中无密钥泄露。 | `= 0 findings` | automated redaction tests and artifact scan |
+| `M020-AC-005` | `pass` | macOS/Linux 安装测试和 PowerShell 静态门禁通过。 | `= 2 gates` | installer integration and PowerShell static checks |
+| `M020-AC-006` | `pass` | 至少执行 60 个 L0/L1 自然语言首次尝试任务。 | `>= 60 tasks` | fresh independent validator report with frozen baseline suite and dynamically assigned milestone suite |
+| `M020-AC-007` | `pass` | L0/L1 自然语言任务首次成功率至少 95%。 | `>= 95 percent` | fresh independent validator report with frozen baseline suite and dynamically assigned milestone suite |
+| `M020-AC-008` | `pass` | 当前里程碑不存在活动 P0/P1 问题。 | `= 0 issues` | issues.json entries scoped to milestone 0.2 |
+| `M020-AC-009` | `pass` | command registry、JSON schema、capability matrix、MCP manifest 和用户文档漂移为零。 | `= 0 findings` | generated consistency inventory |
 
 ### 活动问题
 
-| ID | Priority | Owner | Status | Title |
-|---|---|---|---|---|
-| `ISSUE-020-001` | `P1` | `cli` | `open` | Complete the public JSON contract inventory |
-| `ISSUE-020-002` | `P1` | `cli` | `open` | Add curated novice learning and deployment views |
+无。
 
 ### 人工交接门禁
 
 - Activation: `approved`
-- Completion review: `not_due`
+- Completion review: `pending`
 - 完成后必须总结：增强能力、未预估问题、根因、规避措施、下一阶段目标、量化预期和主要风险。
 - 未获得用户明确确认，不得启动下一里程碑。
 
@@ -420,7 +417,7 @@
 ## 依赖与就绪风险
 
 - 结构化依赖：13 项；未就绪：13 项。
-- 就绪风险：11 项；开放：11 项。
+- 就绪风险：11 项；开放：10 项。
 
 ## 非目标
 

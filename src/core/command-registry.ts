@@ -3,6 +3,12 @@ export type CommandApiEffect = "no-network" | "api-read" | "api-write" | "destru
 export type CommandRiskLevel = "low" | "medium" | "high" | "destructive";
 export type McpExposure = "none" | "readonly" | "preview-only" | "blocked";
 
+export type JsonContractDescriptor = {
+  successSchemaId: string;
+  errorSchemaId: "apexcn-error-v1";
+  testFile: string;
+};
+
 export type CommandDescriptor = {
   id: string;
   path: string[];
@@ -16,6 +22,7 @@ export type CommandDescriptor = {
   supportsPreview: boolean;
   supportsDryRun: boolean;
   mcpExposure: McpExposure;
+  jsonContract: JsonContractDescriptor | null;
   examples: Array<{
     description: string;
     command: string;
@@ -53,11 +60,11 @@ export const COMMAND_DESCRIPTORS: CommandDescriptor[] = [
   descriptor("ask", ["ask"], "Ask community RAG or scoped references", "read", "api-read", "medium", true, "readonly", 'apexcn ask "问题" --top-k 3 --json'),
   descriptor("auth.audit", ["auth", "audit"], "Audit local auth profile configuration", "auth", "no-network", "medium", false, "none", "apexcn auth audit --json"),
   descriptor("auth.list", ["auth", "list"], "List local auth profiles", "auth", "no-network", "medium", false, "none", "apexcn auth list --json"),
-  descriptor("auth.logout", ["auth", "logout"], "Clear active auth profile", "auth", "no-network", "medium", false, "blocked", "apexcn auth logout", false, false, true),
-  descriptor("auth.remove", ["auth", "remove"], "Remove an auth profile", "auth", "no-network", "high", false, "blocked", "apexcn auth remove old-profile", false, false, true),
-  descriptor("auth.set-token", ["auth", "set-token"], "Save an API token profile", "auth", "no-network", "high", false, "blocked", "apexcn auth set-token --profile agent-prod --token \"$APEXCN_API_KEY\"", false, false, true),
+  descriptor("auth.logout", ["auth", "logout"], "Clear active auth profile", "auth", "no-network", "medium", false, "blocked", "apexcn auth logout", false, false, false),
+  descriptor("auth.remove", ["auth", "remove"], "Remove an auth profile", "auth", "no-network", "high", false, "blocked", "apexcn auth remove old-profile", false, false, false),
+  descriptor("auth.set-token", ["auth", "set-token"], "Save an API token profile", "auth", "no-network", "high", false, "blocked", "apexcn auth set-token --profile agent-prod --token \"$APEXCN_API_KEY\"", false, false, false),
   descriptor("auth.show", ["auth", "show"], "Show active auth profile with redacted token", "auth", "no-network", "medium", false, "none", "apexcn auth show --json"),
-  descriptor("auth.use", ["auth", "use"], "Switch active auth profile", "auth", "no-network", "medium", false, "blocked", "apexcn auth use agent-prod", false, false, true),
+  descriptor("auth.use", ["auth", "use"], "Switch active auth profile", "auth", "no-network", "medium", false, "blocked", "apexcn auth use agent-prod", false, false, false),
   descriptor("category.list", ["category", "list"], "List community categories", "read", "api-read", "low", true, "readonly", "apexcn category list --json"),
   descriptor("collection.build", ["collection", "build"], "Build a local collection", "read", "api-read", "medium", true, "none", 'apexcn collection build --query "REST API" --output-dir ./collection --json'),
   descriptor("collection.index", ["collection", "index"], "Build a local collection search index", "local", "no-network", "low", false, "none", "apexcn collection index --dir ./collection --json"),
@@ -71,6 +78,7 @@ export const COMMAND_DESCRIPTORS: CommandDescriptor[] = [
   descriptor("draft.reply", ["draft", "reply"], "Draft a local reply", "local", "no-network", "low", false, "none", "apexcn draft reply --topic-id 1 --answer 回复 --json"),
   descriptor("favorite.add", ["favorite", "add"], "Preview or add favorite", "write", "api-write", "medium", true, "preview-only", "apexcn favorite add 1 --preview", true, true),
   descriptor("favorite.remove", ["favorite", "remove"], "Preview or remove favorite", "write", "api-write", "medium", true, "preview-only", "apexcn favorite remove 1 --preview", true, true),
+  descriptor("guide", ["guide"], "Show a curated novice task guide", "local", "no-network", "low", false, "none", "apexcn guide learning --json"),
   descriptor("me", ["me"], "Show current account", "read", "api-read", "low", true, "none", "apexcn me --json"),
   descriptor("me.favorites", ["me", "favorites"], "List current user's favorites", "read", "api-read", "low", true, "none", "apexcn me favorites --json"),
   descriptor("me.replies", ["me", "replies"], "List current user's replies", "read", "api-read", "low", true, "none", "apexcn me replies --json"),
@@ -147,6 +155,40 @@ function descriptor(
     supportsPreview,
     supportsDryRun,
     mcpExposure,
+    jsonContract: supportsJson ? jsonContractFor(id) : null,
     examples: [{ description: summary, command, mode: supportsPreview ? "preview" : supportsJson ? "json" : "text" }]
   };
+}
+
+function jsonContractFor(id: string): JsonContractDescriptor {
+  const testFile = contractTestFile(id);
+  if (id === "commands") return contract("command-manifest-v2", testFile);
+  if (id === "ask") return contract("ask-response-v1", testFile);
+  if (id === "research") return contract("research-bundle-v1", testFile);
+  if (id === "search") return contract("search-response-v1", testFile);
+  if (id === "topic.view") return contract("topic-response-v1", testFile);
+  if (id === "doctor.snapshot") return contract("doctor-snapshot-v1", testFile);
+  if (id === "guide") return contract("novice-guide-v1", testFile);
+  if (id === "mcp.tools") return contract("mcp-tools-v1", testFile);
+  if (id === "workflow.plan") return contract("workflow-plan-v1", testFile);
+  if (id === "collection.query") return contract("collection-query-v1", testFile);
+  return contract("public-json-object-v1", testFile);
+}
+
+function contract(successSchemaId: string, testFile: string): JsonContractDescriptor {
+  return { successSchemaId, errorSchemaId: "apexcn-error-v1", testFile };
+}
+
+function contractTestFile(id: string): string {
+  if (id === "commands") return "test/contract/command-manifest.contract.test.ts";
+  if (id.startsWith("auth.")) return "test/auth.test.ts";
+  if (id.startsWith("collection.")) return "test/collection.test.ts";
+  if (id.startsWith("doctor")) return "test/doctor.test.ts";
+  if (id.startsWith("draft.")) return "test/draft.test.ts";
+  if (id === "guide") return "test/guide.test.ts";
+  if (id === "me" || id.startsWith("me.")) return "test/me.test.ts";
+  if (id.startsWith("mcp.")) return "test/mcp/mcp-cli.test.ts";
+  if (id.startsWith("review.")) return "test/review.test.ts";
+  if (id.startsWith("workflow.")) return "test/workflow.test.ts";
+  return "test/content.test.ts";
 }

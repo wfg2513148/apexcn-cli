@@ -64,6 +64,22 @@ $env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; irm "https://gith
 
 > 把这几条 APEX 中文社区帖子整理成一份学习笔记，每条写清楚适合谁看、解决什么问题、链接是什么。
 
+### 新手任务路径
+
+> 给我一条从安装、检索到安全提问的 APEX 中文社区学习路径。
+
+> 给我一份 APEX 应用部署前后的检查清单，并说明哪些结论还需要核对官方文档。
+
+终端中可直接查看本地策展视图：
+
+```bash
+apexcn guide learning --json
+apexcn guide compatibility --apex-version 24.2 --ords-version 24.4 --json
+apexcn guide deployment --format text
+apexcn guide security --json
+apexcn guide performance --json
+```
+
 ### 起草和发布内容
 
 > 我遇到 APEX 调用 REST API 返回 401。请先搜索社区已有讨论，再帮我起草一篇提问帖。先不要发布，给我确认。

@@ -4,6 +4,7 @@ export * from "./command-manifest.js";
 export * from "./common.js";
 export * from "./doctor.js";
 export * from "./error.js";
+export * from "./guide.js";
 export * from "./mcp.js";
 export * from "./research.js";
 export * from "./search.js";

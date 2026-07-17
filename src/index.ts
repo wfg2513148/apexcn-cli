@@ -17,11 +17,13 @@ import {
   createTopicCommand
 } from "./commands/content.js";
 import { createDraftCommand } from "./commands/draft.js";
+import { createGuideCommand } from "./commands/guide.js";
 import { createMeCommand } from "./commands/me.js";
 import { createMcpCommand } from "./commands/mcp.js";
 import { createReviewCommand } from "./commands/review.js";
 import { createWorkflowCommand } from "./commands/workflow.js";
 import { descriptorForPath } from "./core/command-registry.js";
+import { formatCliUsageError } from "./output.js";
 import { COMMAND_MANIFEST_JSON_SCHEMA } from "./schemas/command-manifest.js";
 import { CLI_VERSION } from "./version.js";
 
@@ -39,6 +41,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
 
   const program = new Command();
   let activeCliConfigPath: string | undefined;
+  let activeJsonErrors = false;
   program.name("apexcn");
   program.version(CLI_VERSION);
   program.option("--config <path>", "config file path", parseConfigPath);
@@ -54,6 +57,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   program.addCommand(createAuthCommand(commandOptions));
   program.addCommand(createDoctorCommand(commandOptions));
   program.addCommand(createDraftCommand(commandOptions));
+  program.addCommand(createGuideCommand(commandOptions));
   program.addCommand(createMeCommand(commandOptions));
   program.addCommand(createReviewCommand(commandOptions));
   program.addCommand(createWorkflowCommand(commandOptions));
@@ -70,14 +74,16 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   program.addCommand(createRelationCommand("subscription", commandOptions));
   program.addCommand(createAskCommand(commandOptions));
   program.addCommand(createCommandsCommand(program, io));
-  configureCommandOutput(program, io);
+  configureCommandOutput(program, io, () => activeJsonErrors);
   const parseAsync = program.parseAsync.bind(program);
   program.parseAsync = async (argv, parseOptions) => {
     activeCliConfigPath = configPathFromArgv(argv, parseOptions);
+    activeJsonErrors = jsonErrorsFromArgv(argv, parseOptions);
     try {
       return await parseAsync(argv, parseOptions);
     } finally {
       activeCliConfigPath = undefined;
+      activeJsonErrors = false;
       program.setOptionValue("config", undefined);
     }
   };
@@ -110,6 +116,11 @@ type CommandManifest = {
     supportsPreview?: boolean;
     supportsDryRun?: boolean;
     mcpExposure?: string;
+    jsonContract?: {
+      successSchemaId: string;
+      errorSchemaId: string;
+      testFile: string;
+    } | null;
     examples: CommandExample[];
   }>;
 };
@@ -192,6 +203,7 @@ function commandManifest(root: Command): CommandManifest {
         supportsPreview: descriptor?.supportsPreview,
         supportsDryRun: descriptor?.supportsDryRun,
         mcpExposure: descriptor?.mcpExposure,
+        jsonContract: descriptor?.jsonContract,
         examples: guidance.examples
       };
     }).sort((left, right) => left.path.localeCompare(right.path))
@@ -219,6 +231,7 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "doctor snapshot": "print a local support snapshot without calling the API",
   "draft question": "draft a local community question from structured inputs and research links",
   "draft reply": "draft a local community reply from structured inputs and references",
+  "guide": "show a curated learning, compatibility, deployment, security, or performance task guide",
   "favorite add": "favorite a community topic",
   "favorite remove": "remove a topic from favorites",
   "me": "show the authenticated community account",
@@ -342,6 +355,14 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "draft reply": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: 'apexcn draft reply --topic-id 30549 --answer "回复建议" --format text', mode: "read" }]
+  },
+  "guide": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [
+      { command: "apexcn guide learning --json", mode: "read" },
+      { command: "apexcn guide compatibility --apex-version 24.2 --ords-version 24.4 --json", mode: "read" },
+      { command: "apexcn guide deployment --format text", mode: "read" }
+    ]
   },
   "favorite add": {
     safety: { effects: ["api-write"], preview: "available", confirmation: [] },
@@ -626,13 +647,32 @@ function resolveConfigPath(cliConfigPath: string | undefined, injectedConfigPath
   return injectedConfigPath;
 }
 
-function configureCommandOutput(command: Command, io: CommandIo): void {
+function jsonErrorsFromArgv(argv: readonly string[] | undefined, parseOptions: Parameters<Command["parseAsync"]>[1]): boolean {
+  if (process.env.APEXCN_ERROR_FORMAT === "json") {
+    return true;
+  }
+  const values = argv ?? process.argv;
+  const startIndex = parseOptions?.from === "user" ? 0 : 2;
+  for (let index = startIndex; index < values.length; index += 1) {
+    const value = values[index];
+    if (value === "--json" || value === "--format=json" || value === "--format=pretty") {
+      return true;
+    }
+    if (value === "--format" && ["json", "pretty"].includes(values[index + 1] ?? "")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function configureCommandOutput(command: Command, io: CommandIo, useJsonErrors: () => boolean): void {
   command.configureOutput({
     writeOut: io.stdout,
-    writeErr: io.stderr
+    writeErr: io.stderr,
+    outputError: (message, write) => write(useJsonErrors() ? formatCliUsageError(message) : message)
   });
   for (const child of command.commands) {
-    configureCommandOutput(child, io);
+    configureCommandOutput(child, io, useJsonErrors);
   }
 }
 

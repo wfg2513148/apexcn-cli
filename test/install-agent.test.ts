@@ -483,7 +483,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         env: { ...process.env, HOME: join(tempRoot, 'home') },
         encoding: 'utf8',
       });
-      expect(version).toBe('0.18.18\n');
+      expect(version).toBe('0.20.0\n');
       expect(readFileSync(join(installRoot, 'dist', 'index.js'), 'utf8')).not.toContain('stale');
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
@@ -497,8 +497,8 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
       execNpm(['pack', '--pack-destination', tempRoot], {
         encoding: 'utf8',
       });
-      const archive = join(tempRoot, 'apexcn-cli-0.18.18.tgz');
-      writeChecksums(tempRoot, 'apexcn-cli-0.18.18.tgz');
+      const archive = join(tempRoot, 'apexcn-cli-0.20.0.tgz');
+      writeChecksums(tempRoot, 'apexcn-cli-0.20.0.tgz');
 
       const output = execFileSync(
         'bash',
@@ -524,7 +524,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         env: { ...process.env, HOME: join(tempRoot, 'home') },
         encoding: 'utf8',
       });
-      expect(version).toBe('0.18.18\n');
+      expect(version).toBe('0.20.0\n');
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
@@ -546,8 +546,8 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
       execNpm(['pack', '--pack-destination', tempRoot], {
         encoding: 'utf8',
       });
-      const archive = join(tempRoot, 'apexcn-cli-0.18.18.tgz');
-      writeChecksums(tempRoot, 'apexcn-cli-0.18.18.tgz');
+      const archive = join(tempRoot, 'apexcn-cli-0.20.0.tgz');
+      writeChecksums(tempRoot, 'apexcn-cli-0.20.0.tgz');
 
       const output = execFileSync(
         pwsh,
@@ -586,7 +586,7 @@ exec node "${join(installRoot, 'cli', 'dist', 'index.js')}" "$@"
         encoding: 'utf8',
         shell: process.platform === 'win32',
       });
-      expect(version).toBe('0.18.18\n');
+      expect(version).toBe('0.20.0\n');
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }

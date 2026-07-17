@@ -23,6 +23,7 @@
 | `me profile/topics/replies/favorites/subscriptions/stats` | read | api-read | yes | yes | no | no | none | low | 个人数据只读。 |
 | `stats category/topic/tag` | read | api-read | yes | yes | no | no | none | low | 聚合统计。 |
 | `draft question/reply` | local | no-network | no | yes | no | no | none | low | 本地草稿。 |
+| `guide learning/compatibility/deployment/security/performance` | local | no-network | no | yes | no | no | none | low | 本地策展任务路径，不冒充官方兼容性认证。 |
 | `review topic/reply` | local | no-network | no | yes | no | no | none | low | 本地发布前审核。 |
 | `collection build` | read | api-read | yes | yes | no | no | none | medium | 构建离线资料包。 |
 | `collection verify` | local | no-network | no | yes | no | no | none | low | 校验资料包。 |

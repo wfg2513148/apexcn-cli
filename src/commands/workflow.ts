@@ -3,7 +3,7 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { Command, InvalidArgumentError, Option } from "commander";
 import { ConfigFileError, loadConfig } from "../config.js";
-import { formatHttpErrorText, remediationForHttpError } from "../core/errors.js";
+import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { blockText, fieldText, isRecord, outputFormat, parseOutputFormat, printData, printError, validateFormatOptions, type FormatOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
@@ -1744,6 +1744,7 @@ function handleRunError(io: CommandIo, error: unknown, session: Session): void {
   if (error instanceof HttpError) {
     printError(io, {
       type: "http",
+      code: stableErrorCode(error),
       message: redactSecret(error.message, session.token),
       status: error.status,
       requestId: error.requestId,
@@ -1753,7 +1754,12 @@ function handleRunError(io: CommandIo, error: unknown, session: Session): void {
     return;
   }
   if (error instanceof NetworkError || error instanceof TimeoutError) {
-    printError(io, { type: error instanceof TimeoutError ? "timeout" : "network", message: error.message });
+    printError(io, {
+      type: error instanceof TimeoutError ? "timeout" : "network",
+      code: stableErrorCode(error),
+      message: error.message,
+      remediation: remediationForTransportError(error)
+    }, formatTransportErrorText(error));
     process.exitCode = 1;
     return;
   }

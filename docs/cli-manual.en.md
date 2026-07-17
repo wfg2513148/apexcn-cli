@@ -14,11 +14,25 @@ apexcn --config /tmp/apexcn-config.json auth show --json
 
 Use `--json` in scripts and AI-agent workflows. Use root `--config <path>` or `APEXCN_CONFIG_PATH` when automation needs an isolated config file.
 
-When an AI agent needs available commands, aliases, purposes, safety metadata, safe examples, and options, prefer `apexcn commands --json` instead of parsing `--help` text. The current structured manifest contract is `schemaVersion === 1`; if it is missing or unsupported, do not consume structured `safety` or `examples`, and upgrade the CLI or ask the user before continuing. In the manifest, `schema` lists available enum values, `safety.effects` describes command effects, `safety.preview` describes whether preview is available or required, `safety.confirmation` lists explicit confirmation flags, and `examples[].mode` separates read, preview, and execute examples.
+When an AI agent needs available commands, aliases, purposes, safety metadata, safe examples, and options, prefer `apexcn commands --json` instead of parsing `--help` text. The current structured manifest contract is `schemaVersion === 1`; if it is missing or unsupported, do not consume structured `safety` or `examples`, and upgrade the CLI or ask the user before continuing. In the manifest, `schema` lists available enum values, `safety.effects` describes command effects, `safety.preview` describes whether preview is available or required, `safety.confirmation` lists explicit confirmation flags, and `examples[].mode` separates read, preview, and execute examples. Additive `manifestVersion === 2` metadata includes `jsonContract`; JSON-capable commands point to their success schema, stable error schema, and contract test, while unsupported commands return `null`.
 
 For unstable networks, set `APEXCN_HTTP_TIMEOUT_MS` to provide a default timeout for community API requests. `doctor --timeout-ms` overrides this default. Blank or non-positive values are ignored.
 
-When scripts need parseable failures, prefer passing `--json` to the command. Content and account commands that support `--json` write validation, config, network, and API errors as one-line JSON to stderr. You can also set `APEXCN_ERROR_FORMAT=json` to force structured API-command errors; default output remains human-readable text.
+When scripts need parseable failures, prefer passing `--json` to the command. JSON-capable commands write Commander argument parsing, validation, config, network, and API errors as one-line JSON to stderr. You can also set `APEXCN_ERROR_FORMAT=json` to force structured errors; default output remains human-readable text.
+
+## guide
+
+Curated local task paths for novices. These commands do not read auth, call the API, deploy applications, or write community content:
+
+```bash
+apexcn guide learning --json
+apexcn guide compatibility --apex-version 24.2 --ords-version 24.4 --json
+apexcn guide deployment --format text
+apexcn guide security --json
+apexcn guide performance --json
+```
+
+Compatibility and deployment guides explicitly require verification against official Oracle documentation and the target environment; they are not compatibility certifications.
 
 ## auth
 

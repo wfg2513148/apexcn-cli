@@ -22,7 +22,7 @@ export const COMMAND_MANIFEST_JSON_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        required: ["path", "aliases", "description", "options", "safety", "examples", "id", "capability", "apiEffect", "riskLevel", "authRequired", "supportsJson", "supportsPreview", "supportsDryRun", "mcpExposure"],
+        required: ["path", "aliases", "description", "options", "safety", "examples", "id", "capability", "apiEffect", "riskLevel", "authRequired", "supportsJson", "supportsPreview", "supportsDryRun", "mcpExposure", "jsonContract"],
         properties: {
           path: { type: "string" },
           aliases: { type: "array", items: { type: "string" } },
@@ -38,7 +38,21 @@ export const COMMAND_MANIFEST_JSON_SCHEMA = {
           supportsJson: { type: "boolean" },
           supportsPreview: { type: "boolean" },
           supportsDryRun: { type: "boolean" },
-          mcpExposure: { enum: [...MCP_EXPOSURES] }
+          mcpExposure: { enum: [...MCP_EXPOSURES] },
+          jsonContract: {
+            anyOf: [
+              {
+                type: "object",
+                required: ["successSchemaId", "errorSchemaId", "testFile"],
+                properties: {
+                  successSchemaId: { type: "string" },
+                  errorSchemaId: { const: "apexcn-error-v1" },
+                  testFile: { type: "string" }
+                }
+              },
+              { type: "null" }
+            ]
+          }
         },
         additionalProperties: true
       }
@@ -79,6 +93,14 @@ function assertManifestCommand(value: unknown, label: string): void {
   }
   if (typeof value.supportsJson !== "boolean" || typeof value.supportsPreview !== "boolean" || typeof value.supportsDryRun !== "boolean") {
     throw new Error(`${label}.supports* fields must be booleans`);
+  }
+  if (value.supportsJson) {
+    assertRecord(value.jsonContract, `${label}.jsonContract`);
+    assertString(value.jsonContract.successSchemaId, `${label}.jsonContract.successSchemaId`);
+    assertString(value.jsonContract.errorSchemaId, `${label}.jsonContract.errorSchemaId`);
+    assertString(value.jsonContract.testFile, `${label}.jsonContract.testFile`);
+  } else if (value.jsonContract !== null) {
+    throw new Error(`${label}.jsonContract must be null when JSON is unsupported`);
   }
   if (!isRecord(value.safety) || !Array.isArray(value.safety.effects) || typeof value.safety.preview !== "string") {
     throw new Error(`${label}.safety has an invalid shape`);

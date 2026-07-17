@@ -383,7 +383,8 @@ describe("me command", () => {
     await program.parseAsync(["node", "apexcn", "me"]);
 
     expect(stdout.join("")).toBe("");
-    expect(stderr.join("")).toBe("HTTP 403: token [redacted] is not allowed requestId=req-token\n");
+    expect(stderr.join("")).toContain("HTTP 403: token [redacted] is not allowed requestId=req-token\n");
+    expect(stderr.join("")).toContain("apexcn auth audit --json");
     expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(process.exitCode).toBe(1);
   });
@@ -415,13 +416,14 @@ describe("me command", () => {
     expect(stdout.join("")).toBe("");
     expect(JSON.parse(stderr.join(""))).toEqual({
       ok: false,
-      error: {
+      error: expect.objectContaining({
         type: "http",
         message: "token [redacted] is not allowed",
         status: 403,
         requestId: "req-token"
-      }
+      })
     });
+    expect(JSON.parse(stderr.join("")).error.remediation.code).toBe("PERMISSION_DENIED");
     expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(process.exitCode).toBe(1);
   });
@@ -447,7 +449,8 @@ describe("me command", () => {
     await program.parseAsync(["node", "apexcn", "me"]);
 
     expect(stdout.join("")).toBe("");
-    expect(stderr.join("")).toBe("Request timed out after 5ms: https://oracleapex.cn/ords/api/api/v1/me\n");
+    expect(stderr.join("")).toContain("Request timed out after 5ms: https://oracleapex.cn/ords/api/api/v1/me\n");
+    expect(stderr.join("")).toContain("APEXCN_HTTP_TIMEOUT_MS");
     expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(process.exitCode).toBe(1);
   });
@@ -476,11 +479,12 @@ describe("me command", () => {
     expect(stdout.join("")).toBe("");
     expect(JSON.parse(stderr.join(""))).toEqual({
       ok: false,
-      error: {
+      error: expect.objectContaining({
         type: "timeout",
         message: "Request timed out after 5ms: https://oracleapex.cn/ords/api/api/v1/me"
-      }
+      })
     });
+    expect(JSON.parse(stderr.join("")).error.remediation.code).toBe("REQUEST_TIMEOUT");
     expect(stderr.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(process.exitCode).toBe(1);
   });
@@ -510,7 +514,8 @@ describe("me command", () => {
     await program.parseAsync(["node", "apexcn", "me"]);
 
     expect(stdout.join("")).toBe("");
-    expect(stderr.join("")).toBe("HTTP 503: Service Unavailable requestId=req-html\n");
+    expect(stderr.join("")).toContain("HTTP 503: Service Unavailable requestId=req-html\n");
+    expect(stderr.join("")).toContain("apexcn doctor --json");
     expect(stderr.join("")).not.toContain("SyntaxError");
     expect(stderr.join("")).not.toContain("<html>");
     expect(process.exitCode).toBe(1);
@@ -534,7 +539,8 @@ describe("me command", () => {
     await program.parseAsync(["node", "apexcn", "me"]);
 
     expect(stdout.join("")).toBe("");
-    expect(stderr.join("")).toBe("Network error: failed to reach https://oracleapex.cn/ords/api/api/v1/me\n");
+    expect(stderr.join("")).toContain("Network error: failed to reach https://oracleapex.cn/ords/api/api/v1/me\n");
+    expect(stderr.join("")).toContain("apexcn doctor --json");
     expect(stderr.join("")).not.toContain("TypeError");
     expect(stderr.join("")).not.toContain("fetch failed");
     expect(stderr.join("")).not.toContain("src/");
@@ -562,11 +568,12 @@ describe("me command", () => {
     expect(stdout.join("")).toBe("");
     expect(JSON.parse(stderr.join(""))).toEqual({
       ok: false,
-      error: {
+      error: expect.objectContaining({
         type: "network",
         message: "Network error: failed to reach https://oracleapex.cn/ords/api/api/v1/me"
-      }
+      })
     });
+    expect(JSON.parse(stderr.join("")).error.remediation.code).toBe("NETWORK_UNREACHABLE");
     expect(stderr.join("")).not.toContain("TypeError");
     expect(stderr.join("")).not.toContain("fetch failed");
     expect(process.exitCode).toBe(1);

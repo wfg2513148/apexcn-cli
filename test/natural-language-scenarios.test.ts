@@ -144,6 +144,11 @@ const commonReadScenarios: Scenario[] = [
   scenario("research by date", "研究 6 月份发布或更新的 APEXLang 内容", "research", "read", ["read"], "none", ["--from-date <date>", "--to-date <date>", "--json"]),
   scenario("research text output", "把 REST API 研究结果输出成文本", "research", "read", ["read"], "none", ["--format <format>"]),
   scenario("commands manifest", "告诉我 apexcn-cli 当前支持哪些命令和安全分类", "commands", "read", ["manifest"], "none", ["--json"]),
+  scenario("guide learning path", "给我一条从零开始学习使用 APEX 中文社区资料的路径", "guide", "read", ["read"], "none", ["--json"]),
+  scenario("guide version compatibility", "帮我核对 APEX 24.2 和 ORDS 24.4 的兼容性检查步骤", "guide", "read", ["read"], "none", ["--apex-version <version>", "--ords-version <version>", "--json"]),
+  scenario("guide deployment checklist", "给我一份 APEX 应用部署前后的检查清单", "guide", "read", ["read"], "none", ["--format <format>"]),
+  scenario("guide security checklist", "按步骤告诉我如何检查 APEX 和 ORDS 安全配置", "guide", "read", ["read"], "none", ["--json"]),
+  scenario("guide performance checklist", "给我一条 APEX 页面性能问题的排查路径", "guide", "read", ["read"], "none", ["--json"]),
   scenario("collection build from query", "把 REST API 搜索结果做成本地知识合集", "collection build", "read", ["read"], "none", ["--query <keyword>", "--output-dir <dir>", "--json"]),
   scenario("collection build multiple topics", "把帖子 30549 和 30752 做成离线知识合集", "collection build", "read", ["read"], "none", ["--topic-id <id>", "--output-dir <dir>", "--json"]),
   scenario("collection build query and category", "按 ORDS 关键词和新手入门板块构建知识合集", "collection build", "read", ["read"], "none", ["--query <keyword>", "--category-id <id>", "--json"]),
@@ -539,6 +544,25 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
         expect(fetch).not.toHaveBeenCalled();
         expect(stderr).toBe("");
         expect(JSON.parse(stdout).commands.length).toBeGreaterThanOrEqual(38);
+      }
+    },
+    {
+      name: "curated learning guide is local and actionable",
+      userSays: "给我一条从零开始的 APEX 中文社区学习路径。",
+      commandPath: "guide",
+      configureAuth: false,
+      argv: ["node", "apexcn", "guide", "learning", "--json"],
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({
+          kind: "novice-guide",
+          view: "learning",
+          steps: expect.arrayContaining([
+            expect.objectContaining({ id: "install" }),
+            expect.objectContaining({ id: "discover" })
+          ])
+        }));
       }
     },
     {

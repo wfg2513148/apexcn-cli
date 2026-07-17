@@ -97,6 +97,7 @@ describe("documentation consistency", () => {
     const schemaFiles = [
       "src/schemas/common.ts",
       "src/schemas/error.ts",
+      "src/schemas/guide.ts",
       "src/schemas/command-manifest.ts",
       "src/schemas/search.ts",
       "src/schemas/topic.ts",

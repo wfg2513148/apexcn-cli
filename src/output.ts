@@ -1,5 +1,6 @@
 import { InvalidArgumentError } from "commander";
 import type { CommandIo } from "./commands/auth.js";
+import { redactSecretText } from "./core/secret-redaction.js";
 
 export type OutputFormat = "json" | "pretty" | "text";
 
@@ -13,6 +14,7 @@ export type FormatOption = JsonOption & {
 
 export type ErrorPayload = {
   type: string;
+  code?: string;
   message: string;
   status?: number;
   requestId?: string;
@@ -67,6 +69,21 @@ export function printError(options: CommandIo, error: ErrorPayload, fallbackText
   options.stderr(fallbackText ?? `${error.message}\n`);
 }
 
+export function formatCliUsageError(message: string): string {
+  const cleanMessage = redactSecretText(message)
+    .replace(/^error:\s*/i, "")
+    .trim();
+  return `${JSON.stringify({
+    ok: false,
+    error: {
+      type: "validation",
+      code: cliUsageErrorCode(cleanMessage),
+      message: cleanMessage,
+      exitCode: 1
+    }
+  })}\n`;
+}
+
 export function itemsFromData(data: unknown): Array<Record<string, unknown>> {
   if (!isRecord(data) || !Array.isArray(data.items)) {
     return [];
@@ -98,4 +115,16 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 
 function withoutUndefined(input: ErrorPayload): ErrorPayload {
   return Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined)) as ErrorPayload;
+}
+
+function cliUsageErrorCode(message: string): string {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("unknown command")) return "UNKNOWN_COMMAND";
+  if (normalized.includes("unknown option")) return "UNKNOWN_OPTION";
+  if (normalized.includes("required option") && normalized.includes("not specified")) return "MISSING_OPTION";
+  if (normalized.includes("missing required argument")) return "MISSING_ARGUMENT";
+  if (normalized.includes("argument missing")) return "MISSING_OPTION_VALUE";
+  if (normalized.includes("too many arguments")) return "TOO_MANY_ARGUMENTS";
+  if (normalized.includes("invalid") || normalized.includes("expected")) return "INVALID_ARGUMENT";
+  return "CLI_USAGE_ERROR";
 }

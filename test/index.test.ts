@@ -17,7 +17,7 @@ describe("CLI entrypoint detection", () => {
 
     await expect(program.parseAsync(["node", "apexcn", "--version"])).rejects.toMatchObject({ code: "commander.version" });
 
-    expect(output.join("")).toBe("0.18.18\n");
+    expect(output.join("")).toBe("0.20.0\n");
   });
 
   test("prints a machine-readable command manifest", async () => {
@@ -31,7 +31,7 @@ describe("CLI entrypoint detection", () => {
 
     const manifest = JSON.parse(output.join(""));
     expect(manifest.schemaVersion).toBe(1);
-    expect(manifest.version).toBe("0.18.18");
+    expect(manifest.version).toBe("0.20.0");
     expect(manifest.schema).toEqual({
       safetyEffects: ["read", "api-write", "destructive", "config-read", "config-write", "auth", "secret", "diagnostic", "manifest"],
       previewPolicies: ["required", "available", "none"],
@@ -235,6 +235,40 @@ describe("CLI entrypoint detection", () => {
     vi.unstubAllGlobals();
   });
 
+  test.each([
+    {
+      argv: ["node", "apexcn", "search", "APEX", "--page-size", "invalid", "--json"],
+      code: "INVALID_ARGUMENT"
+    },
+    {
+      argv: ["node", "apexcn", "topic", "view", "--json"],
+      code: "MISSING_ARGUMENT"
+    },
+    {
+      argv: ["node", "apexcn", "search", "APEX", "--not-a-real-option", "--json"],
+      code: "UNKNOWN_OPTION"
+    }
+  ])("prints stable JSON for Commander usage errors: $code", async ({ argv, code }) => {
+    const stderr: string[] = [];
+    const program = createProgram({
+      stdout: () => undefined,
+      stderr: (text) => stderr.push(text)
+    });
+    exitOverrideTree(program);
+
+    await expect(program.parseAsync(argv)).rejects.toMatchObject({ code: expect.stringMatching(/^commander\./) });
+
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: {
+        type: "validation",
+        code,
+        message: expect.any(String),
+        exitCode: 1
+      }
+    });
+  });
+
   test("prints a text command manifest", async () => {
     const output: string[] = [];
     const program = createProgram({
@@ -283,6 +317,15 @@ function leafCommandPaths(command: Command, prefix: string[] = [], includeCurren
 
 function hasActionHandler(command: Command): boolean {
   return Boolean((command as unknown as { _actionHandler?: unknown })._actionHandler);
+}
+
+function exitOverrideTree(command: Command): void {
+  command.exitOverride((error) => {
+    throw error;
+  });
+  for (const child of command.commands) {
+    exitOverrideTree(child);
+  }
 }
 
 type ManifestCommand = {

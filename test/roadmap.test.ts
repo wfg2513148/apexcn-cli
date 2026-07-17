@@ -27,7 +27,7 @@ describe("roadmap contract", () => {
       encoding: "utf8"
     });
 
-    expect(output).toContain("Roadmap check passed for 8 milestones and 6 active issues");
+    expect(output).toContain("Roadmap check passed for 8 milestones and 4 active issues");
   });
 
   test("defines differentiated measurable stages from 0.2 through 0.9", () => {
@@ -184,6 +184,7 @@ describe("roadmap contract", () => {
     const roadmap = loadJson("roadmap.json");
     const issues = loadJson("issues.json");
     roadmap.milestones[0].capabilities[0].status = "validated";
+    roadmap.milestones[0].capabilities[0].evidenceIds = ["M020-E-LOCAL"];
 
     const problems = validateRoadmap(validationInput(roadmap, issues));
 
