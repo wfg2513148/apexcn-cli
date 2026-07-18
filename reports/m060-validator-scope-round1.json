@@ -2,12 +2,13 @@
   "kind": "apexcn-cli-validator-scope-contract",
   "schemaVersion": 2,
   "milestoneId": "0.6",
-  "assignmentRef": "M060-R1-20260718T080248+0800",
-  "issuedAt": "2026-07-18T08:02:48+08:00",
+  "assignmentRef": "M060-R1-20260718T082103+0800",
+  "issuedAt": "2026-07-18T08:21:03+08:00",
   "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
   "intakeHistory": {
     "excludedThreadIds": [
-      "019f7284-68d0-77c3-bd2a-7afcf2f0c90a"
+      "019f7284-68d0-77c3-bd2a-7afcf2f0c90a",
+      "019f7289-e577-7de1-8fc1-911b8acc812e"
     ],
     "countsAsProductAttempt": false,
     "admitToIssues": false,
@@ -92,7 +93,12 @@
     "npmVersion": "12.0.0",
     "platform": "Darwin 25.5.0 arm64",
     "environmentHash": "e547eb074d4ba41695997d5f9cf3c563cf74f915d8662d713cf9ef65b6801113",
-    "credentialPolicy": "Reuse the existing minimum-privilege dev-write-eval profile. Never print, copy into the repository, attach, or include the credential in evidence."
+    "credentialPolicy": "Reuse the existing minimum-privilege dev-write-eval profile. Never print, copy into the repository, attach, or include the credential in evidence.",
+    "secureConfigPath": "/Users/kwang/.apexcn/dev-write-eval-config.json",
+    "secureConfigDirectoryMode": "0700",
+    "secureConfigFileMode": "0600",
+    "secureConfigSelector": "Pass --config /Users/kwang/.apexcn/dev-write-eval-config.json to every configured apexcn command.",
+    "secureConfigEvidencePolicy": "The path, modes, profile name, and dev base URL may be recorded. File contents, token, Authorization, Cookie, hashes, fingerprints, or copied config files must never enter the round directory or evidence."
   },
   "intakeGate": {
     "singleDeterministicAttempt": true,
@@ -116,6 +122,22 @@
     ],
     "writeWorkflowAssignment": {
       "requiredFirstAttemptCount": 20,
+      "harnessPreflight": {
+        "mustPassBeforeAnyLiveWrite": true,
+        "networkWritesAllowed": false,
+        "requirements": [
+          "Use a distinct run directory for every one of the 20 workflow operations.",
+          "Extract each created object id and version only from that workflow operation's own execute artifact result.",
+          "Bind every update and delete to the current object version obtained from the immediately preceding successful operation.",
+          "Prove with synthetic round-local execute fixtures that topic/reply id and version extraction cannot return null and cannot read another operation's artifact.",
+          "Prove statically that the planned 20 workflow run directories are unique."
+        ]
+      },
+      "attemptAccounting": {
+        "exactLiveWorkflowCount": 20,
+        "repairRerunsAllowedInSameTask": false,
+        "onHarnessInfrastructureFailure": "Stop new writes, clean up with the existing successful artifacts, verify zero residual read-only, mark the task INFRASTRUCTURE_INVALIDATED, and do not issue a product score or product issue."
+      },
       "groups": [
         {
           "groupId": "LIVE-G1",
@@ -152,7 +174,7 @@
     ]
   },
   "evidenceContract": {
-    "roundDirectory": "run-m060-r1-20260718T080248+0800",
+    "roundDirectory": "run-m060-r1-20260718T082103+0800",
     "requiredFiles": [
       "intake.json",
       "scope-contract.json",
@@ -199,7 +221,7 @@
   "prohibitedActions": [
     "Do not read /Users/kwang/apexcn-cli source files or unbundled implementation details.",
     "Do not open or reuse any previous validator task, old harness, old run directory, or historical screenshot.",
-    "Do not open or reuse intake-only task 019f7284-68d0-77c3-bd2a-7afcf2f0c90a or any discarded directory created by it.",
+    "Do not open or reuse intake-only task 019f7284-68d0-77c3-bd2a-7afcf2f0c90a, infrastructure-invalid task 019f7289-e577-7de1-8fc1-911b8acc812e, or any directory/harness/evidence created by either task.",
     "Do not use hidden subagents as the validator.",
     "Do not create another community account.",
     "Do not print, copy, persist, attach, or expose any API key.",
