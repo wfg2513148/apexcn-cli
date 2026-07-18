@@ -2,8 +2,8 @@
   "kind": "apexcn-cli-validator-scope-contract",
   "schemaVersion": 2,
   "milestoneId": "0.6",
-  "assignmentRef": "M060-R1-20260718T212432+0800",
-  "issuedAt": "2026-07-18T21:24:32+08:00",
+  "assignmentRef": "M060-R1-20260719T020209+0800",
+  "issuedAt": "2026-07-19T02:02:09+08:00",
   "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
   "intakeHistory": {
     "excludedThreadIds": [
@@ -19,7 +19,8 @@
       "019f72d2-57cd-7d42-b523-8631bac24ceb",
       "019f72db-dbe4-7bd3-b4e8-956d05bd1294",
       "019f73ff-7659-7433-8f17-1d2d6e0c1f96",
-      "019f7483-0e4e-7a41-88da-32e4a06aa651"
+      "019f7483-0e4e-7a41-88da-32e4a06aa651",
+      "019f7566-f046-7950-b687-cf3891a6bdfc"
     ],
     "countsAsProductAttempt": false,
     "admitToIssues": false,
@@ -51,7 +52,7 @@
     "productTestMaterial": "Install and test only this tarball. Git source and worktree files are never product test materials."
   },
   "governance": {
-    "governanceHead": "59f0d005e10fe459df679ca7ad15754dcd6b579d",
+    "governanceHead": "2f5834f0735425e5b7c0f23b58853af01aeadfdd",
     "governanceHeadSemantics": "Latest committed validator-governance state before this scope re-issuance. Current main may advance with later governance-only commits and must not equal candidateCommit.",
     "candidateRefVerificationOnly": true,
     "allowedGitMetadataChecks": [
@@ -90,6 +91,10 @@
           "Confirm the requiredRelativePath exists as a regular file.",
           "Run node --check ./harness/m060-r1-harness.mjs.",
           "Before the first invocation, statically prove the harness contains executable implementations for all 20 assigned live workflow operations, dual backend/browser evidence capture, cleanup, residual verification, and final scoring.",
+          "Keep browser automation outside the long-lived Node harness process: invoke a bounded round-local browser helper that starts or attaches only to this task's isolated headless Chrome, captures one requested DOM/screenshot result, closes its CDP/WebSocket connection, and exits. The main harness must not retain a browser/CDP/WebSocket handle.",
+          "Prove every browser helper invocation has an explicit finally cleanup path and a hard timeout, and prove the main harness has no open-handle path after report generation.",
+          "Prove B007 through B030 cannot send a write request to the real dev base URL. Synthetic recovery requests may target only a round-local fault server; the first real dev write is LIVE-G1 topic-create.",
+          "For B022, mutate the canonical approved target.profile value to the exact non-existent string m060-mismatched-profile after approval. Do not add an irrelevant target property. Require local target-mismatch rejection plus zero network writes.",
           "Reject the harness before invocation if it contains PENDING, TODO, stub, placeholder live-workflow results, or any path that can finish successfully before all required live workflows and cleanup complete.",
           "Do not invoke any other harness filename or absolute path."
         ]
@@ -152,7 +157,9 @@
     "visualBrowserEvidencePath": "/Users/kwang/apexcn-forums/output/m060-dev-visual-url/m060-visual-final-20260718T033549Z/browser.png",
     "visualBrowserEvidenceSha256": "47d8b09a7bcd0287cc0cafa3685155db3bcb28c059c150c6e2af8c3c534af5ad",
     "visualContractTestsPath": "/Users/kwang/apexcn-forums/output/m060-dev-visual-url/m060-visual-final-20260718T033549Z/final-tests.log",
-    "visualContractTestsSha256": "6e4f2d5a99710e29b04469859522a5b14ec2fffdb966de115f76cdcc46ce82d3"
+    "visualContractTestsSha256": "6e4f2d5a99710e29b04469859522a5b14ec2fffdb966de115f76cdcc46ce82d3",
+    "preRoundCleanupAuditPath": "/Users/kwang/apexcn-forums/output/m060-validator-cleanup-audit/m060-validator-cleanup-20260718T155228Z/audit.json",
+    "preRoundCleanupAuditSha256": "b7e2c8c9f803129330d85d2847a5c738d6919c9ccf42d140a9eb5eae922727de"
   },
   "environment": {
     "nodeVersion": "v26.0.0",
@@ -209,7 +216,7 @@
       "scoring and evidence generation"
     ],
     "sameTaskRepairOrRerunAllowed": false,
-    "onFailure": "Stop immediately. Do not repair and rerun. If no live write occurred, record INFRASTRUCTURE_INVALIDATED, prove zero write network requests from the immutable round ledger, mark object cleanup not_applicable, and exit; do not substitute a failing residual API probe for the zero-write ledger. If live writes occurred, stop new writes, clean up only from successful artifacts, verify zero residual read-only, then exit without a product score or product issue."
+    "onFailure": "Stop immediately. Do not repair and rerun. If no live write occurred, record INFRASTRUCTURE_INVALIDATED, prove zero real-dev write network requests from the immutable round ledger, mark object cleanup not_applicable, and exit; do not substitute a failing residual API probe for the zero-write ledger. If live writes occurred, stop new writes, clean up only from successful artifacts, verify zero topic/reply residuals read-only, preserve the exact operationKeys for server-side idempotency audit, then exit without a product score or product issue."
   },
   "dynamicSuite": {
     "scoredSeparately": true,
@@ -264,7 +271,12 @@
       "attemptAccounting": {
         "exactLiveWorkflowCount": 20,
         "repairRerunsAllowedInSameTask": false,
-        "onHarnessInfrastructureFailure": "Stop new writes, clean up with the existing successful artifacts, verify zero residual read-only, mark the task INFRASTRUCTURE_INVALIDATED, and do not issue a product score or product issue."
+        "onHarnessInfrastructureFailure": "Stop new writes, clean up with the existing successful artifacts, verify zero topic/reply residuals read-only, mark the task INFRASTRUCTURE_INVALIDATED, and do not issue a product score or product issue."
+      },
+      "cleanupSemantics": {
+        "residualWriteTestResources": "Count active isolated topics and replies only. Both must be zero after cleanup.",
+        "idempotencyAuditRows": "Expected replay/audit state, not an active write-test resource. Preserve and report the exact round operationKeys; do not require or attempt database access. The main task routes their post-round audit and exact cleanup through the fixed apexcn-forums server task before release.",
+        "deletedVisualUrl": "Every deleted topic visual URL must return 404 in the same isolated headless Chrome session."
       },
       "groups": [
         {
@@ -302,7 +314,7 @@
     ]
   },
   "evidenceContract": {
-    "roundDirectory": "run-m060-r1-20260718T212432+0800",
+    "roundDirectory": "run-m060-r1-20260719T020209+0800",
     "requiredFiles": [
       "intake.json",
       "scope-contract.json",
