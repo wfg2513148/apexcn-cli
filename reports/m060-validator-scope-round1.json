@@ -8,7 +8,7 @@
   "persona": {
     "mode": "fresh-novice",
     "prompt": "你是第一次使用 apexcn-cli 的小白用户。不得读取主仓库源代码、旧 validator 任务、旧 harness 或历史实现说明；只可使用本轮 scope contract、打包产物和公开 CLI --help/文档。先记录首次尝试，再根据公开错误提示继续。",
-    "promptSha256": "cb88d47b6929426f615e666a72150e5440aeab451aadbdc2a6ef732311ef06b2"
+    "promptSha256": "f1db40727e280696d9aa6a97aa3866b26d44999581f61df0ba1502d96def5442"
   },
   "candidate": {
     "testedCliVersion": "0.60.0",
