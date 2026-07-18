@@ -2,8 +2,8 @@
   "kind": "apexcn-cli-validator-scope-contract",
   "schemaVersion": 2,
   "milestoneId": "0.6",
-  "assignmentRef": "M060-R1-20260718T093232+0800",
-  "issuedAt": "2026-07-18T09:32:32+08:00",
+  "assignmentRef": "M060-R1-20260718T142717+0800",
+  "issuedAt": "2026-07-18T14:27:17+08:00",
   "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
   "intakeHistory": {
     "excludedThreadIds": [
@@ -49,7 +49,7 @@
     "productTestMaterial": "Install and test only this tarball. Git source and worktree files are never product test materials."
   },
   "governance": {
-    "governanceHead": "cb0a83c8c8a24e40bf2fef9723d7a824b3cf96d6",
+    "governanceHead": "0df1284819de237a582adb6c19cd27fd122e76a9",
     "governanceHeadSemantics": "Latest committed validator-governance state before this scope re-issuance. Current main may advance with later governance-only commits and must not equal candidateCommit.",
     "candidateRefVerificationOnly": true,
     "allowedGitMetadataChecks": [
@@ -133,17 +133,24 @@
   },
   "server": {
     "contractVersion": "0.6.0-candidate",
-    "serverCommit": "55cc890aa31033345fd2811b33d35895350079a9",
+    "serverCommit": "1c9ccb981be9bdd7f836d023f3c266816b98e6bd",
     "baseUrl": "https://oracleapex.cn/ords/dev",
     "profile": "dev-write-eval",
     "surfaceCode": "apexcn-cli-m060-dev-write",
     "categoryId": 8,
     "categoryName": "__APEXCN_CLI_DEV_WRITE_TEST__",
-    "browserUrlTemplate": "https://oracleapex.cn/ords/dev/f?p=100:14:::P14_THREAD_ID:<topicId>",
+    "browserUrlTemplate": "https://oracleapex.cn/ords/dev/api/v1/topics/<topicId>/visual",
+    "browserUrlPolicy": "Treat the URL returned by url, threadUrl, canonicalUrl, or visualUrl as an opaque server contract. Do not synthesize an APEX f?p URL or checksum. The visual endpoint is public read-only only for topics in the active isolated write-test surface; outside-surface, missing, and deleted topics return 404.",
     "contractFixturePath": "/Users/kwang/apexcn-forums/tests/fixtures/api/m060-content-write-contract.json",
-    "contractFixtureSha256": "bbce4ea032e685a86835741a7f637bd77f02626af44469735e1e55c3232a781e",
+    "contractFixtureSha256": "c9a51bdbe8260d226212c81f280693500cf520d070b09c78cbd8a9a7710ca506",
     "serverSmokePath": "/Users/kwang/apexcn-forums/output/m060-dev-write-smoke/m060-dev-write-smoke-20260717T230524Z.json",
-    "serverSmokeSha256": "56f92aa57f66eea3387844bc33d90f96b02c097b7d5627e17e787816e3057b62"
+    "serverSmokeSha256": "56f92aa57f66eea3387844bc33d90f96b02c097b7d5627e17e787816e3057b62",
+    "visualReadinessPath": "/Users/kwang/apexcn-forums/output/m060-dev-visual-url/m060-visual-final-20260718T033549Z/readiness.json",
+    "visualReadinessSha256": "6a4395c47ae090d359ee7d88a3fa084baa9ffa2be2dfa4377fac0c378cc20dad",
+    "visualBrowserEvidencePath": "/Users/kwang/apexcn-forums/output/m060-dev-visual-url/m060-visual-final-20260718T033549Z/browser.png",
+    "visualBrowserEvidenceSha256": "47d8b09a7bcd0287cc0cafa3685155db3bcb28c059c150c6e2af8c3c534af5ad",
+    "visualContractTestsPath": "/Users/kwang/apexcn-forums/output/m060-dev-visual-url/m060-visual-final-20260718T033549Z/final-tests.log",
+    "visualContractTestsSha256": "6e4f2d5a99710e29b04469859522a5b14ec2fffdb966de115f76cdcc46ce82d3"
   },
   "environment": {
     "nodeVersion": "v26.0.0",
@@ -182,12 +189,12 @@
   },
   "browserReadinessGate": {
     "mustPassBeforeRoundDirectoryOrCandidateInstall": true,
-    "existingUserTabRequired": true,
+    "existingUserTabRequired": false,
     "checks": [
-      "Use the Codex in-app browser only; do not substitute Chrome, standalone Playwright, screenshots from another task, or a database-only check.",
-      "Discover an already-open user tab and claim that exact tab. Do not create a new tab as a substitute for a missing user tab.",
-      "Require a non-empty URL on the oracleapex.cn dev surface, a title other than This page crashed, and a successful fresh DOM snapshot or screenshot from the claimed tab.",
-      "Confirm the existing test-account session can render the dev page without exposing credentials or inspecting cookies, storage, profiles, passwords, or session data."
+      "Use a newly isolated local Chrome process for this validator task. Prefer the existing logged-in Profile 11 only when the Chrome extension can control it reliably; an isolated headless Chrome with a fresh user-data-dir is allowed when headed Chrome control is unavailable. Do not use the Codex in-app browser, screenshots from another task, or a database-only check.",
+      "Record non-sensitive process/session isolation evidence showing this validator browser is not shared with another Codex task. Never inspect, copy, or export cookies, storage, profiles, passwords, or session data.",
+      "Before any candidate install or write attempt, navigate freshly to https://oracleapex.cn/ords/f?p=100:1 and require a normal APEX page title plus a successful fresh DOM snapshot and screenshot. A crashed tab, login blocker, Session state protection violation, or other APEX error page fails this gate.",
+      "Use the existing minimum-privilege dev-write-eval account only for approved API operations. Browser evidence must independently prove end-user rendering and accessibility from the stable visual URL returned by the dev contract without exposing credentials."
     ],
     "onFailure": "Stop before creating a round directory or installing the candidate. Report BLOCKED_ENVIRONMENT with zero product attempts, zero writes, zero score, and zero issues. Do not retry browser setup in the same validator task."
   },
@@ -279,7 +286,7 @@
         "first-attempt CLI stdout/stderr and exit code with secrets redacted",
         "preview, approval, and execute hash comparison",
         "backend API response and follow-up object state",
-        "real Codex in-app browser screenshot from this round",
+        "fresh local Chrome screenshot from this round (isolated headless Chrome is allowed when headed Chrome control is unavailable)",
         "visual recognition of title, body, formatting, visibility/status, and end-user accessibility",
         "cleanup or final-deleted-state evidence"
       ]
@@ -293,7 +300,7 @@
     ]
   },
   "evidenceContract": {
-    "roundDirectory": "run-m060-r1-20260718T093232+0800",
+    "roundDirectory": "run-m060-r1-20260718T142717+0800",
     "requiredFiles": [
       "intake.json",
       "scope-contract.json",
