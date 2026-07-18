@@ -2,8 +2,8 @@
   "kind": "apexcn-cli-validator-scope-contract",
   "schemaVersion": 2,
   "milestoneId": "0.6",
-  "assignmentRef": "M060-R1-20260718T084514+0800",
-  "issuedAt": "2026-07-18T08:45:14+08:00",
+  "assignmentRef": "M060-R1-20260718T084742+0800",
+  "issuedAt": "2026-07-18T08:47:42+08:00",
   "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
   "intakeHistory": {
     "excludedThreadIds": [
@@ -11,7 +11,8 @@
       "019f7289-e577-7de1-8fc1-911b8acc812e",
       "019f7299-dc87-7b51-875d-2daffff6263c",
       "019f729e-5949-7d03-98f6-45c70a1024e1",
-      "019f72ab-5fb7-76b1-bba0-c08aa0a85f35"
+      "019f72ab-5fb7-76b1-bba0-c08aa0a85f35",
+      "019f72b0-13f6-7552-9533-812ee1ba420a"
     ],
     "countsAsProductAttempt": false,
     "admitToIssues": false,
@@ -30,6 +31,7 @@
     "candidateVersion": "0.60.0",
     "candidateCommit": "68645b5c2906111adb1fa85b0f5a723947ff26a9",
     "candidateTag": "v0.60.0-rc.1",
+    "candidateGitMetadataPath": "/Users/kwang/apexcn-cli",
     "candidateTagRef": "refs/tags/v0.60.0-rc.1",
     "candidateTagObjectId": "c0d63cb7e48c1a67eaef61b98fb41d3fbb2e5ada",
     "candidateTagKind": "local-annotated-independent-validation-candidate",
@@ -42,13 +44,13 @@
     "productTestMaterial": "Install and test only this tarball. Git source and worktree files are never product test materials."
   },
   "governance": {
-    "governanceHead": "6957af8547e962d7e506d43d429bcf8509fbcc72",
+    "governanceHead": "1ce887efa7833891d1ec0b3213fc537ef1ca8d51",
     "governanceHeadSemantics": "Latest committed validator-governance state before this scope re-issuance. Current main may advance with later governance-only commits and must not equal candidateCommit.",
     "candidateRefVerificationOnly": true,
     "allowedGitMetadataChecks": [
-      "Confirm candidate.candidateTagRef exists locally.",
-      "Peel candidate.candidateTagRef to a commit and compare it with candidate.candidateCommit.",
-      "Confirm candidate.candidateTagKind is annotated."
+      "Run git -C candidate.candidateGitMetadataPath show-ref --verify candidate.candidateTagRef.",
+      "Run git -C candidate.candidateGitMetadataPath rev-parse candidate.candidateTag^{commit} and compare it with candidate.candidateCommit.",
+      "Run git -C candidate.candidateGitMetadataPath cat-file -t candidate.candidateTag and confirm the result is tag."
     ],
     "prohibitedGitInspection": "Do not read candidate commit trees, blobs, diffs, source files, tests, worktree contents, or compare current main HEAD with candidateCommit."
   },
@@ -237,7 +239,7 @@
     ]
   },
   "evidenceContract": {
-    "roundDirectory": "run-m060-r1-20260718T084514+0800",
+    "roundDirectory": "run-m060-r1-20260718T084742+0800",
     "requiredFiles": [
       "intake.json",
       "scope-contract.json",
@@ -286,7 +288,7 @@
     "Do not read /Users/kwang/apexcn-cli source files or unbundled implementation details.",
     "Do not move, recreate, delete, or push candidate.candidateTagRef, and do not inspect its commit tree or blobs.",
     "Do not open or reuse any previous validator task, old harness, old run directory, or historical screenshot.",
-    "Do not open or reuse intake-only tasks 019f7284-68d0-77c3-bd2a-7afcf2f0c90a and 019f7299-dc87-7b51-875d-2daffff6263c, infrastructure-invalid tasks 019f7289-e577-7de1-8fc1-911b8acc812e, 019f729e-5949-7d03-98f6-45c70a1024e1, and 019f72ab-5fb7-76b1-bba0-c08aa0a85f35, or any directory/harness/evidence created by those tasks.",
+    "Do not open or reuse intake-only tasks 019f7284-68d0-77c3-bd2a-7afcf2f0c90a, 019f7299-dc87-7b51-875d-2daffff6263c, and 019f72b0-13f6-7552-9533-812ee1ba420a; infrastructure-invalid tasks 019f7289-e577-7de1-8fc1-911b8acc812e, 019f729e-5949-7d03-98f6-45c70a1024e1, and 019f72ab-5fb7-76b1-bba0-c08aa0a85f35; or any directory/harness/evidence created by those tasks.",
     "Do not use hidden subagents as the validator.",
     "Do not create another community account.",
     "Do not print, copy, persist, attach, or expose any API key.",
