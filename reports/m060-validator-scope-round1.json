@@ -2,8 +2,8 @@
   "kind": "apexcn-cli-validator-scope-contract",
   "schemaVersion": 2,
   "milestoneId": "0.6",
-  "assignmentRef": "M060-R1-20260718T145309+0800",
-  "issuedAt": "2026-07-18T14:53:09+08:00",
+  "assignmentRef": "M060-R1-20260718T212432+0800",
+  "issuedAt": "2026-07-18T21:24:32+08:00",
   "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
   "intakeHistory": {
     "excludedThreadIds": [
@@ -18,7 +18,8 @@
       "019f72c6-8013-7b33-b1b5-576e02104acc",
       "019f72d2-57cd-7d42-b523-8631bac24ceb",
       "019f72db-dbe4-7bd3-b4e8-956d05bd1294",
-      "019f73ff-7659-7433-8f17-1d2d6e0c1f96"
+      "019f73ff-7659-7433-8f17-1d2d6e0c1f96",
+      "019f7483-0e4e-7a41-88da-32e4a06aa651"
     ],
     "countsAsProductAttempt": false,
     "admitToIssues": false,
@@ -50,7 +51,7 @@
     "productTestMaterial": "Install and test only this tarball. Git source and worktree files are never product test materials."
   },
   "governance": {
-    "governanceHead": "00e8ac1b8a38324429c8726a940407f255386f4f",
+    "governanceHead": "59f0d005e10fe459df679ca7ad15754dcd6b579d",
     "governanceHeadSemantics": "Latest committed validator-governance state before this scope re-issuance. Current main may advance with later governance-only commits and must not equal candidateCommit.",
     "candidateRefVerificationOnly": true,
     "allowedGitMetadataChecks": [
@@ -192,8 +193,8 @@
     "mustPassBeforeRoundDirectoryOrCandidateInstall": true,
     "existingUserTabRequired": false,
     "checks": [
-      "Use a newly isolated local Chrome process for this validator task. Prefer the existing logged-in Profile 11 only when the Chrome extension can control it reliably; an isolated headless Chrome with a fresh user-data-dir is allowed when headed Chrome control is unavailable. Do not use the Codex in-app browser, screenshots from another task, or a database-only check.",
-      "Record non-sensitive process/session isolation evidence showing this validator browser is not shared with another Codex task. Never inspect, copy, or export cookies, storage, profiles, passwords, or session data.",
+      "Use a newly isolated headless Chrome process from the outset with a fresh user-data-dir and a unique validator session/namespace. Do not connect to Profile 11, the Chrome extension, the Codex in-app browser, another task's browser, screenshots from another task, or a database-only check.",
+      "Record non-sensitive PID, user-data-dir basename, and session/namespace evidence proving this validator browser is not shared with another Codex task. Never inspect, copy, import, or export cookies, storage, profiles, passwords, or session data.",
       "Before any candidate install or write attempt, navigate freshly to https://oracleapex.cn/ords/f?p=100:1 and require a normal APEX page title plus a successful fresh DOM snapshot and screenshot. A crashed tab, login blocker, Session state protection violation, or other APEX error page fails this gate.",
       "Use the existing minimum-privilege dev-write-eval account only for approved API operations. Browser evidence must independently prove end-user rendering and accessibility from the stable visual URL returned by the dev contract without exposing credentials."
     ],
@@ -287,7 +288,7 @@
         "first-attempt CLI stdout/stderr and exit code with secrets redacted",
         "preview, approval, and execute hash comparison",
         "backend API response and follow-up object state",
-        "fresh local Chrome screenshot from this round (isolated headless Chrome is allowed when headed Chrome control is unavailable)",
+        "fresh isolated headless Chrome screenshot from this round",
         "visual recognition of title, body, formatting, visibility/status, and end-user accessibility",
         "cleanup or final-deleted-state evidence"
       ]
@@ -301,7 +302,7 @@
     ]
   },
   "evidenceContract": {
-    "roundDirectory": "run-m060-r1-20260718T145309+0800",
+    "roundDirectory": "run-m060-r1-20260718T212432+0800",
     "requiredFiles": [
       "intake.json",
       "scope-contract.json",
