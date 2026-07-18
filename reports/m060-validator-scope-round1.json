@@ -2,8 +2,8 @@
   "kind": "apexcn-cli-validator-scope-contract",
   "schemaVersion": 2,
   "milestoneId": "0.6",
-  "assignmentRef": "M060-R1-20260718T142717+0800",
-  "issuedAt": "2026-07-18T14:27:17+08:00",
+  "assignmentRef": "M060-R1-20260718T145309+0800",
+  "issuedAt": "2026-07-18T14:53:09+08:00",
   "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
   "intakeHistory": {
     "excludedThreadIds": [
@@ -17,7 +17,8 @@
       "019f72ba-437f-7c42-b7d7-b841bf9dfe04",
       "019f72c6-8013-7b33-b1b5-576e02104acc",
       "019f72d2-57cd-7d42-b523-8631bac24ceb",
-      "019f72db-dbe4-7bd3-b4e8-956d05bd1294"
+      "019f72db-dbe4-7bd3-b4e8-956d05bd1294",
+      "019f73ff-7659-7433-8f17-1d2d6e0c1f96"
     ],
     "countsAsProductAttempt": false,
     "admitToIssues": false,
@@ -49,7 +50,7 @@
     "productTestMaterial": "Install and test only this tarball. Git source and worktree files are never product test materials."
   },
   "governance": {
-    "governanceHead": "0df1284819de237a582adb6c19cd27fd122e76a9",
+    "governanceHead": "00e8ac1b8a38324429c8726a940407f255386f4f",
     "governanceHeadSemantics": "Latest committed validator-governance state before this scope re-issuance. Current main may advance with later governance-only commits and must not equal candidateCommit.",
     "candidateRefVerificationOnly": true,
     "allowedGitMetadataChecks": [
@@ -300,7 +301,7 @@
     ]
   },
   "evidenceContract": {
-    "roundDirectory": "run-m060-r1-20260718T142717+0800",
+    "roundDirectory": "run-m060-r1-20260718T145309+0800",
     "requiredFiles": [
       "intake.json",
       "scope-contract.json",
