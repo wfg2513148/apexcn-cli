@@ -2,8 +2,8 @@
   "kind": "apexcn-cli-validator-scope-contract",
   "schemaVersion": 2,
   "milestoneId": "0.6",
-  "assignmentRef": "M060-R1-20260719T084204+0800",
-  "issuedAt": "2026-07-19T08:42:04+08:00",
+  "assignmentRef": "M060-R1-20260719T210152+0800",
+  "issuedAt": "2026-07-19T21:01:52+08:00",
   "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
   "intakeHistory": {
     "excludedThreadIds": [
@@ -21,7 +21,8 @@
       "019f73ff-7659-7433-8f17-1d2d6e0c1f96",
       "019f7483-0e4e-7a41-88da-32e4a06aa651",
       "019f7566-f046-7950-b687-cf3891a6bdfc",
-      "019f77ca-2b0e-7f62-aa84-b719dc2fbb08"
+      "019f77ca-2b0e-7f62-aa84-b719dc2fbb08",
+      "019f77dc-7c0f-7773-bbc4-bb6271f67215"
     ],
     "countsAsProductAttempt": false,
     "admitToIssues": false,
@@ -53,7 +54,7 @@
     "productTestMaterial": "Install and test only this tarball. Git source and worktree files are never product test materials."
   },
   "governance": {
-    "governanceHead": "bb16b4c2822362007b11d08d69d15d3226c1a5df",
+    "governanceHead": "6609849bceb0b8ec6a14400b27df89011cde7759",
     "governanceHeadSemantics": "Latest committed validator-governance state before this scope re-issuance. Current main may advance with later governance-only commits and must not equal candidateCommit.",
     "candidateRefVerificationOnly": true,
     "allowedGitMetadataChecks": [
@@ -164,9 +165,10 @@
   },
   "environment": {
     "nodeVersion": "v26.0.0",
-    "npmVersion": "12.0.0",
+    "npmVersion": "12.0.1",
     "platform": "Darwin 25.5.0 arm64",
-    "environmentHash": "e547eb074d4ba41695997d5f9cf3c563cf74f915d8662d713cf9ef65b6801113",
+    "environmentHashAlgorithm": "SHA-256 of the UTF-8 bytes of compact JSON with this exact key order: {\"nodeVersion\":\"v26.0.0\",\"npmVersion\":\"12.0.1\",\"platform\":\"Darwin 25.5.0 arm64\"}",
+    "environmentHash": "b26cdfb738e10ad869ff758de3ac641b0b6c5e22c5ca0e648d8850ae9bc0bbc7",
     "credentialPolicy": "Reuse the existing minimum-privilege dev-write-eval profile. Never print, copy into the repository, attach, or include the credential in evidence.",
     "secureConfigPath": "/Users/kwang/.apexcn/dev-write-eval-config.json",
     "secureConfigDirectoryMode": "0700",
@@ -315,7 +317,7 @@
     ]
   },
   "evidenceContract": {
-    "roundDirectory": "run-m060-r1-20260719T084204+0800",
+    "roundDirectory": "run-m060-r1-20260719T210152+0800",
     "requiredFiles": [
       "intake.json",
       "scope-contract.json",
