@@ -2,8 +2,8 @@
   "kind": "apexcn-cli-validator-scope-contract",
   "schemaVersion": 2,
   "milestoneId": "0.6",
-  "assignmentRef": "M060-R1-20260720T001904+0800",
-  "issuedAt": "2026-07-20T00:19:04+08:00",
+  "assignmentRef": "M060-R1-20260720T004327+0800",
+  "issuedAt": "2026-07-20T00:43:27+08:00",
   "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
   "intakeHistory": {
     "excludedThreadIds": [
@@ -36,7 +36,8 @@
       "019f7adf-5b2b-7f90-9b14-dcdf2b657264",
       "019f7aec-4856-7c33-81e2-e1a851cf348e",
       "019f7b05-3b85-7e12-b34d-71c31735af57",
-      "019f7b0b-5833-72d3-9c22-fdc26c1f5899"
+      "019f7b0b-5833-72d3-9c22-fdc26c1f5899",
+      "019f7b2d-38ac-7cf2-859d-57ade8934e07"
     ],
     "countsAsProductAttempt": false,
     "admitToIssues": false,
@@ -68,7 +69,7 @@
     "productTestMaterial": "Install and test only this tarball. Git source and worktree files are never product test materials."
   },
   "governance": {
-    "governanceHead": "e88b6434c88f5abca375753d10790f49fa411ebd",
+    "governanceHead": "8cef76ba3fc33f261eca0dd709ca00769d11627c",
     "governanceHeadSemantics": "Latest committed validator-governance state before this scope re-issuance. Current main may advance with later governance-only commits and must not equal candidateCommit.",
     "candidateRefVerificationOnly": true,
     "allowedGitMetadataChecks": [
@@ -171,6 +172,44 @@
         "globalVersionFlagProhibition": "Never pass --version as an object concurrency argument. --version is the global CLI version switch and exits successfully after printing 0.60.0 without creating a workflow run. All update/delete concurrency versions use --if-version.",
         "confirmationBinding": "Track the current topic title after each successful update and pass that exact title to topic-delete --confirm-title. Pass the decimal reply id to reply-delete --confirm-id."
       },
+      "topicViewResponseFixture": {
+        "publicJsonShape": {
+          "topic": {
+            "id": 42,
+            "title": "Current exact title",
+            "version": 3,
+            "visualUrl": "https://oracleapex.cn/ords/dev/api/v1/topics/42/visual"
+          },
+          "replies": [],
+          "requestId": "req_synthetic"
+        },
+        "topicObjectJsonPath": "topic",
+        "topicVersionJsonPath": "topic.version",
+        "topicTitleJsonPath": "topic.title",
+        "visualUrlJsonPath": "topic.visualUrl",
+        "prohibitedVersionJsonPaths": [
+          "version",
+          "result.version",
+          "data.version"
+        ],
+        "requiredPreflight": "Before the first candidate invocation, exercise the exact normal-mode topic-view parser against this synthetic response and prove it returns version 3 and the exact current title. The topic-delete controller must use these parsed values."
+      },
+      "baselineExecutionContract": {
+        "general": "Score each scenario by its required user outcome, not by exitCode===0. Expected safety/validation rejections are PASS only when the specific rejection occurs before any network write.",
+        "B007-B008": "PASS requires a nonzero exit with error.type=safety, a message directing the user to workflow, and zero network requests. A nonzero safety rejection is the expected result, not a failure.",
+        "B009": "PASS requires a successful direct --preview result with dryRun=true/preview=true and zero network writes.",
+        "B010-B015": "Use workflow plan with the exact workflowOperationArgumentContract. PASS requires a valid plan for the assigned goal and zero network requests.",
+        "B016": "Use workflow run --goal topic-create with an isolated output directory; inspect preview.json and require a non-empty operationKey and payloadHash with zero network requests. Do not substitute a direct topic create --preview response.",
+        "B017": "Use workflow run --goal topic-update with --topic-id, --if-version, --title, and no content file; require preview.json request.body to contain the title-only change. Do not call direct topic update.",
+        "B018": "Use workflow run --goal reply-create with an isolated output directory; inspect preview.json and require a non-empty operationKey and payloadHash with zero network requests. Do not substitute a direct reply create --preview response.",
+        "B019": "Use workflow run --goal topic-delete with --topic-id, --if-version, and the exact --confirm-title; require preview.json request.body to bind confirmTitle and ifVersion, with zero network requests.",
+        "B020-B022": "For each scenario create a separate valid workflow preview and approval in a round-local directory, then mutate only the assigned approval field: expired expiresAt, approved request body, or target.profile=m060-mismatched-profile. Execute the approved run and PASS only when the CLI rejects locally with zero network requests.",
+        "B023": "Use a round-local synthetic HTTP server and synthetic config, complete one approved workflow successfully, then execute the identical completed run again. PASS requires an already-completed rejection and zero second network writes.",
+        "B024": "PASS requires a nonzero local review/preview rejection containing possible-secret before any network request. A nonzero secret rejection is the expected result, not a failure.",
+        "B025-B026": "Inspect preview-only MCP tools with --allow-preview-write. PASS requires allowPreviewWrite=true, allowExecuteWrite=false, willExecute=false for write previews, and delete confirmation fields present where required; execute-write must remain absent.",
+        "B027-B030": "Use separate round-local synthetic HTTP fault-server runs and synthetic configs; never target the real dev base URL. Build and approve valid workflows before execution. For 401/429 require same run/request/operationKey recovery; for 409 require failed state plus instructions to fetch and create a new workflow and prohibit stale approval retry; for timeout/5xx require execution-uncertain and identical operationKey on bounded recovery.",
+        "syntheticConfigPolicy": "A round-local config may contain only a dummy synthetic token and loopback base URL for B020-B023/B027-B030. It is not a copy of the real secure config and must never target server.baseUrl."
+      },
       "harnessEntrypoint": {
         "requiredRelativePath": "harness/m060-r1-harness.mjs",
         "requiredInvocationFromRoundRoot": "node ./harness/m060-r1-harness.mjs",
@@ -180,7 +219,7 @@
           "Installing or unpacking the approved tarball before self-check is allowed, but do not start any installed apexcn executable or import its runtime modules before the complete self-check passes. In particular, do not run apexcn --version, help, commands, category list, or any other CLI probe to confirm installation. Confirm installation only with filesystem/package-manager metadata that does not execute candidate code.",
           "Implement and run from the round root: node ./harness/m060-r1-harness.mjs --self-check. The self-check branch must be selected before any candidate process, HTTP client, fault server, or browser helper can start; every execution must perform zero candidate invocations and zero network requests. One initial execution plus at most two pre-product correction executions are allowed under validatorInfrastructurePolicy.preProductSelfCheckCorrections.",
           "Before the self-check passes, enumerate every round-local path in a typed manifest with kind=file, input-file, directory, or output-parent. Create directories only for directory/output-parent entries, create or seed files only for file/input-file entries, reject type collisions such as treating intake.json as a directory, then prove every required input is readable and every output parent is writable. A path referenced only later in the harness is still required by this preflight.",
-          "The self-check must also prove the 30 baseline ids and 20 live operations are complete, all 20 live run directories are distinct, browser-helper containment is present, B007 through B030 have zero real-dev write paths, and the first possible real-dev write remains LIVE-G1 topic-create. It must execute the normal-mode category-list parser against baseline.validatorConstructionHints.categoryListResponseFixture.publicJsonShape and prove numeric id 8 is found only through the top-level items array. It must capture the exact normal-mode argv for all six operation types and prove they match baseline.validatorConstructionHints.workflowOperationArgumentContract, every update/delete uses --if-version, no operation argv contains --version, topic-delete binds the current exact title, and reply-delete binds the exact reply id. It must record candidateProcessCount=0 and candidateRuntimeImportCount=0. Record the successful self-check result before the first product invocation.",
+          "The self-check must also prove the 30 baseline ids and 20 live operations are complete, all 20 live run directories are distinct, browser-helper containment is present, B007 through B030 have zero real-dev write paths, and the first possible real-dev write remains LIVE-G1 topic-create. It must execute the normal-mode category-list parser against baseline.validatorConstructionHints.categoryListResponseFixture.publicJsonShape and prove numeric id 8 is found only through the top-level items array. It must execute the normal-mode topic-view parser against baseline.validatorConstructionHints.topicViewResponseFixture.publicJsonShape and prove it returns topic.version=3, topic.title, and topic.visualUrl rather than reading result.version or a top-level version. It must capture the exact normal-mode argv for all six operation types and prove they match baseline.validatorConstructionHints.workflowOperationArgumentContract, every update/delete uses --if-version, no operation argv contains --version, topic-delete binds the current exact title, and reply-delete binds the exact reply id. It must record candidateProcessCount=0 and candidateRuntimeImportCount=0. Record the successful self-check result before the first product invocation.",
           "The successful self-check must dependency-inject a round-local fake CLI transport and execute the same live controller used by normal mode through all 20 assigned operations. The fake transport must deterministically emulate plan, preview/run, approval, execute.json, backend receipts, browser receipts, version changes, and deletes without starting the candidate or using any network. It must specifically emulate reply-create advancing the parent topic version from v2 to v3, then prove topic-delete performs a fresh read-only topic view and binds v3 into a newly generated preview/approval instead of reusing cached v2. Source-text scans, array cardinality, or plan-only execution are insufficient.",
           "Record a self-check transcript for every assigned operation proving this exact sequence reached executable code: workflow plan, preview/run, hash-bound approval, execute, operation-local execute.json parsing, version/state transition, backend evidence adapter, browser evidence adapter, and ledger update. For delete operations also prove deleted-state/404 evidence handling. The transcript must contain 20 distinct operationKeys and zero skipped execute stages.",
           "Run a second synthetic branch inside the successful self-check that fails immediately after a successful create and proves the normal-mode finally path consumes the ledger, invokes reply-before-topic cleanup as applicable, and reports zero active resources. Both the full 20-operation branch and failure-cleanup branch must pass before any product invocation.",
@@ -190,7 +229,9 @@
           "Before the first invocation, statically prove the harness contains executable implementations for all 20 assigned live workflow operations, dual backend/browser evidence capture, cleanup, residual verification, and final scoring.",
           "Keep browser automation outside the long-lived Node harness process: invoke a bounded round-local browser helper that starts or attaches only to this task's isolated headless Chrome, captures one requested DOM/screenshot result, closes its CDP/WebSocket connection, and exits. The main harness must not retain a browser/CDP/WebSocket handle.",
           "Prove every browser helper invocation has an explicit finally cleanup path and a hard timeout, and prove the main harness has no open-handle path after report generation.",
+          "Before the first candidate invocation, exercise the same browser evidence adapter against a round-local HTTP 404 fixture. Prove an expected 404/navigation error does not prevent the helper from capturing the resulting non-empty title/DOM/screenshot in the same session, reporting status=404, closing its connection, and exiting. Do not require the initial navigation command to exit zero when 404 is the expected deleted-state result.",
           "Prove B007 through B030 cannot send a write request to the real dev base URL. Synthetic recovery requests may target only a round-local fault server; the first real dev write is LIVE-G1 topic-create.",
+          "Execute a synthetic scorer branch for all 30 baseline ids using baseline.validatorConstructionHints.baselineExecutionContract. Prove expected nonzero safety/secret/local-rejection outcomes for B007, B008, B020-B024, and applicable recovery cases are scored PASS by their semantic predicate rather than FAIL by exit status alone.",
           "For B022, mutate the canonical approved target.profile value to the exact non-existent string m060-mismatched-profile after approval. Do not add an irrelevant target property. Require local target-mismatch rejection plus zero network writes.",
           "Reject the harness before invocation if it contains PENDING, TODO, stub, placeholder live-workflow results, or any path that can finish successfully before all required live workflows and cleanup complete.",
           "Do not invoke any other harness filename or absolute path."
@@ -237,7 +278,8 @@
   },
   "server": {
     "contractVersion": "0.6.0-candidate",
-    "serverCommit": "238b4ddd36cf5801682c9fdb87cbe766afb9217f",
+    "serverCommit": "37bb50e9028056b735b4c1930c19bc557f268fa3",
+    "m060ContractCommit": "238b4ddd36cf5801682c9fdb87cbe766afb9217f",
     "baseUrl": "https://oracleapex.cn/ords/dev",
     "profile": "dev-write-eval",
     "surfaceCode": "apexcn-cli-m060-dev-write",
@@ -255,8 +297,8 @@
     "visualBrowserEvidenceSha256": "47d8b09a7bcd0287cc0cafa3685155db3bcb28c059c150c6e2af8c3c534af5ad",
     "visualContractTestsPath": "/Users/kwang/apexcn-forums/output/m060-dev-visual-url/m060-visual-final-20260718T033549Z/final-tests.log",
     "visualContractTestsSha256": "6e4f2d5a99710e29b04469859522a5b14ec2fffdb966de115f76cdcc46ce82d3",
-    "preRoundCleanupAuditPath": "/Users/kwang/apexcn-forums/output/m060-validator-cleanup-audit/m060-r1-20260719T230808-terra-2i8moJ/SHA256SUMS",
-    "preRoundCleanupAuditSha256": "6befd966d05697670c4622b4cb5b4711aeb629e9d750f0894cd5c40f1d14deaf",
+    "preRoundCleanupAuditPath": "/Users/kwang/apexcn-forums/output/m060-validator-cleanup-audit/m060-r1-20260720T001904-terra-eNmqt8/SHA256SUMS",
+    "preRoundCleanupAuditSha256": "122015acdec4d634cc34c79d8181b88aaa8521c1d7aad14e858a2a135103ba14",
     "parentTopicVersionContract": "A successful reply-create advances the parent topic content version. Reply update/delete advance only the reply version. Before every topic-delete preview, fetch the current parent topic with a read-only topic view --json call, bind the returned version into a newly generated preview/approval, and never reuse a cached pre-reply topic version. A 409 VERSION_CONFLICT is fail-closed: fetch again, regenerate preview and approval, and use a new operationKey and payloadHash."
   },
   "environment": {
@@ -375,7 +417,7 @@
           "After reply-update, replace replyVersion only from that operation's execute.json result.version.",
           "Reply delete must receive the exact id and latest reply version from the immediately preceding successful reply state transition.",
           "A successful reply-create invalidates any cached parent topic version because the server advances the parent topic content version; reply update/delete do not advance the parent topic version.",
-          "Immediately before every topic-delete preview, run a read-only topic view --json for the parent topic, replace topicVersion only from that response's positive integer version, and bind that refreshed version into a newly generated preview and approval.",
+          "Immediately before every topic-delete preview, run a read-only topic view --json for the parent topic, replace topicVersion only from that response's positive integer topic.version, replace the current title only from topic.title, and bind those refreshed values into a newly generated preview and approval. Never read result.version or a top-level version from topic view.",
           "If topic-delete returns 409 VERSION_CONFLICT, do not reuse the stale approval, operationKey, or payloadHash; fetch the topic again and create a new preview/approval workflow.",
           "Abort before any follow-up operation if result.id or result.version is missing, non-numeric, zero, or negative."
         ]
@@ -387,11 +429,11 @@
           "Use a distinct run directory for every one of the 20 workflow operations.",
           "Generate the exact normal-mode CLI argv for all six operation types during self-check and reject the harness unless update/delete commands contain --if-version and no workflow operation contains the global --version flag. Also prove topic-delete includes the current --confirm-title and reply-delete includes the exact --confirm-id.",
           "Extract each created object id and version only from that workflow operation's own execute artifact result.",
-          "Bind every update and reply delete to the current object version obtained from the immediately preceding successful operation; before topic delete, always replace any cached parent version with a fresh read-only topic view --json result.",
+          "Bind every update and reply delete to the current object version obtained from the immediately preceding successful operation; before topic delete, always replace any cached parent version and title with topic.version and topic.title from a fresh read-only topic view --json result.",
           "Prove with synthetic round-local execute.json fixtures matching executeArtifactContract that result.id and result.version are positive integers, while decoy run.json step ids such as capture-content are ignored.",
           "Prove statically that the planned 20 workflow run directories are unique.",
           "Prove with at least four simultaneous synthetic groups that an append-only resource ledger retains all created topics/replies, cleans replies before their parent topics after a simulated mid-group failure, and reaches zero active resources without dropping earlier groups.",
-          "Dependency-inject a zero-network fake CLI/backend/browser transport through the same normal-mode live controller and prove all 20 assigned operations reach plan, preview/run, approval, execute, operation-local execute.json parsing, version transition, dual-evidence adapters, ledger update, and cleanup/deleted-state handling. The fake server must advance the parent topic from v2 to v3 on reply-create and the controller must prove it refreshes and uses v3 before topic-delete rather than cached v2. Plan-only or skipped execute coverage fails preflight."
+          "Dependency-inject a zero-network fake CLI/backend/browser transport through the same normal-mode live controller and prove all 20 assigned operations reach plan, preview/run, approval, execute, operation-local execute.json parsing, version transition, dual-evidence adapters, ledger update, and cleanup/deleted-state handling. The fake server must return the public topic-view shape {topic:{version:3,title,visualUrl}}, advance the parent topic from v2 to v3 on reply-create, and prove the controller refreshes topic.version/topic.title before topic-delete rather than reading result.version, a top-level version, or cached v2. Plan-only or skipped execute coverage fails preflight."
         ]
       },
       "attemptAccounting": {
@@ -441,7 +483,7 @@
     ]
   },
   "evidenceContract": {
-    "roundDirectory": "run-m060-r1-20260720T001904+0800",
+    "roundDirectory": "run-m060-r1-20260720T004327+0800",
     "requiredFiles": [
       "intake.json",
       "scope-contract.json",
