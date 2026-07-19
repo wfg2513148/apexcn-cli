@@ -2,8 +2,8 @@
   "kind": "apexcn-cli-validator-scope-contract",
   "schemaVersion": 2,
   "milestoneId": "0.6",
-  "assignmentRef": "M060-R1-20260719T020209+0800",
-  "issuedAt": "2026-07-19T02:02:09+08:00",
+  "assignmentRef": "M060-R1-20260719T084204+0800",
+  "issuedAt": "2026-07-19T08:42:04+08:00",
   "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
   "intakeHistory": {
     "excludedThreadIds": [
@@ -20,7 +20,8 @@
       "019f72db-dbe4-7bd3-b4e8-956d05bd1294",
       "019f73ff-7659-7433-8f17-1d2d6e0c1f96",
       "019f7483-0e4e-7a41-88da-32e4a06aa651",
-      "019f7566-f046-7950-b687-cf3891a6bdfc"
+      "019f7566-f046-7950-b687-cf3891a6bdfc",
+      "019f77ca-2b0e-7f62-aa84-b719dc2fbb08"
     ],
     "countsAsProductAttempt": false,
     "admitToIssues": false,
@@ -52,7 +53,7 @@
     "productTestMaterial": "Install and test only this tarball. Git source and worktree files are never product test materials."
   },
   "governance": {
-    "governanceHead": "2f5834f0735425e5b7c0f23b58853af01aeadfdd",
+    "governanceHead": "bb16b4c2822362007b11d08d69d15d3226c1a5df",
     "governanceHeadSemantics": "Latest committed validator-governance state before this scope re-issuance. Current main may advance with later governance-only commits and must not equal candidateCommit.",
     "candidateRefVerificationOnly": true,
     "allowedGitMetadataChecks": [
@@ -188,7 +189,7 @@
     "singleDeterministicAttempt": true,
     "createRoundDirectoryOnlyAfterPass": true,
     "checks": [
-      "Read this scope contract once and hash its file bytes directly.",
+      "Hash this scope contract's file bytes directly before using it. Repeated read-only inspection of this same hash-bound path is allowed when needed to avoid display truncation; verify the raw SHA-256 still matches the issued contract before creating the round directory, and fail intake if it changes.",
       "Read persona.promptPath once and hash its file bytes directly without any text transformation.",
       "Verify persona encoding, trailing-newline flag, byte length, and byte SHA-256.",
       "Verify thread id, cwd, novice persona, model, thinking, candidate version, candidate tag ref, peeled candidate commit, tarball size and SHA-256, governanceHead field, environment hash, allowed materials, and prohibited actions.",
@@ -314,7 +315,7 @@
     ]
   },
   "evidenceContract": {
-    "roundDirectory": "run-m060-r1-20260719T020209+0800",
+    "roundDirectory": "run-m060-r1-20260719T084204+0800",
     "requiredFiles": [
       "intake.json",
       "scope-contract.json",
