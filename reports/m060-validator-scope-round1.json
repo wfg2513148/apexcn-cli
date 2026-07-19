@@ -2,8 +2,8 @@
   "kind": "apexcn-cli-validator-scope-contract",
   "schemaVersion": 2,
   "milestoneId": "0.6",
-  "assignmentRef": "M060-R1-20260719T221612+0800",
-  "issuedAt": "2026-07-19T22:16:12+08:00",
+  "assignmentRef": "M060-R1-20260719T224728+0800",
+  "issuedAt": "2026-07-19T22:47:28+08:00",
   "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
   "intakeHistory": {
     "excludedThreadIds": [
@@ -29,7 +29,8 @@
       "019f7a9e-78a4-7880-8298-41ec7a597b76",
       "019f7aa8-3632-7703-af2a-ced275f01ce9",
       "019f7aad-9957-70c1-8734-59c88f9067e3",
-      "019f7ab8-22d1-7590-90f2-8aee883795a8"
+      "019f7ab8-22d1-7590-90f2-8aee883795a8",
+      "019f7abc-cebf-7802-9866-efaebdb4b2c9"
     ],
     "countsAsProductAttempt": false,
     "admitToIssues": false,
@@ -61,7 +62,7 @@
     "productTestMaterial": "Install and test only this tarball. Git source and worktree files are never product test materials."
   },
   "governance": {
-    "governanceHead": "2b7737bc153bb389f59e33a640605858b557c69f",
+    "governanceHead": "0616c04ec9b74ca2fc762b3bc200134ec79fc0be",
     "governanceHeadSemantics": "Latest committed validator-governance state before this scope re-issuance. Current main may advance with later governance-only commits and must not equal candidateCommit.",
     "candidateRefVerificationOnly": true,
     "allowedGitMetadataChecks": [
@@ -102,7 +103,7 @@
           "Implement and run from the round root: node ./harness/m060-r1-harness.mjs --self-check. The self-check branch must be selected before any candidate process, HTTP client, fault server, or browser helper can start; every execution must perform zero candidate invocations and zero network requests. One initial execution plus at most two pre-product correction executions are allowed under validatorInfrastructurePolicy.preProductSelfCheckCorrections.",
           "Before the self-check passes, enumerate every round-local path in a typed manifest with kind=file, input-file, directory, or output-parent. Create directories only for directory/output-parent entries, create or seed files only for file/input-file entries, reject type collisions such as treating intake.json as a directory, then prove every required input is readable and every output parent is writable. A path referenced only later in the harness is still required by this preflight.",
           "The self-check must also prove the 30 baseline ids and 20 live operations are complete, all 20 live run directories are distinct, browser-helper containment is present, B007 through B030 have zero real-dev write paths, and the first possible real-dev write remains LIVE-G1 topic-create. Record the successful self-check result before the first product invocation.",
-          "The successful self-check must dependency-inject a round-local fake CLI transport and execute the same live controller used by normal mode through all 20 assigned operations. The fake transport must deterministically emulate plan, preview/run, approval, execute.json, backend receipts, browser receipts, version changes, and deletes without starting the candidate or using any network. Source-text scans, array cardinality, or plan-only execution are insufficient.",
+          "The successful self-check must dependency-inject a round-local fake CLI transport and execute the same live controller used by normal mode through all 20 assigned operations. The fake transport must deterministically emulate plan, preview/run, approval, execute.json, backend receipts, browser receipts, version changes, and deletes without starting the candidate or using any network. It must specifically emulate reply-create advancing the parent topic version from v2 to v3, then prove topic-delete performs a fresh read-only topic view and binds v3 into a newly generated preview/approval instead of reusing cached v2. Source-text scans, array cardinality, or plan-only execution are insufficient.",
           "Record a self-check transcript for every assigned operation proving this exact sequence reached executable code: workflow plan, preview/run, hash-bound approval, execute, operation-local execute.json parsing, version/state transition, backend evidence adapter, browser evidence adapter, and ledger update. For delete operations also prove deleted-state/404 evidence handling. The transcript must contain 20 distinct operationKeys and zero skipped execute stages.",
           "Run a second synthetic branch inside the successful self-check that fails immediately after a successful create and proves the normal-mode finally path consumes the ledger, invokes reply-before-topic cleanup as applicable, and reports zero active resources. Both the full 20-operation branch and failure-cleanup branch must pass before any product invocation.",
           "Use an append-only round resource ledger keyed by group id, operationKey, resource type, resource id, version, creation artifact, active/deleted state, and cleanup evidence. Never retain only the latest group or latest object. Every successful topic/reply create must be added before the next live operation; every successful delete must update only its matching ledger entry.",
@@ -158,7 +159,7 @@
   },
   "server": {
     "contractVersion": "0.6.0-candidate",
-    "serverCommit": "1c9ccb981be9bdd7f836d023f3c266816b98e6bd",
+    "serverCommit": "238b4ddd36cf5801682c9fdb87cbe766afb9217f",
     "baseUrl": "https://oracleapex.cn/ords/dev",
     "profile": "dev-write-eval",
     "surfaceCode": "apexcn-cli-m060-dev-write",
@@ -176,8 +177,9 @@
     "visualBrowserEvidenceSha256": "47d8b09a7bcd0287cc0cafa3685155db3bcb28c059c150c6e2af8c3c534af5ad",
     "visualContractTestsPath": "/Users/kwang/apexcn-forums/output/m060-dev-visual-url/m060-visual-final-20260718T033549Z/final-tests.log",
     "visualContractTestsSha256": "6e4f2d5a99710e29b04469859522a5b14ec2fffdb966de115f76cdcc46ce82d3",
-    "preRoundCleanupAuditPath": "/Users/kwang/apexcn-forums/output/m060-validator-cleanup-audit/m060-validator-cleanup-20260718T155228Z/audit.json",
-    "preRoundCleanupAuditSha256": "b7e2c8c9f803129330d85d2847a5c738d6919c9ccf42d140a9eb5eae922727de"
+    "preRoundCleanupAuditPath": "/Users/kwang/apexcn-forums/output/m060-validator-cleanup-audit/m060-r1-20260719T221612-terra-ZfZVlC/SHA256SUMS",
+    "preRoundCleanupAuditSha256": "63417e2644615d992cffb2044aa637e6d6a6983cc17a8dad3c0d2265dec86207",
+    "parentTopicVersionContract": "A successful reply-create advances the parent topic content version. Reply update/delete advance only the reply version. Before every topic-delete preview, fetch the current parent topic with a read-only topic view --json call, bind the returned version into a newly generated preview/approval, and never reuse a cached pre-reply topic version. A 409 VERSION_CONFLICT is fail-closed: fetch again, regenerate preview and approval, and use a new operationKey and payloadHash."
   },
   "environment": {
     "nodeVersion": "v26.0.0",
@@ -286,7 +288,10 @@
           "After topic-update, replace topicVersion only from that operation's execute.json result.version.",
           "After reply-create, set replyId and replyVersion only from that operation's execute.json result.id and result.version.",
           "After reply-update, replace replyVersion only from that operation's execute.json result.version.",
-          "Topic/reply delete must receive the exact id and latest version from the immediately preceding successful state transition.",
+          "Reply delete must receive the exact id and latest reply version from the immediately preceding successful reply state transition.",
+          "A successful reply-create invalidates any cached parent topic version because the server advances the parent topic content version; reply update/delete do not advance the parent topic version.",
+          "Immediately before every topic-delete preview, run a read-only topic view --json for the parent topic, replace topicVersion only from that response's positive integer version, and bind that refreshed version into a newly generated preview and approval.",
+          "If topic-delete returns 409 VERSION_CONFLICT, do not reuse the stale approval, operationKey, or payloadHash; fetch the topic again and create a new preview/approval workflow.",
           "Abort before any follow-up operation if result.id or result.version is missing, non-numeric, zero, or negative."
         ]
       },
@@ -296,11 +301,11 @@
         "requirements": [
           "Use a distinct run directory for every one of the 20 workflow operations.",
           "Extract each created object id and version only from that workflow operation's own execute artifact result.",
-          "Bind every update and delete to the current object version obtained from the immediately preceding successful operation.",
+          "Bind every update and reply delete to the current object version obtained from the immediately preceding successful operation; before topic delete, always replace any cached parent version with a fresh read-only topic view --json result.",
           "Prove with synthetic round-local execute.json fixtures matching executeArtifactContract that result.id and result.version are positive integers, while decoy run.json step ids such as capture-content are ignored.",
           "Prove statically that the planned 20 workflow run directories are unique.",
           "Prove with at least four simultaneous synthetic groups that an append-only resource ledger retains all created topics/replies, cleans replies before their parent topics after a simulated mid-group failure, and reaches zero active resources without dropping earlier groups.",
-          "Dependency-inject a zero-network fake CLI/backend/browser transport through the same normal-mode live controller and prove all 20 assigned operations reach plan, preview/run, approval, execute, operation-local execute.json parsing, version transition, dual-evidence adapters, ledger update, and cleanup/deleted-state handling. Plan-only or skipped execute coverage fails preflight."
+          "Dependency-inject a zero-network fake CLI/backend/browser transport through the same normal-mode live controller and prove all 20 assigned operations reach plan, preview/run, approval, execute, operation-local execute.json parsing, version transition, dual-evidence adapters, ledger update, and cleanup/deleted-state handling. The fake server must advance the parent topic from v2 to v3 on reply-create and the controller must prove it refreshes and uses v3 before topic-delete rather than cached v2. Plan-only or skipped execute coverage fails preflight."
         ]
       },
       "attemptAccounting": {
@@ -350,7 +355,7 @@
     ]
   },
   "evidenceContract": {
-    "roundDirectory": "run-m060-r1-20260719T221612+0800",
+    "roundDirectory": "run-m060-r1-20260719T224728+0800",
     "requiredFiles": [
       "intake.json",
       "scope-contract.json",
