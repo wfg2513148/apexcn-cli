@@ -2,8 +2,8 @@
   "kind": "apexcn-cli-validator-scope-contract",
   "schemaVersion": 2,
   "milestoneId": "0.6",
-  "assignmentRef": "M060-R1-20260719T224728+0800",
-  "issuedAt": "2026-07-19T22:47:28+08:00",
+  "assignmentRef": "M060-R1-20260719T225319+0800",
+  "issuedAt": "2026-07-19T22:53:19+08:00",
   "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
   "intakeHistory": {
     "excludedThreadIds": [
@@ -30,7 +30,9 @@
       "019f7aa8-3632-7703-af2a-ced275f01ce9",
       "019f7aad-9957-70c1-8734-59c88f9067e3",
       "019f7ab8-22d1-7590-90f2-8aee883795a8",
-      "019f7abc-cebf-7802-9866-efaebdb4b2c9"
+      "019f7abc-cebf-7802-9866-efaebdb4b2c9",
+      "019f7ad9-cd25-72c0-8942-f4f63eaa4720",
+      "019f7ada-baec-7430-b364-617e1d6862a3"
     ],
     "countsAsProductAttempt": false,
     "admitToIssues": false,
@@ -62,7 +64,7 @@
     "productTestMaterial": "Install and test only this tarball. Git source and worktree files are never product test materials."
   },
   "governance": {
-    "governanceHead": "0616c04ec9b74ca2fc762b3bc200134ec79fc0be",
+    "governanceHead": "9e489c6493fcee17f484904b575ec7bcc8baf3ae",
     "governanceHeadSemantics": "Latest committed validator-governance state before this scope re-issuance. Current main may advance with later governance-only commits and must not equal candidateCommit.",
     "candidateRefVerificationOnly": true,
     "allowedGitMetadataChecks": [
@@ -210,7 +212,7 @@
     "createRoundDirectoryOnlyAfterPass": true,
     "checks": [
       "Hash this scope contract's file bytes directly before using it. Repeated read-only inspection of this same hash-bound path is allowed when needed to avoid display truncation; verify the raw SHA-256 still matches the issued contract before creating the round directory, and fail intake if it changes.",
-      "Read persona.promptPath once and hash its file bytes directly without any text transformation.",
+      "Read persona.promptPath once and calculate byte length and SHA-256 directly from the original raw bytes before any UTF-8 decode or validation. If a decoder can consume or mutate its input buffer, decode a copy; never calculate length or hash from the post-decode source variable.",
       "Verify persona encoding, trailing-newline flag, byte length, and byte SHA-256.",
       "Verify thread id, cwd, novice persona, model, thinking, candidate version, candidate tag ref, peeled candidate commit, tarball size and SHA-256, governanceHead field, environment hash, allowed materials, and prohibited actions.",
       "Git access is metadata-only: verify the local annotated candidate tag exists and peels to candidateCommit. Do not read Git trees, blobs, diffs, source, tests, or worktree files, and do not compare current main HEAD with candidateCommit.",
@@ -355,7 +357,7 @@
     ]
   },
   "evidenceContract": {
-    "roundDirectory": "run-m060-r1-20260719T224728+0800",
+    "roundDirectory": "run-m060-r1-20260719T225319+0800",
     "requiredFiles": [
       "intake.json",
       "scope-contract.json",
