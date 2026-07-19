@@ -2,8 +2,8 @@
   "kind": "apexcn-cli-validator-scope-contract",
   "schemaVersion": 2,
   "milestoneId": "0.6",
-  "assignmentRef": "M060-R1-20260719T215339+0800",
-  "issuedAt": "2026-07-19T21:53:39+08:00",
+  "assignmentRef": "M060-R1-20260719T215833+0800",
+  "issuedAt": "2026-07-19T21:58:33+08:00",
   "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
   "intakeHistory": {
     "excludedThreadIds": [
@@ -26,7 +26,8 @@
       "019f7a7e-813d-7030-8da0-ebf9fccd8ce9",
       "019f7a85-53cb-77c1-a7e4-66b53e357cea",
       "019f7a90-7e76-7971-a694-46d6682c8c97",
-      "019f7a9e-78a4-7880-8298-41ec7a597b76"
+      "019f7a9e-78a4-7880-8298-41ec7a597b76",
+      "019f7aa8-3632-7703-af2a-ced275f01ce9"
     ],
     "countsAsProductAttempt": false,
     "admitToIssues": false,
@@ -58,7 +59,7 @@
     "productTestMaterial": "Install and test only this tarball. Git source and worktree files are never product test materials."
   },
   "governance": {
-    "governanceHead": "4866952e771b92266863c4eefe40a12f4a3697b7",
+    "governanceHead": "6d6fe17abcac058be9c4528ffe2393489cbcace7",
     "governanceHeadSemantics": "Latest committed validator-governance state before this scope re-issuance. Current main may advance with later governance-only commits and must not equal candidateCommit.",
     "candidateRefVerificationOnly": true,
     "allowedGitMetadataChecks": [
@@ -217,6 +218,7 @@
     "existingUserTabRequired": false,
     "checks": [
       "Use a newly isolated headless Chrome process from the outset with a fresh user-data-dir and a unique validator session/namespace. Do not connect to Profile 11, the Chrome extension, the Codex in-app browser, another task's browser, screenshots from another task, or a database-only check.",
+      "Choose the unique agent-browser session and namespace as short ASCII identifiers before the only readiness attempt: each must be 20 characters or fewer, contain only lowercase letters, digits, and hyphens, and keep the resulting Unix socket path at or below the driver's 103-byte limit. A recommended form is m060r1- followed by six lowercase hex characters. Do not embed the full thread id, assignmentRef, timestamp, or absolute path.",
       "Record a non-sensitive isolated-browser identity using the fresh user-data-dir basename and unique validator session/namespace plus at least one launcher or process-liveness marker exposed by the chosen browser driver. Record an OS PID when the driver exposes one, but pid=null alone must not fail this gate when isolation, fresh DOM, nonzero screenshot, liveness, and cleanup are independently proven. Never inspect, copy, import, or export cookies, storage, profiles, passwords, or session data.",
       "Before any candidate install or write attempt, navigate freshly to https://oracleapex.cn/ords/f?p=100:1 and require a normal APEX page title plus a successful fresh DOM snapshot and screenshot. A crashed tab, login blocker, Session state protection violation, or other APEX error page fails this gate.",
       "Use the existing minimum-privilege dev-write-eval account only for approved API operations. Browser evidence must independently prove end-user rendering and accessibility from the stable visual URL returned by the dev contract without exposing credentials."
@@ -333,7 +335,7 @@
     ]
   },
   "evidenceContract": {
-    "roundDirectory": "run-m060-r1-20260719T215339+0800",
+    "roundDirectory": "run-m060-r1-20260719T215833+0800",
     "requiredFiles": [
       "intake.json",
       "scope-contract.json",
@@ -383,7 +385,7 @@
     "Do not read /Users/kwang/apexcn-cli source files or unbundled implementation details.",
     "Do not move, recreate, delete, or push candidate.candidateTagRef, and do not inspect its commit tree or blobs.",
     "Do not open or reuse any previous validator task, old harness, old run directory, or historical screenshot.",
-    "Do not open or reuse intake-only tasks 019f7284-68d0-77c3-bd2a-7afcf2f0c90a, 019f7299-dc87-7b51-875d-2daffff6263c, 019f72b0-13f6-7552-9533-812ee1ba420a, and 019f72c6-8013-7b33-b1b5-576e02104acc; infrastructure-invalid tasks 019f7289-e577-7de1-8fc1-911b8acc812e, 019f729e-5949-7d03-98f6-45c70a1024e1, 019f72ab-5fb7-76b1-bba0-c08aa0a85f35, 019f72b2-7d5b-7011-aa43-ebd55ad662c6, 019f72ba-437f-7c42-b7d7-b841bf9dfe04, 019f72d2-57cd-7d42-b523-8631bac24ceb, 019f72db-dbe4-7bd3-b4e8-956d05bd1294, 019f7a7e-813d-7030-8da0-ebf9fccd8ce9, 019f7a85-53cb-77c1-a7e4-66b53e357cea, 019f7a90-7e76-7971-a694-46d6682c8c97, and 019f7a9e-78a4-7880-8298-41ec7a597b76; or any directory/harness/evidence created by those tasks.",
+    "Do not open or reuse intake-only tasks 019f7284-68d0-77c3-bd2a-7afcf2f0c90a, 019f7299-dc87-7b51-875d-2daffff6263c, 019f72b0-13f6-7552-9533-812ee1ba420a, and 019f72c6-8013-7b33-b1b5-576e02104acc; infrastructure-invalid tasks 019f7289-e577-7de1-8fc1-911b8acc812e, 019f729e-5949-7d03-98f6-45c70a1024e1, 019f72ab-5fb7-76b1-bba0-c08aa0a85f35, 019f72b2-7d5b-7011-aa43-ebd55ad662c6, 019f72ba-437f-7c42-b7d7-b841bf9dfe04, 019f72d2-57cd-7d42-b523-8631bac24ceb, 019f72db-dbe4-7bd3-b4e8-956d05bd1294, 019f7a7e-813d-7030-8da0-ebf9fccd8ce9, 019f7a85-53cb-77c1-a7e4-66b53e357cea, 019f7a90-7e76-7971-a694-46d6682c8c97, 019f7a9e-78a4-7880-8298-41ec7a597b76, and 019f7aa8-3632-7703-af2a-ced275f01ce9; or any directory/harness/evidence created by those tasks.",
     "Do not use hidden subagents as the validator.",
     "Do not create another community account.",
     "Do not print, copy, persist, attach, or expose any API key.",
