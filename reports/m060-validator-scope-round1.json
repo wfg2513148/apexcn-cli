@@ -2,8 +2,8 @@
   "kind": "apexcn-cli-validator-scope-contract",
   "schemaVersion": 2,
   "milestoneId": "0.6",
-  "assignmentRef": "M060-R1-20260719T234139+0800",
-  "issuedAt": "2026-07-19T23:41:39+08:00",
+  "assignmentRef": "M060-R1-20260720T001904+0800",
+  "issuedAt": "2026-07-20T00:19:04+08:00",
   "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
   "intakeHistory": {
     "excludedThreadIds": [
@@ -35,7 +35,8 @@
       "019f7ada-baec-7430-b364-617e1d6862a3",
       "019f7adf-5b2b-7f90-9b14-dcdf2b657264",
       "019f7aec-4856-7c33-81e2-e1a851cf348e",
-      "019f7b05-3b85-7e12-b34d-71c31735af57"
+      "019f7b05-3b85-7e12-b34d-71c31735af57",
+      "019f7b0b-5833-72d3-9c22-fdc26c1f5899"
     ],
     "countsAsProductAttempt": false,
     "admitToIssues": false,
@@ -67,7 +68,7 @@
     "productTestMaterial": "Install and test only this tarball. Git source and worktree files are never product test materials."
   },
   "governance": {
-    "governanceHead": "3fb135a2e06fb81c5b8079278044770472fdbe3b",
+    "governanceHead": "e88b6434c88f5abca375753d10790f49fa411ebd",
     "governanceHeadSemantics": "Latest committed validator-governance state before this scope re-issuance. Current main may advance with later governance-only commits and must not equal candidateCommit.",
     "candidateRefVerificationOnly": true,
     "allowedGitMetadataChecks": [
@@ -176,9 +177,10 @@
         "preExecutionChecks": [
           "Confirm the requiredRelativePath exists as a regular file.",
           "Run node --check ./harness/m060-r1-harness.mjs.",
+          "Installing or unpacking the approved tarball before self-check is allowed, but do not start any installed apexcn executable or import its runtime modules before the complete self-check passes. In particular, do not run apexcn --version, help, commands, category list, or any other CLI probe to confirm installation. Confirm installation only with filesystem/package-manager metadata that does not execute candidate code.",
           "Implement and run from the round root: node ./harness/m060-r1-harness.mjs --self-check. The self-check branch must be selected before any candidate process, HTTP client, fault server, or browser helper can start; every execution must perform zero candidate invocations and zero network requests. One initial execution plus at most two pre-product correction executions are allowed under validatorInfrastructurePolicy.preProductSelfCheckCorrections.",
           "Before the self-check passes, enumerate every round-local path in a typed manifest with kind=file, input-file, directory, or output-parent. Create directories only for directory/output-parent entries, create or seed files only for file/input-file entries, reject type collisions such as treating intake.json as a directory, then prove every required input is readable and every output parent is writable. A path referenced only later in the harness is still required by this preflight.",
-          "The self-check must also prove the 30 baseline ids and 20 live operations are complete, all 20 live run directories are distinct, browser-helper containment is present, B007 through B030 have zero real-dev write paths, and the first possible real-dev write remains LIVE-G1 topic-create. It must execute the normal-mode category-list parser against baseline.validatorConstructionHints.categoryListResponseFixture.publicJsonShape and prove numeric id 8 is found only through the top-level items array. It must capture the exact normal-mode argv for all six operation types and prove they match baseline.validatorConstructionHints.workflowOperationArgumentContract, every update/delete uses --if-version, no operation argv contains --version, topic-delete binds the current exact title, and reply-delete binds the exact reply id. Record the successful self-check result before the first product invocation.",
+          "The self-check must also prove the 30 baseline ids and 20 live operations are complete, all 20 live run directories are distinct, browser-helper containment is present, B007 through B030 have zero real-dev write paths, and the first possible real-dev write remains LIVE-G1 topic-create. It must execute the normal-mode category-list parser against baseline.validatorConstructionHints.categoryListResponseFixture.publicJsonShape and prove numeric id 8 is found only through the top-level items array. It must capture the exact normal-mode argv for all six operation types and prove they match baseline.validatorConstructionHints.workflowOperationArgumentContract, every update/delete uses --if-version, no operation argv contains --version, topic-delete binds the current exact title, and reply-delete binds the exact reply id. It must record candidateProcessCount=0 and candidateRuntimeImportCount=0. Record the successful self-check result before the first product invocation.",
           "The successful self-check must dependency-inject a round-local fake CLI transport and execute the same live controller used by normal mode through all 20 assigned operations. The fake transport must deterministically emulate plan, preview/run, approval, execute.json, backend receipts, browser receipts, version changes, and deletes without starting the candidate or using any network. It must specifically emulate reply-create advancing the parent topic version from v2 to v3, then prove topic-delete performs a fresh read-only topic view and binds v3 into a newly generated preview/approval instead of reusing cached v2. Source-text scans, array cardinality, or plan-only execution are insufficient.",
           "Record a self-check transcript for every assigned operation proving this exact sequence reached executable code: workflow plan, preview/run, hash-bound approval, execute, operation-local execute.json parsing, version/state transition, backend evidence adapter, browser evidence adapter, and ledger update. For delete operations also prove deleted-state/404 evidence handling. The transcript must contain 20 distinct operationKeys and zero skipped execute stages.",
           "Run a second synthetic branch inside the successful self-check that fails immediately after a successful create and proves the normal-mode finally path consumes the ledger, invokes reply-before-topic cleanup as applicable, and reports zero active resources. Both the full 20-operation branch and failure-cleanup branch must pass before any product invocation.",
@@ -314,6 +316,7 @@
   },
   "validatorInfrastructurePolicy": {
     "anyHarnessErrorAfterFirstProductInvocationInvalidatesTask": true,
+    "candidateProcessGate": "The successful complete self-check is the only event that opens candidate execution. Tarball install is not permission to invoke it. B001 install evidence uses package-manager/filesystem metadata only; B002 --version and every other candidate CLI baseline probe run only after self-check has passed and frozen the harness.",
     "appliesTo": [
       "baseline construction or execution",
       "synthetic preflight",
@@ -438,7 +441,7 @@
     ]
   },
   "evidenceContract": {
-    "roundDirectory": "run-m060-r1-20260719T234139+0800",
+    "roundDirectory": "run-m060-r1-20260720T001904+0800",
     "requiredFiles": [
       "intake.json",
       "scope-contract.json",
