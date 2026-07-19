@@ -2,8 +2,8 @@
   "kind": "apexcn-cli-validator-scope-contract",
   "schemaVersion": 2,
   "milestoneId": "0.6",
-  "assignmentRef": "M060-R1-20260719T230808+0800",
-  "issuedAt": "2026-07-19T23:08:08+08:00",
+  "assignmentRef": "M060-R1-20260719T233005+0800",
+  "issuedAt": "2026-07-19T23:30:05+08:00",
   "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
   "intakeHistory": {
     "excludedThreadIds": [
@@ -33,7 +33,8 @@
       "019f7abc-cebf-7802-9866-efaebdb4b2c9",
       "019f7ad9-cd25-72c0-8942-f4f63eaa4720",
       "019f7ada-baec-7430-b364-617e1d6862a3",
-      "019f7adf-5b2b-7f90-9b14-dcdf2b657264"
+      "019f7adf-5b2b-7f90-9b14-dcdf2b657264",
+      "019f7aec-4856-7c33-81e2-e1a851cf348e"
     ],
     "countsAsProductAttempt": false,
     "admitToIssues": false,
@@ -65,7 +66,7 @@
     "productTestMaterial": "Install and test only this tarball. Git source and worktree files are never product test materials."
   },
   "governance": {
-    "governanceHead": "a830c989244a7014803713934b55075285506b7d",
+    "governanceHead": "ab600a18a4cc9ed04cb6a7ea6b650003515891be",
     "governanceHeadSemantics": "Latest committed validator-governance state before this scope re-issuance. Current main may advance with later governance-only commits and must not equal candidateCommit.",
     "candidateRefVerificationOnly": true,
     "allowedGitMetadataChecks": [
@@ -114,6 +115,60 @@
         ],
         "requiredPreflight": "Before the first candidate invocation, exercise the exact normal-mode category-list parser against this synthetic response and prove it finds numeric id 8. Do not infer this shape from source code or repair it after the real category-list call."
       },
+      "workflowOperationArgumentContract": {
+        "topic-create": {
+          "requiredArgs": [
+            "--category-id",
+            "--title",
+            "--content-file",
+            "--output-dir"
+          ]
+        },
+        "topic-update": {
+          "requiredArgs": [
+            "--topic-id",
+            "--if-version",
+            "--output-dir"
+          ],
+          "atLeastOneOf": [
+            "--title",
+            "--content-file"
+          ]
+        },
+        "topic-delete": {
+          "requiredArgs": [
+            "--topic-id",
+            "--if-version",
+            "--confirm-title",
+            "--output-dir"
+          ]
+        },
+        "reply-create": {
+          "requiredArgs": [
+            "--topic-id",
+            "--content-file",
+            "--output-dir"
+          ]
+        },
+        "reply-update": {
+          "requiredArgs": [
+            "--reply-id",
+            "--if-version",
+            "--content-file",
+            "--output-dir"
+          ]
+        },
+        "reply-delete": {
+          "requiredArgs": [
+            "--reply-id",
+            "--if-version",
+            "--confirm-id",
+            "--output-dir"
+          ]
+        },
+        "globalVersionFlagProhibition": "Never pass --version as an object concurrency argument. --version is the global CLI version switch and exits successfully after printing 0.60.0 without creating a workflow run. All update/delete concurrency versions use --if-version.",
+        "confirmationBinding": "Track the current topic title after each successful update and pass that exact title to topic-delete --confirm-title. Pass the decimal reply id to reply-delete --confirm-id."
+      },
       "harnessEntrypoint": {
         "requiredRelativePath": "harness/m060-r1-harness.mjs",
         "requiredInvocationFromRoundRoot": "node ./harness/m060-r1-harness.mjs",
@@ -122,7 +177,7 @@
           "Run node --check ./harness/m060-r1-harness.mjs.",
           "Implement and run from the round root: node ./harness/m060-r1-harness.mjs --self-check. The self-check branch must be selected before any candidate process, HTTP client, fault server, or browser helper can start; every execution must perform zero candidate invocations and zero network requests. One initial execution plus at most two pre-product correction executions are allowed under validatorInfrastructurePolicy.preProductSelfCheckCorrections.",
           "Before the self-check passes, enumerate every round-local path in a typed manifest with kind=file, input-file, directory, or output-parent. Create directories only for directory/output-parent entries, create or seed files only for file/input-file entries, reject type collisions such as treating intake.json as a directory, then prove every required input is readable and every output parent is writable. A path referenced only later in the harness is still required by this preflight.",
-          "The self-check must also prove the 30 baseline ids and 20 live operations are complete, all 20 live run directories are distinct, browser-helper containment is present, B007 through B030 have zero real-dev write paths, and the first possible real-dev write remains LIVE-G1 topic-create. It must execute the normal-mode category-list parser against baseline.validatorConstructionHints.categoryListResponseFixture.publicJsonShape and prove numeric id 8 is found only through the top-level items array. Record the successful self-check result before the first product invocation.",
+          "The self-check must also prove the 30 baseline ids and 20 live operations are complete, all 20 live run directories are distinct, browser-helper containment is present, B007 through B030 have zero real-dev write paths, and the first possible real-dev write remains LIVE-G1 topic-create. It must execute the normal-mode category-list parser against baseline.validatorConstructionHints.categoryListResponseFixture.publicJsonShape and prove numeric id 8 is found only through the top-level items array. It must capture the exact normal-mode argv for all six operation types and prove they match baseline.validatorConstructionHints.workflowOperationArgumentContract, every update/delete uses --if-version, no operation argv contains --version, topic-delete binds the current exact title, and reply-delete binds the exact reply id. Record the successful self-check result before the first product invocation.",
           "The successful self-check must dependency-inject a round-local fake CLI transport and execute the same live controller used by normal mode through all 20 assigned operations. The fake transport must deterministically emulate plan, preview/run, approval, execute.json, backend receipts, browser receipts, version changes, and deletes without starting the candidate or using any network. It must specifically emulate reply-create advancing the parent topic version from v2 to v3, then prove topic-delete performs a fresh read-only topic view and binds v3 into a newly generated preview/approval instead of reusing cached v2. Source-text scans, array cardinality, or plan-only execution are insufficient.",
           "Record a self-check transcript for every assigned operation proving this exact sequence reached executable code: workflow plan, preview/run, hash-bound approval, execute, operation-local execute.json parsing, version/state transition, backend evidence adapter, browser evidence adapter, and ledger update. For delete operations also prove deleted-state/404 evidence handling. The transcript must contain 20 distinct operationKeys and zero skipped execute stages.",
           "Run a second synthetic branch inside the successful self-check that fails immediately after a successful create and proves the normal-mode finally path consumes the ledger, invokes reply-before-topic cleanup as applicable, and reports zero active resources. Both the full 20-operation branch and failure-cleanup branch must pass before any product invocation.",
@@ -320,6 +375,7 @@
         "networkWritesAllowed": false,
         "requirements": [
           "Use a distinct run directory for every one of the 20 workflow operations.",
+          "Generate the exact normal-mode CLI argv for all six operation types during self-check and reject the harness unless update/delete commands contain --if-version and no workflow operation contains the global --version flag. Also prove topic-delete includes the current --confirm-title and reply-delete includes the exact --confirm-id.",
           "Extract each created object id and version only from that workflow operation's own execute artifact result.",
           "Bind every update and reply delete to the current object version obtained from the immediately preceding successful operation; before topic delete, always replace any cached parent version with a fresh read-only topic view --json result.",
           "Prove with synthetic round-local execute.json fixtures matching executeArtifactContract that result.id and result.version are positive integers, while decoy run.json step ids such as capture-content are ignored.",
@@ -375,7 +431,7 @@
     ]
   },
   "evidenceContract": {
-    "roundDirectory": "run-m060-r1-20260719T230808+0800",
+    "roundDirectory": "run-m060-r1-20260719T233005+0800",
     "requiredFiles": [
       "intake.json",
       "scope-contract.json",
