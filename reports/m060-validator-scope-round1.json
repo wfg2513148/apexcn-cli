@@ -2,8 +2,8 @@
   "kind": "apexcn-cli-validator-scope-contract",
   "schemaVersion": 2,
   "milestoneId": "0.6",
-  "assignmentRef": "M060-R1-20260719T233005+0800",
-  "issuedAt": "2026-07-19T23:30:05+08:00",
+  "assignmentRef": "M060-R1-20260719T233457+0800",
+  "issuedAt": "2026-07-19T23:34:57+08:00",
   "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
   "intakeHistory": {
     "excludedThreadIds": [
@@ -66,7 +66,7 @@
     "productTestMaterial": "Install and test only this tarball. Git source and worktree files are never product test materials."
   },
   "governance": {
-    "governanceHead": "ab600a18a4cc9ed04cb6a7ea6b650003515891be",
+    "governanceHead": "184b2c044a53afbc913d9cf5adc29d8f5f398d50",
     "governanceHeadSemantics": "Latest committed validator-governance state before this scope re-issuance. Current main may advance with later governance-only commits and must not equal candidateCommit.",
     "candidateRefVerificationOnly": true,
     "allowedGitMetadataChecks": [
@@ -252,8 +252,8 @@
     "visualBrowserEvidenceSha256": "47d8b09a7bcd0287cc0cafa3685155db3bcb28c059c150c6e2af8c3c534af5ad",
     "visualContractTestsPath": "/Users/kwang/apexcn-forums/output/m060-dev-visual-url/m060-visual-final-20260718T033549Z/final-tests.log",
     "visualContractTestsSha256": "6e4f2d5a99710e29b04469859522a5b14ec2fffdb966de115f76cdcc46ce82d3",
-    "preRoundCleanupAuditPath": "/Users/kwang/apexcn-forums/output/m060-validator-cleanup-audit/m060-r1-20260719T221612-terra-ZfZVlC/SHA256SUMS",
-    "preRoundCleanupAuditSha256": "63417e2644615d992cffb2044aa637e6d6a6983cc17a8dad3c0d2265dec86207",
+    "preRoundCleanupAuditPath": "/Users/kwang/apexcn-forums/output/m060-validator-cleanup-audit/m060-r1-20260719T230808-terra-2i8moJ/SHA256SUMS",
+    "preRoundCleanupAuditSha256": "6befd966d05697670c4622b4cb5b4711aeb629e9d750f0894cd5c40f1d14deaf",
     "parentTopicVersionContract": "A successful reply-create advances the parent topic content version. Reply update/delete advance only the reply version. Before every topic-delete preview, fetch the current parent topic with a read-only topic view --json call, bind the returned version into a newly generated preview/approval, and never reuse a cached pre-reply topic version. A 409 VERSION_CONFLICT is fail-closed: fetch again, regenerate preview and approval, and use a new operationKey and payloadHash."
   },
   "environment": {
@@ -431,7 +431,7 @@
     ]
   },
   "evidenceContract": {
-    "roundDirectory": "run-m060-r1-20260719T233005+0800",
+    "roundDirectory": "run-m060-r1-20260719T233457+0800",
     "requiredFiles": [
       "intake.json",
       "scope-contract.json",
