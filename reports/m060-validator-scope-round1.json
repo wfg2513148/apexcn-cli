@@ -2,8 +2,8 @@
   "kind": "apexcn-cli-validator-scope-contract",
   "schemaVersion": 2,
   "milestoneId": "0.6",
-  "assignmentRef": "M060-R1-20260719T233457+0800",
-  "issuedAt": "2026-07-19T23:34:57+08:00",
+  "assignmentRef": "M060-R1-20260719T234139+0800",
+  "issuedAt": "2026-07-19T23:41:39+08:00",
   "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
   "intakeHistory": {
     "excludedThreadIds": [
@@ -34,7 +34,8 @@
       "019f7ad9-cd25-72c0-8942-f4f63eaa4720",
       "019f7ada-baec-7430-b364-617e1d6862a3",
       "019f7adf-5b2b-7f90-9b14-dcdf2b657264",
-      "019f7aec-4856-7c33-81e2-e1a851cf348e"
+      "019f7aec-4856-7c33-81e2-e1a851cf348e",
+      "019f7b05-3b85-7e12-b34d-71c31735af57"
     ],
     "countsAsProductAttempt": false,
     "admitToIssues": false,
@@ -66,7 +67,7 @@
     "productTestMaterial": "Install and test only this tarball. Git source and worktree files are never product test materials."
   },
   "governance": {
-    "governanceHead": "184b2c044a53afbc913d9cf5adc29d8f5f398d50",
+    "governanceHead": "3fb135a2e06fb81c5b8079278044770472fdbe3b",
     "governanceHeadSemantics": "Latest committed validator-governance state before this scope re-issuance. Current main may advance with later governance-only commits and must not equal candidateCommit.",
     "candidateRefVerificationOnly": true,
     "allowedGitMetadataChecks": [
@@ -295,11 +296,17 @@
   "browserReadinessGate": {
     "mustPassBeforeRoundDirectoryOrCandidateInstall": true,
     "existingUserTabRequired": false,
+    "readinessUrl": "https://oracleapex.cn/ords/f?p=100:1",
+    "prohibitedReadinessUrls": [
+      "https://oracleapex.cn/ords/dev",
+      "https://oracleapex.cn/ords/dev/"
+    ],
+    "requiredPageClassification": "normal APEX application page with a non-empty non-error title; Not Found, 404, Session State Protection violation, login blocker, about:blank, and empty title/DOM are failures",
     "checks": [
       "Use a newly isolated headless Chrome process from the outset with a fresh user-data-dir and a unique validator session/namespace. Do not connect to Profile 11, the Chrome extension, the Codex in-app browser, another task's browser, screenshots from another task, or a database-only check.",
       "Choose the unique agent-browser session and namespace as short ASCII identifiers before the single browser-process readiness gate: each must be 20 characters or fewer, contain only lowercase letters, digits, and hyphens, and keep the resulting Unix socket path at or below the driver's 103-byte limit. A recommended form is m060r1- followed by six lowercase hex characters. Do not embed the full thread id, assignmentRef, timestamp, or absolute path.",
       "Record a non-sensitive isolated-browser identity using the fresh user-data-dir basename and unique validator session/namespace plus at least one launcher or process-liveness marker exposed by the chosen browser driver. Record an OS PID when the driver exposes one, but pid=null alone must not fail this gate when isolation, fresh DOM, nonzero screenshot, liveness, and cleanup are independently proven. Never inspect, copy, import, or export cookies, storage, profiles, passwords, or session data.",
-      "Before any candidate install or write attempt, launch exactly one fresh isolated Chrome process and navigate to https://oracleapex.cn/ords/f?p=100:1. Wait for DOM content and network idle, then require the final URL to be on oracleapex.cn, a normal APEX page title, a non-empty fresh DOM snapshot, and a nonzero screenshot.",
+      "Before any candidate install or write attempt, launch exactly one fresh isolated Chrome process and navigate to browserReadinessGate.readinessUrl exactly. Do not substitute server.baseUrl, /ords/dev, a visual URL, or any other URL. Wait for DOM content and network idle, then require the final URL to be on oracleapex.cn, a normal APEX page title, a non-empty fresh DOM snapshot, and a nonzero screenshot. Explicitly reject Not Found/404 even when its DOM and screenshot are non-empty.",
       "If the first navigation in that same fresh process ends at about:blank, has an empty title/DOM, or times out before a response, record the first result and allow exactly one explicit re-navigation to the same URL in the same session/process after a short bounded wait. Do not relaunch Chrome, change profile/session/namespace, attach another browser, or discard the first evidence. Any second failure, crashed tab, login blocker, Session state protection violation, or other APEX error page fails the gate.",
       "Use the existing minimum-privilege dev-write-eval account only for approved API operations. Browser evidence must independently prove end-user rendering and accessibility from the stable visual URL returned by the dev contract without exposing credentials."
     ],
@@ -431,7 +438,7 @@
     ]
   },
   "evidenceContract": {
-    "roundDirectory": "run-m060-r1-20260719T233457+0800",
+    "roundDirectory": "run-m060-r1-20260719T234139+0800",
     "requiredFiles": [
       "intake.json",
       "scope-contract.json",
