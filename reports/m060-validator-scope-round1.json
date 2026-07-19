@@ -2,8 +2,8 @@
   "kind": "apexcn-cli-validator-scope-contract",
   "schemaVersion": 2,
   "milestoneId": "0.6",
-  "assignmentRef": "M060-R1-20260719T215833+0800",
-  "issuedAt": "2026-07-19T21:58:33+08:00",
+  "assignmentRef": "M060-R1-20260719T221043+0800",
+  "issuedAt": "2026-07-19T22:10:43+08:00",
   "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
   "intakeHistory": {
     "excludedThreadIds": [
@@ -27,7 +27,8 @@
       "019f7a85-53cb-77c1-a7e4-66b53e357cea",
       "019f7a90-7e76-7971-a694-46d6682c8c97",
       "019f7a9e-78a4-7880-8298-41ec7a597b76",
-      "019f7aa8-3632-7703-af2a-ced275f01ce9"
+      "019f7aa8-3632-7703-af2a-ced275f01ce9",
+      "019f7aad-9957-70c1-8734-59c88f9067e3"
     ],
     "countsAsProductAttempt": false,
     "admitToIssues": false,
@@ -59,7 +60,7 @@
     "productTestMaterial": "Install and test only this tarball. Git source and worktree files are never product test materials."
   },
   "governance": {
-    "governanceHead": "6d6fe17abcac058be9c4528ffe2393489cbcace7",
+    "governanceHead": "3b2668d91a87e7a46fe482a889cee20dc9b3e5d6",
     "governanceHeadSemantics": "Latest committed validator-governance state before this scope re-issuance. Current main may advance with later governance-only commits and must not equal candidateCommit.",
     "candidateRefVerificationOnly": true,
     "allowedGitMetadataChecks": [
@@ -97,14 +98,14 @@
         "preExecutionChecks": [
           "Confirm the requiredRelativePath exists as a regular file.",
           "Run node --check ./harness/m060-r1-harness.mjs.",
-          "Implement and run exactly once from the round root: node ./harness/m060-r1-harness.mjs --self-check. The self-check branch must be selected before any candidate process, HTTP client, fault server, or browser helper can start; it must perform zero candidate invocations and zero network requests.",
-          "Before the self-check passes, enumerate every round-local input, content, operation, output, evidence, screenshot, temporary, and cleanup path that any baseline or live workflow will open. Create all required parent directories and seed input files, then prove every required input is readable and every output parent is writable. A path referenced only later in the harness is still required by this preflight.",
+          "Implement and run from the round root: node ./harness/m060-r1-harness.mjs --self-check. The self-check branch must be selected before any candidate process, HTTP client, fault server, or browser helper can start; every execution must perform zero candidate invocations and zero network requests. One initial execution plus at most two pre-product correction executions are allowed under validatorInfrastructurePolicy.preProductSelfCheckCorrections.",
+          "Before the self-check passes, enumerate every round-local path in a typed manifest with kind=file, input-file, directory, or output-parent. Create directories only for directory/output-parent entries, create or seed files only for file/input-file entries, reject type collisions such as treating intake.json as a directory, then prove every required input is readable and every output parent is writable. A path referenced only later in the harness is still required by this preflight.",
           "The self-check must also prove the 30 baseline ids and 20 live operations are complete, all 20 live run directories are distinct, browser-helper containment is present, B007 through B030 have zero real-dev write paths, and the first possible real-dev write remains LIVE-G1 topic-create. Record the successful self-check result before the first product invocation.",
-          "The single self-check must dependency-inject a round-local fake CLI transport and execute the same live controller used by normal mode through all 20 assigned operations. The fake transport must deterministically emulate plan, preview/run, approval, execute.json, backend receipts, browser receipts, version changes, and deletes without starting the candidate or using any network. Source-text scans, array cardinality, or plan-only execution are insufficient.",
+          "The successful self-check must dependency-inject a round-local fake CLI transport and execute the same live controller used by normal mode through all 20 assigned operations. The fake transport must deterministically emulate plan, preview/run, approval, execute.json, backend receipts, browser receipts, version changes, and deletes without starting the candidate or using any network. Source-text scans, array cardinality, or plan-only execution are insufficient.",
           "Record a self-check transcript for every assigned operation proving this exact sequence reached executable code: workflow plan, preview/run, hash-bound approval, execute, operation-local execute.json parsing, version/state transition, backend evidence adapter, browser evidence adapter, and ledger update. For delete operations also prove deleted-state/404 evidence handling. The transcript must contain 20 distinct operationKeys and zero skipped execute stages.",
-          "Run a second synthetic branch inside the same single self-check that fails immediately after a successful create and proves the normal-mode finally path consumes the ledger, invokes reply-before-topic cleanup as applicable, and reports zero active resources. Both the full 20-operation branch and failure-cleanup branch must pass before any product invocation.",
+          "Run a second synthetic branch inside the successful self-check that fails immediately after a successful create and proves the normal-mode finally path consumes the ledger, invokes reply-before-topic cleanup as applicable, and reports zero active resources. Both the full 20-operation branch and failure-cleanup branch must pass before any product invocation.",
           "Use an append-only round resource ledger keyed by group id, operationKey, resource type, resource id, version, creation artifact, active/deleted state, and cleanup evidence. Never retain only the latest group or latest object. Every successful topic/reply create must be added before the next live operation; every successful delete must update only its matching ledger entry.",
-          "Before the first product invocation, use synthetic fixtures for at least four simultaneous groups to prove the ledger retains every created topic/reply, schedules reply cleanup before parent topic cleanup in reverse dependency order, survives a simulated mid-group failure, and reaches zero active resources without discarding earlier groups. This proof is part of the single self-check, not a later audit.",
+          "Before the first product invocation, use synthetic fixtures for at least four simultaneous groups to prove the ledger retains every created topic/reply, schedules reply cleanup before parent topic cleanup in reverse dependency order, survives a simulated mid-group failure, and reaches zero active resources without discarding earlier groups. This proof is part of the successful self-check, not a later product audit.",
           "The main harness must wrap the entire live phase in finally cleanup that reads the complete ledger and attempts bounded cleanup for every still-active approved resource, then performs read-only residual verification. A live failure may stop new writes but must not bypass ledger-driven cleanup or final residual reporting.",
           "Before the first invocation, statically prove the harness contains executable implementations for all 20 assigned live workflow operations, dual backend/browser evidence capture, cleanup, residual verification, and final scoring.",
           "Keep browser automation outside the long-lived Node harness process: invoke a bounded round-local browser helper that starts or attaches only to this task's isolated headless Chrome, captures one requested DOM/screenshot result, closes its CDP/WebSocket connection, and exits. The main harness must not retain a browser/CDP/WebSocket handle.",
@@ -226,15 +227,27 @@
     "onFailure": "Stop before creating a round directory or installing the candidate. Report BLOCKED_ENVIRONMENT with zero product attempts, zero writes, zero score, and zero issues. Do not retry browser setup in the same validator task."
   },
   "validatorInfrastructurePolicy": {
-    "anyHarnessErrorInvalidatesTask": true,
+    "anyHarnessErrorAfterFirstProductInvocationInvalidatesTask": true,
     "appliesTo": [
       "baseline construction or execution",
       "synthetic preflight",
       "live workflows",
       "scoring and evidence generation"
     ],
-    "sameTaskRepairOrRerunAllowed": false,
-    "onFailure": "Stop immediately. Do not repair and rerun. If no live write occurred, record INFRASTRUCTURE_INVALIDATED, prove zero real-dev write network requests from the immutable round ledger, mark object cleanup not_applicable, and exit; do not substitute a failing residual API probe for the zero-write ledger. If live writes occurred, stop new writes, clean up only from successful artifacts, verify zero topic/reply residuals read-only, preserve the exact operationKeys for server-side idempotency audit, then exit without a product score or product issue."
+    "preProductSelfCheckCorrections": {
+      "allowed": true,
+      "maximumCorrections": 2,
+      "maximumTotalSelfCheckExecutions": 3,
+      "requiresBeforeEachCorrection": [
+        "Prove candidate product invocation count is zero.",
+        "Prove real and synthetic network request count is zero.",
+        "Record the exact self-check error and the harness-only diff.",
+        "Do not change scope, candidate tarball, dataset, scorer, assigned scenarios, expected outputs, browser evidence requirements, or product assertions."
+      ],
+      "successBoundary": "After the first successful complete self-check, freeze the harness and all scorer/dataset inputs. No further harness correction or self-check execution is allowed."
+    },
+    "sameTaskRepairOrRerunAfterFirstProductInvocationAllowed": false,
+    "onFailure": "Before the first product invocation, only a self-check implementation error may use the bounded preProductSelfCheckCorrections policy. Once the first complete self-check succeeds or any candidate product invocation/network request occurs, stop immediately on any harness error and do not repair or rerun. If no live write occurred, record INFRASTRUCTURE_INVALIDATED, prove zero real-dev write network requests from the immutable round ledger, mark object cleanup not_applicable, and exit. If live writes occurred, stop new writes, clean up only from successful artifacts, verify zero topic/reply residuals read-only, preserve the exact operationKeys for server-side idempotency audit, then exit without a product score or product issue."
   },
   "dynamicSuite": {
     "scoredSeparately": true,
@@ -335,7 +348,7 @@
     ]
   },
   "evidenceContract": {
-    "roundDirectory": "run-m060-r1-20260719T215833+0800",
+    "roundDirectory": "run-m060-r1-20260719T221043+0800",
     "requiredFiles": [
       "intake.json",
       "scope-contract.json",
@@ -385,7 +398,7 @@
     "Do not read /Users/kwang/apexcn-cli source files or unbundled implementation details.",
     "Do not move, recreate, delete, or push candidate.candidateTagRef, and do not inspect its commit tree or blobs.",
     "Do not open or reuse any previous validator task, old harness, old run directory, or historical screenshot.",
-    "Do not open or reuse intake-only tasks 019f7284-68d0-77c3-bd2a-7afcf2f0c90a, 019f7299-dc87-7b51-875d-2daffff6263c, 019f72b0-13f6-7552-9533-812ee1ba420a, and 019f72c6-8013-7b33-b1b5-576e02104acc; infrastructure-invalid tasks 019f7289-e577-7de1-8fc1-911b8acc812e, 019f729e-5949-7d03-98f6-45c70a1024e1, 019f72ab-5fb7-76b1-bba0-c08aa0a85f35, 019f72b2-7d5b-7011-aa43-ebd55ad662c6, 019f72ba-437f-7c42-b7d7-b841bf9dfe04, 019f72d2-57cd-7d42-b523-8631bac24ceb, 019f72db-dbe4-7bd3-b4e8-956d05bd1294, 019f7a7e-813d-7030-8da0-ebf9fccd8ce9, 019f7a85-53cb-77c1-a7e4-66b53e357cea, 019f7a90-7e76-7971-a694-46d6682c8c97, 019f7a9e-78a4-7880-8298-41ec7a597b76, and 019f7aa8-3632-7703-af2a-ced275f01ce9; or any directory/harness/evidence created by those tasks.",
+    "Do not open or reuse intake-only tasks 019f7284-68d0-77c3-bd2a-7afcf2f0c90a, 019f7299-dc87-7b51-875d-2daffff6263c, 019f72b0-13f6-7552-9533-812ee1ba420a, and 019f72c6-8013-7b33-b1b5-576e02104acc; infrastructure-invalid tasks 019f7289-e577-7de1-8fc1-911b8acc812e, 019f729e-5949-7d03-98f6-45c70a1024e1, 019f72ab-5fb7-76b1-bba0-c08aa0a85f35, 019f72b2-7d5b-7011-aa43-ebd55ad662c6, 019f72ba-437f-7c42-b7d7-b841bf9dfe04, 019f72d2-57cd-7d42-b523-8631bac24ceb, 019f72db-dbe4-7bd3-b4e8-956d05bd1294, 019f7a7e-813d-7030-8da0-ebf9fccd8ce9, 019f7a85-53cb-77c1-a7e4-66b53e357cea, 019f7a90-7e76-7971-a694-46d6682c8c97, 019f7a9e-78a4-7880-8298-41ec7a597b76, 019f7aa8-3632-7703-af2a-ced275f01ce9, and 019f7aad-9957-70c1-8734-59c88f9067e3; or any directory/harness/evidence created by those tasks.",
     "Do not use hidden subagents as the validator.",
     "Do not create another community account.",
     "Do not print, copy, persist, attach, or expose any API key.",
