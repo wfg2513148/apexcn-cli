@@ -126,6 +126,8 @@ apexcn stats category --json
 - 0.40.x 迁移说明：[docs/migration-v0.40.md](docs/migration-v0.40.md)
 - 0.50.x 迁移说明：[docs/migration-v0.50.md](docs/migration-v0.50.md)
 - 0.60.x 迁移说明：[docs/migration-v0.60.md](docs/migration-v0.60.md)
+- 0.70.x 迁移说明：[docs/migration-v0.70.md](docs/migration-v0.70.md)
+- 0.80.x 迁移说明：[docs/migration-v0.80.md](docs/migration-v0.80.md)
 - MCP Agent 接入：[docs/mcp.md](docs/mcp.md)
 - MCP 客户端兼容：[docs/mcp-client-compatibility.md](docs/mcp-client-compatibility.md)
 - JSON/API 契约：[docs/api-contract.md](docs/api-contract.md)

@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 export type ProfileConfig = {
   baseUrl: string;
   token: string;
+  tokenEnv?: string;
 };
 
 export type ApexcnConfig = {

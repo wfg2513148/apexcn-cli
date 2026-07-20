@@ -222,8 +222,8 @@ describe("me command", () => {
     const stderr: string[] = [];
     const responses: Record<string, unknown> = {
       "/api/v1/capabilities": {
-        kind: "capability-inventory",
-        contractVersion: "0.4.3-candidate",
+        kind: "capabilities",
+        contractVersion: "0.6.0-candidate",
         capabilities: [
           { id: "personal-community", available: true, endpoints: ["/me", "/me/topics"] },
           { id: "notifications", available: false, endpoints: ["/notifications"], unavailableReason: "NOT_IMPLEMENTED" },
@@ -253,7 +253,7 @@ describe("me command", () => {
       stdout.length = 0;
       await program.parseAsync(["node", "apexcn", "me", command, "--json"]);
       const output = JSON.parse(stdout.join(""));
-      expect(output).toEqual(responses[
+      const expected = responses[
         command === "capabilities"
           ? "/api/v1/capabilities"
           : command === "rules"
@@ -261,7 +261,15 @@ describe("me command", () => {
             : command === "privacy"
               ? "/api/v1/privacy-policy"
               : `/api/v1/${command}`
-      ]);
+      ];
+      if (command === "capabilities") {
+        expect(output).toEqual(expect.objectContaining({
+          ...(expected as Record<string, unknown>),
+          clientCompatibility: expect.objectContaining({ ok: true, status: "compatible", negotiationMode: "legacy" })
+        }));
+      } else {
+        expect(output).toEqual(expected);
+      }
       if (command !== "capabilities") {
         expect(output.available).toBe(false);
         expect(output.status).toBe("UNAVAILABLE");
@@ -273,6 +281,34 @@ describe("me command", () => {
 
     expect(fetch).toHaveBeenCalledTimes(5);
     expect(stderr.join("")).toBe("");
+  });
+
+  test("capability negotiation fails closed for unavailable required capabilities", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      kind: "capabilities",
+      contractVersion: "0.8.0-candidate",
+      supportedContractVersions: ["0.8.0-candidate", "0.7.0-candidate", "0.6.0-candidate"],
+      capabilities: [{ id: "notifications", available: false, unavailableReason: "NOT_IMPLEMENTED" }],
+      requestId: "req-capabilities"
+    })));
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: () => undefined
+    });
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz", "--base-url", "https://oracleapex.cn/ords/test"]);
+    stdout.length = 0;
+
+    await program.parseAsync(["node", "apexcn", "me", "capabilities", "--require-capability", "notifications", "--json"]);
+
+    expect(JSON.parse(stdout.join("")).clientCompatibility).toEqual(expect.objectContaining({
+      ok: false,
+      status: "missing-capability",
+      missingCapabilities: ["notifications"]
+    }));
+    expect(process.exitCode).toBe(1);
   });
 
   test("prints current user activity lists with offset pagination", async () => {

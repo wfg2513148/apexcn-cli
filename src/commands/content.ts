@@ -2,9 +2,10 @@ import { readFile } from "node:fs/promises";
 import { stdin as processStdin, stdout as processStdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { Command, InvalidArgumentError, Option } from "commander";
-import { ConfigFileError, loadConfig } from "../config.js";
+import { ConfigFileError } from "../config.js";
 import { createApiClient } from "../core/api-client.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
+import { loadRuntimeSession } from "../core/runtime-session.js";
 import {
   askCommunity,
   listAdmins,
@@ -870,15 +871,17 @@ async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOpt
 }
 
 async function loadSession(options: ApiCommandOptions, commandOptions: ErrorFormatOption): Promise<Session | undefined> {
-  const config = await loadConfig(options.configPath);
-  const profile = config.current;
-  const current = profile ? config.profiles[profile] : undefined;
-  if (!profile || !current) {
-    printError(options, { type: "no-profile", message: "No active profile", exitCode: 1 }, undefined, commandOptions.json);
+  const runtime = await loadRuntimeSession(options.configPath);
+  if (!runtime.ok) {
+    printError(options, {
+      type: "no-profile",
+      message: runtime.reason === "no-profile" ? "No active profile" : `No credential is available for profile ${runtime.profile}`,
+      exitCode: 1
+    }, undefined, commandOptions.json);
     process.exitCode = 1;
     return undefined;
   }
-  return { profile, ...current };
+  return runtime.session;
 }
 
 function printDryRun(options: CommandIo, session: Session, request: ApiRequestPlan, mode: "dry-run" | "preview", json?: boolean): void {

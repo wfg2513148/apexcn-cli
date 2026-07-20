@@ -57,7 +57,7 @@
 
 个人工作台输出默认应用两层过滤：secret-like 字段递归替换为 `[redacted]`；email、手机号、IP、地址等私有字段默认掩码或替换。只有 `me --include-private` 可显式显示服务端返回的私有账号字段，secret-like 字段仍不会透传。
 
-`me capabilities` 对应 `/api/v1/capabilities`。通知、收件箱、规则和隐私端点若无权威数据，成功响应仍必须明确包含 `available: false`、`status: "UNAVAILABLE"`、`unavailableReason` 和 `requestId`。CLI 不把 truthful unavailable 改写为伪造的空数组或正文。
+`me capabilities` 对应 `/api/v1/capabilities`。0.80.x 要求 `kind: "capabilities"`、`contractVersion`、`capabilities[]` 和 `requestId`；当前 `0.8.0-candidate` 还必须声明包含 0.8、0.7、0.6 的完整 `supportedContractVersions`。available 能力必须包含 `endpoints`，unavailable 能力必须包含 `unavailableReason` 且不伪造 endpoints。CLI 添加 `clientCompatibility`，并对未来、过旧、格式错误或缺失必需能力的响应 fail closed。通知、收件箱、规则和隐私端点若无权威数据，成功响应仍必须明确包含 `available: false`、`status: "UNAVAILABLE"`、`unavailableReason` 和 `requestId`。CLI 不把 truthful unavailable 改写为伪造的空数组或正文。
 
 collection manifest v2 在每个 topic 与顶层保存 canonical hash；hash 排除 requestId 与生成时间，只绑定内容和 provenance。collection bundle v1 对排序后的全部托管文件保存内容、size、SHA-256 与整体 bundle hash。`collection automation` v1 仅允许 `mode: "offline"`，结果固定包含 `networkRequests: 0`、`unattendedWriteRequests: 0` 和 execution hash。
 

@@ -3,20 +3,24 @@ import { loadConfig, setProfile, removeProfile, type ProfileConfig } from "../co
 export type CredentialAuditResult = {
   ok: boolean;
   profile: string;
-  store: "file" | "env";
+  store: "file" | "env" | "fallback";
   tokenPresent: boolean;
+  selectedStore?: "file" | "env";
+  backends?: Array<{ store: "file" | "env"; available: boolean }>;
   issues: Array<{ code: string; message: string }>;
 };
 
 export interface CredentialStore {
-  kind: "file" | "env";
+  kind: "file" | "env" | "fallback";
   get(profile: string): Promise<string | undefined>;
   set(profile: string, token: string, profileConfig?: Omit<ProfileConfig, "token">): Promise<void>;
   remove(profile: string): Promise<void>;
   audit(profile: string): Promise<CredentialAuditResult>;
 }
 
-export function fileCredentialStore(configPath?: string): CredentialStore {
+type DirectCredentialStore = CredentialStore & { kind: "file" | "env" };
+
+export function fileCredentialStore(configPath?: string): DirectCredentialStore {
   return {
     kind: "file",
     async get(profile) {
@@ -42,7 +46,7 @@ export function fileCredentialStore(configPath?: string): CredentialStore {
   };
 }
 
-export function envCredentialStore(env: NodeJS.ProcessEnv = process.env, variableName = "APEXCN_API_KEY"): CredentialStore {
+export function envCredentialStore(env: NodeJS.ProcessEnv = process.env, variableName = "APEXCN_API_KEY"): DirectCredentialStore {
   return {
     kind: "env",
     async get() {
@@ -65,4 +69,51 @@ export function envCredentialStore(env: NodeJS.ProcessEnv = process.env, variabl
       };
     }
   };
+}
+
+export function fallbackCredentialStore(primary: DirectCredentialStore, fallback: DirectCredentialStore): CredentialStore {
+  return {
+    kind: "fallback",
+    async get(profile) {
+      return (await primary.get(profile)) || fallback.get(profile);
+    },
+    async set(profile, token, profileConfig) {
+      await fallback.set(profile, token, profileConfig);
+    },
+    async remove(profile) {
+      await fallback.remove(profile);
+    },
+    async audit(profile) {
+      const [primaryAudit, fallbackAudit] = await Promise.all([
+        primary.audit(profile),
+        fallback.audit(profile)
+      ]);
+      const selected = primaryAudit.tokenPresent ? primary : fallbackAudit.tokenPresent ? fallback : undefined;
+      return {
+        ok: selected !== undefined,
+        profile,
+        store: "fallback",
+        tokenPresent: selected !== undefined,
+        selectedStore: selected?.kind === "file" || selected?.kind === "env" ? selected.kind : undefined,
+        backends: [
+          { store: primary.kind, available: primaryAudit.tokenPresent },
+          { store: fallback.kind, available: fallbackAudit.tokenPresent }
+        ],
+        issues: selected
+          ? []
+          : [{ code: "missing-fallback-token", message: "No credential is available from the primary or fallback store" }]
+      };
+    }
+  };
+}
+
+export function profileCredentialStore(
+  profile: ProfileConfig,
+  configPath?: string,
+  env: NodeJS.ProcessEnv = process.env
+): CredentialStore {
+  const file = fileCredentialStore(configPath);
+  return profile.tokenEnv
+    ? fallbackCredentialStore(envCredentialStore(env, profile.tokenEnv), file)
+    : file;
 }

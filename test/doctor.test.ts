@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -70,8 +70,8 @@ describe("doctor command", () => {
     const data = JSON.parse(stdout.join(""));
     expect(data.ok).toBe(true);
     expect(data.diagnostics).toEqual(expect.objectContaining({
-      cliVersion: "0.70.0",
-      userAgent: "apexcn-cli/0.70.0",
+      cliVersion: "0.80.0",
+      userAgent: "apexcn-cli/0.80.0",
       configPath: expect.stringContaining("config.json"),
       nodeVersion: expect.stringMatching(/^v\d+/),
       platform: process.platform,
@@ -271,8 +271,8 @@ describe("doctor command", () => {
     await program.parseAsync(["node", "apexcn", "doctor", "--format", "text"]);
 
     expect(stdout.join("")).toContain("apexcn doctor: ok\n");
-    expect(stdout.join("")).toContain("CLI Version: 0.70.0\n");
-    expect(stdout.join("")).toContain("User Agent: apexcn-cli/0.70.0\n");
+    expect(stdout.join("")).toContain("CLI Version: 0.80.0\n");
+    expect(stdout.join("")).toContain("User Agent: apexcn-cli/0.80.0\n");
     expect(stdout.join("")).toContain("Config Path: ");
     expect(stdout.join("")).toContain("OK search requestId=req-search\n");
   });
@@ -294,7 +294,7 @@ describe("doctor command", () => {
       await program.parseAsync(argv);
 
       expect(stdout.join("")).toContain("apexcn doctor: ok\n");
-      expect(stdout.join("")).toContain("CLI Version: 0.70.0\n");
+      expect(stdout.join("")).toContain("CLI Version: 0.80.0\n");
       expect(() => JSON.parse(stdout.join(""))).toThrow();
       vi.unstubAllGlobals();
     }
@@ -556,6 +556,37 @@ describe("doctor command", () => {
     expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(stdout.join("")).not.toContain("env-api-key-secret");
     expect(process.exitCode).toBeUndefined();
+  });
+
+  test("doctor snapshot writes a sanitized support artifact with user-only permissions", async () => {
+    const configPath = await tempConfigPath();
+    const outputPath = join(dirname(configPath), "support", "snapshot.json");
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(configPath, JSON.stringify({
+      current: "prod",
+      profiles: {
+        prod: {
+          baseUrl: "https://oracleapex.cn/ords/api",
+          token: "abcdefghijklmnopqrstuvwxyz"
+        }
+      }
+    }));
+    const stdout: string[] = [];
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: () => undefined
+    });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "snapshot", "--output", outputPath, "--json"]);
+
+    const artifact = await readFile(outputPath, "utf8");
+    expect(JSON.parse(artifact)).toEqual(expect.objectContaining({ kind: "doctor-snapshot", schemaVersion: 1 }));
+    expect(artifact).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    if (process.platform !== "win32") {
+      expect((await stat(outputPath)).mode & 0o777).toBe(0o600);
+    }
+    expect(JSON.parse(stdout.join("")).kind).toBe("doctor-snapshot");
   });
 
   test("doctor snapshot reports broken config JSON with stable issue codes", async () => {

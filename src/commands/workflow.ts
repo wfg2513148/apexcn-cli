@@ -2,8 +2,9 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { Command, InvalidArgumentError, Option } from "commander";
-import { ConfigFileError, loadConfig } from "../config.js";
+import { ConfigFileError } from "../config.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
+import { loadRuntimeSession } from "../core/runtime-session.js";
 import {
   createWorkflowPlan,
   type WorkflowGoal,
@@ -46,11 +47,13 @@ type WorkflowRunOptions = FormatOption & {
   outputDir?: string;
   execute?: boolean;
   yes?: boolean;
+  policy?: string;
 };
 
 type WorkflowApproveOptions = {
   runDir: string;
   approvedBy?: string;
+  secondApprover?: string;
   note?: string;
   expiresInMinutes?: number;
   json?: boolean;
@@ -76,6 +79,7 @@ type WorkflowDiffOptions = {
 type WorkflowAuditLogOptions = {
   runDir: string;
   format?: "ndjson" | "json";
+  verifyFile?: string;
 };
 
 type WorkflowExportOptions = {
@@ -150,6 +154,7 @@ type WorkflowApproval = {
   approvedAt: string;
   expiresAt: string;
   approvedBy: string;
+  secondApprover?: string;
   note?: string;
   previewHash: string;
   target: WorkflowTarget;
@@ -220,6 +225,7 @@ export function createWorkflowCommand(options: WorkflowCommandOptions): Command 
     .option("--output-dir <path>", "directory for run artifacts")
     .option("--execute", "execute the final API write after preview")
     .option("--yes", "confirm --execute")
+    .option("--policy <file>", "enforce a JSON workflow policy before execute")
     .option("--json", "pretty-print JSON")
     .action(async (commandOptions: WorkflowRunOptions) => {
       if (!validateFormatOptions(options, commandOptions)) {
@@ -232,6 +238,7 @@ export function createWorkflowCommand(options: WorkflowCommandOptions): Command 
     .command("approve")
     .requiredOption("--run-dir <run-dir>", "workflow run directory to approve")
     .option("--approved-by <name>", "name recorded in approval artifact")
+    .option("--second-approver <name>", "independent second approver for two-person policy levels")
     .option("--note <text>", "approval note")
     .option("--expires-in-minutes <n>", "approval lifetime in minutes", parsePositiveInteger, 120)
     .option("--json", "pretty-print JSON")
@@ -271,6 +278,7 @@ export function createWorkflowCommand(options: WorkflowCommandOptions): Command 
     .command("audit-log")
     .requiredOption("--run-dir <run-dir>", "workflow run directory")
     .option("--format <format>", "output format: ndjson or json", parseAuditLogFormat, "ndjson")
+    .option("--verify-file <file>", "verify a saved JSON or NDJSON audit log against the workflow")
     .action(async (commandOptions: WorkflowAuditLogOptions) => {
       await auditWorkflow(options, commandOptions);
     });
@@ -462,6 +470,14 @@ async function auditWorkflow(io: CommandIo, options: WorkflowAuditLogOptions): P
   }
   const report = await workflowVerificationReport(loaded.runDir, loaded.state);
   const events = workflowAuditEvents(loaded.state, report);
+  if (options.verifyFile) {
+    const verification = await verifySavedAuditLog(options.verifyFile, events);
+    if (!verification.ok) {
+      process.exitCode = 1;
+    }
+    printData(io, verification, true);
+    return;
+  }
   if (options.format === "json") {
     printData(io, { kind: "workflow-audit-log", schemaVersion: 1, events }, true);
     return;
@@ -501,6 +517,7 @@ async function approveWorkflow(io: CommandIo, options: WorkflowApproveOptions): 
     approvedAt: now(),
     expiresAt: new Date(Date.now() + (options.expiresInMinutes ?? 120) * 60_000).toISOString(),
     approvedBy: fieldText(options.approvedBy).trim() || process.env.USER || "unknown",
+    secondApprover: distinctSecondApprover(options.approvedBy, options.secondApprover),
     note: fieldText(options.note).trim() || undefined,
     previewHash: workflowPreviewHash(preview.target, preview.request),
     target: preview.target,
@@ -561,6 +578,21 @@ async function runWorkflow(io: WorkflowCommandOptions, options: WorkflowRunOptio
       printError(io, { type: "validation", message: approvalError });
       process.exitCode = 1;
       return;
+    }
+    if (options.policy) {
+      const report = await workflowVerificationReport(loaded.runDir, loaded.state);
+      const policyResult = await verifyWorkflowPolicy(loaded.runDir, loaded.state, report, options.policy);
+      if (!policyResult.ok) {
+        const issues = Array.isArray(policyResult.issues)
+          ? policyResult.issues.filter(isRecord).map((issue) => fieldText(issue.message)).filter(Boolean)
+          : [];
+        printError(io, {
+          type: "safety",
+          message: `Workflow policy refused execution${issues.length > 0 ? `: ${issues.join(" ")}` : "."}`
+        });
+        process.exitCode = 1;
+        return;
+      }
     }
   }
   const session = await loadSession(io);
@@ -705,6 +737,7 @@ type WorkflowPolicy = {
     requirePreview: boolean;
     requireApproval: boolean;
     approvalExpiresInMinutes: number;
+    auditRetentionDays: number;
   };
   commands: Record<string, Record<string, unknown>>;
   mcp: {
@@ -718,12 +751,16 @@ function defaultWorkflowPolicy(): WorkflowPolicy {
     defaults: {
       requirePreview: true,
       requireApproval: true,
-      approvalExpiresInMinutes: 120
+      approvalExpiresInMinutes: 120,
+      auditRetentionDays: 90
     },
     commands: {
-      "topic.create": { allowed: true, requireReview: true, minContentLength: 80 },
-      "topic.delete": { allowed: true, requireExactTitle: true, requireTwoReviewers: true },
-      "reply.delete": { allowed: true, requireExactTitle: false }
+      "topic.create": { allowed: true, minimumApprovers: 1, requireReview: true, minContentLength: 80 },
+      "topic.update": { allowed: true, minimumApprovers: 1, requireReview: true },
+      "topic.delete": { allowed: true, minimumApprovers: 2, requireExactTitle: true },
+      "reply.create": { allowed: true, minimumApprovers: 1, requireReview: true },
+      "reply.update": { allowed: true, minimumApprovers: 1, requireReview: true },
+      "reply.delete": { allowed: true, minimumApprovers: 2, requireExactTitle: false }
     },
     mcp: {
       allowExecute: false
@@ -750,14 +787,28 @@ async function verifyWorkflowPolicy(runDir: string, state: WorkflowRunState, rep
       issues.push({ code: "policy-approval-expired", message: "Approval is expired.", path: state.artifacts.approval });
     }
   }
+  const runAgeMs = Date.now() - Date.parse(state.createdAt);
+  if (Number.isFinite(runAgeMs) && runAgeMs > policy.defaults.auditRetentionDays * 86_400_000) {
+    issues.push({ code: "policy-audit-retention-expired", message: "Workflow is older than the policy audit retention window.", path: join(runDir, "run.json") });
+  }
   const approvalSummary = isRecord(report.approval) ? report.approval : undefined;
   if (approvalSummary && approvalSummary.hashMatches === false) {
     issues.push({ code: "policy-hash-mismatch", message: "Approval hash does not match preview request.", path: state.artifacts.approval });
   }
   const commandId = workflowCommandId(state.goal);
   const commandPolicy = policy.commands[commandId];
-  if (commandPolicy?.allowed === false) {
+  if (!commandPolicy) {
+    issues.push({ code: "policy-command-unconfigured", message: `Policy does not configure ${commandId}; access is denied by default.`, path: policyPath });
+  } else if (commandPolicy.allowed !== true) {
     issues.push({ code: "policy-command-blocked", message: `Policy blocks ${commandId}.`, path: policyPath });
+  } else {
+    const minimumApprovers = typeof commandPolicy.minimumApprovers === "number" ? commandPolicy.minimumApprovers : 1;
+    const approvers = isRecord(approval)
+      ? [approval.approvedBy, approval.secondApprover].filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+      : [];
+    if (new Set(approvers).size < minimumApprovers) {
+      issues.push({ code: "policy-approval-level-not-met", message: `${commandId} requires ${minimumApprovers} distinct approver(s).`, path: state.artifacts.approval });
+    }
   }
   return {
     kind: "workflow-policy-verification",
@@ -777,9 +828,23 @@ function isWorkflowPolicy(value: unknown): value is WorkflowPolicy {
     && typeof value.defaults.requirePreview === "boolean"
     && typeof value.defaults.requireApproval === "boolean"
     && typeof value.defaults.approvalExpiresInMinutes === "number"
+    && typeof value.defaults.auditRetentionDays === "number"
+    && value.defaults.auditRetentionDays > 0
     && isRecord(value.commands)
     && isRecord(value.mcp)
     && value.mcp.allowExecute === false;
+}
+
+function distinctSecondApprover(first: string | undefined, second: string | undefined): string | undefined {
+  const normalizedSecond = fieldText(second).trim();
+  if (!normalizedSecond) {
+    return undefined;
+  }
+  const normalizedFirst = fieldText(first).trim() || process.env.USER || "unknown";
+  if (normalizedSecond === normalizedFirst) {
+    throw new InvalidArgumentError("--second-approver must be different from --approved-by");
+  }
+  return normalizedSecond;
 }
 
 async function readOptionalJson(path: string | undefined): Promise<unknown | undefined> {
@@ -825,8 +890,11 @@ function workflowAuditEvents(state: WorkflowRunState, report: Record<string, unk
   if (isRecord(report.approval)) {
     events.push(auditEvent(time, state.runId, "approve", command, previewHash, report.approval.hashMatches === false ? "failed" : "ok", "approval artifact present"));
   }
+  if (isRecord(report.execute)) {
+    events.push(auditEvent(time, state.runId, "execute", command, previewHash, report.ok === false ? "failed" : "ok", "execute artifact present"));
+  }
   events.push(auditEvent(time, state.runId, "verify", command, previewHash, report.ok === false ? "failed" : "ok", report.ok === false ? "verification issues found" : "verification passed"));
-  return events;
+  return chainAuditEvents(events);
 }
 
 function auditEvent(time: string, runId: string, event: string, command: string, requestHash: string | undefined, result: string, reason: string): Record<string, unknown> {
@@ -840,6 +908,64 @@ function auditEvent(time: string, runId: string, event: string, command: string,
     actor: "local-user",
     result,
     reason
+  };
+}
+
+function chainAuditEvents(events: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  let previousHash = "sha256:genesis";
+  return events.map((event) => {
+    const chained = { ...event, previousHash };
+    const eventHash = `sha256:${createHash("sha256").update(canonicalJson(chained), "utf8").digest("hex")}`;
+    previousHash = eventHash;
+    return { ...chained, eventHash };
+  });
+}
+
+async function verifySavedAuditLog(path: string, expected: Array<Record<string, unknown>>): Promise<Record<string, unknown> & { ok: boolean }> {
+  const issues: WorkflowVerificationIssue[] = [];
+  let actual: unknown;
+  try {
+    const text = await readFile(path, "utf8");
+    try {
+      const parsed = JSON.parse(text) as unknown;
+      actual = isRecord(parsed) && Array.isArray(parsed.events) ? parsed.events : parsed;
+    } catch {
+      actual = text.trim().split("\n").filter(Boolean).map((line) => JSON.parse(line) as unknown);
+    }
+  } catch (error) {
+    return {
+      kind: "workflow-audit-verification",
+      schemaVersion: 1,
+      ok: false,
+      auditPath: path,
+      expectedEventCount: expected.length,
+      actualEventCount: 0,
+      issues: [{ code: "audit-log-invalid", message: `Audit log is not valid JSON or NDJSON: ${errorMessage(error)}`, path }]
+    };
+  }
+  if (!Array.isArray(actual)) {
+    issues.push({ code: "audit-log-invalid", message: "Audit log must contain an events array or NDJSON records.", path });
+  }
+  const actualEvents: unknown[] = Array.isArray(actual) ? actual : [];
+  if (actualEvents.length !== expected.length) {
+    issues.push({ code: "audit-event-count-mismatch", message: `Expected ${expected.length} audit events but found ${actualEvents.length}.`, path });
+  }
+  const expectedNames = expected.map((event) => fieldText(event.event));
+  const actualNames = actualEvents.filter(isRecord).map((event) => fieldText(event.event));
+  if (canonicalJson(actualNames) !== canonicalJson(expectedNames)) {
+    issues.push({ code: "audit-event-coverage-mismatch", message: "Audit event sequence is incomplete or reordered.", path });
+  }
+  if (canonicalJson(actualEvents) !== canonicalJson(expected)) {
+    issues.push({ code: "audit-chain-mismatch", message: "Audit event content or hash chain does not match the workflow.", path });
+  }
+  return {
+    kind: "workflow-audit-verification",
+    schemaVersion: 1,
+    ok: issues.length === 0,
+    auditPath: path,
+    expectedEventCount: expected.length,
+    actualEventCount: actualEvents.length,
+    issues
   };
 }
 
@@ -1663,15 +1789,16 @@ async function loadWorkflowRun(runDir: string): Promise<{ runDir: string; state:
 
 async function loadSession(io: WorkflowCommandOptions): Promise<Session | undefined> {
   try {
-    const config = await loadConfig(io.configPath);
-    const profile = config.current;
-    const current = profile ? config.profiles[profile] : undefined;
-    if (!profile || !current) {
-      printError(io, { type: "no-profile", message: "No active profile" });
+    const runtime = await loadRuntimeSession(io.configPath);
+    if (!runtime.ok) {
+      printError(io, {
+        type: "no-profile",
+        message: runtime.reason === "no-profile" ? "No active profile" : `No credential is available for profile ${runtime.profile}`
+      });
       process.exitCode = 1;
       return undefined;
     }
-    return { profile, ...current };
+    return runtime.session;
   } catch (error) {
     if (error instanceof ConfigFileError) {
       printError(io, { type: "config", message: error.message });

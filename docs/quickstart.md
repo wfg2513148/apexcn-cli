@@ -143,11 +143,17 @@ apexcn auth set-token \
   --profile prod \
   --base-url https://oracleapex.cn/ords/api \
   --token "$APEXCN_API_KEY"
+
+# 只保存变量名，不把环境变量值写入配置
+apexcn auth set-token \
+  --profile agent-env \
+  --base-url https://oracleapex.cn/ords/api \
+  --token-env APEXCN_API_KEY
 ```
 
 保存后，`prod` 会成为当前 active profile。后续命令不需要再传 `--profile`。
 
-`--token`、`--profile` 和 `--base-url` 不能是空字符串或只有空白字符；`--base-url` 必须是绝对 `http` 或 `https` URL。如果使用环境变量，先确认变量已经设置。
+`--token-env` 只保存变量名；同时传 `--token-env` 与 `--token` 时按 env→file 顺序回退。两个 backend 都不可用时，API 请求会 fail closed。token 值、profile 和 base URL 不能是空字符串或只有空白字符；`--base-url` 必须是绝对 `http` 或 `https` URL。
 
 查看当前配置，不会泄露完整 token：
 
@@ -158,7 +164,7 @@ apexcn auth audit --json
 apexcn auth list --json
 ```
 
-`auth audit` 是纯本地配置审计，不调用社区 API。它会检查 active profile、profile 是否存在、base URL 是否有效、token 是否缺失、是否使用 HTTP、以及多个 profile 是否复用同一 base URL；输出只包含脱敏 token。
+`auth audit` 是纯本地配置审计，不调用社区 API。它会检查 active profile、profile 是否存在、base URL 是否有效、file/env credential 是否可用、是否使用 HTTP、以及多个 profile 是否复用同一 base URL；输出只包含 store 类型、变量名、presence 和脱敏 file token。
 
 需要维护多个 API profile 时，可用 `auth set-token --no-switch` 保存但不切换当前 profile，用 `auth use <profile>` 切换，用 `auth remove <profile>` 删除。删除当前 profile 会清空 active profile，但不会自动切到其他账号。
 
@@ -522,11 +528,11 @@ npm run test:e2e:readonly
 排障顺序：
 
 1. `apexcn auth show --json`
-2. `apexcn doctor snapshot --json`
+2. `apexcn doctor snapshot --output ./support-snapshot.json --json`
 3. `apexcn doctor --format json`
 4. `apexcn me --verbose --json`
 
-`doctor snapshot` 不联网，适合先采集本地配置、环境变量 presence/validity 和 agent skill 安装状态；它不会输出完整 token 或 `APEXCN_API_KEY`。`doctor` 默认输出文本；`--format json` 适合脚本采集诊断字段，包括 CLI 版本、User-Agent、配置文件路径、Node.js 版本、平台和架构。默认只检查 profile、账号、板块和搜索；只有显式传 `--check-ask <question>` 时才会额外检查 RAG 问答接口。网络不稳定时可加 `--timeout-ms 10000` 设置每个检查的超时时间。
+`doctor snapshot` 不联网，适合先采集本地配置、环境变量 presence/validity 和 agent skill 安装状态；它不会输出完整 token 或 `APEXCN_API_KEY`。`--output` 保存的脱敏文件使用仅当前用户可读写权限。`doctor` 默认输出文本；`--format json` 适合脚本采集诊断字段，包括 CLI 版本、User-Agent、配置文件路径、Node.js 版本、平台和架构。默认只检查 profile、账号、板块和搜索；只有显式传 `--check-ask <question>` 时才会额外检查 RAG 问答接口。网络不稳定时可加 `--timeout-ms 10000` 设置每个检查的超时时间。
 5. 检查 stderr 中的 `HTTP <status>` 和 `requestId`
 6. 用 `requestId` 查服务端日志
 7. 必要时轮换 API key 后重新 `auth set-token`

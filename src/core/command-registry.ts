@@ -37,7 +37,7 @@ export const COMMAND_DESCRIPTORS: CommandDescriptor[] = [
   descriptor("auth.list", ["auth", "list"], "List local auth profiles", "auth", "no-network", "medium", false, "none", "apexcn auth list --json"),
   descriptor("auth.logout", ["auth", "logout"], "Clear active auth profile", "auth", "no-network", "medium", false, "blocked", "apexcn auth logout", false, false, false),
   descriptor("auth.remove", ["auth", "remove"], "Remove an auth profile", "auth", "no-network", "high", false, "blocked", "apexcn auth remove old-profile", false, false, false),
-  descriptor("auth.set-token", ["auth", "set-token"], "Save an API token profile", "auth", "no-network", "high", false, "blocked", "apexcn auth set-token --profile agent-prod --token \"$APEXCN_API_KEY\"", false, false, false),
+  descriptor("auth.set-token", ["auth", "set-token"], "Configure a file or environment API credential profile", "auth", "no-network", "high", false, "blocked", "apexcn auth set-token --profile agent-prod --token-env APEXCN_API_KEY", false, false, false),
   descriptor("auth.show", ["auth", "show"], "Show active auth profile with redacted token", "auth", "no-network", "medium", false, "none", "apexcn auth show --json"),
   descriptor("auth.use", ["auth", "use"], "Switch active auth profile", "auth", "no-network", "medium", false, "blocked", "apexcn auth use agent-prod", false, false, false),
   descriptor("category.list", ["category", "list"], "List community categories", "read", "api-read", "low", true, "readonly", "apexcn category list --json"),

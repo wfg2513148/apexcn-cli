@@ -43,9 +43,14 @@ apexcn auth set-token \
   --profile agent-prod \
   --base-url https://oracleapex.cn/ords/api \
   --token "$APEXCN_API_KEY"
+
+apexcn auth set-token \
+  --profile agent-env \
+  --base-url https://oracleapex.cn/ords/api \
+  --token-env APEXCN_API_KEY
 ```
 
-`--token`, `--profile`, and `--base-url` cannot be blank or whitespace-only. `--base-url` must be an absolute `http` or `https` URL. If you pass environment variables, make sure they are set first.
+`--token-env <name>` stores only the environment variable name. Pass both `--token-env` and `--token` to use the environment credential first and the file credential as fallback. If neither backend supplies a token, API commands fail before making a request. Token values, profile names, and base URLs cannot be blank or whitespace-only. `--base-url` must be an absolute `http` or `https` URL.
 Add `--no-switch` when you want to save a profile without making it current.
 
 Show current profile:
@@ -92,13 +97,14 @@ apexcn doctor --json
 apexcn doctor --format json
 apexcn doctor --format text
 apexcn doctor snapshot --json
+apexcn doctor snapshot --output ./support-snapshot.json --json
 apexcn doctor --check-ask "How do I call a REST API from Oracle APEX?" --json
 apexcn doctor --timeout-ms 10000 --json
 ```
 
 `doctor` defaults to text output. `--format json` prints compact JSON; `--json` and `--format pretty` print pretty JSON. JSON output includes diagnostics such as CLI version, user agent, config path, Node.js version, platform, and architecture. By default it checks only the profile, account, categories, and search. It checks the RAG ask endpoint only when you explicitly pass `--check-ask <question>`. `--timeout-ms` sets a per-check request timeout in milliseconds.
 
-`doctor snapshot` is a local-only support snapshot and does not call the community API. It reads the config file directly and outputs `kind: "doctor-snapshot"`, `schemaVersion: 1`, `diagnostics`, `environment`, `config`, `agentSkill`, and stable `checks[].code` values. Hard issue codes include `config-unreadable`, `config-invalid-json`, `no-active-profile`, `missing-current-profile`, `invalid-base-url`, and `invalid-timeout-env`; warning codes include `api-key-env-missing`, `missing-token`, and `agent-skill-missing`. Environment variables are reported only as present/valid, and tokens are reported only as presence plus redacted length.
+`doctor snapshot` is a local-only support snapshot and does not call the community API. It reads the config file directly and outputs `kind: "doctor-snapshot"`, `schemaVersion: 1`, `diagnostics`, `environment`, `config`, `agentSkill`, and stable `checks[].code` values. Hard issue codes include `config-unreadable`, `config-invalid-json`, `no-active-profile`, `missing-current-profile`, `invalid-base-url`, and `invalid-timeout-env`; warning codes include `api-key-env-missing`, `missing-token`, and `agent-skill-missing`. Environment variables are reported only as present/valid, and tokens are reported only as presence plus redacted length. `--output <file>` writes the same sanitized snapshot with user-only permissions.
 
 ## category
 
@@ -143,6 +149,7 @@ Read aggregate statistics and activity lists for the current account:
 ```bash
 apexcn me stats --json
 apexcn me capabilities --json
+apexcn me capabilities --require-capability personal-community favorite-topic-export --json
 apexcn me notifications --json
 apexcn me inbox --json
 apexcn me rules --json
@@ -155,7 +162,7 @@ apexcn me subscriptions --json
 
 `me` recursively redacts email, phone, IP, address, and secret-like fields by default. Only explicit `me --include-private` prints private account fields returned by the server. `me topics`, `me replies`, `me favorites`, and `me subscriptions` should continue with the server's opaque `page.nextCursor`. Numeric `offset/page.nextOffset` remains available for older servers, but `--cursor` and `--offset` cannot be combined.
 
-`me capabilities` reads the server `contractVersion` and capability inventory. `me notifications`, `me inbox`, `me rules`, and `me privacy` only relay authoritative readonly contracts. When a capability is missing, the CLI preserves `available: false`, `status: "UNAVAILABLE"`, `unavailableReason`, and `requestId`; it never fabricates empty messages, rules, or policy content.
+`me capabilities` reads the server `contractVersion` and capability inventory, then adds `clientCompatibility`. 0.80.x accepts only the declared 0.8, 0.7, and 0.6 candidate contract window; malformed, newer, or older contracts fail closed. The current 0.8 contract must advertise that full supported window. `--require-capability <ids...>` also exits nonzero when any requested capability is unavailable. `me notifications`, `me inbox`, `me rules`, and `me privacy` only relay authoritative readonly contracts. When a capability is missing, the CLI preserves `available: false`, `status: "UNAVAILABLE"`, `unavailableReason`, and `requestId`; it never fabricates empty messages, rules, or policy content.
 
 ## search
 
@@ -581,7 +588,11 @@ apexcn workflow policy init --output apexcn-policy.json
 apexcn workflow verify --run-dir ./run --policy apexcn-policy.json --json
 apexcn workflow diff --run-dir ./run --json
 apexcn workflow audit-log --run-dir ./run --format ndjson
+apexcn workflow audit-log --run-dir ./run --format ndjson > audit.ndjson
+apexcn workflow audit-log --run-dir ./run --verify-file audit.ndjson --json
 ```
+
+The default policy denies unconfigured commands, requires one distinct approver for create/update and two for delete, and retains audit evidence for 90 days. Add `--second-approver <name>` to `workflow approve` when the selected policy requires two people. Pass `--policy <file>` to the resumed execute command to enforce the policy before any API write. Audit events include a SHA-256 hash chain; `--verify-file` rejects missing, reordered, modified, or extra events.
 
 Readonly real-environment acceptance. The script skips when `APEXCN_API_KEY` is not set. With a key, it checks `doctor`, `me`, `category list`, `search`, and `ask`; write paths only run with `--preview`:
 

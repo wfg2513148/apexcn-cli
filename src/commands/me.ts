@@ -1,6 +1,8 @@
 import { Command, InvalidArgumentError, Option } from "commander";
-import { ConfigFileError, loadConfig } from "../config.js";
+import { ConfigFileError } from "../config.js";
+import { assessCapabilityCompatibility } from "../core/capability-compatibility.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
+import { loadRuntimeSession } from "../core/runtime-session.js";
 import { redactSecrets } from "../core/secret-redaction.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { fieldText, isRecord, itemsFromData, outputFormat, parseOutputFormat, printData, printError, validateFormatOptions, type FormatOption } from "../output.js";
@@ -53,19 +55,28 @@ export function createMeCommand(options: MeCommandOptions): Command {
     { name: "rules", path: "/api/v1/community/rules", formatter: formatUnavailableCapabilityText, description: "read authoritative community rules when available" },
     { name: "privacy", path: "/api/v1/privacy-policy", formatter: formatUnavailableCapabilityText, description: "read the authoritative privacy policy when available" }
   ] as const) {
-    me
+    const command = me
       .command(item.name)
       .description(item.description)
       .option("--json", "pretty-print JSON")
-      .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
-      .action(async function(this: Command, rawOptions: FormatOption | Command) {
-        const commandOptions = commandOptionsFrom<FormatOption>(this, rawOptions);
+      .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat));
+    if (item.name === "capabilities") {
+      command.option("--require-capability <ids...>", "fail closed unless each capability id is available");
+    }
+    command.action(async function(this: Command, rawOptions: FormatOption & { requireCapability?: string[] } | Command) {
+        const commandOptions = commandOptionsFrom<FormatOption & { requireCapability?: string[] }>(this, rawOptions);
         if (!validateFormatOptions(options, commandOptions)) {
           return;
         }
         await runMeApi(options, commandOptions, async (session) => {
           const data = await requestJson(session.baseUrl, item.path, { token: session.token });
-          printData(options, redactMeOutput(data), outputFormat(commandOptions), item.formatter);
+          const output = item.name === "capabilities"
+            ? capabilityOutput(data, commandOptions.requireCapability)
+            : redactMeOutput(data);
+          if (item.name === "capabilities" && isRecord(output) && isRecord(output.clientCompatibility) && output.clientCompatibility.ok !== true) {
+            process.exitCode = 1;
+          }
+          printData(options, output, outputFormat(commandOptions), item.formatter);
         });
       });
   }
@@ -122,31 +133,36 @@ type Session = {
 async function runMeApi(options: MeCommandOptions, commandOptions: { json?: boolean }, callback: (session: Session) => Promise<void>): Promise<void> {
   let token: string | undefined;
   try {
-    const config = await loadConfig(options.configPath);
-    const profile = config.current;
-    const current = profile ? config.profiles[profile] : undefined;
-
-    if (!profile || !current) {
+    const runtime = await loadRuntimeSession(options.configPath);
+    if (!runtime.ok) {
+      const noProfile = runtime.reason === "no-profile";
       printError(options, {
         type: "no-profile",
-        code: "NO_ACTIVE_PROFILE",
-        message: "No active profile",
+        code: noProfile ? "NO_ACTIVE_PROFILE" : "NO_CREDENTIAL",
+        message: noProfile ? "No active profile" : `No credential is available for profile ${runtime.profile}`,
         remediation: {
           code: "PROFILE_CONFIGURATION_REQUIRED",
-          message: "Select or configure an authenticated profile before using personal commands.",
-          actions: [
-            "Run `apexcn auth show --json` to inspect configured profiles.",
-            "Run `apexcn auth use <profile>` to select an existing profile.",
-            "Run `apexcn auth set-token --token <token> --profile <profile>` to configure a profile."
-          ]
+          message: noProfile
+            ? "Select or configure an authenticated profile before using personal commands."
+            : "Configure an available file or environment credential before using personal commands.",
+          actions: noProfile
+            ? [
+                "Run `apexcn auth show --json` to inspect configured profiles.",
+                "Run `apexcn auth use <profile>` to select an existing profile.",
+                "Run `apexcn auth set-token --token <token> --profile <profile>` to configure a profile."
+              ]
+            : [
+                "Set the profile's configured token environment variable.",
+                "Run `apexcn auth set-token --token <token> --profile <profile>` to configure a file credential."
+              ]
         }
       }, undefined, commandOptions.json);
       process.exitCode = 1;
       return;
     }
 
-    token = current.token;
-    await callback({ profile, ...current });
+    token = runtime.session.token;
+    await callback(runtime.session);
   } catch (error) {
     if (error instanceof HttpError) {
       printError(options, {
@@ -274,12 +290,26 @@ function formatCapabilitiesText(data: unknown): string {
   if (!isRecord(data) || !Array.isArray(data.capabilities)) {
     return "";
   }
-  return data.capabilities.filter(isRecord).map((capability) => [
+  const compatibility = isRecord(data.clientCompatibility) ? data.clientCompatibility : {};
+  return [
+    `compatibility: ${fieldText(compatibility.status)}`,
+    `contractVersion: ${fieldText(compatibility.contractVersion)}`,
+    ...data.capabilities.filter(isRecord).map((capability) => [
     fieldText(capability.id),
     fieldText(capability.available),
     Array.isArray(capability.endpoints) ? capability.endpoints.map(fieldText).filter(Boolean).join(",") : "",
     fieldText(capability.unavailableReason)
-  ].join("\t")).join("\n");
+    ].join("\t"))
+  ].join("\n");
+}
+
+function capabilityOutput(data: unknown, requiredCapabilities: string[] = []): Record<string, unknown> {
+  const redacted = redactMeOutput(data);
+  const base = isRecord(redacted) ? redacted : {};
+  return {
+    ...base,
+    clientCompatibility: assessCapabilityCompatibility(data, requiredCapabilities)
+  };
 }
 
 function formatUnavailableCapabilityText(data: unknown): string {

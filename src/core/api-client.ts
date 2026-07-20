@@ -1,6 +1,7 @@
-import { ConfigFileError, loadConfig } from "../config.js";
+import { ConfigFileError } from "../config.js";
 import { requestJson, type RequestJsonOptions } from "../http.js";
 import { errorBodyFrom, type ApexcnErrorBody } from "./errors.js";
+import { loadRuntimeSession } from "./runtime-session.js";
 
 export type ApexcnSession = {
   profile: string;
@@ -16,14 +17,18 @@ export type ApexcnApiClient = {
 
 export async function loadApiClient(configPath?: string): Promise<ApexcnApiClient | ApexcnErrorBody> {
   try {
-    const config = await loadConfig(configPath);
-    const profile = config.current;
-    const current = profile ? config.profiles[profile] : undefined;
-    if (!profile || !current) {
-      return { ok: false, error: { code: "NO_ACTIVE_PROFILE", message: "No active profile", retryable: false } };
+    const runtime = await loadRuntimeSession(configPath);
+    if (!runtime.ok) {
+      return {
+        ok: false,
+        error: {
+          code: runtime.reason === "no-profile" ? "NO_ACTIVE_PROFILE" : "NO_CREDENTIAL",
+          message: runtime.reason === "no-profile" ? "No active profile" : `No credential is available for profile ${runtime.profile}`,
+          retryable: false
+        }
+      };
     }
-    const session = { profile, ...current };
-    return createApiClient(session);
+    return createApiClient(runtime.session);
   } catch (error) {
     if (error instanceof ConfigFileError) {
       return { ok: false, error: { code: "CONFIG_ERROR", message: error.message, retryable: false } };

@@ -2,8 +2,9 @@ import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { isAbsolute, join, normalize, sep } from "node:path";
 import { Command, InvalidArgumentError } from "commander";
-import { ConfigFileError, loadConfig } from "../config.js";
+import { ConfigFileError } from "../config.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
+import { loadRuntimeSession } from "../core/runtime-session.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { buildIndexRecord, createIndexMeta, isCollectionIndexRecord, queryIndex, type CollectionIndexRecord } from "../core/knowledge/collection-index.js";
 import { bundleHash, collectionContentHash, topicCanonicalHash } from "../core/knowledge/collection-assets.js";
@@ -1392,15 +1393,16 @@ function collectionIndexMarkdown(topics: Array<Record<string, unknown>>, errors:
 
 async function loadSession(options: CollectionCommandOptions): Promise<Session | undefined> {
   try {
-    const config = await loadConfig(options.configPath);
-    const profile = config.current;
-    const current = profile ? config.profiles[profile] : undefined;
-    if (!profile || !current) {
-      printError(options, { type: "no-profile", message: "No active profile" });
+    const runtime = await loadRuntimeSession(options.configPath);
+    if (!runtime.ok) {
+      printError(options, {
+        type: "no-profile",
+        message: runtime.reason === "no-profile" ? "No active profile" : `No credential is available for profile ${runtime.profile}`
+      });
       process.exitCode = 1;
       return undefined;
     }
-    return { profile, ...current };
+    return runtime.session;
   } catch (error) {
     if (error instanceof ConfigFileError) {
       printError(options, { type: "config", message: error.message });

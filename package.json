@@ -1,6 +1,6 @@
 {
   "name": "apexcn-cli",
-  "version": "0.70.0",
+  "version": "0.80.0",
   "type": "module",
   "bin": {
     "apexcn": "./dist/index.js"
@@ -23,6 +23,9 @@
     "scripts/generate-release-checksums.mjs",
     "scripts/install-agent.ps1",
     "scripts/install-agent.sh",
+    "scripts/lifecycle-agent.ps1",
+    "scripts/lifecycle-agent.sh",
+    "scripts/soak-readonly.mjs",
     "README.md"
   ],
   "scripts": {
@@ -38,6 +41,7 @@
     "eval:retrieval": "node scripts/eval-retrieval.mjs --report",
     "qualify:mcp": "node scripts/qualify-mcp.mjs",
     "roadmap:render": "node scripts/check-roadmap.mjs --write-docs",
+    "soak:readonly": "node scripts/soak-readonly.mjs",
     "test": "vitest run",
     "test:e2e:readonly": "bash scripts/e2e-readonly.sh"
   },

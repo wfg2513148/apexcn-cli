@@ -90,6 +90,139 @@ describe("workflow policy, diff, and audit-log", () => {
     }));
   });
 
+  test("policy decisions allow explicit commands and deny blocked or unconfigured commands", async () => {
+    const dir = await tempDir();
+    const runDir = join(dir, "run");
+    const policyPath = join(dir, "policy.json");
+    await prepareApprovedRun(runDir);
+    const init = localProgram();
+    await init.program.parseAsync(["node", "apexcn", "workflow", "policy", "init", "--output", policyPath, "--json"]);
+
+    const allowed = localProgram();
+    await allowed.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--policy", policyPath, "--json"]);
+    expect(JSON.parse(allowed.stdout.join("")).policy).toEqual(expect.objectContaining({ ok: true }));
+
+    const policy = JSON.parse(await readFile(policyPath, "utf8")) as { commands: Record<string, Record<string, unknown>> };
+    policy.commands["topic.create"].allowed = false;
+    await writeFile(policyPath, `${JSON.stringify(policy, null, 2)}\n`);
+    const blocked = localProgram();
+    await blocked.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--policy", policyPath, "--json"]);
+    expect(JSON.parse(blocked.stdout.join("")).policy.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "policy-command-blocked" })
+    ]));
+    const requestCount = vi.mocked(fetch).mock.calls.length;
+    const blockedExecution = localProgram();
+    await blockedExecution.program.parseAsync([
+      "node", "apexcn", "workflow", "run", "--resume", runDir,
+      "--execute", "--yes", "--policy", policyPath, "--json"
+    ]);
+    expect(blockedExecution.stderr.join("")).toContain("Workflow policy refused execution");
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(requestCount);
+    process.exitCode = undefined;
+
+    delete policy.commands["topic.create"];
+    await writeFile(policyPath, `${JSON.stringify(policy, null, 2)}\n`);
+    const unconfigured = localProgram();
+    await unconfigured.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--policy", policyPath, "--json"]);
+    expect(JSON.parse(unconfigured.stdout.join("")).policy.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "policy-command-unconfigured" })
+    ]));
+  });
+
+  test("policy allow, deny, and unconfigured matrix is exact for every content command", async () => {
+    const dir = await tempDir();
+    const runDir = join(dir, "run");
+    const policyPath = join(dir, "policy.json");
+    await prepareApprovedRun(runDir);
+    const init = localProgram();
+    await init.program.parseAsync(["node", "apexcn", "workflow", "policy", "init", "--output", policyPath, "--json"]);
+    const basePolicy = JSON.parse(await readFile(policyPath, "utf8")) as {
+      commands: Record<string, Record<string, unknown>>;
+    };
+    const runPath = join(runDir, "run.json");
+    const baseRun = JSON.parse(await readFile(runPath, "utf8")) as Record<string, unknown>;
+    const matrix = [
+      ["topic-create", "topic.create"],
+      ["topic-update", "topic.update"],
+      ["topic-delete", "topic.delete"],
+      ["reply-create", "reply.create"],
+      ["reply-update", "reply.update"],
+      ["reply-delete", "reply.delete"]
+    ] as const;
+
+    for (const [goal, commandId] of matrix) {
+      await writeFile(runPath, `${JSON.stringify({ ...baseRun, goal }, null, 2)}\n`);
+      const allowedPolicy = structuredClone(basePolicy);
+      allowedPolicy.commands[commandId].allowed = true;
+      allowedPolicy.commands[commandId].minimumApprovers = 1;
+      await writeFile(policyPath, `${JSON.stringify(allowedPolicy, null, 2)}\n`);
+      const allowed = localProgram();
+      await allowed.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--policy", policyPath, "--json"]);
+      expect(JSON.parse(allowed.stdout.join("")).policy).toEqual(expect.objectContaining({ ok: true, command: commandId }));
+      process.exitCode = undefined;
+
+      allowedPolicy.commands[commandId].allowed = false;
+      await writeFile(policyPath, `${JSON.stringify(allowedPolicy, null, 2)}\n`);
+      const blocked = localProgram();
+      await blocked.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--policy", policyPath, "--json"]);
+      expect(JSON.parse(blocked.stdout.join("")).policy.issues).toEqual(expect.arrayContaining([
+        expect.objectContaining({ code: "policy-command-blocked" })
+      ]));
+      process.exitCode = undefined;
+
+      delete allowedPolicy.commands[commandId];
+      await writeFile(policyPath, `${JSON.stringify(allowedPolicy, null, 2)}\n`);
+      const unconfigured = localProgram();
+      await unconfigured.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--policy", policyPath, "--json"]);
+      expect(JSON.parse(unconfigured.stdout.join("")).policy.issues).toEqual(expect.arrayContaining([
+        expect.objectContaining({ code: "policy-command-unconfigured" })
+      ]));
+      process.exitCode = undefined;
+    }
+  });
+
+  test("policy enforces distinct approval levels and audit retention", async () => {
+    const dir = await tempDir();
+    const runDir = join(dir, "run");
+    const policyPath = join(dir, "policy.json");
+    await prepareApprovedRun(runDir);
+    const init = localProgram();
+    await init.program.parseAsync(["node", "apexcn", "workflow", "policy", "init", "--output", policyPath, "--json"]);
+    const policy = JSON.parse(await readFile(policyPath, "utf8")) as {
+      defaults: { auditRetentionDays: number };
+      commands: Record<string, Record<string, unknown>>;
+    };
+    policy.commands["topic.create"].minimumApprovers = 2;
+    await writeFile(policyPath, `${JSON.stringify(policy, null, 2)}\n`);
+
+    const oneApprover = localProgram();
+    await oneApprover.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--policy", policyPath, "--json"]);
+    expect(JSON.parse(oneApprover.stdout.join("")).policy.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "policy-approval-level-not-met" })
+    ]));
+
+    const approver = localProgram();
+    await approver.program.parseAsync([
+      "node", "apexcn", "workflow", "approve", "--run-dir", runDir,
+      "--approved-by", "reviewer-one", "--second-approver", "reviewer-two", "--json"
+    ]);
+    const twoApprovers = localProgram();
+    await twoApprovers.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--policy", policyPath, "--json"]);
+    expect(JSON.parse(twoApprovers.stdout.join("")).policy).toEqual(expect.objectContaining({ ok: true }));
+
+    const runPath = join(runDir, "run.json");
+    const run = JSON.parse(await readFile(runPath, "utf8")) as Record<string, unknown>;
+    run.createdAt = "2020-01-01T00:00:00.000Z";
+    await writeFile(runPath, `${JSON.stringify(run, null, 2)}\n`);
+    policy.defaults.auditRetentionDays = 1;
+    await writeFile(policyPath, `${JSON.stringify(policy, null, 2)}\n`);
+    const expired = localProgram();
+    await expired.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--policy", policyPath, "--json"]);
+    expect(JSON.parse(expired.stdout.join("")).policy.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "policy-audit-retention-expired" })
+    ]));
+  });
+
   test("diff detects approval hash mismatch", async () => {
     const dir = await tempDir();
     const runDir = join(dir, "run");
@@ -123,6 +256,38 @@ describe("workflow policy, diff, and audit-log", () => {
     expect(stderr.join("")).toBe("");
     const lines = stdout.join("").trim().split("\n").map((line) => JSON.parse(line));
     expect(lines).toEqual(expect.arrayContaining([expect.objectContaining({ schemaVersion: 1, event: "verify" })]));
+    expect(lines.every((event) => typeof event.previousHash === "string" && typeof event.eventHash === "string")).toBe(true);
     expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
+  });
+
+  test("audit-log verification detects missing and tampered events", async () => {
+    const dir = await tempDir();
+    const runDir = join(dir, "run");
+    const auditPath = join(dir, "audit.ndjson");
+    await prepareApprovedRun(runDir);
+    const generated = localProgram();
+    await generated.program.parseAsync(["node", "apexcn", "workflow", "audit-log", "--run-dir", runDir, "--format", "ndjson"]);
+    await writeFile(auditPath, generated.stdout.join(""));
+
+    const verified = localProgram();
+    await verified.program.parseAsync(["node", "apexcn", "workflow", "audit-log", "--run-dir", runDir, "--verify-file", auditPath]);
+    expect(JSON.parse(verified.stdout.join(""))).toEqual(expect.objectContaining({ ok: true, actualEventCount: 4 }));
+
+    const events = generated.stdout.join("").trim().split("\n").map((line) => JSON.parse(line));
+    events[1].reason = "tampered";
+    await writeFile(auditPath, `${events.map((event) => JSON.stringify(event)).join("\n")}\n`);
+    const tampered = localProgram();
+    await tampered.program.parseAsync(["node", "apexcn", "workflow", "audit-log", "--run-dir", runDir, "--verify-file", auditPath]);
+    expect(JSON.parse(tampered.stdout.join("")).issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "audit-chain-mismatch" })
+    ]));
+
+    await writeFile(auditPath, `${events.slice(1).map((event) => JSON.stringify(event)).join("\n")}\n`);
+    const incomplete = localProgram();
+    await incomplete.program.parseAsync(["node", "apexcn", "workflow", "audit-log", "--run-dir", runDir, "--verify-file", auditPath]);
+    expect(JSON.parse(incomplete.stdout.join("")).issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "audit-event-count-mismatch" }),
+      expect.objectContaining({ code: "audit-event-coverage-mismatch" })
+    ]));
   });
 });

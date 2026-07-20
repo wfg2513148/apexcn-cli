@@ -2,7 +2,7 @@
 
 | Command | Capability | API Effect | Auth Required | Supports JSON | Supports Preview | Supports Dry Run | MCP Exposure | Risk Level | Notes |
 |---|---|---:|---:|---:|---:|---:|---|---|---|
-| `auth set-token` | auth | no-network | no | no | no | yes | blocked | high | 保存本地 token。 |
+| `auth set-token` | auth | no-network | no | no | no | yes | blocked | high | 保存 file token，或只保存 env 变量名并配置 env→file fallback。 |
 | `auth show` | auth | no-network | no | yes | no | no | none | medium | 只输出脱敏 token。 |
 | `auth audit` | auth | no-network | no | yes | no | no | none | medium | 本地认证审计。 |
 | `auth list/use/remove/logout` | auth | no-network | no | mixed | no | mixed | blocked | medium | 本地 profile 管理。 |

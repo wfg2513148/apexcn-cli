@@ -320,7 +320,7 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   },
   "auth set-token": {
     safety: { effects: ["config-write", "auth", "secret"], preview: "none", confirmation: [] },
-    examples: [{ command: 'apexcn auth set-token --profile agent-prod --base-url https://oracleapex.cn/ords/api --token "$APEXCN_API_KEY"', mode: "execute" }]
+    examples: [{ command: "apexcn auth set-token --profile agent-prod --base-url https://oracleapex.cn/ords/api --token-env APEXCN_API_KEY", mode: "execute" }]
   },
   "auth show": {
     safety: { effects: ["config-read"], preview: "none", confirmation: [] },

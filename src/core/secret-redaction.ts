@@ -1,7 +1,9 @@
 const SECRET_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
-  { pattern: /(Authorization\s*:\s*Bearer\s+)[^\s"'`]+/gi, replacement: "$1[redacted]" },
+  { pattern: /(Authorization\s*:\s*)(?:(?:Bearer|Basic|Token)\s+)?[^\s"'`]+/gi, replacement: "$1[redacted]" },
   { pattern: /(Bearer\s+)[A-Za-z0-9._~+/=-]{12,}/g, replacement: "$1[redacted]" },
-  { pattern: /((?:api[_-]?key|apiKey|token|password|passwd|secret)\s*[:=]\s*)("[^"]+"|'[^']+'|[^\s,}\]]+)/gi, replacement: "$1[redacted]" },
+  { pattern: /((?:"|')?(?:api[_-]?key|apiKey|token|password|passwd|secret)(?:"|')?\s*[:=]\s*)("[^"]+"|'[^']+'|[^\s,}\]]+)/gi, replacement: "$1[redacted]" },
+  { pattern: /((?:--api-key|--token|--password|--secret)\s+)[^\s"'`]+/gi, replacement: "$1[redacted]" },
+  { pattern: /(https?:\/\/[^:/@\s]+:)[^@\s/]+(@)/gi, replacement: "$1[redacted]$2" },
   { pattern: /((?:Cookie|Set-Cookie)\s*:\s*)[^\r\n]+/gi, replacement: "$1[redacted]" }
 ];
 

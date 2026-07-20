@@ -24,13 +24,24 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
 
   auth
     .command("set-token")
-    .requiredOption("--token <token>")
+    .option("--token <token>", "file credential used directly or as fallback")
+    .option("--token-env <name>", "environment variable used before the file credential")
     .option("--base-url <url>", "ORDS base URL", DEFAULT_BASE_URL)
     .option("--profile <profile>", "profile name", "prod")
     .option("--no-switch", "save the profile without making it current")
-    .action(async (commandOptions: { token: string; baseUrl: string; profile: string; switch?: boolean }) => {
-      if (commandOptions.token.trim().length === 0) {
+    .action(async (commandOptions: { token?: string; tokenEnv?: string; baseUrl: string; profile: string; switch?: boolean }) => {
+      if (commandOptions.token === undefined && commandOptions.tokenEnv === undefined) {
+        options.stderr("Provide --token, --token-env, or both\n");
+        process.exitCode = 1;
+        return;
+      }
+      if (commandOptions.token !== undefined && commandOptions.token.trim().length === 0) {
         options.stderr("Token must not be blank\n");
+        process.exitCode = 1;
+        return;
+      }
+      if (commandOptions.tokenEnv !== undefined && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(commandOptions.tokenEnv)) {
+        options.stderr("Token environment variable name is invalid\n");
         process.exitCode = 1;
         return;
       }
@@ -50,9 +61,20 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
         return;
       }
       try {
+        let fileToken = commandOptions.token;
+        if (fileToken === undefined) {
+          try {
+            fileToken = (await loadConfig(options.configPath)).profiles[commandOptions.profile]?.token ?? "";
+          } catch (error) {
+            if (!(error instanceof ConfigFileError)) {
+              throw error;
+            }
+            fileToken = "";
+          }
+        }
         await setProfile(
           commandOptions.profile,
-          { baseUrl: commandOptions.baseUrl, token: commandOptions.token },
+          { baseUrl: commandOptions.baseUrl, token: fileToken, tokenEnv: commandOptions.tokenEnv },
           options.configPath,
           { overwriteInvalid: true, switchCurrent: commandOptions.switch !== false }
         );
@@ -84,7 +106,10 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
         name,
         current: name === current,
         baseUrl: config.profiles[name].baseUrl,
-        token: redactToken(config.profiles[name].token)
+        ...(config.profiles[name].tokenEnv
+          ? { credentialStore: "env-fallback", tokenEnv: config.profiles[name].tokenEnv }
+          : {}),
+        token: config.profiles[name].token ? redactToken(config.profiles[name].token) : ""
       }));
 
       if (commandOptions.json) {
@@ -113,7 +138,7 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
         }
         throw error;
       }
-      const audit = authAudit(config as unknown, options.configPath ?? defaultConfigPath());
+      const audit = authAudit(config as unknown, options.configPath ?? defaultConfigPath(), process.env);
       if (!audit.ok) {
         process.exitCode = 1;
       }
@@ -192,13 +217,19 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
         return;
       }
 
-      const redactedToken = redactToken(current.token);
+      const redactedToken = current.token ? redactToken(current.token) : "";
+      const credentialStore = current.tokenEnv ? "env-fallback" : "file";
       if (commandOptions.json) {
-        options.stdout(`${JSON.stringify({ profile, baseUrl: current.baseUrl, token: redactedToken }, null, 2)}\n`);
+        options.stdout(`${JSON.stringify({
+          profile,
+          baseUrl: current.baseUrl,
+          ...(current.tokenEnv ? { credentialStore, tokenEnv: current.tokenEnv } : {}),
+          token: redactedToken
+        }, null, 2)}\n`);
         return;
       }
 
-      options.stdout(`Profile: ${profile}\nBase URL: ${current.baseUrl}\nToken: ${redactedToken}\n`);
+      options.stdout(`Profile: ${profile}\nBase URL: ${current.baseUrl}\nCredential Store: ${credentialStore}\nToken: ${redactedToken || "[environment only]"}\n`);
     });
 
   auth.command("logout").action(async () => {
@@ -229,7 +260,7 @@ type AuthAuditFinding = {
   profile?: string;
 };
 
-function authAudit(config: unknown, configPath: string): {
+function authAudit(config: unknown, configPath: string, env: NodeJS.ProcessEnv = process.env): {
   kind: "auth-audit";
   schemaVersion: 1;
   ok: boolean;
@@ -265,6 +296,8 @@ function authAudit(config: unknown, configPath: string): {
     }
     const baseUrl = typeof value.baseUrl === "string" ? value.baseUrl : "";
     const token = typeof value.token === "string" ? value.token : "";
+    const tokenEnv = typeof value.tokenEnv === "string" ? value.tokenEnv : undefined;
+    const envTokenPresent = tokenEnv ? Boolean(env[tokenEnv]) : false;
     if (!isValidBaseUrl(baseUrl)) {
       issues.push({ code: "invalid-base-url", message: "Profile baseUrl must be an absolute http or https URL.", profile: name });
     } else {
@@ -275,13 +308,21 @@ function authAudit(config: unknown, configPath: string): {
         warnings.push({ code: "insecure-base-url", message: "Profile uses http instead of https.", profile: name });
       }
     }
-    if (!token.trim()) {
-      issues.push({ code: "missing-token", message: "Profile token is missing or blank.", profile: name });
+    if (!token.trim() && !envTokenPresent) {
+      issues.push({
+        code: tokenEnv ? "missing-fallback-token" : "missing-token",
+        message: tokenEnv
+          ? `Neither ${tokenEnv} nor the file fallback provides a token.`
+          : "Profile token is missing or blank.",
+        profile: name
+      });
     }
     return {
       name,
       current: name === current,
       baseUrl,
+      credentialStore: tokenEnv ? "env-fallback" : "file",
+      tokenEnv: tokenEnv ? { name: tokenEnv, present: envTokenPresent } : undefined,
       token: {
         present: token.trim().length > 0,
         redacted: token ? redactToken(token) : "",

@@ -44,6 +44,8 @@ export type DoctorSnapshotOutput = {
     activeProfile?: {
       baseUrl: string;
       baseUrlValid: boolean;
+      credentialStore?: "env-fallback";
+      tokenEnv?: { name: string; present: boolean };
       tokenPresent: boolean;
       tokenRedactedLength: number;
     };
@@ -149,18 +151,26 @@ async function inspectConfig(configPath: string, checks: DoctorSnapshotCheck[]):
 
   const baseUrl = typeof currentValue.baseUrl === "string" ? currentValue.baseUrl : "";
   const token = typeof currentValue.token === "string" ? currentValue.token : "";
+  const tokenEnv = typeof currentValue.tokenEnv === "string" ? currentValue.tokenEnv : undefined;
+  const envTokenPresent = tokenEnv ? Boolean(process.env[tokenEnv]) : false;
   const baseUrlValid = isValidHttpUrl(baseUrl);
   output.activeProfile = {
     baseUrl,
     baseUrlValid,
-    tokenPresent: token.trim().length > 0,
+    ...(tokenEnv ? { credentialStore: "env-fallback" as const, tokenEnv: { name: tokenEnv, present: envTokenPresent } } : {}),
+    tokenPresent: envTokenPresent || token.trim().length > 0,
     tokenRedactedLength: token ? redactTokenForSnapshot(token).length : 0
   };
   if (!baseUrlValid) {
     checks.push({ code: "invalid-base-url", severity: "issue", ok: false, message: "Active profile baseUrl must be an absolute http or https URL" });
   }
-  if (!token.trim()) {
-    checks.push({ code: "missing-token", severity: "warning", ok: false, message: "Active profile token is missing or blank" });
+  if (!token.trim() && !envTokenPresent) {
+    checks.push({
+      code: tokenEnv ? "missing-fallback-token" : "missing-token",
+      severity: "warning",
+      ok: false,
+      message: tokenEnv ? `Neither ${tokenEnv} nor the file fallback provides a token` : "Active profile token is missing or blank"
+    });
   }
   return output;
 }

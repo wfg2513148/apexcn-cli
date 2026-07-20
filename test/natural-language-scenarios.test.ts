@@ -1414,8 +1414,8 @@ function personalCapabilityExecutableScenarios(): ExecutableNaturalLanguageScena
       responseForUrl: (url) => {
         expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/capabilities");
         return Response.json({
-          kind: "capability-inventory",
-          contractVersion: "0.4.3-candidate",
+          kind: "capabilities",
+          contractVersion: "0.6.0-candidate",
           capabilities: [{ id: "personal-community", available: true, endpoints: ["/me"] }],
           requestId: "req-capabilities"
         });
@@ -1423,7 +1423,11 @@ function personalCapabilityExecutableScenarios(): ExecutableNaturalLanguageScena
       assertFeedback: ({ stdout, stderr, fetch }) => {
         expect(fetch).toHaveBeenCalledOnce();
         expect(stderr).toBe("");
-        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "capability-inventory", contractVersion: "0.4.3-candidate" }));
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({
+          kind: "capabilities",
+          contractVersion: "0.6.0-candidate",
+          clientCompatibility: expect.objectContaining({ ok: true })
+        }));
       }
     },
     ...unavailable.map(([commandPath, command, path]) => ({

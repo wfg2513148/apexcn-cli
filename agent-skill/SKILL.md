@@ -48,8 +48,10 @@ apexcn commands --json
 apexcn auth set-token \
   --profile agent-prod \
   --base-url https://oracleapex.cn/ords/api \
-  --token "$APEXCN_API_KEY"
+  --token-env APEXCN_API_KEY
 ```
+
+This stores only the environment variable name. Pass both `--token-env` and `--token` only when a file fallback is intentionally required.
 
 ## Agent Rules
 
@@ -64,8 +66,8 @@ apexcn auth set-token \
 - Use `apexcn review reply` before `reply create --dry-run` when you have a local Markdown reply or reply-draft JSON. It is local-only, validates topic/parent ids, detects weak replies and possible secrets, and never publishes.
 - Use `apexcn workflow plan` when you need a machine-readable sequence of local, preview, and execute steps. It only plans; it never executes commands.
 - Use `apexcn workflow run` when you need the CLI to run a resumable workflow with persisted artifacts. The default run reads API data and writes local `run.json`, draft files, review data, and `preview.json`; it does not publish.
-- Approve a workflow preview with `apexcn workflow approve --run-dir <run-dir> --json` after reviewing `preview.json`. This records a hash-bound approval artifact.
-- Only execute an approved workflow with `apexcn workflow run --resume <run-dir> --execute --yes --json`. Execution refuses missing or stale approvals and reuses the approved preview request body for the final POST.
+- Approve a workflow preview with `apexcn workflow approve --run-dir <run-dir> --json` after reviewing `preview.json`. This records a hash-bound approval artifact. If the selected policy requires two approvers, pass distinct `--approved-by` and `--second-approver` values.
+- Only execute an approved workflow with `apexcn workflow run --resume <run-dir> --execute --yes --policy <file> --json`. Execution refuses missing or stale approvals, enforces the supplied policy before any API write, and reuses the approved preview request body for the final POST.
 - Use `apexcn workflow verify --run-dir <run-dir> --json` to locally verify workflow artifacts, approval hashes, and execute evidence. Add `--write-report` when the user needs `verification.json` for audit records.
 - Use `apexcn workflow export --run-dir <run-dir> --output <file> --json` when the user needs a portable single-file workflow evidence bundle for archival or external review.
 - Use `apexcn workflow verify-bundle --bundle <file> --json` when reviewing a portable workflow bundle without access to the original run directory.
@@ -85,7 +87,9 @@ apexcn auth set-token \
 - Use filtered ask flags `--category-id`, `--from/--to`, and `--tag` only when the user wants scoped reference retrieval. Treat filtered ask output as scoped references with `confidence`, `limitations`, and `filters`, not as full RAG generation unless the server contract changes.
 - Use `apexcn commands --json` to inspect available commands, purposes, safety metadata, examples, and options instead of parsing help text.
 - Use `apexcn auth audit --json` before API workflows when you need a local-only check for missing active profile, invalid base URLs, missing tokens, duplicate base URLs, or insecure HTTP profiles.
-- Use `apexcn doctor snapshot --json` before sharing diagnostics with a user or support channel. It is local-only and reports config/env/agent-skill state without exposing full tokens or API key values.
+- Use `apexcn doctor snapshot --output <file> --json` before sharing diagnostics with a user or support channel. It is local-only, writes a user-only sanitized file, and reports config/env/agent-skill state without exposing full tokens or API key values.
+- Use `apexcn me capabilities --require-capability <ids...> --json` before a workflow that depends on specific server APIs. Do not continue when `clientCompatibility.ok` is false.
+- Use `apexcn workflow audit-log --run-dir <run-dir> --verify-file <file> --json` before trusting an archived JSON or NDJSON audit log.
 - This skill supports manifest `schemaVersion === 1`. If `schemaVersion` is missing or unsupported, do not consume structured `safety` or `examples`; upgrade `apexcn-cli` or ask the user before continuing.
 - Prefer manifest `examples[].command` for command shape, check `examples[].mode`, and inspect `safety.effects`, `safety.preview`, and `safety.confirmation` before writes or destructive actions.
 - Prefer `--content-file` for long posts or replies. Use `--content-file -` when piping generated content through stdin.
@@ -110,7 +114,7 @@ apexcn auth set-token \
 ```bash
 apexcn search "APEX" --page-size 5 --json
 apexcn auth audit --json
-apexcn doctor snapshot --json
+apexcn doctor snapshot --output ./support-snapshot.json --json
 apexcn stats category --json
 apexcn stats category --from 2026-07-01 --to 2026-07-05 --json
 apexcn stats topic --tag ORDS --from 2026-07-01 --top 10 --json
@@ -138,6 +142,7 @@ apexcn review reply --topic-id 30549 --content-file ./reply.md --json
 apexcn workflow plan --goal ask-question --keyword "REST API" --title "标题" --problem "问题描述" --category-id 4 --json
 apexcn workflow run --goal ask-question --keyword "REST API" --title "标题" --problem "问题描述" --category-id 4 --output-dir ./run --json
 apexcn workflow approve --run-dir ./run --approved-by reviewer --note "preview reviewed" --json
+apexcn workflow audit-log --run-dir ./run --verify-file ./audit.ndjson --json
 apexcn workflow verify --run-dir ./run --write-report --json
 apexcn workflow export --run-dir ./run --output ./workflow-bundle.json --json
 apexcn workflow verify-bundle --bundle ./workflow-bundle.json --json

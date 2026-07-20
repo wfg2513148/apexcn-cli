@@ -1,6 +1,9 @@
 import { Command, InvalidArgumentError, Option } from "commander";
-import { ConfigFileError, defaultConfigPath, loadConfig } from "../config.js";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
+import { ConfigFileError, defaultConfigPath } from "../config.js";
 import { createDoctorSnapshot, type DoctorSnapshotOutput } from "../core/doctor-snapshot.js";
+import { loadRuntimeSession } from "../core/runtime-session.js";
 import { DEFAULT_USER_AGENT, HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { fieldText, isRecord, parseOutputFormat, printData, validateFormatOptions, type FormatOption, type OutputFormat } from "../output.js";
 import { CLI_VERSION } from "../version.js";
@@ -50,14 +53,19 @@ export function createDoctorCommand(options: DoctorCommandOptions): Command {
   doctor
     .command("snapshot")
     .description("print a local support snapshot without calling the API")
+    .option("--output <file>", "write the sanitized support snapshot with user-only permissions")
     .option("--json", "pretty-print JSON")
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
-    .action(async (commandOptions: FormatOption) => {
+    .action(async (commandOptions: FormatOption & { output?: string }) => {
       const outputOptions = { ...doctor.opts(), ...commandOptions };
       if (!validateFormatOptions(options, outputOptions)) {
         return;
       }
       const result = await createDoctorSnapshot(options.configPath);
+      if (commandOptions.output) {
+        await mkdir(dirname(commandOptions.output), { recursive: true });
+        await writeFile(commandOptions.output, `${JSON.stringify(result, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+      }
       printDoctorSnapshot(options, result, outputOptions);
       if (!result.ok) {
         process.exitCode = 1;
@@ -97,18 +105,21 @@ export function createDoctorCommand(options: DoctorCommandOptions): Command {
 
 async function runDoctor(options: DoctorCommandOptions, commandOptions: { checkAsk?: string; timeoutMs?: number } = {}): Promise<DoctorOutput> {
   const configPath = options.configPath ?? defaultConfigPath();
-  const config = await loadConfig(configPath);
-  const profile = config.current;
-  const current = profile ? config.profiles[profile] : undefined;
+  const runtime = await loadRuntimeSession(configPath);
   const checks: DoctorCheck[] = [];
 
-  if (!profile || !current) {
-    checks.push({ name: "profile", ok: false, message: "No active profile" });
+  if (!runtime.ok) {
+    checks.push({
+      name: "profile",
+      ok: false,
+      message: runtime.reason === "no-profile" ? "No active profile" : `No credential is available for profile ${runtime.profile}`
+    });
     return { ok: false, diagnostics: diagnostics(configPath), checks };
   }
 
   checks.push({ name: "profile", ok: true });
-  const session = { baseUrl: current.baseUrl, token: current.token };
+  const { profile, baseUrl, token } = runtime.session;
+  const session = { baseUrl, token };
   checks.push(await checkApi("me", session, "/api/v1/me", undefined, { timeoutMs: commandOptions.timeoutMs }));
   checks.push(await checkApi("categories", session, "/api/v1/categories", undefined, { timeoutMs: commandOptions.timeoutMs }));
   checks.push(await checkApi("search", session, "/api/v1/search", { keyword: "APEX", pageSize: 1 }, { timeoutMs: commandOptions.timeoutMs }));
@@ -123,7 +134,7 @@ async function runDoctor(options: DoctorCommandOptions, commandOptions: { checkA
   return {
     ok: checks.every((check) => check.ok),
     diagnostics: diagnostics(configPath),
-    profile: { name: profile, baseUrl: current.baseUrl },
+    profile: { name: profile, baseUrl },
     checks
   };
 }

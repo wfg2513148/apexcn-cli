@@ -17,6 +17,7 @@ async function writeConfig(path: string, config: unknown) {
 describe("auth command", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
     process.exitCode = undefined;
   });
 
@@ -37,6 +38,39 @@ describe("auth command", () => {
     expect(text).toContain("Base URL: https://oracleapex.cn/ords/api");
     expect(text).toContain("Token: abcd...wxyz");
     expect(text).not.toContain("abcdefghijklmnopqrstuvwxyz");
+  });
+
+  test("auth set-token configures an environment credential without storing its value", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubEnv("APEXCN_TEST_TOKEN", "environment-secret-value");
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync([
+      "node", "apexcn", "auth", "set-token",
+      "--token-env", "APEXCN_TEST_TOKEN",
+      "--profile", "env-profile"
+    ]);
+    await program.parseAsync(["node", "apexcn", "auth", "show", "--json"]);
+    await program.parseAsync(["node", "apexcn", "auth", "audit", "--json"]);
+
+    const configText = await readFile(configPath, "utf8");
+    expect(configText).toContain('"tokenEnv": "APEXCN_TEST_TOKEN"');
+    expect(configText).not.toContain("environment-secret-value");
+    expect(stdout.join("")).not.toContain("environment-secret-value");
+    expect(stderr.join("")).toBe("");
+    expect(JSON.parse(stdout[1])).toEqual(expect.objectContaining({
+      profile: "env-profile",
+      credentialStore: "env-fallback",
+      tokenEnv: "APEXCN_TEST_TOKEN",
+      token: ""
+    }));
+    expect(JSON.parse(stdout[2])).toEqual(expect.objectContaining({ ok: true }));
   });
 
   test("auth show reports invalid config without a stack trace", async () => {

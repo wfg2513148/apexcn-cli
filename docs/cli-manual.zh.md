@@ -57,9 +57,14 @@ apexcn auth set-token \
   --profile agent-prod \
   --base-url https://oracleapex.cn/ords/api \
   --token "$APEXCN_API_KEY"
+
+apexcn auth set-token \
+  --profile agent-env \
+  --base-url https://oracleapex.cn/ords/api \
+  --token-env APEXCN_API_KEY
 ```
 
-`--token`、`--profile` 和 `--base-url` 不能是空字符串或只有空白字符。`--base-url` 必须是绝对 `http` 或 `https` URL。如果传环境变量，先确认变量已经设置。
+`--token-env <name>` 只保存环境变量名。同时传 `--token-env` 和 `--token` 时，运行时优先使用环境凭据，缺失时回退到文件凭据；两个 backend 都没有 token 时，API 命令会在发起请求前 fail closed。token 值、profile 和 base URL 不能是空字符串或只有空白字符。`--base-url` 必须是绝对 `http` 或 `https` URL。
 如果只想保存 profile 而不切换当前 profile，加 `--no-switch`。
 
 查看当前 profile：
@@ -106,13 +111,14 @@ apexcn doctor --json
 apexcn doctor --format json
 apexcn doctor --format text
 apexcn doctor snapshot --json
+apexcn doctor snapshot --output ./support-snapshot.json --json
 apexcn doctor --check-ask "Oracle APEX 如何调用 REST API？" --json
 apexcn doctor --timeout-ms 10000 --json
 ```
 
 `doctor` 默认输出文本。`--format json` 输出压缩 JSON；`--json` 和 `--format pretty` 输出格式化 JSON。JSON 输出包含 CLI 版本、User-Agent、配置文件路径、Node.js 版本、平台和架构等诊断信息。默认只检查 profile、账号、板块和搜索；只有显式传 `--check-ask <question>` 时才会额外检查 RAG 问答接口。`--timeout-ms` 可为每个检查设置毫秒级请求超时。
 
-`doctor snapshot` 是纯本地支持快照，不调用社区 API。它直读配置文件并输出 `kind: "doctor-snapshot"`、`schemaVersion: 1`、`diagnostics`、`environment`、`config`、`agentSkill` 和稳定 `checks[].code`。硬问题 code 包括 `config-unreadable`、`config-invalid-json`、`no-active-profile`、`missing-current-profile`、`invalid-base-url`、`invalid-timeout-env`；warning code 包括 `api-key-env-missing`、`missing-token`、`agent-skill-missing`。环境变量只输出是否存在或是否有效；token 只输出是否存在和脱敏长度，不输出完整值。
+`doctor snapshot` 是纯本地支持快照，不调用社区 API。它直读配置文件并输出 `kind: "doctor-snapshot"`、`schemaVersion: 1`、`diagnostics`、`environment`、`config`、`agentSkill` 和稳定 `checks[].code`。硬问题 code 包括 `config-unreadable`、`config-invalid-json`、`no-active-profile`、`missing-current-profile`、`invalid-base-url`、`invalid-timeout-env`；warning code 包括 `api-key-env-missing`、`missing-token`、`agent-skill-missing`。环境变量只输出是否存在或是否有效；token 只输出是否存在和脱敏长度，不输出完整值。`--output <file>` 会以仅当前用户可读写权限保存同一份脱敏快照。
 
 ## category
 
@@ -157,6 +163,7 @@ apexcn admin list --format text
 ```bash
 apexcn me stats --json
 apexcn me capabilities --json
+apexcn me capabilities --require-capability personal-community favorite-topic-export --json
 apexcn me notifications --json
 apexcn me inbox --json
 apexcn me rules --json
@@ -169,7 +176,7 @@ apexcn me subscriptions --json
 
 `me` 默认递归脱敏 email、手机号、IP、地址和 secret-like 字段；只有显式 `me --include-private` 才显示服务端返回的私有账号字段。`me topics`、`me replies`、`me favorites` 和 `me subscriptions` 优先使用服务端返回的 opaque `page.nextCursor` 继续分页；兼容旧服务端时仍可使用 `offset/page.nextOffset`，但 `--cursor` 与 `--offset` 不能同时使用。
 
-`me capabilities` 读取服务端 `contractVersion` 与能力矩阵。`me notifications`、`me inbox`、`me rules` 和 `me privacy` 只转发权威只读契约；能力缺失时保留服务端的 `available: false`、`status: "UNAVAILABLE"`、`unavailableReason` 和 `requestId`，不会生成空消息、规则或政策冒充真实数据。
+`me capabilities` 读取服务端 `contractVersion` 与能力矩阵，并增加 `clientCompatibility`。0.80.x 只接受已声明的 0.8、0.7、0.6 candidate 契约窗口；格式错误、更新或更旧的契约都 fail closed。当前 0.8 契约还必须公布完整支持窗口。`--require-capability <ids...>` 会在任一必需能力不可用时以非零状态退出。`me notifications`、`me inbox`、`me rules` 和 `me privacy` 只转发权威只读契约；能力缺失时保留服务端的 `available: false`、`status: "UNAVAILABLE"`、`unavailableReason` 和 `requestId`，不会生成空消息、规则或政策冒充真实数据。
 
 ## search
 
@@ -595,7 +602,11 @@ apexcn workflow policy init --output apexcn-policy.json
 apexcn workflow verify --run-dir ./run --policy apexcn-policy.json --json
 apexcn workflow diff --run-dir ./run --json
 apexcn workflow audit-log --run-dir ./run --format ndjson
+apexcn workflow audit-log --run-dir ./run --format ndjson > audit.ndjson
+apexcn workflow audit-log --run-dir ./run --verify-file audit.ndjson --json
 ```
+
+默认 policy 对未配置命令一律拒绝，create/update 至少需要一名独立审批人，delete 至少需要两名，审计证据保留期为 90 天。所选 policy 要求双人审批时，在 `workflow approve` 中增加 `--second-approver <name>`。恢复执行命令必须传 `--policy <file>` 才会在任何 API 写入前强制执行该 policy。审计事件带 SHA-256 hash chain；`--verify-file` 会拒绝缺失、乱序、修改或额外事件。
 
 只读真实环境验收。没有 `APEXCN_API_KEY` 时脚本会跳过；有 key 时会检查 `doctor`、`me`、`category list`、`search` 和 `ask`，写操作只做 `--preview`：
 
