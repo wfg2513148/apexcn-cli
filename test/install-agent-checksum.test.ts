@@ -22,104 +22,68 @@ function execNpm(args: string[]): string {
   });
 }
 
+function preparePackage(dir: string, checksum?: string): NodeJS.ProcessEnv {
+  const version = (JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as { version: string }).version;
+  execNpm(["pack", "--pack-destination", dir]);
+  const archive = join(dir, "apexcn-cli.tgz");
+  cpSync(join(dir, `apexcn-cli-${version}.tgz`), archive);
+  const actual = createHash("sha256").update(readFileSync(archive)).digest("hex");
+  const checksums = join(dir, "checksums.txt");
+  writeFileSync(checksums, `${checksum ?? actual}  apexcn-cli.tgz\n`);
+  return {
+    ...process.env,
+    HOME: join(dir, "home"),
+    APEXCN_CLI_PACKAGE_URL: `file://${archive}`,
+    APEXCN_CLI_CHECKSUMS_URL: `file://${checksums}`,
+    APEXCN_CLI_INSTALL_ROOT: join(dir, "install"),
+    APEXCN_CLI_BIN_DIR: join(dir, "bin")
+  };
+}
+
 describe("install-agent checksum verification", () => {
-  test("shell installer accepts a package when checksums.txt matches", () => {
+  test("shell installer accepts a matching package", () => {
     const dir = mkdtempSync(join(tmpdir(), "apexcn-install-checksum-ok-"));
-    const packageJson = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as { version: string };
-    const tarball = `apexcn-cli-${packageJson.version}.tgz`;
-    execNpm(["pack", "--pack-destination", dir]);
-    const tgzPath = join(dir, tarball);
-    cpSync(tgzPath, join(dir, "apexcn-cli.tgz"));
-    const actual = createHash("sha256").update(readFileSync(join(dir, "apexcn-cli.tgz"))).digest("hex");
-    writeFileSync(join(dir, "checksums.txt"), `${actual}  apexcn-cli.tgz\n`);
-
-    const result = spawnSync("bash", [
-      "scripts/install-agent.sh",
-      "--package-url", `file://${join(dir, "apexcn-cli.tgz")}`,
-      "--install-root", join(dir, "install"),
-      "--bin-dir", join(dir, "bin"),
-      "--yes"
-    ], {
+    const result = spawnSync("bash", ["scripts/install-agent.sh"], {
       cwd: repoRoot,
-      env: { ...process.env, APEXCN_CLI_CHECKSUMS_URL: `file://${join(dir, "checksums.txt")}` },
+      env: preparePackage(dir),
       encoding: "utf8"
     });
 
-    expect(result.status).toBe(0);
+    expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain("Verified package checksum.");
-  }, 30000);
+  }, 30_000);
 
-  test("shell installer fails when checksums.txt is missing unless explicitly skipped", () => {
+  test("shell installer fails when checksums.txt is unavailable", () => {
     const dir = mkdtempSync(join(tmpdir(), "apexcn-install-checksum-missing-"));
-    const packageJson = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as { version: string };
-    const tarball = `apexcn-cli-${packageJson.version}.tgz`;
-    execNpm(["pack", "--pack-destination", dir]);
-    cpSync(join(dir, tarball), join(dir, "apexcn-cli.tgz"));
-    const missingChecksumsUrl = `file://${join(dir, "missing-checksums.txt")}`;
-
-    const failed = spawnSync("bash", [
-      "scripts/install-agent.sh",
-      "--package-url", `file://${join(dir, "apexcn-cli.tgz")}`,
-      "--install-root", join(dir, "install-failed"),
-      "--bin-dir", join(dir, "bin-failed"),
-      "--yes"
-    ], {
+    const env = preparePackage(dir);
+    env.APEXCN_CLI_CHECKSUMS_URL = `file://${join(dir, "missing-checksums.txt")}`;
+    const result = spawnSync("bash", ["scripts/install-agent.sh"], {
       cwd: repoRoot,
-      env: { ...process.env, APEXCN_CLI_CHECKSUMS_URL: missingChecksumsUrl },
+      env,
       encoding: "utf8"
     });
-    expect(failed.status).not.toBe(0);
-    expect(failed.stderr).toContain("Unable to download checksums.txt");
 
-    const skipped = spawnSync("bash", [
-      "scripts/install-agent.sh",
-      "--package-url", `file://${join(dir, "apexcn-cli.tgz")}`,
-      "--install-root", join(dir, "install-skipped"),
-      "--bin-dir", join(dir, "bin-skipped"),
-      "--yes"
-    ], {
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("Unable to download checksums.txt");
+  }, 30_000);
+
+  test("shell installer rejects a checksum mismatch", () => {
+    const dir = mkdtempSync(join(tmpdir(), "apexcn-install-checksum-bad-"));
+    const result = spawnSync("bash", ["scripts/install-agent.sh"], {
       cwd: repoRoot,
-      env: { ...process.env, APEXCN_CLI_CHECKSUMS_URL: missingChecksumsUrl, APEXCN_CLI_SKIP_CHECKSUM: "1" },
-      encoding: "utf8"
-    });
-    expect(skipped.status).toBe(0);
-    expect(skipped.stderr).toContain("WARNING");
-    expect(skipped.stderr).toContain("APEXCN_CLI_SKIP_CHECKSUM=1");
-  }, 30000);
-
-  test("shell installer rejects a package when checksums.txt does not match", () => {
-    const dir = mkdtempSync(join(tmpdir(), "apexcn-install-checksum-"));
-    const packageJson = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as { version: string };
-    const tarball = `apexcn-cli-${packageJson.version}.tgz`;
-    execNpm(["pack", "--pack-destination", dir]);
-    const tgzPath = join(dir, tarball);
-    const actual = createHash("sha256").update(readFileSync(tgzPath)).digest("hex");
-    const wrong = `${actual.slice(0, -1)}${actual.endsWith("0") ? "1" : "0"}`;
-    writeFileSync(join(dir, "checksums.txt"), `${wrong}  apexcn-cli.tgz\n`);
-    cpSync(tgzPath, join(dir, "apexcn-cli.tgz"));
-
-    const result = spawnSync("bash", [
-      "scripts/install-agent.sh",
-      "--package-url", `file://${join(dir, "apexcn-cli.tgz")}`,
-      "--install-root", join(dir, "install"),
-      "--bin-dir", join(dir, "bin"),
-      "--yes"
-    ], {
-      cwd: repoRoot,
-      env: { ...process.env, APEXCN_CLI_CHECKSUMS_URL: `file://${join(dir, "checksums.txt")}` },
+      env: preparePackage(dir, "0".repeat(64)),
       encoding: "utf8"
     });
 
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("Checksum verification failed");
-  }, 30000);
+  }, 30_000);
 
-  test("PowerShell installer contains equivalent checksum enforcement", () => {
+  test("PowerShell installer enforces the same checksum policy", () => {
     const script = readFileSync(join(repoRoot, "scripts/install-agent.ps1"), "utf8");
 
-    expect(script).toContain("APEXCN_CLI_SKIP_CHECKSUM");
     expect(script).toContain("checksums.txt");
     expect(script).toContain("Checksum verification failed");
-    expect(script).toContain("Write-WarningStep");
+    expect(script).not.toContain("SKIP_CHECKSUM");
   });
 });

@@ -1,10 +1,24 @@
-import { mkdtempSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { execFileSync, spawnSync } from "node:child_process";
+import { cpSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
 import { describe, expect, test } from "vitest";
 
 const repoRoot = join(__dirname, "..");
+
+function execNpm(args: string[]): string {
+  if (process.env.npm_execpath) {
+    return execFileSync(process.execPath, [process.env.npm_execpath, ...args], {
+      cwd: repoRoot,
+      encoding: "utf8"
+    });
+  }
+  return execFileSync(process.platform === "win32" ? "npm.cmd" : "npm", args, {
+    cwd: repoRoot,
+    encoding: "utf8"
+  });
+}
 
 describe("cross-platform lifecycle assets", () => {
   test("shell lifecycle performs install, upgrade, rollback, and uninstall with a preserved backup", () => {
@@ -19,6 +33,13 @@ describe("cross-platform lifecycle assets", () => {
     mkdirSync(home, { recursive: true });
     writeFileSync(join(installRoot, "package.json"), '{"name":"apexcn-cli","version":"0.60.0","type":"module"}\n');
     writeFileSync(join(installRoot, "dist", "index.js"), 'console.log("0.60.0");\n');
+    const version = (JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as { version: string }).version;
+    execNpm(["pack", "--pack-destination", root]);
+    const archive = join(root, "apexcn-cli.tgz");
+    cpSync(join(root, `apexcn-cli-${version}.tgz`), archive);
+    const checksums = join(root, "checksums.txt");
+    const digest = createHash("sha256").update(readFileSync(archive)).digest("hex");
+    writeFileSync(checksums, `${digest}  apexcn-cli.tgz\n`);
 
     const common = {
       cwd: repoRoot,
@@ -26,33 +47,30 @@ describe("cross-platform lifecycle assets", () => {
       env: {
         ...process.env,
         HOME: home,
-        APEXCN_CLI_CURRENT_AGENT: "none"
+        APEXCN_CLI_PACKAGE_URL: `file://${archive}`,
+        APEXCN_CLI_CHECKSUMS_URL: `file://${checksums}`
       }
     };
     const installed = spawnSync("bash", [
       "scripts/lifecycle-agent.sh",
       "install",
       "--install-root", freshInstallRoot,
-      "--bin-dir", freshBinDir,
-      "--source-dir", repoRoot,
-      "--yes"
+      "--bin-dir", freshBinDir
     ], common);
     expect(installed.status, installed.stderr).toBe(0);
-    expect((JSON.parse(readFileSync(join(freshInstallRoot, "package.json"), "utf8")) as { version: string }).version)
-      .toBe((JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as { version: string }).version);
+    expect((JSON.parse(readFileSync(join(freshInstallRoot, "package", "package.json"), "utf8")) as { version: string }).version)
+      .toBe(version);
 
     const upgraded = spawnSync("bash", [
       "scripts/lifecycle-agent.sh",
       "upgrade",
       "--install-root", installRoot,
       "--bin-dir", binDir,
-      "--backup-root", backupRoot,
-      "--source-dir", repoRoot,
-      "--yes"
+      "--backup-root", backupRoot
     ], common);
     expect(upgraded.status, upgraded.stderr).toBe(0);
-    const currentVersion = (JSON.parse(readFileSync(join(installRoot, "package.json"), "utf8")) as { version: string }).version;
-    expect(currentVersion).toBe((JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as { version: string }).version);
+    const currentVersion = (JSON.parse(readFileSync(join(installRoot, "package", "package.json"), "utf8")) as { version: string }).version;
+    expect(currentVersion).toBe(version);
 
     const backups = readdirSync(backupRoot);
     expect(backups).toHaveLength(1);

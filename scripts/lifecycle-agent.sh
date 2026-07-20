@@ -15,7 +15,6 @@ bin_dir="${APEXCN_CLI_BIN_DIR:-$HOME/.local/bin}"
 backup_root="${APEXCN_CLI_BACKUP_ROOT:-$HOME/.apexcn/backups/apexcn-cli}"
 backup_path=""
 yes="${APEXCN_CLI_YES:-0}"
-installer_args=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -37,12 +36,11 @@ while [[ $# -gt 0 ]]; do
       ;;
     --yes)
       yes=1
-      installer_args+=("--yes")
       shift
       ;;
     *)
-      installer_args+=("$1")
-      shift
+      printf 'Unknown lifecycle option: %s\n' "$1" >&2
+      exit 2
       ;;
   esac
 done
@@ -97,12 +95,12 @@ restore_backup() {
 
 case "$operation" in
   install)
-    exec "$installer" --install-root "$install_root" --bin-dir "$bin_dir" "${installer_args[@]}"
+    APEXCN_CLI_INSTALL_ROOT="$install_root" APEXCN_CLI_BIN_DIR="$bin_dir" exec "$installer"
     ;;
   upgrade)
     cli_root >/dev/null || { printf 'No existing apexcn-cli installation at %s\n' "$install_root" >&2; exit 1; }
     backup_path="$(create_backup)"
-    if "$installer" --install-root "$install_root" --bin-dir "$bin_dir" "${installer_args[@]}"; then
+    if APEXCN_CLI_INSTALL_ROOT="$install_root" APEXCN_CLI_BIN_DIR="$bin_dir" "$installer"; then
       printf '[apexcn-cli] Upgrade complete. Rollback backup: %s\n' "$backup_path"
     else
       printf '[apexcn-cli] Upgrade failed; restoring %s\n' "$backup_path" >&2

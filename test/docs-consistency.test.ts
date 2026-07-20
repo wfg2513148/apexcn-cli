@@ -47,12 +47,13 @@ describe("documentation consistency", () => {
     expect(docs).not.toMatch(/\/v0\.17\.0\//);
   });
 
-  test("macOS and Linux one-line install docs fail when the download pipe fails", () => {
+  test("macOS and Linux one-line install docs keep a minimal fail-closed pipe", () => {
     for (const path of ["README.md", "docs/quickstart.md"]) {
       const doc = read(path);
 
       expect(doc).toContain("bash -o pipefail -c");
-      expect(doc).toContain("curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300");
+      expect(doc).toContain("curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash");
+      expect(doc).not.toContain("curl -fsSL --retry");
       expect(doc).not.toContain("install-agent.sh | APEXCN_API_KEY");
     }
   });

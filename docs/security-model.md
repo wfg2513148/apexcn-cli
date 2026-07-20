@@ -77,4 +77,4 @@ Release 必须上传：
 - `artifacts/install-agent.sh.sha256`
 - `artifacts/install-agent.ps1.sha256`
 
-安装脚本默认下载 `checksums.txt` 并用 SHA-256 校验 `apexcn-cli.tgz`。校验失败必须停止安装。只有显式设置 `APEXCN_CLI_SKIP_CHECKSUM=1` 时才允许降级跳过，并应向用户输出 warning。
+安装脚本必须下载 `checksums.txt` 并用 SHA-256 校验 `apexcn-cli.tgz`。校验缺失或失败时必须停止安装，不提供跳过开关。

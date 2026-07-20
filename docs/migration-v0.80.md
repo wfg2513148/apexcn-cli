@@ -2,6 +2,18 @@
 
 0.80.x adds organization policy, tamper-evident audit verification, explicit API compatibility negotiation, sanitized support snapshots, credential fallback, and cross-platform lifecycle helpers without redesigning existing commands.
 
+## One-click installation
+
+Starting with 0.80.1, the public one-click installer takes no arguments. It installs the CLI launcher and user-level agent skills, requires Node.js 20+, and always verifies `apexcn-cli.tgz` against `checksums.txt`. Installation never consumes or validates an API key; configure authentication only after installation succeeds.
+
+```bash
+bash -o pipefail -c 'curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash'
+```
+
+```powershell
+irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
+```
+
 ## API compatibility
 
 `apexcn me capabilities --json` now adds `clientCompatibility`. The supported window is `0.8.0-candidate`, `0.7.0-candidate`, and `0.6.0-candidate`. A malformed, future, older, or incomplete current contract exits nonzero. Use `--require-capability <ids...>` to fail closed before a dependent workflow.

@@ -38,16 +38,16 @@ describe("release checksums", () => {
     expect(checksums).toContain("install-agent.ps1");
   });
 
-  test("install scripts contain checksum verification and explicit skip controls", () => {
+  test("install scripts contain mandatory checksum verification without skip controls", () => {
     const shell = readFileSync(join(repoRoot, "scripts/install-agent.sh"), "utf8");
     const pwsh = readFileSync(join(repoRoot, "scripts/install-agent.ps1"), "utf8");
 
-    expect(shell).toContain("APEXCN_CLI_SKIP_CHECKSUM");
-    expect(shell).toContain("verify_package_checksum");
+    expect(shell).toContain("checksums.txt");
     expect(shell).toContain("Checksum verification failed");
-    expect(pwsh).toContain("APEXCN_CLI_SKIP_CHECKSUM");
-    expect(pwsh).toContain("Test-PackageChecksum");
+    expect(shell).not.toContain("SKIP_CHECKSUM");
+    expect(pwsh).toContain("checksums.txt");
     expect(pwsh).toContain("Checksum verification failed");
+    expect(pwsh).not.toContain("SKIP_CHECKSUM");
   });
 
   test("release artifact check creates checksums.txt", () => {

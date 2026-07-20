@@ -57,14 +57,11 @@ function Restore-Backup([string]$Source) {
 }
 
 function Invoke-Installer {
-  $arguments = @{
-    InstallRoot = $InstallRoot
-    BinDir = $BinDir
-  }
-  if ($PackageUrl) { $arguments.PackageUrl = $PackageUrl }
-  if ($ChecksumsUrl) { $arguments.ChecksumsUrl = $ChecksumsUrl }
-  if ($Yes) { $arguments.Yes = $true }
-  & $installer @arguments
+  $env:APEXCN_CLI_INSTALL_ROOT = $InstallRoot
+  $env:APEXCN_CLI_BIN_DIR = $BinDir
+  if ($PackageUrl) { $env:APEXCN_CLI_PACKAGE_URL = $PackageUrl }
+  if ($ChecksumsUrl) { $env:APEXCN_CLI_CHECKSUMS_URL = $ChecksumsUrl }
+  & $installer
   if ($LASTEXITCODE -ne 0) { throw "Installer failed with exit code $LASTEXITCODE" }
 }
 

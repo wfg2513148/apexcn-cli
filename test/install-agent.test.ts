@@ -1,809 +1,256 @@
-import { createHash } from 'node:crypto';
-import { chmodSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { execFileSync, spawnSync } from 'node:child_process';
-import { describe, expect, test } from 'vitest';
+import { createHash } from "node:crypto";
+import { execFileSync, spawnSync } from "node:child_process";
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { delimiter, join } from "node:path";
+import { describe, expect, test } from "vitest";
 
-const repoRoot = join(__dirname, '..');
-const posixExecutionTest = process.platform === 'win32' ? test.skip : test;
+const repoRoot = join(__dirname, "..");
+const posixTest = process.platform === "win32" ? test.skip : test;
 
-function readRepoFile(relativePath: string): string {
-  return readFileSync(join(repoRoot, relativePath), 'utf8');
+function readRepoFile(path: string): string {
+  return readFileSync(join(repoRoot, path), "utf8");
 }
 
-function execNpm(args: string[], options: { encoding: BufferEncoding }): string {
+function execNpm(args: string[]): string {
   if (process.env.npm_execpath) {
     return execFileSync(process.execPath, [process.env.npm_execpath, ...args], {
       cwd: repoRoot,
-      ...options,
+      encoding: "utf8"
     });
   }
-  return execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', args, {
+  return execFileSync(process.platform === "win32" ? "npm.cmd" : "npm", args, {
     cwd: repoRoot,
-    ...options,
+    encoding: "utf8"
   });
 }
 
-function writeChecksums(dir: string, archiveName: string): void {
-  const content = readFileSync(join(dir, archiveName));
-  const sha256 = createHash('sha256').update(content).digest('hex');
-  writeFileSync(join(dir, 'checksums.txt'), `${sha256}  apexcn-cli.tgz\n`);
+function preparePackage(root: string): { archive: string; checksums: string } {
+  const version = (JSON.parse(readRepoFile("package.json")) as { version: string }).version;
+  execNpm(["pack", "--pack-destination", root]);
+  const archive = join(root, "apexcn-cli.tgz");
+  cpSync(join(root, `apexcn-cli-${version}.tgz`), archive);
+  const digest = createHash("sha256").update(readFileSync(archive)).digest("hex");
+  const checksums = join(root, "checksums.txt");
+  writeFileSync(checksums, `${digest}  apexcn-cli.tgz\n`);
+  return { archive, checksums };
 }
 
-describe('agent one-click installer assets', () => {
-  test('macOS/Linux installer supports agent-safe automation', () => {
-    const script = readRepoFile('scripts/install-agent.sh');
+function installEnvironment(
+  root: string,
+  packagePaths: { archive: string; checksums: string },
+  extra: NodeJS.ProcessEnv = {}
+): NodeJS.ProcessEnv {
+  const home = join(root, "home");
+  const bin = join(root, "bin");
+  mkdirSync(home, { recursive: true });
+  mkdirSync(bin, { recursive: true });
+  return {
+    ...process.env,
+    HOME: home,
+    APEXCN_CLI_PACKAGE_URL: `file://${packagePaths.archive}`,
+    APEXCN_CLI_CHECKSUMS_URL: `file://${packagePaths.checksums}`,
+    APEXCN_CLI_INSTALL_ROOT: join(root, "install"),
+    APEXCN_CLI_BIN_DIR: bin,
+    PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
+    ...extra
+  };
+}
 
-    expect(script).toContain('--dry-run');
-    expect(script).toContain('--install-codex-skill');
-    expect(script).toContain('--install-agent-skills');
-    expect(script).not.toContain('token="${APEXCN_API_KEY:-}"');
-    expect(script).not.toContain('--token <token>');
-    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/latest/download/apexcn-cli.tgz');
-    expect(script).toContain('APEXCN_CLI_SKIP_CHECKSUM');
-    expect(script).not.toContain('APEXCN_CLI_VERIFY_TIMEOUT_MS');
-    expect(script).toContain('checksums.txt');
-    expect(script).toContain('Checksum verification failed');
-    expect(script).toContain('curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300');
-    expect(script).toContain('wget -q --tries=5 --timeout=20');
-    expect(script).toContain('Authentication is configured after installation.');
-    expect(script).toContain('--package-url');
-    expect(script).toContain('Downloading apexcn-cli package');
-    expect(script).toContain('cli_root');
-    expect(script).toContain('check_shell_launcher');
-    expect(script).toContain('repair_shell_launcher');
-    expect(script).toContain('auth set-token');
-    expect(script).toContain('npm run build');
-    expect(script).toContain('use_git=1');
-    expect(script).not.toContain('feature/apexcn-cli-ords-api');
-  });
+describe("zero-argument one-click installers", () => {
+  test("shell installer keeps a minimal public surface and mandatory checksum verification", () => {
+    const script = readRepoFile("scripts/install-agent.sh");
 
-  test('macOS/Linux installer can copy the skill into detected AI agent tools', () => {
-    const script = readRepoFile('scripts/install-agent.sh');
-
-    expect(script).toContain('detect_agent_tool');
-    expect(script).toContain('install_agent_skills');
-    expect(script).toContain('install_current_agent_skill');
-    expect(script).toContain('APEXCN_CLI_CURRENT_AGENT');
-    expect(script).toContain('current_agent_opt_out');
-    expect(script).toContain('Set to none to disable current-agent auto skill installation.');
-    expect(script).not.toContain('Optional current AI agent override: codex');
-    expect(script).toContain('prompt_install_agent_skill');
-    expect(script).toContain('codex');
-    expect(script).toContain('claude');
-    expect(script).toContain('opencode');
-    expect(script).toContain('workbuddy');
-    expect(script).toContain('qcoder');
-    expect(script).toContain('$HOME/.agents/skills/apexcn-cli');
-    expect(script).toContain('CLAUDE_HOME:-$HOME/.claude');
-    expect(script).toContain('${XDG_CONFIG_HOME:-$HOME/.config}/opencode/skills/apexcn-cli');
-    expect(script).toContain('$HOME/.workbuddy/skills/apexcn-cli');
-    expect(script).toContain('$HOME/.codebuddy/skills/apexcn-cli');
-    expect(script).toContain('$HOME/.qoder-cn/skills/apexcn-cli');
-  });
-
-  test('Windows installer supports agent-safe automation', () => {
-    const script = readRepoFile('scripts/install-agent.ps1');
-
-    expect(script).toContain('DryRun');
-    expect(script).toContain('InstallCodexSkill');
-    expect(script).toContain('InstallAgentSkills');
-    expect(script).not.toContain('$env:APEXCN_API_KEY) { $env:APEXCN_API_KEY }');
-    expect(script).not.toContain('[string]$Token');
-    expect(script).toContain('https://github.com/wfg2513148/apexcn-cli/releases/latest/download/apexcn-cli.tgz');
-    expect(script).toContain('APEXCN_CLI_SKIP_CHECKSUM');
-    expect(script).not.toContain('APEXCN_CLI_VERIFY_TIMEOUT_MS');
-    expect(script).toContain('checksums.txt');
-    expect(script).toContain('Checksum verification failed');
-    expect(script).toContain('$maxAttempts = 5');
-    expect(script).toContain('Invoke-WebRequest -Uri $Url -OutFile $Target -TimeoutSec 300');
-    expect(script).toContain('download failed, retrying');
-    expect(script).toContain('Authentication is configured after installation.');
-    expect(script).toContain('PackageUrl');
-    expect(script).toContain('Downloading apexcn-cli package');
-    expect(script).toContain('Get-CliRoot');
-    expect(script).toContain('Test-ShellLauncher');
-    expect(script).toContain('Repair-ShellLauncher');
-    expect(script).toContain('Test-LauncherFileLooksLikeApexcnCli');
-    expect(script).toContain('auth set-token');
-    expect(script).toContain('npm run build');
-    expect(script).toContain('Using bundled prebuilt apexcn-cli package.');
-    expect(script).toContain('else { "main" }');
-    expect(script).not.toContain('feature/apexcn-cli-ords-api');
-  });
-
-  test('Windows installer can copy the skill into detected AI agent tools', () => {
-    const script = readRepoFile('scripts/install-agent.ps1');
-
-    expect(script).toContain('Test-AgentTool');
-    expect(script).toContain('Install-AgentSkills');
-    expect(script).toContain('Install-CurrentAgentSkill');
-    expect(script).toContain('APEXCN_CLI_CURRENT_AGENT');
-    expect(script).toContain('function Test-CurrentAgentOptOut');
-    expect(script).toContain('if (Test-CurrentAgentOptOut) {');
-    expect(script).toContain('if ($InstallAgentSkills -or ((-not (Test-CurrentAgentOptOut))');
-    expect(script).toContain('Confirm-AgentSkillInstall');
-    expect(script).toContain('codex');
-    expect(script).toContain('claude');
-    expect(script).toContain('opencode');
-    expect(script).toContain('workbuddy');
-    expect(script).toContain('qcoder');
-    expect(script).toContain('.agents');
-    expect(script).toContain('.claude');
-    expect(script).toContain('opencode');
-    expect(script).toContain('.workbuddy');
-    expect(script).toContain('.codebuddy');
-    expect(script).toContain('.qoder-cn');
-  });
-
-  posixExecutionTest('macOS/Linux installer defaults skill installation to the current AI tool', () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-agent-install-'));
-    const home = join(tempRoot, 'home');
-    mkdirSync(home);
-
-    try {
-      const output = execFileSync(
-        'bash',
-        [
-          join(repoRoot, 'scripts/install-agent.sh'),
-          '--source-dir',
-          repoRoot,
-          '--install-root',
-          join(tempRoot, 'install'),
-          '--bin-dir',
-          join(tempRoot, 'bin'),
-        ],
-        {
-          cwd: repoRoot,
-          env: {
-            ...process.env,
-            APEXCN_CLI_DRY_RUN: '1',
-            CODEX_SHELL: '1',
-            HOME: home,
-          },
-          encoding: 'utf8',
-        },
-      );
-
-      expect(output).toContain('Detected current AI tool: codex');
-      expect(output).toContain(join(home, '.codex/skills/apexcn-cli'));
-      expect(output).toContain(join(home, '.agents/skills/apexcn-cli'));
-      expect(output).not.toContain('Re-run with --install-agent-skills');
-    } finally {
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  }, 30000);
-
-  posixExecutionTest('macOS/Linux installer can opt out of current agent skill installation', () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-agent-opt-out-'));
-    const home = join(tempRoot, 'home');
-    mkdirSync(home);
-
-    try {
-      const output = execFileSync(
-        'bash',
-        [
-          join(repoRoot, 'scripts/install-agent.sh'),
-          '--source-dir',
-          repoRoot,
-          '--install-root',
-          join(tempRoot, 'install'),
-          '--bin-dir',
-          join(tempRoot, 'bin'),
-          '--yes',
-        ],
-        {
-          cwd: repoRoot,
-          env: {
-            ...process.env,
-            APEXCN_CLI_DRY_RUN: '1',
-            APEXCN_CLI_CURRENT_AGENT: 'none',
-            CODEX_SHELL: '1',
-            HOME: home,
-          },
-          encoding: 'utf8',
-        },
-      );
-
-      expect(output).not.toContain('Detected current AI tool: codex');
-      expect(output).not.toContain(join(home, '.codex/skills/apexcn-cli'));
-      expect(output).not.toContain(join(home, '.agents/skills/apexcn-cli'));
-      expect(output).not.toContain('Re-run with --install-agent-skills');
-    } finally {
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  }, 30000);
-
-  posixExecutionTest('macOS/Linux current agent opt-out preserves explicit broad skill installation', () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-agent-broad-install-'));
-    const home = join(tempRoot, 'home');
-    const codexHome = join(home, '.codex');
-    mkdirSync(codexHome, { recursive: true });
-
-    try {
-      const output = execFileSync(
-        'bash',
-        [
-          join(repoRoot, 'scripts/install-agent.sh'),
-          '--source-dir',
-          repoRoot,
-          '--install-root',
-          join(tempRoot, 'install'),
-          '--bin-dir',
-          join(tempRoot, 'bin'),
-        ],
-        {
-          cwd: repoRoot,
-          env: {
-            ...process.env,
-            APEXCN_CLI_DRY_RUN: '1',
-            APEXCN_CLI_CURRENT_AGENT: 'none',
-            APEXCN_CLI_INSTALL_AGENT_SKILLS: '1',
-            CODEX_HOME: codexHome,
-            HOME: home,
-          },
-          encoding: 'utf8',
-        },
-      );
-
-      expect(output).not.toContain('Detected current AI tool: codex');
-      expect(output).toContain(join(codexHome, 'skills/apexcn-cli'));
-      expect(output).toContain(join(home, '.agents/skills/apexcn-cli'));
-    } finally {
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  }, 30000);
-
-  posixExecutionTest('macOS/Linux installer warns when another apexcn command shadows the launcher', () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-shadow-install-'));
-    const fakeBin = join(tempRoot, 'fake-bin');
-    mkdirSync(fakeBin, { recursive: true });
-    const fakeApexcn = join(fakeBin, 'apexcn');
-    writeFileSync(fakeApexcn, '#!/usr/bin/env sh\nexit 0\n');
-    chmodSync(fakeApexcn, 0o755);
-
-    try {
-      const output = execFileSync(
-        'bash',
-        [
-          join(repoRoot, 'scripts/install-agent.sh'),
-          '--source-dir',
-          repoRoot,
-          '--install-root',
-          join(tempRoot, 'install'),
-          '--bin-dir',
-          join(tempRoot, 'bin'),
-        ],
-        {
-          cwd: repoRoot,
-          env: {
-            ...process.env,
-            APEXCN_CLI_DRY_RUN: '1',
-            PATH: `${fakeBin}:${process.env.PATH}`,
-          },
-          encoding: 'utf8',
-        },
-      );
-
-      expect(output).toContain('WARNING: your shell currently resolves apexcn to');
-      expect(output).toContain('Run this before README examples');
-      expect(output).toContain(`export PATH="${join(tempRoot, 'bin')}:$PATH"`);
-    } finally {
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  }, 30000);
-
-  posixExecutionTest('macOS/Linux installer can replace a shadowing apexcn symlink with --yes', () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-shadow-repair-'));
-    const fakeBin = join(tempRoot, 'fake-bin');
-    mkdirSync(fakeBin, { recursive: true });
-    const fakeTarget = join(fakeBin, 'apex-cli');
-    writeFileSync(fakeTarget, '#!/usr/bin/env sh\nexit 0\n');
-    chmodSync(fakeTarget, 0o755);
-    symlinkSync(fakeTarget, join(fakeBin, 'apexcn'));
-
-    try {
-      const output = execFileSync(
-        'bash',
-        [
-          join(repoRoot, 'scripts/install-agent.sh'),
-          '--source-dir',
-          repoRoot,
-          '--install-root',
-          join(tempRoot, 'install'),
-          '--bin-dir',
-          join(tempRoot, 'bin'),
-          '--yes',
-        ],
-        {
-          cwd: repoRoot,
-          env: {
-            ...process.env,
-            APEXCN_CLI_DRY_RUN: '1',
-            PATH: `${fakeBin}:${process.env.PATH}`,
-          },
-          encoding: 'utf8',
-        },
-      );
-
-      expect(output).toContain('Replacing shadowing apexcn launcher');
-      expect(output).toContain('DRY-RUN: would replace');
-    } finally {
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  }, 30000);
-
-  posixExecutionTest('macOS/Linux installer replaces a working older apexcn-cli launcher file with --yes', () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-shadow-file-repair-'));
-    const fakeBin = join(tempRoot, 'fake-bin');
-    const installRoot = join(tempRoot, 'tools', 'apexcn-cli');
-    mkdirSync(fakeBin, { recursive: true });
-    const fakeApexcn = join(fakeBin, 'apexcn');
-    writeFileSync(
-      fakeApexcn,
-      `#!/usr/bin/env bash
-# apexcn-cli launcher for dist/index.js
-if [[ "\${1:-}" == "--help" ]]; then
-  printf 'topic|thread\n'
-  exit 0
-fi
-if [[ "\${1:-}" == "--version" ]]; then
-  printf '0.18.8\n'
-  exit 0
-fi
-exit 0
-`,
-    );
-    chmodSync(fakeApexcn, 0o755);
-
-    try {
-      const output = execFileSync(
-        'bash',
-        [
-          join(repoRoot, 'scripts/install-agent.sh'),
-          '--source-dir',
-          repoRoot,
-          '--install-root',
-          installRoot,
-          '--bin-dir',
-          join(tempRoot, 'bin'),
-          '--yes',
-        ],
-        {
-          cwd: repoRoot,
-          env: {
-            ...process.env,
-            PATH: `${fakeBin}:${process.env.PATH}`,
-            HOME: join(tempRoot, 'home'),
-          },
-          encoding: 'utf8',
-        },
-      );
-
-      expect(output).toContain('Replacing shadowing apexcn launcher');
-      expect(execFileSync(fakeApexcn, ['--version'], {
-        env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
-        encoding: 'utf8',
-      })).toBe('0.80.0\n');
-      expect(readFileSync(fakeApexcn, 'utf8')).not.toContain("0.18.8");
-    } finally {
-      rmSync(tempRoot, { recursive: true, force: true });
+    expect(script.split("\n").length).toBeLessThanOrEqual(180);
+    expect(script).toContain('[[ "$#" -eq 0 ]]');
+    expect(script).toContain("takes no arguments");
+    expect(script).toContain("checksums.txt");
+    expect(script).toContain("Checksum verification failed");
+    expect(script).toContain("Verified package checksum");
+    expect(script).toContain("releases/latest/download/apexcn-cli.tgz");
+    expect(script).not.toContain("APEXCN_API_KEY");
+    for (const option of [
+      "--yes",
+      "--dry-run",
+      "--source-dir",
+      "--package-url",
+      "--repo",
+      "--ref",
+      "--install-root",
+      "--bin-dir",
+      "--install-agent-skills"
+    ]) {
+      expect(script).not.toContain(option);
     }
   });
 
-  posixExecutionTest('macOS/Linux installer ignores API key environment values and leaves auth unconfigured', () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-install-without-auth-'));
-    const home = join(tempRoot, 'home');
+  test("PowerShell installer keeps the same zero-argument security contract", () => {
+    const script = readRepoFile("scripts/install-agent.ps1");
 
-    try {
-      const output = execFileSync(
-        'bash',
-        [
-          join(repoRoot, 'scripts/install-agent.sh'),
-          '--source-dir',
-          repoRoot,
-          '--install-root',
-          join(tempRoot, 'install'),
-          '--bin-dir',
-          join(tempRoot, 'bin'),
-          '--yes',
-        ],
-        {
-          cwd: repoRoot,
-          env: {
-            ...process.env,
-            APEXCN_API_KEY: 'must-not-be-consumed-by-installer',
-            APEXCN_CLI_CURRENT_AGENT: 'none',
-            HOME: home,
-          },
-          encoding: 'utf8',
-        },
-      );
-
-      expect(output).toContain('Authentication is configured after installation.');
-      expect(output).not.toContain('Configuring apexcn auth profile');
-      expect(output).not.toContain('Checking apexcn account');
-      expect(existsSync(join(home, '.apexcn', 'config.json'))).toBe(false);
-    } finally {
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  }, 30000);
-
-  posixExecutionTest('macOS/Linux installer rejects legacy authentication flags', () => {
-    const result = spawnSync(
-      'bash',
-      [join(repoRoot, 'scripts/install-agent.sh'), '--dry-run', '--token', 'must-not-be-accepted'],
-      { cwd: repoRoot, encoding: 'utf8' },
-    );
-
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain('Unknown option: --token');
-    expect(result.stdout).not.toContain('must-not-be-accepted');
-    expect(result.stderr).not.toContain('must-not-be-accepted');
+    expect(script.split("\n").length).toBeLessThanOrEqual(180);
+    expect(script).toContain("$args.Count");
+    expect(script).toContain("takes no arguments");
+    expect(script).toContain("checksums.txt");
+    expect(script).toContain("Checksum verification failed");
+    expect(script).toContain("Verified package checksum");
+    expect(script).toContain("releases/latest/download/apexcn-cli.tgz");
+    expect(script).not.toContain("APEXCN_API_KEY");
+    expect(script).not.toContain("param(");
+    expect(script).not.toContain("[switch]");
   });
 
-  posixExecutionTest('macOS/Linux installer writes a compact launcher for the resolved CLI root', () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-launcher-install-'));
-
-    try {
-      execFileSync(
-        'bash',
-        [
-          join(repoRoot, 'scripts/install-agent.sh'),
-          '--source-dir',
-          repoRoot,
-          '--install-root',
-          join(tempRoot, 'install'),
-          '--bin-dir',
-          join(tempRoot, 'bin'),
-          '--yes',
-        ],
-        {
-          cwd: repoRoot,
-          env: { ...process.env, HOME: join(tempRoot, 'home') },
-          encoding: 'utf8',
-        },
-      );
-
-      const launcher = readFileSync(join(tempRoot, 'bin', 'apexcn'), 'utf8');
-      expect(launcher.match(/exec node/g)).toHaveLength(1);
-      expect(launcher).not.toContain('/cli/dist/index.js');
-    } finally {
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  }, 30000);
-
-  posixExecutionTest('macOS/Linux source-dir install rebuilds instead of reusing stale dist', () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-source-rebuild-install-'));
-    const installRoot = join(tempRoot, 'install');
-    mkdirSync(join(installRoot, 'dist'), { recursive: true });
-    mkdirSync(join(installRoot, 'node_modules', 'commander'), { recursive: true });
-    writeFileSync(join(installRoot, 'dist', 'index.js'), '#!/usr/bin/env node\nconsole.log("stale")\n');
-
-    try {
-      const output = execFileSync(
-        'bash',
-        [
-          join(repoRoot, 'scripts/install-agent.sh'),
-          '--source-dir',
-          repoRoot,
-          '--install-root',
-          installRoot,
-          '--bin-dir',
-          join(tempRoot, 'bin'),
-          '--yes',
-        ],
-        {
-          cwd: repoRoot,
-          env: { ...process.env, HOME: join(tempRoot, 'home') },
-          encoding: 'utf8',
-        },
-      );
-
-      expect(output).not.toContain('Using bundled prebuilt apexcn-cli package.');
-      const version = execFileSync(join(tempRoot, 'bin', 'apexcn'), ['--version'], {
-        env: { ...process.env, HOME: join(tempRoot, 'home') },
-        encoding: 'utf8',
-      });
-      expect(version).toBe('0.80.0\n');
-      expect(readFileSync(join(installRoot, 'dist', 'index.js'), 'utf8')).not.toContain('stale');
-    } finally {
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  }, 30000);
-
-  posixExecutionTest('macOS/Linux installer can install the npm package tarball layout', () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-package-install-'));
-
-    try {
-      execNpm(['pack', '--pack-destination', tempRoot], {
-        encoding: 'utf8',
-      });
-      const archive = join(tempRoot, 'apexcn-cli-0.80.0.tgz');
-      writeChecksums(tempRoot, 'apexcn-cli-0.80.0.tgz');
-
-      const output = execFileSync(
-        'bash',
-        [
-          join(repoRoot, 'scripts/install-agent.sh'),
-          '--package-url',
-          `file://${archive}`,
-          '--install-root',
-          join(tempRoot, 'install'),
-          '--bin-dir',
-          join(tempRoot, 'bin'),
-          '--yes',
-        ],
-        {
-          cwd: repoRoot,
-          env: { ...process.env, HOME: join(tempRoot, 'home') },
-          encoding: 'utf8',
-        },
-      );
-      expect(output).toContain('Using bundled prebuilt apexcn-cli package.');
-
-      const version = execFileSync(join(tempRoot, 'bin', 'apexcn'), ['--version'], {
-        env: { ...process.env, HOME: join(tempRoot, 'home') },
-        encoding: 'utf8',
-      });
-      expect(version).toBe('0.80.0\n');
-    } finally {
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  }, 30000);
-
-  test('Windows installer can install the npm package tarball layout when pwsh is available', () => {
-    const pwsh = process.env.PWSH_BIN ?? 'pwsh';
-    const probe = spawnSync(pwsh, ['-NoProfile', '-Command', '$PSVersionTable.PSVersion.ToString()'], {
-      encoding: 'utf8',
+  posixTest("shell installer installs the release package and skills without consuming auth", () => {
+    const root = mkdtempSync(join(tmpdir(), "apexcn-zero-install-"));
+    const packagePaths = preparePackage(root);
+    const env = installEnvironment(root, packagePaths, {
+      APEXCN_API_KEY: "must-not-be-consumed"
     });
-    if (probe.status !== 0) {
-      console.warn('Skipping PowerShell installer tarball test because pwsh is unavailable.');
+
+    try {
+      const result = spawnSync("bash", ["scripts/install-agent.sh"], {
+        cwd: repoRoot,
+        env,
+        encoding: "utf8"
+      });
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain("Verified package checksum");
+      expect(result.stdout).toContain("Authentication is configured after installation");
+      expect(result.stdout).not.toContain("Configuring apexcn auth");
+      expect(execFileSync(join(root, "bin", "apexcn"), ["--version"], {
+        env,
+        encoding: "utf8"
+      })).toBe("0.80.1\n");
+      expect(existsSync(join(root, "home", ".apexcn", "config.json"))).toBe(false);
+      expect(existsSync(join(root, "home", ".agents", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
+      expect(existsSync(join(root, "home", ".codex", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  posixTest("shell installer rejects every command-line argument", () => {
+    const result = spawnSync("bash", ["scripts/install-agent.sh", "--yes"], {
+      cwd: repoRoot,
+      encoding: "utf8"
+    });
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("takes no arguments");
+  });
+
+  posixTest("shell installer fails closed on a checksum mismatch", () => {
+    const root = mkdtempSync(join(tmpdir(), "apexcn-zero-checksum-"));
+    const packagePaths = preparePackage(root);
+    writeFileSync(packagePaths.checksums, `${"0".repeat(64)}  apexcn-cli.tgz\n`);
+
+    try {
+      const result = spawnSync("bash", ["scripts/install-agent.sh"], {
+        cwd: repoRoot,
+        env: installEnvironment(root, packagePaths),
+        encoding: "utf8"
+      });
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("Checksum verification failed");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  posixTest("shell installer replaces a working older apexcn-cli launcher", () => {
+    const root = mkdtempSync(join(tmpdir(), "apexcn-zero-shadow-"));
+    const packagePaths = preparePackage(root);
+    const shadowBin = join(root, "shadow-bin");
+    const shadow = join(shadowBin, "apexcn");
+    mkdirSync(shadowBin);
+    writeFileSync(shadow, `#!/usr/bin/env bash
+# apexcn-cli launcher for dist/index.js
+[[ "\${1:-}" == "--help" ]] && { printf 'topic|thread\\n'; exit 0; }
+[[ "\${1:-}" == "--version" ]] && { printf '0.18.8\\n'; exit 0; }
+exit 0
+`);
+    chmodSync(shadow, 0o755);
+    const env = installEnvironment(root, packagePaths, {
+      PATH: `${shadowBin}${delimiter}${process.env.PATH ?? ""}`
+    });
+
+    try {
+      const result = spawnSync("bash", ["scripts/install-agent.sh"], {
+        cwd: repoRoot,
+        env,
+        encoding: "utf8"
+      });
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain("Updated shell-resolved launcher");
+      expect(execFileSync(shadow, ["--version"], { env, encoding: "utf8" })).toBe("0.80.1\n");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  test("PowerShell installer can install the same package when pwsh is available", () => {
+    const pwsh = process.env.PWSH_BIN ?? "pwsh";
+    if (spawnSync(pwsh, ["-NoProfile", "-Command", "$PSVersionTable.PSVersion.ToString()"]).status !== 0) {
       return;
     }
-
-    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-pwsh-package-install-'));
-
-    try {
-      execNpm(['pack', '--pack-destination', tempRoot], {
-        encoding: 'utf8',
-      });
-      const archive = join(tempRoot, 'apexcn-cli-0.80.0.tgz');
-      writeChecksums(tempRoot, 'apexcn-cli-0.80.0.tgz');
-
-      const output = execFileSync(
-        pwsh,
-        [
-          '-NoProfile',
-          '-ExecutionPolicy',
-          'Bypass',
-          '-File',
-          join(repoRoot, 'scripts/install-agent.ps1'),
-          '-PackageUrl',
-          `file://${archive}`,
-          '-InstallRoot',
-          join(tempRoot, 'install'),
-          '-BinDir',
-          join(tempRoot, 'bin'),
-          '-Yes',
-        ],
-        {
-          cwd: repoRoot,
-          env: {
-            ...process.env,
-            APEXCN_CLI_CHECKSUMS_URL: `file://${join(tempRoot, 'checksums.txt')}`,
-            USERPROFILE: join(tempRoot, 'home'),
-          },
-          encoding: 'utf8',
-        },
-      );
-      expect(output).toContain('Using bundled prebuilt apexcn-cli package.');
-
-      const command = process.platform === 'win32' ? join(tempRoot, 'bin', 'apexcn.cmd') : 'node';
-      const args = process.platform === 'win32'
-        ? ['--version']
-        : [join(tempRoot, 'install', 'package', 'dist', 'index.js'), '--version'];
-      const version = execFileSync(command, args, {
-        env: { ...process.env, USERPROFILE: join(tempRoot, 'home') },
-        encoding: 'utf8',
-        shell: process.platform === 'win32',
-      });
-      expect(version).toBe('0.80.0\n');
-    } finally {
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  }, 30000);
-
-  posixExecutionTest('macOS/Linux installer summary separates installation from authentication', () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), 'apexcn-auth-after-install-'));
-    const home = join(tempRoot, 'home');
-    mkdirSync(home, { recursive: true });
+    const root = mkdtempSync(join(tmpdir(), "apexcn-zero-pwsh-"));
+    const packagePaths = preparePackage(root);
+    const env = {
+      ...installEnvironment(root, packagePaths),
+      USERPROFILE: join(root, "home"),
+      LOCALAPPDATA: join(root, "local")
+    };
 
     try {
-      const output = execFileSync(
-        'bash',
-        [
-          join(repoRoot, 'scripts/install-agent.sh'),
-          '--source-dir',
-          repoRoot,
-          '--install-root',
-          join(tempRoot, 'install'),
-          '--bin-dir',
-          join(tempRoot, 'bin'),
-          '--yes',
-        ],
-        {
-          cwd: repoRoot,
-          env: {
-            ...process.env,
-            HOME: home,
-            APEXCN_API_KEY: 'abcdefghijklmnopqrstuvwxyz',
-            APEXCN_CLI_BASE_URL: 'http://127.0.0.1:9',
-          },
-          encoding: 'utf8',
-        },
-      );
+      const result = spawnSync(pwsh, [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        join(repoRoot, "scripts/install-agent.ps1")
+      ], { cwd: repoRoot, env, encoding: "utf8" });
 
-      expect(output).toContain('Authentication is configured after installation.');
-      expect(output).toContain('apexcn auth set-token --profile agent-prod --base-url https://oracleapex.cn/ords/api --token-env APEXCN_API_KEY');
-      const auth = spawnSync(join(tempRoot, 'bin', 'apexcn'), ['auth', 'show', '--json'], {
-        env: { ...process.env, HOME: home },
-        encoding: 'utf8',
-      });
-      expect(auth.status).toBe(1);
-      expect(auth.stderr).toContain('No active profile');
-      expect(existsSync(join(home, '.apexcn', 'config.json'))).toBe(false);
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain("Verified package checksum");
+      expect(execFileSync(process.execPath, [
+        join(root, "install", "package", "dist", "index.js"),
+        "--version"
+      ], { env, encoding: "utf8" })).toBe("0.80.1\n");
+      expect(existsSync(join(root, "home", ".apexcn", "config.json"))).toBe(false);
     } finally {
-      rmSync(tempRoot, { recursive: true, force: true });
+      rmSync(root, { recursive: true, force: true });
     }
-  }, 30000);
+  }, 30_000);
 
-  test('Codex skill tells agents how to use the installed CLI safely', () => {
-    const skill = readRepoFile('agent-skill/SKILL.md');
-
-    expect(skill).toContain('apexcn auth show --json');
-    expect(skill).toContain('apexcn doctor --json');
-    expect(skill).toContain('--json');
-    expect(skill).toContain('real URL');
-    expect(skill).toContain('originalUrl');
-    expect(skill).toContain('不要输出完整 API key');
-    expect(skill).toContain('apexcn-cli');
-  });
-
-  test('Codex skill description includes natural community trigger keywords', () => {
-    const skill = readRepoFile('agent-skill/SKILL.md');
-    const description = /^description: (.+)$/m.exec(skill)?.[1] ?? '';
-
-    expect(description).toMatch(/^Use when/);
-    expect(description.length).toBeLessThan(500);
-    expect(description).toContain('APEX 中文社区');
-    expect(description).toContain('oracleapex.cn');
-    expect(description).toContain('APEX Chinese Community');
-    expect(description).toContain('Oracle APEX troubleshooting/how-to question');
-    expect(description).not.toContain('community posts/topics');
-    expect(description).not.toContain('forum search');
-    expect(skill).toContain('## Trigger Keywords');
-    expect(skill).toContain('APEX社区 when paired with actions');
-    expect(skill).toContain('在 APEX 中文社区搜索');
-    expect(skill).toContain('发布到 APEX 中文社区');
-    expect(skill).toContain('Natural Oracle APEX troubleshooting or how-to questions');
-    expect(skill).toContain('Do not use this skill for:');
-    expect(skill).toContain('without APEX Chinese Community or oracleapex.cn context');
-  });
-
-  test('Codex skill instructs agents to carry ask follow-up context', () => {
-    const skill = readRepoFile('agent-skill/SKILL.md');
-
-    expect(skill).toContain('For natural Oracle APEX troubleshooting/how-to questions');
-    expect(skill).toContain('apexcn ask "<question>" --top-k 3 --json');
-    expect(skill).toContain('Maintain conversation context in the agent');
-    expect(skill).toContain('--context "<previous question/topic and constraints>"');
-    expect(skill).toContain('do not call `apexcn ask` with only the short follow-up');
-    expect(skill).toContain('needsContext');
-  });
-
-  test('quickstart exposes one-line AI agent installation as the primary path', () => {
-    const doc = readRepoFile('docs/quickstart.md');
-
-    expect(doc).toContain('给 AI agent 的一行命令');
-    expect(doc).toContain('install-agent.sh');
-    expect(doc).toContain('install-agent.ps1');
-    expect(doc).toContain('apexcn-cli.tgz');
-    expect(doc).toContain('APEXCN_CLI_INSTALL_AGENT_SKILLS');
-    expect(doc).toContain('安装命令不接收 API key');
-    expect(doc).toContain('bash -o pipefail -c');
-    expect(doc).toContain('curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300');
-    expect(doc).toContain('--install-agent-skills');
-    expect(doc).toContain('如果 GitHub 下载失败，整条命令会以失败状态退出');
-    expect(doc).toContain('当前用户运行该命令的 AI 工具全局 Skills 目录');
-    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh');
-    expect(doc).toContain('https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1');
-    expect(doc).not.toContain('wfg2513148/apexcn-forums/main/cli/install-agent.sh');
-    expect(doc).not.toContain('wfg2513148/apexcn-forums/main/cli/install-agent.ps1');
-    expect(doc).not.toContain('feature/apexcn-cli-ords-api');
-  });
-
-  test('split manuals cover beginner and terminal usage in Chinese and English', () => {
-    const userDocs = [
-      readRepoFile('docs/user-guide.zh.md'),
-      readRepoFile('docs/user-guide.en.md'),
-    ];
-    const terminalDocs = [
-      readRepoFile('docs/cli-manual.zh.md'),
-      readRepoFile('docs/cli-manual.en.md'),
-    ];
-
-    for (const doc of userDocs) {
-      expect(doc).toContain('AI');
-      expect(doc).toContain('apexcn-cli');
-      expect(doc).toMatch(/搜索|Search/);
-      expect(doc).toMatch(/发布|Publish/);
-      expect(doc).toMatch(/回复|Reply/);
-      expect(doc).toMatch(/收藏|Favorite/);
-      expect(doc).toMatch(/订阅|Subscribe/);
-      expect(doc).not.toContain('```');
-      expect(doc).not.toContain('apexcn ');
-      expect(doc).not.toContain('curl ');
-      expect(doc).not.toContain('PowerShell');
-      expect(doc).not.toContain('APEXCN_API_KEY=');
+  test("primary docs expose the zero-argument commands and separate authentication", () => {
+    for (const path of ["README.md", "docs/quickstart.md"]) {
+      const doc = readRepoFile(path);
+      expect(doc).toContain("bash -o pipefail -c 'curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash'");
+      expect(doc).toContain('irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex');
+      expect(doc).toContain("安装命令不接收 API key");
+      expect(doc).not.toContain("APEXCN_CLI_INSTALL_AGENT_SKILLS");
+      expect(doc).not.toContain("APEXCN_CLI_YES");
+      expect(doc).not.toContain("bash -s --");
     }
-
-    for (const doc of terminalDocs) {
-      expect(doc).toContain('apexcn auth set-token');
-      expect(doc).toContain('apexcn auth show');
-      expect(doc).toContain('apexcn doctor');
-      expect(doc).toContain('apexcn auth logout');
-      expect(doc).toContain('apexcn me');
-      expect(doc).toContain('apexcn category list');
-      expect(doc).toContain('apexcn search');
-      expect(doc).toContain('apexcn topic view');
-      expect(doc).toContain('apexcn topic create');
-      expect(doc).toContain('apexcn topic delete');
-      expect(doc).toContain('apexcn reply create');
-      expect(doc).toContain('apexcn reply delete');
-      expect(doc).toContain('apexcn favorite add');
-      expect(doc).toContain('apexcn favorite remove');
-      expect(doc).toContain('apexcn subscription add');
-      expect(doc).toContain('apexcn subscription remove');
-      expect(doc).toContain('apexcn ask');
-    }
-
-    expect(userDocs[0]).toContain('小白用户手册');
-    expect(userDocs[1]).toContain('Beginner Guide');
-    expect(terminalDocs[0]).toContain('命令行终端手册');
-    expect(terminalDocs[1]).toContain('Terminal Manual');
   });
 
-  test('README gives beginner-friendly AI and manual install paths', () => {
-    const doc = readRepoFile('README.md');
+  test("bundled skill keeps installation and authentication separate", () => {
+    const skill = readRepoFile("agent-skill/SKILL.md");
 
-    expect(doc).toContain('把 APEX 中文社区装进本地 AI 工具里');
-    expect(doc).toContain('快速安装');
-    expect(doc).toContain('推荐：在 AI 工具里安装');
-    expect(doc).toContain('安装后怎么用');
-    expect(doc).toContain('多数情况下不需要显式说 `apexcn-cli`');
-    expect(doc).toContain('帮我在 APEX 中文社区搜索 REST API 相关帖子');
-    expect(doc).toContain('请先搜索社区已有讨论，再帮我起草一篇提问帖');
-    expect(doc).toContain('帮我收藏帖子 30549');
-    expect(doc).toContain('APEXCN_CLI_INSTALL_AGENT_SKILLS');
-    expect(doc).toContain('bash -o pipefail -c');
-    expect(doc).toContain('apexcn doctor --json');
-    expect(doc).toContain('apexcn auth show --json');
-    expect(doc).toContain('command -v apexcn');
-    expect(doc).toContain('docs/user-guide.zh.md');
-    expect(doc).toContain('docs/user-guide.en.md');
-    expect(doc).toContain('docs/cli-manual.zh.md');
-    expect(doc).toContain('docs/cli-manual.en.md');
-    expect(doc).toContain('如果 shell 找不到 `apexcn`');
-    expect(doc).not.toContain('APEXCN_CLI_CURRENT_AGENT');
-    expect(doc).not.toContain('可选值');
-    expect(doc).not.toContain('如果安装脚本没有认出当前 AI 工具');
-    expect(doc).not.toContain('不是数据库直连工具');
-    expect(doc).not.toContain('管理员后门');
-    expect(doc).not.toContain('不能绕过');
-    expect(doc).not.toContain('不能删除或编辑');
-    expect(doc).not.toContain('只用于识别当前账号');
-    expect(doc).not.toContain('APEXCN_CLI_INSTALL_CODEX_SKILL=1');
+    expect(skill).toContain("Never pass an API key");
+    expect(skill).toContain("--token-env APEXCN_API_KEY");
+    expect(skill).toContain("apexcn auth audit --json");
+    expect(skill).toContain("Do not output the full API key");
   });
 });

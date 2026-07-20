@@ -19,30 +19,16 @@
 macOS / Linux：
 
 ```bash
-APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -o pipefail -c 'curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300 https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash -s -- --yes'
+bash -o pipefail -c 'curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash'
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
+irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
 ```
 
-### 只安装终端命令
-
-如果你只想自己在命令行里用：
-
-macOS / Linux：
-
-```bash
-bash -o pipefail -c 'curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300 https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash -s -- --yes'
-```
-
-Windows PowerShell：
-
-```powershell
-$env:APEXCN_CLI_YES="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
-```
+两条命令都不接收参数，会安装 CLI launcher 和用户级 agent skill。安装器要求本机已有 Node.js 20+、校验 release 包的 SHA-256，并在发现可识别的旧 launcher 时直接更新它。
 
 ### 安装后单独认证
 
@@ -222,4 +208,4 @@ https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.
 https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1.sha256
 ```
 
-Release assets 使用 SHA-256 校验。安装脚本默认下载 `checksums.txt` 并校验 `apexcn-cli.tgz`；只有在显式设置 `APEXCN_CLI_SKIP_CHECKSUM=1` 时才跳过校验。
+Release assets 使用 SHA-256 校验。安装脚本必须下载 `checksums.txt` 并校验 `apexcn-cli.tgz`；校验不可跳过。

@@ -57,18 +57,17 @@ https://oracleapex.cn/ords/api
 macOS / Linux：
 
 ```bash
-APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -o pipefail -c 'curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300 https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash -s -- --yes'
+bash -o pipefail -c 'curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash'
 ```
-
-macOS / Linux 命令通过外层 `bash -o pipefail -c` 执行管道；如果 GitHub 下载失败，整条命令会以失败状态退出，不会把空输入当成安装成功。
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
+irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
 ```
 
 安装命令不接收 API key。即使调用安装脚本的 shell 已经存在 `APEXCN_API_KEY`，安装器也不会读取、保存或验证它。
+安装命令也不接收其他参数：它只负责检查 Node.js 20+、下载并强制校验 release 包、安装 launcher 和用户级 agent skill。
 
 安装脚本默认下载固定文件名的 CLI 包：
 
@@ -77,21 +76,7 @@ https://github.com/wfg2513148/apexcn-cli/releases/latest/download/apexcn-cli.tgz
 https://github.com/wfg2513148/apexcn-cli/releases/latest/download/checksums.txt
 ```
 
-即使 CLI 版本更新，上述 URL 和压缩包文件名也保持不变。安装脚本默认用 `checksums.txt` 校验 `apexcn-cli.tgz`；只有显式设置 `APEXCN_CLI_SKIP_CHECKSUM=1` 时才跳过校验。
-
-如果只是让 agent 先检查会做什么，把 macOS / Linux 命令最后的 `--yes` 改为：
-
-```bash
---dry-run --yes --install-agent-skills
-```
-
-Windows 可加：
-
-```powershell
-$env:APEXCN_CLI_DRY_RUN="1"
-```
-
-自动化测试或受控环境中，如需禁止安装脚本根据当前 AI 工具自动写入 skill，可设置 `APEXCN_CLI_CURRENT_AGENT=none`；显式设置 `APEXCN_CLI_INSTALL_AGENT_SKILLS=1` 时仍会安装已检测到的工具 skill。
+即使 CLI 版本更新，上述 URL 和压缩包文件名也保持不变。安装脚本必须用 `checksums.txt` 校验 `apexcn-cli.tgz`，校验缺失或不匹配时立即停止。
 
 安装完成后先确认 shell 使用的是刚安装的 launcher：
 
@@ -431,7 +416,7 @@ AI agent 调用 CLI 时建议固定这些规则：
 - 遇到 401 先刷新 API key；遇到 403 不要重试写入，先判断权限/禁言/RAG 开关；遇到 429 按限流退避。
 - 不要在生产环境切换 `API_ENABLE_CLI`、限流、禁言、版主、锁帖等运营配置。
 
-API 写操作预览与安装脚本的 `--dry-run` 是两件事：安装脚本 dry-run 用于检查安装动作；CLI API `--preview` / `--dry-run` 用于打印将要发送的社区 API 写请求但不联网执行。CLI API 预览只覆盖 `topic create/update/edit/delete`、`reply create/update/edit/delete`、`favorite add/remove`、`subscription add/remove`，别名 `thread` 和 `post` 继承同样分类。`ask` 虽然使用 POST，但属于只读 RAG 问答，不纳入 API 写操作预览。预览下不需要预先执行 `category list` 或 `topic view`；创建话题仍必须显式传 `--category-id`，删除话题仍必须传 `--yes --force --confirm-title`。
+一键安装脚本没有 dry-run 参数。CLI API `--preview` / `--dry-run` 只用于打印将要发送的社区 API 写请求但不联网执行。CLI API 预览只覆盖 `topic create/update/edit/delete`、`reply create/update/edit/delete`、`favorite add/remove`、`subscription add/remove`，别名 `thread` 和 `post` 继承同样分类。`ask` 虽然使用 POST，但属于只读 RAG 问答，不纳入 API 写操作预览。预览下不需要预先执行 `category list` 或 `topic view`；创建话题仍必须显式传 `--category-id`，删除话题仍必须传 `--yes --force --confirm-title`。
 
 推荐非交互骨架：
 
