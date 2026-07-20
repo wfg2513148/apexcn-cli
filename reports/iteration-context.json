@@ -1,15 +1,15 @@
 {
   "kind": "apexcn-iteration-context",
   "schemaVersion": 1,
-  "generatedAt": "2026-07-20T05:18:52.942Z",
+  "generatedAt": "2026-07-20T05:59:11.913Z",
   "release": {
-    "version": "0.80.0",
-    "tag": "v0.80.0",
-    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v0.80.0"
+    "version": "0.80.1",
+    "tag": "v0.80.1",
+    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v0.80.1"
   },
   "repository": {
     "branch": "main",
-    "commit": "fc12daa29d7de3bd614c3b10a6afd3bdc6442b77"
+    "commit": "5df1e05b453be2f0828e08865e3907e9818359ff"
   },
   "milestone": {
     "completedIterationFor": null,
@@ -17,38 +17,41 @@
     "resumeMilestoneStatus": "in_progress"
   },
   "enhancedCapabilities": [
-    "发布策略治理与 hash-chain 审计：六类 topic/reply 写操作默认拒绝，创建和更新要求审批，删除要求两名不同审批者，保存的 JSON/NDJSON 记录可检测缺失、重排、篡改和额外事件。",
-    "发布服务端能力兼容性窗口：CLI 接受 0.8、0.7、0.6 contract，支持 require-capability，并对未来、过旧、缺失和畸形 contract 失败关闭。",
-    "发布环境变量凭据配置与运行时安全回退、0600 doctor snapshot、10,000-case redaction fuzz 和 issue routing matrix。",
-    "发布 macOS/Linux shell 与 Windows PowerShell 生命周期脚本、只读 soak runner 和 v0.80 迁移说明；macOS/Linux 实际生命周期已通过。"
+    "一键安装公开契约缩减为零参数 macOS/Linux 与 Windows 命令，安装器只检查 Node.js、下载、强制校验、安装 launcher 和用户级 agent skill。",
+    "安装与认证完全分离：安装器不读取、不保存、不验证 API key，也不执行账号 API 请求；认证只在安装成功后由独立命令完成。",
+    "可识别的旧 shell-resolved apexcn-cli launcher 会被新版本更新，避免新包已安装但 shell 仍运行旧 CLI。",
+    "凭据输入拒绝示例占位符、非 ASCII 字符、空白和其他不可安全放入 HTTP header 的 token，避免底层传输异常被误报为普通网络故障。"
   ],
   "unexpectedProblems": [
-    "用户在独立验证完成 intake、候选安装、版本、help 和 commands 后暂停了剩余场景，因此本次只能发布已完成能力，不能关闭 0.8 验收。",
-    "原 context compact 默认把任何发布都视为里程碑完成；直接运行会把仍为 in_progress 的 0.8 错误交接到 0.9。",
-    "Windows 实机 lifecycle 和七天只读 soak 尚未形成足以支持验收声明的证据。"
+    "用户示例把中文占位符当作 API key，旧认证流程接受并保存该值；Node fetch 随后因非 ASCII header 抛出 TypeError，CLI 又把它归类成 Network error。",
+    "旧安装器把新版 launcher 写入用户目录，但 shell 优先解析 /usr/local/bin 中的 0.18.8 launcher，导致安装成功后实际运行的仍是旧版本。",
+    "旧一键命令和安装脚本暴露重试、超时、yes、skill、source、repo、dry-run、认证等大量参数，与新手一键安装目标不符。",
+    "完全裸的 curl 管道在下载失败时可能由空 bash 返回成功，因此仍保留最小 pipefail 包装，而不是牺牲失败语义换取更短字符数。"
   ],
   "rootCauses": [
-    "发布可用能力与关闭整个 roadmap milestone 是两个不同事件，而旧 compact 数据模型只覆盖后者。",
-    "跨平台实机与七天持续运行需要独立环境和时间窗口，用户暂停后不能用单元测试或短时成功替代。",
-    "独立 validator 的完整动态场景尚未开始执行，已完成的安装与发现性检查不足以代表产品验收。"
+    "凭据校验只检查空值，没有在落盘前验证占位符、可见 ASCII 和 HTTP header 安全字符。",
+    "安装验证只调用新写入的 launcher，没有比较当前 shell 实际解析到的 apexcn 路径与版本。",
+    "旧安装器同时承担依赖安装、源码模式、工具检测、skill 选择、认证和账号验证，职责过多形成庞大参数面。",
+    "安装文档优先展示可配置性而非稳定的最小公开契约，导致用户需要复制与理解不必要的参数。"
   ],
   "preventionActions": [
-    "context compact 现在读取 roadmap 实际状态：未完成里程碑发布时写入 completedIterationFor=null，并继续 resume 同一 in_progress milestone。",
-    "Release notes 和冻结 snapshot 明确列出未执行、已暂停和不可声明的资格边界，0.8 acceptance criteria 与 completion review 保持未关闭。",
-    "发布资产检查新增 lifecycle、soak、兼容性、凭据、诊断、路由和迁移文件要求，并由回归测试覆盖。"
+    "新增零参数契约测试，限制安装脚本行数并拒绝所有命令行参数、API key 引用和已移除的公开开关。",
+    "新增隔离 HOME 的 release 包安装、强制 checksum、旧 launcher 替换、无认证副作用和 skill 安装回归测试。",
+    "checksum 缺失或不匹配现在始终失败关闭，不再提供跳过机制。",
+    "README、quickstart、迁移、终端手册和安全模型统一为 install-then-authenticate，并明确一键安装不接收 API key。"
   ],
-  "nextMilestoneGoal": "继续完成 roadmap 0.8 尚未闭环的 Windows 实机 lifecycle、完整新手独立验证和七天只读 soak；在这些证据达到 AC 后再关闭 0.8，而不是启动 0.9。",
+  "nextMilestoneGoal": "按用户当前暂停决定保留 roadmap 0.8 为 in_progress；待用户决定继续后，再执行真实 Windows lifecycle、完整新手独立验证和七天只读 soak，并在全部 AC 达标后关闭 0.8。",
   "expectedResults": [
-    "全新 Windows 环境完成安装、升级、回滚和卸载，认证保留与失败恢复证据完整。",
-    "新的或恢复执行的用户可见新手 validator 完成完整 baseline 与 0.8 adverse suite，所有 finding 进入 issues.json 并闭环。",
+    "全新 Windows 环境完成零参数安装、升级、回滚和卸载，认证保留与失败恢复证据完整。",
+    "新的用户可见新手 validator 使用 v0.80.1 release 资产完成完整 baseline 与 0.8 adverse suite，实际 finding 进入 issues.json 并闭环。",
     "七天只读 soak 成功率至少 99.5%，无社区写入、无凭据泄漏，并形成可复核证据。",
-    "0.8 全部 acceptance criteria、独立验证、issue closure 和 completion review 完成后，才允许激活 0.9。"
+    "只有 0.8 全部 acceptance criteria、独立验证、issue closure 和 completion review 完成后，才允许激活后续里程碑。"
   ],
   "majorRisks": [
-    "Windows 实机尚未执行，PowerShell 脚本当前只有自动化测试和静态发布检查支持。",
-    "七天 soak 暂停前只有 4 次成功操作，远低于时间和样本要求。",
-    "独立 validator 尚未执行主要产品场景，当前 0 个 CLI finding 只能描述已执行子集。",
-    "0.5 继续 blocked/unreleased；v0.80.0 不得作为 0.5 完成或发布依据。"
+    "真实 Windows lifecycle 仍按用户要求暂停；PowerShell 安装器当前不能声明已完成实机资格验证。",
+    "七天 soak 和独立 validator 主要场景仍未完成，v0.80.1 只代表已验证的补丁能力而非 0.8 整体验收。",
+    "安装器会更新可识别且目录可写的旧 launcher；不可识别或不可写的 shadow launcher 仍需用户调整 PATH。",
+    "0.5 继续 blocked/unreleased；v0.80.1 不得作为 0.5 完成或发布依据。"
   ],
   "activeIssues": [],
   "resume": {
