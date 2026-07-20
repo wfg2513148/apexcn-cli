@@ -1,15 +1,15 @@
 {
   "kind": "apexcn-iteration-context",
   "schemaVersion": 1,
-  "generatedAt": "2026-07-20T05:59:11.913Z",
+  "generatedAt": "2026-07-20T08:26:30.502Z",
   "release": {
-    "version": "0.80.1",
-    "tag": "v0.80.1",
-    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v0.80.1"
+    "version": "0.80.2",
+    "tag": "v0.80.2",
+    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v0.80.2"
   },
   "repository": {
     "branch": "main",
-    "commit": "5df1e05b453be2f0828e08865e3907e9818359ff"
+    "commit": "6101d81f58701c459e7df2e706f80c1a09b4d357"
   },
   "milestone": {
     "completedIterationFor": null,
@@ -17,41 +17,41 @@
     "resumeMilestoneStatus": "in_progress"
   },
   "enhancedCapabilities": [
-    "一键安装公开契约缩减为零参数 macOS/Linux 与 Windows 命令，安装器只检查 Node.js、下载、强制校验、安装 launcher 和用户级 agent skill。",
-    "安装与认证完全分离：安装器不读取、不保存、不验证 API key，也不执行账号 API 请求；认证只在安装成功后由独立命令完成。",
-    "可识别的旧 shell-resolved apexcn-cli launcher 会被新版本更新，避免新包已安装但 shell 仍运行旧 CLI。",
-    "凭据输入拒绝示例占位符、非 ASCII 字符、空白和其他不可安全放入 HTTP header 的 token，避免底层传输异常被误报为普通网络故障。"
+    "新增顶层 `apexcn -apikey <key>` 快捷入口，普通字母数字 key 支持带引号或不带引号输入。",
+    "快捷入口固定写入生产 ORDS base URL 的默认 `prod` profile 并设为 active，配置文件继续使用 `0600` 权限。",
+    "配置过程不调用社区 API、不回显 key，并在解析完成后从 Commander option state 清除 key 引用。",
+    "原有 `auth set-token --token-env`、多 profile、env-to-file fallback 和审计能力保持不变。"
   ],
   "unexpectedProblems": [
-    "用户示例把中文占位符当作 API key，旧认证流程接受并保存该值；Node fetch 随后因非 ASCII header 抛出 TypeError，CLI 又把它归类成 Network error。",
-    "旧安装器把新版 launcher 写入用户目录，但 shell 优先解析 /usr/local/bin 中的 0.18.8 launcher，导致安装成功后实际运行的仍是旧版本。",
-    "旧一键命令和安装脚本暴露重试、超时、yes、skill、source、repo、dry-run、认证等大量参数，与新手一键安装目标不符。",
-    "完全裸的 curl 管道在下载失败时可能由空 bash 返回成功，因此仍保留最小 pipefail 包装，而不是牺牲失败语义换取更短字符数。"
+    "Commander 对多字母单横线选项生成首字母大写的内部属性名，需要显式读取和清理 `Apikey` state。",
+    "用户要求的命令行直传方式比环境变量方式简单，但 key 可能进入 shell 历史并短暂出现在进程列表中。",
+    "带引号与不带引号在 CLI 收到的 argv 中没有差异，因此必须通过真实 shell 调用分别验证，而不能只依赖单元测试描述。",
+    "0.8 的真实 Windows lifecycle、独立新手验证和七天只读 soak 仍按用户此前决定暂停，本补丁不能关闭整个里程碑。"
   ],
   "rootCauses": [
-    "凭据校验只检查空值，没有在落盘前验证占位符、可见 ASCII 和 HTTP header 安全字符。",
-    "安装验证只调用新写入的 launcher，没有比较当前 shell 实际解析到的 apexcn 路径与版本。",
-    "旧安装器同时承担依赖安装、源码模式、工具检测、skill 选择、认证和账号验证，职责过多形成庞大参数面。",
-    "安装文档优先展示可配置性而非稳定的最小公开契约，导致用户需要复制与理解不必要的参数。"
+    "现有认证入口以多 profile、base URL 和 credential backend 灵活性为主，缺少面向首次用户的固定默认值快捷路径。",
+    "shell 引号由 shell 消费而非 CLI 解析，单元测试 argv 无法单独证明两种用户输入写法都可用。",
+    "命令行直传 secret 的易用性与历史记录、进程列表暴露风险之间存在不可消除的安全取舍。",
+    "roadmap 0.8 的完整验收包含跨平台实机、独立 validator 和长期 soak，局部认证体验补丁不能替代这些证据。"
   ],
   "preventionActions": [
-    "新增零参数契约测试，限制安装脚本行数并拒绝所有命令行参数、API key 引用和已移除的公开开关。",
-    "新增隔离 HOME 的 release 包安装、强制 checksum、旧 launcher 替换、无认证副作用和 skill 安装回归测试。",
-    "checksum 缺失或不匹配现在始终失败关闭，不再提供跳过机制。",
-    "README、quickstart、迁移、终端手册和安全模型统一为 install-then-authenticate，并明确一键安装不接收 API key。"
+    "新增快捷入口的保存、默认 profile、生产 base URL、无网络、无回显、option state 清理和非法值拒绝测试。",
+    "使用隔离配置和发布资产分别执行带引号与不带引号的真实 shell 命令，并核验 `0600` 权限。",
+    "README、quickstart、用户指南、CLI 手册、迁移说明、安装器提示和 bundled skill 均说明快捷入口与安全取舍。",
+    "继续保留 `--token-env` 作为高安全需求方案，并拒绝空值、占位符、非 ASCII 和含空白 token。"
   ],
-  "nextMilestoneGoal": "按用户当前暂停决定保留 roadmap 0.8 为 in_progress；待用户决定继续后，再执行真实 Windows lifecycle、完整新手独立验证和七天只读 soak，并在全部 AC 达标后关闭 0.8。",
+  "nextMilestoneGoal": "保持 roadmap 0.8 为 in_progress；待用户明确恢复后，继续真实 Windows lifecycle、完整新手独立验证和七天只读 soak，并在全部 AC 达标后关闭 0.8。",
   "expectedResults": [
-    "全新 Windows 环境完成零参数安装、升级、回滚和卸载，认证保留与失败恢复证据完整。",
-    "新的用户可见新手 validator 使用 v0.80.1 release 资产完成完整 baseline 与 0.8 adverse suite，实际 finding 进入 issues.json 并闭环。",
-    "七天只读 soak 成功率至少 99.5%，无社区写入、无凭据泄漏，并形成可复核证据。",
-    "只有 0.8 全部 acceptance criteria、独立验证、issue closure 和 completion review 完成后，才允许激活后续里程碑。"
+    "首次用户用一条 `apexcn -apikey` 命令完成默认生产 profile 配置，再运行 `apexcn me --json` 验证身份。",
+    "全新 Windows 环境完成安装、快捷认证、升级、回滚和卸载的实机证据。",
+    "新的用户可见新手 validator 使用 v0.80.2 release 完成完整 baseline 与 0.8 adverse suite。",
+    "七天只读 soak 成功率至少 99.5%，无社区写入和凭据泄漏；全部验收完成后才允许激活后续里程碑。"
   ],
   "majorRisks": [
-    "真实 Windows lifecycle 仍按用户要求暂停；PowerShell 安装器当前不能声明已完成实机资格验证。",
-    "七天 soak 和独立 validator 主要场景仍未完成，v0.80.1 只代表已验证的补丁能力而非 0.8 整体验收。",
-    "安装器会更新可识别且目录可写的旧 launcher；不可识别或不可写的 shadow launcher 仍需用户调整 PATH。",
-    "0.5 继续 blocked/unreleased；v0.80.1 不得作为 0.5 完成或发布依据。"
+    "命令行 secret 可能保存在 shell 历史或短暂暴露于进程列表，敏感环境应使用 `auth set-token --token-env`。",
+    "真实 Windows lifecycle 仍暂停，不能用 macOS shell 与 PowerShell 静态测试替代。",
+    "独立 validator 与七天 soak 尚未完成，v0.80.2 只证明本次认证快捷入口和既有自动化回归。",
+    "0.5 继续 blocked/unreleased；v0.80.2 不得作为 0.5 完成或发布依据。"
   ],
   "activeIssues": [],
   "resume": {
