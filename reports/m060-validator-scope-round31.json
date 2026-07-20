@@ -45,7 +45,9 @@
       "019f7cd9-a7c7-7353-b594-43b4b509af97",
       "019f7cf2-27fd-7f71-b549-a3ce79a43b65",
       "019f7cf9-1954-7091-bcd1-c235a312b8a9",
-      "019f7d01-1a47-7a11-818f-c964071d05d0"
+      "019f7d01-1a47-7a11-818f-c964071d05d0",
+      "019f7d1e-a7dd-7191-9d55-38878405761b",
+      "019f7d1f-87c8-7df1-9b93-af519eb17562"
     ],
     "historicalEvidenceRule": "All prior validator threads, run directories, harnesses, scorers, reports, screenshots, and command transcripts are prohibited test materials. Their ids identify only what must not be opened or reused."
   },
