@@ -172,11 +172,21 @@ describe("release version check", () => {
         "package/node_modules/commander/package.json",
         "package/agent-skill/SKILL.md",
         "package/docs/quickstart.md",
+        "package/docs/migration-v0.80.md",
         "package/issues.json",
         "package/roadmap.json",
+        "package/dist/core/capability-compatibility.js",
+        "package/dist/core/credential-store.js",
+        "package/dist/core/doctor-snapshot.js",
+        "package/dist/core/issue-routing.js",
+        "package/dist/core/runtime-session.js",
+        "package/dist/core/workflow-plan.js",
         "package/scripts/baseline-report.mjs",
         "package/scripts/install-agent.ps1",
-        "package/scripts/install-agent.sh"
+        "package/scripts/install-agent.sh",
+        "package/scripts/lifecycle-agent.ps1",
+        "package/scripts/lifecycle-agent.sh",
+        "package/scripts/soak-readonly.mjs"
       ]));
       expect(entries.some((entry) => entry.startsWith("package/.github/"))).toBe(false);
       expect(entries.some((entry) => entry.startsWith("package/artifacts/"))).toBe(false);

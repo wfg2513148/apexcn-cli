@@ -109,6 +109,32 @@ describe("iteration context compaction", () => {
     expect(() => serializeIterationContext(context, 12_288)).toThrow(/maximum is 12288/);
   });
 
+  test("keeps an incomplete released milestone active in the handoff", () => {
+    const packageJson = loadJson("package.json");
+    const roadmap = loadJson("roadmap.json");
+    const summary = {
+      ...validSummary(),
+      milestoneId: "0.8"
+    };
+    const context = createIterationContext({
+      summary,
+      packageJson,
+      roadmap,
+      issues: loadJson("issues.json"),
+      release: { tag: `v${packageJson.version}`, url: "https://example.test/release" },
+      git: { branch: "main", commit: "abc123" }
+    });
+
+    expect(context.milestone).toEqual({
+      completedIterationFor: null,
+      resumeMilestoneId: "0.8",
+      resumeMilestoneStatus: "in_progress"
+    });
+    expect(context.resume.instructions).toContain(
+      "Resume the existing milestone; do not activate a later milestone until its acceptance and completion review are closed."
+    );
+  });
+
   test("redacts secrets before writing the handoff", () => {
     const packageJson = loadJson("package.json");
     const summary = validSummary();

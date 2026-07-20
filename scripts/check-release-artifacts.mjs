@@ -103,6 +103,7 @@ function verifyArtifacts() {
     "package/package.json",
     "package/agent-skill/SKILL.md",
     "package/docs/quickstart.md",
+    "package/docs/migration-v0.80.md",
     "package/eval/collection/corpus-source.json",
     "package/eval/collection/oracle.jsonl",
     "package/eval/collection/real-topics.jsonl",
@@ -113,12 +114,21 @@ function verifyArtifacts() {
     "package/roadmap.json",
     "package/dist/index.js",
     "package/dist/version.js",
+    "package/dist/core/capability-compatibility.js",
+    "package/dist/core/credential-store.js",
+    "package/dist/core/doctor-snapshot.js",
+    "package/dist/core/issue-routing.js",
+    "package/dist/core/runtime-session.js",
+    "package/dist/core/workflow-plan.js",
     "package/node_modules/commander/package.json",
     "package/scripts/eval-rag.mjs",
     "package/scripts/eval-collection.mjs",
     "package/scripts/generate-release-checksums.mjs",
     "package/scripts/install-agent.sh",
-    "package/scripts/install-agent.ps1"
+    "package/scripts/install-agent.ps1",
+    "package/scripts/lifecycle-agent.sh",
+    "package/scripts/lifecycle-agent.ps1",
+    "package/scripts/soak-readonly.mjs"
   ];
   for (const file of requiredFiles) {
     if (!entries.has(file)) {

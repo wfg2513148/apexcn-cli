@@ -57,10 +57,16 @@ export function createIterationContext({
   generatedAt = new Date().toISOString()
 }) {
   const completedMilestoneIndex = roadmap.milestones.findIndex((entry) => entry.id === summary.milestoneId);
-  const milestone = roadmap.milestones
-    .slice(completedMilestoneIndex >= 0 ? completedMilestoneIndex + 1 : 0)
-    .find((entry) => entry.status !== "completed")
-    ?? null;
+  const selectedMilestone = completedMilestoneIndex >= 0
+    ? roadmap.milestones[completedMilestoneIndex]
+    : null;
+  const iterationCompleted = selectedMilestone?.status === "completed";
+  const milestone = selectedMilestone && !iterationCompleted
+    ? selectedMilestone
+    : roadmap.milestones
+      .slice(completedMilestoneIndex >= 0 ? completedMilestoneIndex + 1 : 0)
+      .find((entry) => entry.status !== "completed")
+      ?? null;
   const activeIssues = issues.issues.map((issue) => ({
     id: issue.id,
     milestoneId: issue.milestoneId,
@@ -84,7 +90,7 @@ export function createIterationContext({
       commit: git.commit
     },
     milestone: {
-      completedIterationFor: summary.milestoneId,
+      completedIterationFor: iterationCompleted ? summary.milestoneId : null,
       resumeMilestoneId: milestone?.id ?? null,
       resumeMilestoneStatus: milestone?.status ?? null
     },
@@ -105,7 +111,9 @@ export function createIterationContext({
       instructions: [
         "Re-read current repository state before planning.",
         "Create only a just-in-time plan for the active milestone.",
-        "After release closure, automatically activate only the next planned milestone and create its dedicated goal."
+        iterationCompleted
+          ? "After release closure, automatically activate only the next planned milestone and create its dedicated goal."
+          : "Resume the existing milestone; do not activate a later milestone until its acceptance and completion review are closed."
       ]
     }
   });
