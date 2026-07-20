@@ -46,7 +46,7 @@ describe("collection BM25 weighting", () => {
     });
 
     expect(meta).toEqual(expect.objectContaining({
-      schemaVersion: 2,
+      schemaVersion: 3,
       engine: "bm25",
       fieldWeights: { title: 3, tags: 2, content: 1 },
       averageDocumentLength: expect.any(Number)

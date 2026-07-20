@@ -27,9 +27,10 @@
 | `draft list/restore/export/import/delete` | local | no-network | no | yes | no | no | none | mixed | 要求 active profile 的隔离 inventory；delete 要求 `--yes`。 |
 | `guide learning/compatibility/deployment/security/performance` | local | no-network | no | yes | no | no | none | low | 本地策展任务路径，不冒充官方兼容性认证。 |
 | `review topic/reply` | local | no-network | no | yes | no | no | none | low | 本地发布前审核。 |
-| `collection build` | read | api-read | yes | yes | no | no | none | medium | 构建离线资料包。 |
-| `collection verify` | local | no-network | no | yes | no | no | none | low | 校验资料包。 |
-| `collection index/query/stats` | local | no-network | no | yes | no | no | none | low | BM25 本地检索、解释和索引统计。 |
+| `collection build/sync/favorites` | read | api-read | yes | yes | no | no | none | medium | GET-only 构建、增量刷新和收藏导入。 |
+| `collection verify/export/verify-bundle/import/restore` | local | no-network | no | yes | no | no | none | low | canonical hash 校验与确定性 bundle 往返。 |
+| `collection index/query/stats` | local | no-network | no | yes | no | no | none | low | BM25 本地检索、解释、增量索引和统计。 |
+| `collection automation plan/run` | local | no-network | no | yes | no | no | none | low | 离线只读计划，零网络、零无人值守写请求、重复抑制。 |
 | `workflow plan` | workflow | no-network | no | yes | no | no | readonly | medium | MCP 可生成 plan，不执行。 |
 | `workflow run` | workflow | preview or approved api-write | yes | yes | required | no | blocked | high | 支持 topic/reply create/update/delete；仅 `--resume --execute --yes` 且审批有效时写入。 |
 | `workflow approve/verify/export/verify-bundle` | workflow | no-network | no | yes | no | no | none | medium | 本地审计与验证。 |

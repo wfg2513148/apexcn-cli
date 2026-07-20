@@ -240,9 +240,34 @@ apexcn collection build \
   --json
 
 apexcn collection verify --dir collection --json
+apexcn collection sync --dir collection --json
+apexcn collection index --dir collection --incremental --json
 ```
 
-`collection build` is read-only and never performs API writes. It collects topics in query input order, search result order within each query, and explicit `--topic-id` order last, deduplicating by `id/topicId/threadId`. The output directory contains `collection.json`, `index.md`, and `topics/<id>.json`. Each topic artifact uses a stable wrapper: `kind: "collection-topic"`, `schemaVersion: 1`, `id`, `sources`, `request`, `requestId`, and `result`. `collection.json.files` records `path`, `sha256`, and `size` for the index and topic files so `collection verify` can validate the collection locally. If one topic fetch fails, the error is recorded in `errors`, successful artifacts are kept, and the command exits non-zero.
+`collection build` and `collection sync` are GET-only and never perform API writes. Sync fails before refresh when the active profile base URL differs from the collection source. Collection manifest v2 records a canonical content hash plus a canonical hash per topic; request IDs and generation timestamps do not affect those hashes. `index --incremental` reuses index records whose canonical topic hash is unchanged.
+
+Build directly from the authenticated user's favorite-topic export, then create and move a deterministic offline bundle:
+
+```bash
+apexcn collection favorites --output-dir favorites --json
+apexcn collection export --dir favorites --output favorites.bundle.json --json
+apexcn collection verify-bundle --bundle favorites.bundle.json --json
+apexcn collection import --bundle favorites.bundle.json --output-dir restored --json
+apexcn collection restore --bundle favorites.bundle.json --dir favorites --json
+```
+
+`collection favorites` traverses the server's authenticated readonly cursor and preserves full content, URL, topic ID, relation time, update time, and provenance. Bundle import requires an empty directory; restore overwrites only managed bundle files and leaves unrelated files untouched.
+
+Offline automation plans call no network and cannot send community writes:
+
+```bash
+apexcn collection automation plan --dir favorites --query "ORDS auth" --output plan.json --json
+apexcn collection automation run --plan plan.json --output result.json --json
+```
+
+The plan/run pair is scheduler-agnostic: invoke `automation run` from the local scheduler of your choice. Replaying the same plan and content hash suppresses duplicate output.
+
+The result records `networkRequests: 0` and `unattendedWriteRequests: 0`. Re-running the same plan against the same collection content suppresses duplicate output.
 
 ## draft
 

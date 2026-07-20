@@ -10,6 +10,7 @@ export type CollectionIndexRecord = {
   title: string;
   url?: string;
   sourcePath: string;
+  sourceHash?: string;
   terms: Record<string, number>;
   documentLength: number;
   excerpt: string;
@@ -17,7 +18,7 @@ export type CollectionIndexRecord = {
 
 export type CollectionIndexMeta = {
   kind: "collection-index-meta";
-  schemaVersion: 2;
+  schemaVersion: 3;
   engine: "bm25";
   createdAt: string;
   documentCount: number;
@@ -29,6 +30,7 @@ export type CollectionIndexMeta = {
     content: 1;
   };
   sourceCollectionHash: string;
+  sourceDocuments: Array<{ topicId: number; canonicalHash: string }>;
   fields: string[];
   files: {
     index: { path: "index.jsonl"; size: number; sha256: string };
@@ -41,6 +43,7 @@ export type CollectionQueryResult = {
   score: number;
   matchedTerms: string[];
   sourcePath: string;
+  sourceHash?: string;
   excerpt: string;
   url?: string;
   explain?: {
@@ -67,6 +70,7 @@ export function buildIndexRecord(input: {
     replies?: string;
   };
   sourcePath: string;
+  sourceHash?: string;
   url?: string;
 }): CollectionIndexRecord {
   const weightedTokens = weightedFieldTokens(input);
@@ -78,6 +82,7 @@ export function buildIndexRecord(input: {
     title: input.title,
     url: input.url,
     sourcePath: input.sourcePath,
+    sourceHash: input.sourceHash,
     terms: termFrequency(weightedTokens),
     documentLength: weightedTokens.length,
     excerpt: excerptText([input.title, input.fields?.content ?? input.text].filter(Boolean).join(" "))
@@ -109,6 +114,7 @@ export function queryIndex(records: CollectionIndexRecord[], query: string, opti
         score: score.score,
         matchedTerms,
         sourcePath: record.sourcePath,
+        sourceHash: record.sourceHash,
         excerpt: record.excerpt,
         url: record.url,
         explain: options.explain ? { terms: Object.entries(score.contributions).map(([term, value]) => ({ term, score: value })) } : undefined,
@@ -120,7 +126,7 @@ export function queryIndex(records: CollectionIndexRecord[], query: string, opti
 export function createIndexMeta(input: { createdAt: string; records: CollectionIndexRecord[]; sourceCollectionContent: string; indexFile: { size: number; sha256: string } }): CollectionIndexMeta {
   return {
     kind: "collection-index-meta",
-    schemaVersion: 2,
+    schemaVersion: 3,
     engine: "bm25",
     createdAt: input.createdAt,
     documentCount: input.records.length,
@@ -132,6 +138,9 @@ export function createIndexMeta(input: { createdAt: string; records: CollectionI
       ...COLLECTION_FIELD_WEIGHTS
     },
     sourceCollectionHash: `sha256:${sha256Hex(Buffer.from(input.sourceCollectionContent, "utf8"))}`,
+    sourceDocuments: input.records
+      .map((record) => ({ topicId: record.topicId, canonicalHash: record.sourceHash ?? "" }))
+      .sort((left, right) => left.topicId - right.topicId),
     fields: ["title", "content", "tags", "category"],
     files: {
       index: { path: "index.jsonl", size: input.indexFile.size, sha256: input.indexFile.sha256 }

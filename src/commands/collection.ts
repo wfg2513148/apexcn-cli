@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { isAbsolute, join, normalize, sep } from "node:path";
 import { Command, InvalidArgumentError } from "commander";
@@ -6,6 +6,7 @@ import { ConfigFileError, loadConfig } from "../config.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { buildIndexRecord, createIndexMeta, isCollectionIndexRecord, queryIndex, type CollectionIndexRecord } from "../core/knowledge/collection-index.js";
+import { bundleHash, collectionContentHash, topicCanonicalHash } from "../core/knowledge/collection-assets.js";
 import { fieldText, isRecord, itemsFromData, printData, printError } from "../output.js";
 import type { CommandIo } from "./auth.js";
 
@@ -37,6 +38,7 @@ type VerifyOptions = {
 
 type IndexOptions = {
   dir: string;
+  incremental?: boolean;
   json?: boolean;
 };
 
@@ -52,10 +54,60 @@ type StatsOptions = {
   json?: boolean;
 };
 
+type BundlePathOptions = {
+  bundle: string;
+  json?: boolean;
+};
+
+type ExportOptions = {
+  dir: string;
+  output: string;
+  json?: boolean;
+};
+
+type ImportOptions = BundlePathOptions & {
+  outputDir: string;
+};
+
+type RestoreOptions = BundlePathOptions & {
+  dir: string;
+};
+
+type SyncOptions = {
+  dir: string;
+  json?: boolean;
+};
+
+type FavoritesOptions = {
+  outputDir: string;
+  pageSize?: number;
+  json?: boolean;
+};
+
+type AutomationPlanOptions = {
+  dir: string;
+  query?: string[];
+  topK?: number;
+  output: string;
+  json?: boolean;
+};
+
+type AutomationRunOptions = {
+  plan: string;
+  output: string;
+  json?: boolean;
+};
+
 type TopicSource = {
-  type: "query" | "explicit";
-  query?: string;
-  searchIndex?: number;
+  type: "query";
+  query: string;
+  searchIndex: number;
+} | {
+  type: "explicit";
+} | {
+  type: "favorite";
+  relationCreatedDate?: string;
+  provenance: Record<string, unknown>;
 };
 
 type FileEvidence = {
@@ -94,6 +146,7 @@ export function createCollectionCommand(options: CollectionCommandOptions): Comm
   collection
     .command("index")
     .requiredOption("--dir <dir>", "collection directory")
+    .option("--incremental", "reuse unchanged index records from the prior index")
     .option("--json", "pretty-print JSON")
     .action(async (commandOptions: IndexOptions) => {
       try {
@@ -137,6 +190,110 @@ export function createCollectionCommand(options: CollectionCommandOptions): Comm
     .action(async (commandOptions: VerifyOptions) => {
       try {
         await verifyCollection(options, commandOptions);
+      } catch (error) {
+        handleCollectionError(options, error, commandOptions.json);
+      }
+    });
+
+  collection
+    .command("sync")
+    .requiredOption("--dir <dir>", "collection directory")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: SyncOptions) => {
+      try {
+        await syncCollection(options, commandOptions);
+      } catch (error) {
+        handleCollectionError(options, error, commandOptions.json);
+      }
+    });
+
+  collection
+    .command("favorites")
+    .requiredOption("--output-dir <dir>", "directory for collection artifacts")
+    .option("--page-size <n>", "favorites per page, 1-50", parsePageSize)
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: FavoritesOptions) => {
+      try {
+        await buildFavoritesCollection(options, commandOptions);
+      } catch (error) {
+        handleCollectionError(options, error, commandOptions.json);
+      }
+    });
+
+  collection
+    .command("export")
+    .requiredOption("--dir <dir>", "collection directory")
+    .requiredOption("--output <file>", "output bundle file")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: ExportOptions) => {
+      try {
+        await exportCollection(options, commandOptions);
+      } catch (error) {
+        handleCollectionError(options, error, commandOptions.json);
+      }
+    });
+
+  collection
+    .command("verify-bundle")
+    .requiredOption("--bundle <file>", "collection bundle file")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: BundlePathOptions) => {
+      try {
+        await verifyCollectionBundle(options, commandOptions);
+      } catch (error) {
+        handleCollectionError(options, error, commandOptions.json);
+      }
+    });
+
+  collection
+    .command("import")
+    .requiredOption("--bundle <file>", "collection bundle file")
+    .requiredOption("--output-dir <dir>", "new collection directory")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: ImportOptions) => {
+      try {
+        await importCollectionBundle(options, commandOptions);
+      } catch (error) {
+        handleCollectionError(options, error, commandOptions.json);
+      }
+    });
+
+  collection
+    .command("restore")
+    .requiredOption("--bundle <file>", "collection bundle file")
+    .requiredOption("--dir <dir>", "collection directory to restore")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: RestoreOptions) => {
+      try {
+        await restoreCollectionBundle(options, commandOptions);
+      } catch (error) {
+        handleCollectionError(options, error, commandOptions.json);
+      }
+    });
+
+  const automation = collection.command("automation");
+  automation
+    .command("plan")
+    .requiredOption("--dir <dir>", "collection directory")
+    .option("--query <text>", "offline query to run; repeatable", collectText, [])
+    .option("--top-k <n>", "maximum results per query, 1-50", parseTopK)
+    .requiredOption("--output <file>", "automation plan file")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: AutomationPlanOptions) => {
+      try {
+        await createAutomationPlan(options, commandOptions);
+      } catch (error) {
+        handleCollectionError(options, error, commandOptions.json);
+      }
+    });
+  automation
+    .command("run")
+    .requiredOption("--plan <file>", "automation plan file")
+    .requiredOption("--output <file>", "automation result file")
+    .option("--json", "pretty-print JSON")
+    .action(async (commandOptions: AutomationRunOptions) => {
+      try {
+        await runAutomationPlan(options, commandOptions);
       } catch (error) {
         handleCollectionError(options, error, commandOptions.json);
       }
@@ -191,7 +348,7 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
   }
 
   const topicRecords = [];
-  const topicFiles: Array<{ id: number } & FileEvidence> = [];
+  const topicFiles: Array<{ id: number; canonicalHash: string } & FileEvidence> = [];
   for (const [id, sources] of candidates.entries()) {
     const relativePath = join("topics", `${id}.json`);
     const path = join(outputDir, relativePath);
@@ -206,15 +363,17 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
         requestId: requestIdFrom(result),
         result
       };
+      const canonicalHash = topicCanonicalHash(artifact);
       const evidence = await writeJsonWithEvidence(path, artifact);
-      topicFiles.push({ id, ...evidence, path: relativePath });
+      topicFiles.push({ id, canonicalHash, ...evidence, path: relativePath });
       topicRecords.push({
         id,
         title: topicTitle(result),
         url: topicUrl(result),
         originalUrl: topicOriginalUrl(result),
         sources,
-        file: relativePath
+        file: relativePath,
+        canonicalHash
       });
     } catch (error) {
       errors.push({
@@ -231,8 +390,9 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
   const indexFile = { ...await writeTextWithEvidence(indexPath, index), path: "index.md" };
   const collection = {
     kind: "collection",
-    schemaVersion: 1,
+    schemaVersion: 2,
     createdAt: new Date().toISOString(),
+    contentHash: collectionContentHash(topicRecords.map((topic) => ({ id: topic.id, canonicalHash: topic.canonicalHash }))),
     source: {
       profile: session.profile,
       baseUrl: session.baseUrl,
@@ -293,15 +453,25 @@ async function indexCollection(io: CommandIo, options: IndexOptions): Promise<vo
     return;
   }
   const { collection, content } = loaded;
-  const verification = await collectionVerificationReport(options.dir, collection);
-  if (!verification.ok) {
-    printError(io, { type: "validation", message: "Collection verification failed before indexing." }, undefined, options.json);
-    process.exitCode = 1;
-    return;
-  }
   let records: CollectionSearchRecord[];
+  let rebuiltCount = 0;
+  let reusedCount = 0;
   try {
-    records = await collectionSearchRecords(options.dir, collection);
+    if (options.incremental) {
+      const incremental = await incrementalCollectionSearchRecords(options.dir, collection);
+      records = incremental.records;
+      rebuiltCount = incremental.rebuiltCount;
+      reusedCount = incremental.reusedCount;
+    } else {
+      const verification = await collectionVerificationReport(options.dir, collection);
+      if (!verification.ok) {
+        printError(io, { type: "validation", message: "Collection verification failed before indexing." }, undefined, options.json);
+        process.exitCode = 1;
+        return;
+      }
+      records = await collectionSearchRecords(options.dir, collection);
+      rebuiltCount = records.length;
+    }
   } catch (error) {
     printError(io, { type: "validation", message: `Invalid collection topic artifact: ${errorMessage(error)}` }, undefined, options.json);
     process.exitCode = 1;
@@ -310,7 +480,7 @@ async function indexCollection(io: CommandIo, options: IndexOptions): Promise<vo
   const jsonl = records.map((record) => JSON.stringify(record)).join("\n") + (records.length > 0 ? "\n" : "");
   const indexEvidence = await writeTextWithEvidence(join(options.dir, "index.jsonl"), jsonl);
   const meta = createIndexMeta({
-    createdAt: new Date().toISOString(),
+    createdAt: collection.createdAt,
     records,
     sourceCollectionContent: content,
     indexFile: indexEvidence
@@ -320,10 +490,13 @@ async function indexCollection(io: CommandIo, options: IndexOptions): Promise<vo
     kind: "collection-index",
     schemaVersion: 1,
     engine: "bm25",
+    mode: options.incremental ? "incremental" : "full",
     dir: options.dir,
     topicCount: records.length,
     documentCount: records.length,
     tokenCount: meta.tokenCount,
+    rebuiltCount,
+    reusedCount,
     files: {
       index: join(options.dir, "index.jsonl"),
       meta: join(options.dir, "index.meta.json")
@@ -385,6 +558,517 @@ async function collectionStats(io: CommandIo, options: StatsOptions): Promise<vo
   }, options.json === true);
 }
 
+async function syncCollection(io: CollectionCommandOptions, options: SyncOptions): Promise<void> {
+  const loaded = await readCollectionFile(io, options.dir, options.json);
+  if (!loaded) {
+    return;
+  }
+  const verification = await collectionVerificationReport(options.dir, loaded.collection);
+  if (!verification.ok) {
+    printError(io, { type: "validation", message: "Collection verification failed before sync." }, undefined, options.json);
+    process.exitCode = 1;
+    return;
+  }
+  const session = await loadSession(io);
+  if (!session) {
+    return;
+  }
+  if (normalizedBaseUrl(session.baseUrl) !== normalizedBaseUrl(loaded.collection.source.baseUrl)) {
+    printError(io, { type: "validation", message: "Active profile base URL does not match the collection source." }, undefined, options.json);
+    process.exitCode = 1;
+    return;
+  }
+  const topicFiles = loaded.collection.files.topics.filter(isRecord);
+  const fileById = new Map(topicFiles.filter((file) => typeof file.id === "number").map((file) => [file.id as number, file]));
+  const topics: Array<Record<string, unknown>> = [];
+  const files: Array<Record<string, unknown>> = [];
+  let changedCount = 0;
+  let unchangedCount = 0;
+  let removedCount = 0;
+  for (const topic of loaded.collection.topics.filter(isRecord)) {
+    const id = typeof topic.id === "number" ? topic.id : undefined;
+    const relativePath = fieldText(topic.file);
+    if (id === undefined || !relativePath) {
+      continue;
+    }
+    try {
+      const result = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
+      const sources = Array.isArray(topic.sources) ? topic.sources : [];
+      const artifact = {
+        kind: "collection-topic",
+        schemaVersion: 1,
+        id,
+        sources,
+        request: { method: "GET", path: `/api/v1/topics/${id}` },
+        requestId: requestIdFrom(result),
+        result
+      };
+      const canonicalHash = topicCanonicalHash(artifact);
+      if (canonicalHash === topic.canonicalHash) {
+        topics.push(topic);
+        const oldFile = fileById.get(id);
+        if (oldFile) files.push(oldFile);
+        unchangedCount += 1;
+        continue;
+      }
+      const evidence = await writeJsonWithEvidence(join(options.dir, relativePath), artifact);
+      topics.push({
+        ...topic,
+        title: topicTitle(result),
+        url: topicUrl(result),
+        originalUrl: topicOriginalUrl(result),
+        canonicalHash
+      });
+      files.push({ id, canonicalHash, ...evidence, path: relativePath });
+      changedCount += 1;
+    } catch (error) {
+      if (error instanceof HttpError && error.status === 404) {
+        await unlink(join(options.dir, relativePath));
+        removedCount += 1;
+        continue;
+      }
+      throw error;
+    }
+  }
+  const indexText = collectionIndexMarkdown(topics, []);
+  const indexFile = { ...await writeTextWithEvidence(join(options.dir, "index.md"), indexText), path: "index.md" };
+  const updated = {
+    ...loaded.collection,
+    schemaVersion: 2,
+    syncedAt: new Date().toISOString(),
+    contentHash: collectionContentHash(topics.map((topic) => ({ id: Number(topic.id), canonicalHash: fieldText(topic.canonicalHash) }))),
+    topicCount: topics.length,
+    topics,
+    errors: [],
+    files: { index: indexFile, topics: files }
+  };
+  await writeJsonWithEvidence(join(options.dir, "collection.json"), updated);
+  printData(io, {
+    kind: "collection-sync",
+    schemaVersion: 1,
+    dir: options.dir,
+    topicCount: topics.length,
+    changedCount,
+    unchangedCount,
+    removedCount,
+    contentHash: updated.contentHash
+  }, options.json === true);
+}
+
+async function buildFavoritesCollection(io: CollectionCommandOptions, options: FavoritesOptions): Promise<void> {
+  const session = await loadSession(io);
+  if (!session) {
+    return;
+  }
+  const pageSize = options.pageSize ?? 50;
+  const items: Array<{ item: Record<string, unknown>; requestId?: string }> = [];
+  const seenCursors = new Set<string>();
+  let cursor: string | undefined;
+  let pageCount = 0;
+  do {
+    const data = await requestJson(session.baseUrl, "/api/v1/me/favorites/export", {
+      token: session.token,
+      query: { pageSize, cursor }
+    });
+    pageCount += 1;
+    for (const item of itemsFromData(data)) {
+      items.push({ item, requestId: requestIdFrom(data) });
+    }
+    const page = isRecord(data) && isRecord(data.page) ? data.page : {};
+    const next = typeof page.nextCursor === "string" && page.nextCursor.length > 0 ? page.nextCursor : undefined;
+    if (next && seenCursors.has(next)) {
+      throw new Error("Favorite export repeated a pagination cursor.");
+    }
+    if (next) seenCursors.add(next);
+    cursor = next;
+  } while (cursor);
+
+  const topicsDir = join(options.outputDir, "topics");
+  await mkdir(topicsDir, { recursive: true });
+  const topics: Array<Record<string, unknown>> = [];
+  const files: Array<Record<string, unknown>> = [];
+  const seenIds = new Set<number>();
+  const errors: Array<Record<string, unknown>> = [];
+  for (const { item, requestId } of items) {
+    const id = topicIdFromItem(item);
+    if (id === undefined || item.unavailableReason) {
+      errors.push({ topicId: id, unavailableReason: item.unavailableReason ?? "INVALID_FAVORITE_EXPORT_ITEM" });
+      continue;
+    }
+    if (seenIds.has(id)) {
+      throw new Error(`Favorite export returned duplicate topic ${id}.`);
+    }
+    seenIds.add(id);
+    const provenance = isRecord(item.provenance) ? item.provenance : { source: "favorite", topicId: id };
+    const sources: TopicSource[] = [{
+      type: "favorite",
+      relationCreatedDate: fieldText(item.relationCreatedDate) || undefined,
+      provenance
+    }];
+    const result = {
+      requestId,
+      topic: {
+        id,
+        title: item.title,
+        content: item.content ?? item.body,
+        url: item.url ?? item.threadUrl,
+        originalUrl: item.originalUrl,
+        relationCreatedDate: item.relationCreatedDate,
+        updatedDate: item.updatedDate,
+        provenance
+      }
+    };
+    const relativePath = join("topics", `${id}.json`);
+    const artifact = {
+      kind: "collection-topic",
+      schemaVersion: 1,
+      id,
+      sources,
+      request: { method: "GET", path: "/api/v1/me/favorites/export" },
+      requestId,
+      result
+    };
+    const canonicalHash = topicCanonicalHash(artifact);
+    const evidence = await writeJsonWithEvidence(join(options.outputDir, relativePath), artifact);
+    topics.push({ id, title: item.title, url: item.url ?? item.threadUrl, sources, file: relativePath, canonicalHash });
+    files.push({ id, canonicalHash, ...evidence, path: relativePath });
+  }
+  const indexFile = { ...await writeTextWithEvidence(join(options.outputDir, "index.md"), collectionIndexMarkdown(topics, errors)), path: "index.md" };
+  const collection = {
+    kind: "collection",
+    schemaVersion: 2,
+    createdAt: new Date().toISOString(),
+    contentHash: collectionContentHash(topics.map((topic) => ({ id: Number(topic.id), canonicalHash: fieldText(topic.canonicalHash) }))),
+    source: { profile: session.profile, baseUrl: session.baseUrl, queries: [], topicIds: topics.map((topic) => topic.id), favoriteExport: true },
+    topicCount: topics.length,
+    topics,
+    errors,
+    files: { index: indexFile, topics: files }
+  };
+  await writeJsonWithEvidence(join(options.outputDir, "collection.json"), collection);
+  if (errors.length > 0) process.exitCode = 1;
+  printData(io, {
+    kind: "collection-favorites",
+    schemaVersion: 1,
+    outputDir: options.outputDir,
+    topicCount: topics.length,
+    unavailableCount: errors.length,
+    pageCount,
+    contentHash: collection.contentHash
+  }, options.json === true);
+}
+
+type CollectionBundle = {
+  kind: "collection-bundle";
+  schemaVersion: 1;
+  collectionContentHash: string;
+  documentCount: number;
+  files: Array<{ path: string; size: number; sha256: string; content: string }>;
+  bundleHash: string;
+};
+
+async function exportCollection(io: CommandIo, options: ExportOptions): Promise<void> {
+  const loaded = await readCollectionFile(io, options.dir, options.json);
+  if (!loaded) return;
+  const verification = await collectionVerificationReport(options.dir, loaded.collection);
+  if (!verification.ok) {
+    printError(io, { type: "validation", message: "Collection verification failed before export." }, undefined, options.json);
+    process.exitCode = 1;
+    return;
+  }
+  const paths = [
+    "collection.json",
+    fieldText(loaded.collection.files.index.path),
+    ...loaded.collection.files.topics.filter(isRecord).map((file) => fieldText(file.path)),
+    "index.jsonl",
+    "index.meta.json"
+  ].filter(Boolean);
+  const files: CollectionBundle["files"] = [];
+  for (const path of [...new Set(paths)].sort()) {
+    try {
+      const content = await readFile(join(options.dir, path), "utf8");
+      files.push({ path, size: Buffer.byteLength(content), sha256: sha256Hex(Buffer.from(content)), content });
+    } catch (error) {
+      if (!isNodeError(error) || error.code !== "ENOENT" || !["index.jsonl", "index.meta.json"].includes(path)) throw error;
+    }
+  }
+  const payload = {
+    kind: "collection-bundle" as const,
+    schemaVersion: 1 as const,
+    collectionContentHash: loaded.collection.contentHash ?? fieldText(verification.contentHash),
+    documentCount: loaded.collection.topicCount,
+    files
+  };
+  const bundle: CollectionBundle = { ...payload, bundleHash: bundleHash(payload) };
+  await writeJsonWithEvidence(options.output, bundle);
+  printData(io, { kind: "collection-export", schemaVersion: 1, output: options.output, documentCount: bundle.documentCount, bundleHash: bundle.bundleHash }, options.json === true);
+}
+
+async function verifyCollectionBundle(io: CommandIo, options: BundlePathOptions): Promise<void> {
+  const report = await bundleVerificationReport(options.bundle);
+  if (!report.ok) process.exitCode = 1;
+  printData(io, report, options.json === true);
+}
+
+async function importCollectionBundle(io: CommandIo, options: ImportOptions): Promise<void> {
+  const bundle = await readVerifiedBundle(options.bundle);
+  if (!bundle) {
+    printError(io, { type: "validation", message: "Collection bundle verification failed." }, undefined, options.json);
+    process.exitCode = 1;
+    return;
+  }
+  let entries: string[] = [];
+  try {
+    entries = await readdir(options.outputDir);
+  } catch (error) {
+    if (!isNodeError(error) || error.code !== "ENOENT") throw error;
+  }
+  if (entries.length > 0) {
+    printError(io, { type: "validation", message: "Import output directory must be empty." }, undefined, options.json);
+    process.exitCode = 1;
+    return;
+  }
+  await mkdir(options.outputDir, { recursive: true });
+  await writeBundleFiles(options.outputDir, bundle);
+  const collection = JSON.parse(await readFile(join(options.outputDir, "collection.json"), "utf8")) as unknown;
+  const verification = await collectionVerificationReport(options.outputDir, collection);
+  if (!verification.ok) {
+    printError(io, { type: "validation", message: "Imported collection verification failed." }, undefined, options.json);
+    process.exitCode = 1;
+    return;
+  }
+  printData(io, { kind: "collection-import", schemaVersion: 1, outputDir: options.outputDir, documentCount: bundle.documentCount, restoredFileCount: bundle.files.length }, options.json === true);
+}
+
+async function restoreCollectionBundle(io: CommandIo, options: RestoreOptions): Promise<void> {
+  const bundle = await readVerifiedBundle(options.bundle);
+  if (!bundle) {
+    printError(io, { type: "validation", message: "Collection bundle verification failed." }, undefined, options.json);
+    process.exitCode = 1;
+    return;
+  }
+  await writeBundleFiles(options.dir, bundle);
+  const collection = JSON.parse(await readFile(join(options.dir, "collection.json"), "utf8")) as unknown;
+  const verification = await collectionVerificationReport(options.dir, collection);
+  if (!verification.ok) {
+    printError(io, { type: "validation", message: "Restored collection verification failed." }, undefined, options.json);
+    process.exitCode = 1;
+    return;
+  }
+  printData(io, { kind: "collection-restore", schemaVersion: 1, dir: options.dir, documentCount: bundle.documentCount, restoredFileCount: bundle.files.length }, options.json === true);
+}
+
+async function bundleVerificationReport(path: string): Promise<Record<string, unknown> & { ok: boolean }> {
+  const issues: Array<{ code: string; path?: string }> = [];
+  let value: unknown;
+  try {
+    value = JSON.parse(await readFile(path, "utf8")) as unknown;
+  } catch {
+    return { kind: "collection-bundle-verification", schemaVersion: 1, ok: false, documentCount: 0, issues: [{ code: "invalid-bundle" }] };
+  }
+  if (!isCollectionBundle(value)) {
+    return { kind: "collection-bundle-verification", schemaVersion: 1, ok: false, documentCount: 0, issues: [{ code: "invalid-bundle" }] };
+  }
+  const payload = { kind: value.kind, schemaVersion: value.schemaVersion, collectionContentHash: value.collectionContentHash, documentCount: value.documentCount, files: value.files };
+  if (bundleHash(payload) !== value.bundleHash) issues.push({ code: "bundle-hash-mismatch" });
+  const seenPaths = new Set<string>();
+  for (const file of value.files) {
+    if (seenPaths.has(file.path)) issues.push({ code: "duplicate-path", path: file.path });
+    seenPaths.add(file.path);
+    if (!safeRelativePath(file.path)) issues.push({ code: "unsafe-path", path: file.path });
+    if (Buffer.byteLength(file.content) !== file.size || sha256Hex(Buffer.from(file.content)) !== file.sha256) {
+      issues.push({ code: "file-hash-mismatch", path: file.path });
+    }
+  }
+  verifyEmbeddedBundle(value, issues);
+  return { kind: "collection-bundle-verification", schemaVersion: 1, ok: issues.length === 0, documentCount: value.documentCount, collectionContentHash: value.collectionContentHash, bundleHash: value.bundleHash, fileCount: value.files.length, issues };
+}
+
+function verifyEmbeddedBundle(bundle: CollectionBundle, issues: Array<{ code: string; path?: string }>): void {
+  const collectionFile = bundle.files.find((file) => file.path === "collection.json");
+  if (!collectionFile) {
+    issues.push({ code: "missing-collection-manifest", path: "collection.json" });
+    return;
+  }
+  let collection: unknown;
+  try {
+    collection = JSON.parse(collectionFile.content) as unknown;
+  } catch {
+    issues.push({ code: "invalid-collection-manifest", path: "collection.json" });
+    return;
+  }
+  if (!isValidCollectionSchema(collection)) {
+    issues.push({ code: "invalid-collection-manifest", path: "collection.json" });
+    return;
+  }
+  if (collection.topicCount !== bundle.documentCount || (collection.contentHash ?? "") !== bundle.collectionContentHash) {
+    issues.push({ code: "bundle-collection-mismatch", path: "collection.json" });
+  }
+  const collectionTopics = collection.topics.filter(isRecord);
+  const collectionTopicFiles = collection.files.topics.filter(isRecord);
+  if (collectionTopics.length !== collection.topicCount || collectionTopicFiles.length !== collection.topicCount) {
+    issues.push({ code: "bundle-topic-count-mismatch", path: "collection.json" });
+  }
+  const topicCounts = countedIds(collectionTopics);
+  const fileCounts = countedIds(collectionTopicFiles);
+  if ([...topicCounts.values(), ...fileCounts.values()].some((count) => count !== 1)
+    || [...topicCounts.keys()].some((id) => !fileCounts.has(id))
+    || [...fileCounts.keys()].some((id) => !topicCounts.has(id))) {
+    issues.push({ code: "bundle-topic-coverage-mismatch", path: "collection.json" });
+  }
+  const topicsById = new Map(collectionTopics.filter((topic) => typeof topic.id === "number").map((topic) => [topic.id as number, topic]));
+  const filesByPath = new Map(bundle.files.map((file) => [file.path, file]));
+  const canonicalEntries: Array<{ id: number; canonicalHash: string }> = [];
+  for (const evidence of [collection.files.index, ...collection.files.topics.filter(isRecord)]) {
+    const path = fieldText(evidence.path);
+    const file = filesByPath.get(path);
+    if (!file) {
+      issues.push({ code: "missing-managed-file", path });
+      continue;
+    }
+    if (evidence.size !== file.size || evidence.sha256 !== file.sha256) {
+      issues.push({ code: "manifest-file-mismatch", path });
+    }
+    if (path.startsWith("topics/")) {
+      try {
+        const artifact = JSON.parse(file.content) as unknown;
+        const canonicalHash = topicCanonicalHash(artifact);
+        const id = isRecord(artifact) && typeof artifact.id === "number" ? artifact.id : undefined;
+        if (id !== undefined) canonicalEntries.push({ id, canonicalHash });
+        if (collection.schemaVersion === 2 && evidence.canonicalHash !== canonicalHash) {
+          issues.push({ code: "canonical-hash-mismatch", path });
+        }
+        if (collection.schemaVersion === 2 && id !== undefined && topicsById.get(id)?.canonicalHash !== canonicalHash) {
+          issues.push({ code: "topic-canonical-hash-mismatch", path });
+        }
+      } catch {
+        issues.push({ code: "invalid-topic-artifact", path });
+      }
+    }
+  }
+  if (collection.schemaVersion === 2 && collectionContentHash(canonicalEntries) !== collection.contentHash) {
+    issues.push({ code: "content-hash-mismatch", path: "collection.json" });
+  }
+}
+
+async function readVerifiedBundle(path: string): Promise<CollectionBundle | undefined> {
+  const report = await bundleVerificationReport(path);
+  if (!report.ok) return undefined;
+  try {
+    const value = JSON.parse(await readFile(path, "utf8")) as unknown;
+    return isCollectionBundle(value) ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function writeBundleFiles(dir: string, bundle: CollectionBundle): Promise<void> {
+  for (const file of bundle.files) {
+    if (!safeRelativePath(file.path)) throw new Error(`Unsafe bundle path: ${file.path}`);
+    const path = join(dir, normalize(file.path));
+    await mkdir(join(path, ".."), { recursive: true });
+    await writeFile(path, file.content, "utf8");
+  }
+}
+
+function isCollectionBundle(value: unknown): value is CollectionBundle {
+  return isRecord(value)
+    && value.kind === "collection-bundle"
+    && value.schemaVersion === 1
+    && typeof value.collectionContentHash === "string"
+    && typeof value.documentCount === "number"
+    && typeof value.bundleHash === "string"
+    && Array.isArray(value.files)
+    && value.files.every((file) => isRecord(file) && typeof file.path === "string" && typeof file.size === "number" && typeof file.sha256 === "string" && typeof file.content === "string");
+}
+
+function safeRelativePath(path: string): boolean {
+  if (!path || isAbsolute(path) || path.includes("\0")) return false;
+  const normalized = normalize(path);
+  return normalized !== ".." && !normalized.startsWith(`..${sep}`);
+}
+
+function normalizedBaseUrl(value: string): string {
+  return value.replace(/\/+$/, "");
+}
+
+async function createAutomationPlan(io: CommandIo, options: AutomationPlanOptions): Promise<void> {
+  const loaded = await readCollectionFile(io, options.dir, options.json);
+  if (!loaded) return;
+  const payload = {
+    kind: "collection-automation-plan" as const,
+    schemaVersion: 1 as const,
+    mode: "offline" as const,
+    collectionDir: options.dir,
+    queries: (options.query ?? []).map((query) => ({ query: query.trim(), topK: options.topK ?? 10 })).filter((item) => item.query.length > 0)
+  };
+  const plan = { ...payload, planHash: bundleHash(payload) };
+  await writeJsonWithEvidence(options.output, plan);
+  printData(io, { kind: "collection-automation-plan", schemaVersion: 1, output: options.output, planHash: plan.planHash, networkRequests: 0, unattendedWriteRequests: 0 }, options.json === true);
+}
+
+async function runAutomationPlan(io: CommandIo, options: AutomationRunOptions): Promise<void> {
+  const plan = JSON.parse(await readFile(options.plan, "utf8")) as unknown;
+  if (!isAutomationPlan(plan)) {
+    printError(io, { type: "validation", message: "Invalid collection automation plan." }, undefined, options.json);
+    process.exitCode = 1;
+    return;
+  }
+  const payload = { kind: plan.kind, schemaVersion: plan.schemaVersion, mode: plan.mode, collectionDir: plan.collectionDir, queries: plan.queries };
+  if (bundleHash(payload) !== plan.planHash) {
+    printError(io, { type: "validation", message: "Collection automation plan hash mismatch." }, undefined, options.json);
+    process.exitCode = 1;
+    return;
+  }
+  const loaded = await readCollectionFile(io, plan.collectionDir, options.json);
+  if (!loaded) return;
+  const verification = await collectionVerificationReport(plan.collectionDir, loaded.collection);
+  if (!verification.ok) {
+    printError(io, { type: "validation", message: "Collection verification failed before automation." }, undefined, options.json);
+    process.exitCode = 1;
+    return;
+  }
+  const executionHash = bundleHash({ planHash: plan.planHash, contentHash: loaded.collection.contentHash ?? verification.contentHash });
+  try {
+    const existing = JSON.parse(await readFile(options.output, "utf8")) as unknown;
+    if (isRecord(existing) && existing.executionHash === executionHash) {
+      printData(io, { ...existing, duplicateSuppressed: true }, options.json === true);
+      return;
+    }
+  } catch (error) {
+    if (!isNodeError(error) || error.code !== "ENOENT") throw error;
+  }
+  await indexCollection({ stdout: () => undefined, stderr: io.stderr }, { dir: plan.collectionDir, incremental: true, json: true });
+  const records = parseCollectionSearchRecords(await readFile(join(plan.collectionDir, "index.jsonl"), "utf8"));
+  const queries = plan.queries.map((item) => ({ query: item.query, results: queryIndex(records, item.query, { topK: item.topK }) }));
+  const result = {
+    kind: "collection-automation-result",
+    schemaVersion: 1,
+    mode: "offline",
+    planHash: plan.planHash,
+    executionHash,
+    contentHash: loaded.collection.contentHash ?? verification.contentHash,
+    documentCount: loaded.collection.topicCount,
+    queries,
+    networkRequests: 0,
+    unattendedWriteRequests: 0,
+    duplicateSuppressed: false
+  };
+  await writeJsonWithEvidence(options.output, result);
+  printData(io, result, options.json === true);
+}
+
+function isAutomationPlan(value: unknown): value is { kind: "collection-automation-plan"; schemaVersion: 1; mode: "offline"; collectionDir: string; queries: Array<{ query: string; topK: number }>; planHash: string } {
+  return isRecord(value)
+    && value.kind === "collection-automation-plan"
+    && value.schemaVersion === 1
+    && value.mode === "offline"
+    && typeof value.collectionDir === "string"
+    && typeof value.planHash === "string"
+    && Array.isArray(value.queries)
+    && value.queries.every((item) => isRecord(item) && typeof item.query === "string" && typeof item.topK === "number");
+}
+
 function parseCollectionSearchRecords(text: string): CollectionSearchRecord[] {
   return text
     .split("\n")
@@ -416,12 +1100,23 @@ async function collectionVerificationReport(dir: string, collection: unknown): P
   }
   verifyTopicCoverage(topics, topicFiles, issues);
   const evidence = [];
+  const canonicalEntries: Array<{ id: number; canonicalHash: string }> = [];
   evidence.push(await verifyFileEvidence(dir, collection.files.index, "index", issues));
   for (const file of topicFiles) {
     evidence.push(await verifyFileEvidence(dir, file, "topic", issues));
-    await verifyTopicArtifact(dir, file, issues);
+    const canonicalHash = await verifyTopicArtifact(dir, file, issues);
+    if (canonicalHash && typeof file.id === "number") {
+      canonicalEntries.push({ id: file.id, canonicalHash });
+      if (collection.schemaVersion === 2 && file.canonicalHash !== canonicalHash) {
+        issues.push({ code: "canonical-hash-mismatch", message: "Topic canonical hash does not match.", path: fieldText(file.path) });
+      }
+    }
   }
-  return verificationResult(dir, issues, evidence);
+  const computedContentHash = collectionContentHash(canonicalEntries);
+  if (collection.schemaVersion === 2 && collection.contentHash !== computedContentHash) {
+    issues.push({ code: "content-hash-mismatch", message: "Collection content hash does not match canonical topic content." });
+  }
+  return { ...verificationResult(dir, issues, evidence), contentHash: computedContentHash };
 }
 
 type CollectionSearchRecord = CollectionIndexRecord;
@@ -468,10 +1163,43 @@ async function collectionSearchRecords(dir: string, collection: ValidCollection)
       title,
       fields: collectionRecordFields(topicDataRecord, title),
       sourcePath: file,
+      sourceHash: typeof topic.canonicalHash === "string" ? topic.canonicalHash : topicCanonicalHash(artifact),
       url: topicUrl(result) ?? (fieldText(topic.url) || undefined)
     }));
   }
   return records;
+}
+
+async function incrementalCollectionSearchRecords(dir: string, collection: ValidCollection): Promise<{ records: CollectionSearchRecord[]; rebuiltCount: number; reusedCount: number }> {
+  let previous: CollectionSearchRecord[] = [];
+  try {
+    previous = parseCollectionSearchRecords(await readFile(join(dir, "index.jsonl"), "utf8"));
+  } catch (error) {
+    if (!isNodeError(error) || error.code !== "ENOENT") {
+      throw error;
+    }
+  }
+  const previousById = new Map(previous.map((record) => [record.topicId, record]));
+  const records: CollectionSearchRecord[] = [];
+  let rebuiltCount = 0;
+  let reusedCount = 0;
+  for (const topic of collection.topics.filter(isRecord).sort((left, right) => Number(left.id) - Number(right.id))) {
+    const id = typeof topic.id === "number" ? topic.id : undefined;
+    const canonicalHash = fieldText(topic.canonicalHash);
+    const old = id === undefined ? undefined : previousById.get(id);
+    if (old && canonicalHash && old.sourceHash === canonicalHash) {
+      records.push(old);
+      reusedCount += 1;
+      continue;
+    }
+    const singleCollection = { ...collection, topics: [topic] };
+    const [record] = await collectionSearchRecords(dir, singleCollection);
+    if (record) {
+      records.push(record);
+      rebuiltCount += 1;
+    }
+  }
+  return { records, rebuiltCount, reusedCount };
 }
 
 function legacyCollectionIndexRecord(value: unknown): CollectionSearchRecord | undefined {
@@ -507,8 +1235,9 @@ function legacyCollectionIndexRecord(value: unknown): CollectionSearchRecord | u
 
 type ValidCollection = {
   kind: "collection";
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   createdAt: string;
+  contentHash?: string;
   source: { profile: string; baseUrl: string; queries: unknown[]; topicIds: unknown[] };
   topicCount: number;
   topics: unknown[];
@@ -519,7 +1248,7 @@ type ValidCollection = {
 function isValidCollectionSchema(value: unknown): value is ValidCollection {
   return isRecord(value)
     && value.kind === "collection"
-    && value.schemaVersion === 1
+    && (value.schemaVersion === 1 || value.schemaVersion === 2)
     && typeof value.createdAt === "string"
     && isRecord(value.source)
     && typeof value.source.profile === "string"
@@ -531,7 +1260,8 @@ function isValidCollectionSchema(value: unknown): value is ValidCollection {
     && Array.isArray(value.errors)
     && isRecord(value.files)
     && isRecord(value.files.index)
-    && Array.isArray(value.files.topics);
+    && Array.isArray(value.files.topics)
+    && (value.schemaVersion === 1 || typeof value.contentHash === "string");
 }
 
 function verifyTopicCoverage(topics: Array<Record<string, unknown>>, topicFiles: Array<Record<string, unknown>>, issues: CollectionIssue[]): void {
@@ -600,18 +1330,21 @@ async function verifyFileEvidence(dir: string, file: Record<string, unknown>, ki
   }
 }
 
-async function verifyTopicArtifact(dir: string, file: Record<string, unknown>, issues: CollectionIssue[]): Promise<void> {
+async function verifyTopicArtifact(dir: string, file: Record<string, unknown>, issues: CollectionIssue[]): Promise<string | undefined> {
   const resolved = collectionFilePath(dir, file.path, "topic", issues);
   if (!resolved) {
-    return;
+    return undefined;
   }
   try {
     const artifact = JSON.parse(await readFile(resolved.absolutePath, "utf8")) as unknown;
     if (!isRecord(artifact) || artifact.kind !== "collection-topic" || artifact.schemaVersion !== 1 || artifact.id !== file.id || !Array.isArray(artifact.sources) || !isRecord(artifact.request) || artifact.request.method !== "GET" || !isRecord(artifact.result)) {
       issues.push({ code: "invalid-topic-artifact", message: "Topic artifact schema is invalid.", path: resolved.relativePath });
+      return undefined;
     }
+    return topicCanonicalHash(artifact);
   } catch (error) {
     issues.push({ code: "invalid-topic-artifact", message: `Topic artifact is invalid JSON: ${errorMessage(error)}`, path: resolved.relativePath });
+    return undefined;
   }
 }
 
@@ -703,7 +1436,7 @@ function sha256Hex(content: Buffer): string {
 }
 
 function topicIdFromItem(item: Record<string, unknown>): number | undefined {
-  for (const key of ["id", "topicId", "threadId"]) {
+  for (const key of ["id", "topicId", "threadId", "targetId"]) {
     const value = item[key];
     if (typeof value === "number" && Number.isInteger(value) && value > 0) {
       return value;
@@ -759,7 +1492,11 @@ function collectionRecordFields(topic: Record<string, unknown>, fallbackTitle: s
 }
 
 function sourcesText(sources: Record<string, unknown>[]): string {
-  return sources.map((source) => source.type === "query" ? `query:${fieldText(source.query)}#${fieldText(source.searchIndex)}` : "explicit").join(", ");
+  return sources.map((source) => source.type === "query"
+    ? `query:${fieldText(source.query)}#${fieldText(source.searchIndex)}`
+    : source.type === "favorite"
+      ? `favorite:${fieldText(source.relationCreatedDate)}`
+      : "explicit").join(", ");
 }
 
 function validateDateRange(io: CommandIo, fromDate?: string, toDate?: string, json?: boolean): boolean {
@@ -791,6 +1528,14 @@ function parseTopK(value: string): number {
   const parsed = parsePositiveInteger(value);
   if (parsed > 50) {
     throw new InvalidArgumentError(`Expected --top-k between 1 and 50: ${value}`);
+  }
+  return parsed;
+}
+
+function parsePageSize(value: string): number {
+  const parsed = parsePositiveInteger(value);
+  if (parsed > 50) {
+    throw new InvalidArgumentError(`Expected --page-size between 1 and 50: ${value}`);
   }
   return parsed;
 }

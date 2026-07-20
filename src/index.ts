@@ -222,10 +222,18 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "auth use": "switch the active auth profile",
   "category list": "list community categories",
   "collection build": "build a local multi-topic knowledge collection",
+  "collection automation plan": "create a deterministic offline readonly automation plan",
+  "collection automation run": "run an offline readonly automation plan with duplicate suppression",
+  "collection export": "export a deterministic portable collection bundle",
+  "collection favorites": "build a local collection from authenticated favorite topics",
+  "collection import": "import a verified collection bundle into an empty directory",
   "collection index": "build a local search index for a collection",
   "collection query": "query a local collection search index",
+  "collection restore": "restore managed collection files from a verified bundle",
   "collection stats": "show local collection index statistics",
+  "collection sync": "incrementally refresh existing collection topics",
   "collection verify": "verify a local knowledge collection",
+  "collection verify-bundle": "verify a portable collection bundle",
   "commands": "print a machine-readable command manifest",
   "doctor": "check installation, auth, and API reachability",
   "doctor snapshot": "print a local support snapshot without calling the API",
@@ -330,6 +338,26 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: 'apexcn collection build --query "REST API" --topic-id 30549 --output-dir ./collection --json', mode: "read" }]
   },
+  "collection automation plan": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: 'apexcn collection automation plan --dir ./collection --query "ORDS auth" --output ./plan.json --json', mode: "read" }]
+  },
+  "collection automation run": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn collection automation run --plan ./plan.json --output ./result.json --json", mode: "read" }]
+  },
+  "collection export": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn collection export --dir ./collection --output ./bundle.json --json", mode: "read" }]
+  },
+  "collection favorites": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn collection favorites --output-dir ./favorites --json", mode: "read" }]
+  },
+  "collection import": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn collection import --bundle ./bundle.json --output-dir ./restored --json", mode: "read" }]
+  },
   "collection index": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn collection index --dir ./collection --json", mode: "read" }]
@@ -338,13 +366,25 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: 'apexcn collection query --dir ./collection "ORDS 401" --top-k 5 --explain --json', mode: "read" }]
   },
+  "collection restore": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn collection restore --bundle ./bundle.json --dir ./collection --json", mode: "read" }]
+  },
   "collection stats": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn collection stats --dir ./collection --json", mode: "read" }]
   },
+  "collection sync": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn collection sync --dir ./collection --json", mode: "read" }]
+  },
   "collection verify": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn collection verify --dir ./collection --json", mode: "read" }]
+  },
+  "collection verify-bundle": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn collection verify-bundle --bundle ./bundle.json --json", mode: "read" }]
   },
   "commands": {
     safety: { effects: ["manifest"], preview: "none", confirmation: [] },

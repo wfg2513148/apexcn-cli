@@ -98,7 +98,7 @@ describe("collection commands", () => {
     const collection = await readJson(join(outputDir, "collection.json"));
     expect(collection).toEqual(expect.objectContaining({
       kind: "collection",
-      schemaVersion: 1,
+      schemaVersion: 2,
       topicCount: 4,
       source: expect.objectContaining({ queries: ["REST", "ORDS"], topicIds: [3, 4] })
     }));
@@ -260,7 +260,7 @@ describe("collection commands", () => {
     const meta = await readJson(join(outputDir, "index.meta.json"));
     expect(meta).toEqual(expect.objectContaining({
       kind: "collection-index-meta",
-      schemaVersion: 2,
+      schemaVersion: 3,
       engine: "bm25",
       documentCount: 1,
       averageDocumentLength: expect.any(Number),

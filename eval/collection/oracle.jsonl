@@ -1,0 +1,50 @@
+{"id":"M030-Q001","query":"APEX WebSockets 实时仪表盘","expectedTopicIds":[24763],"minimumMatchedTerms":2}
+{"id":"M030-Q002","query":"Excel Oracle APEX 集合 无需插件","expectedTopicIds":[24682],"minimumMatchedTerms":2}
+{"id":"M030-Q003","query":"Oracle APEX LDAP 目录用户","expectedTopicIds":[24683],"minimumMatchedTerms":2}
+{"id":"M030-Q004","query":"Oracle APEX RAG 生成式 AI 聊天机器人","expectedTopicIds":[23401],"minimumMatchedTerms":2}
+{"id":"M030-Q005","query":"Oracle APEX EBS 集成","expectedTopicIds":[23567],"minimumMatchedTerms":2}
+{"id":"M030-Q006","query":"APEX WebSockets 实时仪表盘","expectedTopicIds":[24763],"minimumMatchedTerms":2}
+{"id":"M030-Q007","query":"APEX 26.1 工作 更轻松 小功能","expectedTopicIds":[24661],"minimumMatchedTerms":2}
+{"id":"M030-Q008","query":"重塑 APEX 应用","expectedTopicIds":[24761],"minimumMatchedTerms":2}
+{"id":"M030-Q009","query":"Excel Oracle APEX 集合 无需插件","expectedTopicIds":[24682],"minimumMatchedTerms":2}
+{"id":"M030-Q010","query":"Oracle APEX LDAP 目录用户","expectedTopicIds":[24683],"minimumMatchedTerms":2}
+{"id":"M030-Q011","query":"APEX AI 代理 请求 响应 日志","expectedTopicIds":[24684],"minimumMatchedTerms":2}
+{"id":"M030-Q012","query":"APEX 26.1 Describe Tables","expectedTopicIds":[24685],"minimumMatchedTerms":2}
+{"id":"M030-Q013","query":"Oracle APEX 朗读 功能","expectedTopicIds":[24502],"minimumMatchedTerms":2}
+{"id":"M030-Q014","query":"APEXlang","expectedTopicIds":[24501],"minimumMatchedTerms":2}
+{"id":"M030-Q015","query":"APEX Flexbox WhatsApp 对话流","expectedTopicIds":[24481],"minimumMatchedTerms":2}
+{"id":"M030-Q016","query":"APEX 2026 4月 现状","expectedTopicIds":[24222],"minimumMatchedTerms":2}
+{"id":"M030-Q017","query":"Oracle APEX 无缝 内联 文件 查看器","expectedTopicIds":[24201],"minimumMatchedTerms":2}
+{"id":"M030-Q018","query":"APEX 动态动作 JavaScript IIFE","expectedTopicIds":[24221],"minimumMatchedTerms":2}
+{"id":"M030-Q019","query":"电子表格 企业级 APEX 系统 AI","expectedTopicIds":[24204],"minimumMatchedTerms":2}
+{"id":"M030-Q020","query":"Oracle APEX 导航栏 通知菜单","expectedTopicIds":[23642],"minimumMatchedTerms":2}
+{"id":"M030-Q021","query":"Oracle APEX 搜索 应用导航","expectedTopicIds":[24202],"minimumMatchedTerms":2}
+{"id":"M030-Q022","query":"AI 时代 APEX 开发环境 配置","expectedTopicIds":[24163],"minimumMatchedTerms":2}
+{"id":"M030-Q023","query":"APEX deployment tool","expectedTopicIds":[24161],"minimumMatchedTerms":2}
+{"id":"M030-Q024","query":"Oracle APEX 自动化 工作流程","expectedTopicIds":[23801],"minimumMatchedTerms":2}
+{"id":"M030-Q025","query":"Oracle APEX 创建 页面 内部","expectedTopicIds":[23601],"minimumMatchedTerms":2}
+{"id":"M030-Q026","query":"Oracle APEX 模板 设计 应用","expectedTopicIds":[23583],"minimumMatchedTerms":2}
+{"id":"M030-Q027","query":"Oracle APEX 禁用 非活动 标签页","expectedTopicIds":[23582],"minimumMatchedTerms":2}
+{"id":"M030-Q028","query":"Oracle APEX PWA Apple App Store","expectedTopicIds":[23568],"minimumMatchedTerms":2}
+{"id":"M030-Q029","query":"Oracle APEX EBS 集成 实用指南","expectedTopicIds":[23567],"minimumMatchedTerms":2}
+{"id":"M030-Q030","query":"APEX Classic Reports Excel PDF Export","expectedTopicIds":[23565],"minimumMatchedTerms":2}
+{"id":"M030-Q031","query":"APEX Theme Roller 自定义颜色","expectedTopicIds":[23564],"minimumMatchedTerms":2}
+{"id":"M030-Q032","query":"Oracle APEX Smart Filters 动态选项卡","expectedTopicIds":[23562],"minimumMatchedTerms":2}
+{"id":"M030-Q033","query":"Oracle APEX OTP 输入插件","expectedTopicIds":[23481],"minimumMatchedTerms":2}
+{"id":"M030-Q034","query":"Oracle APEX 一键 导出 Interactive Reports","expectedTopicIds":[23463],"minimumMatchedTerms":2}
+{"id":"M030-Q035","query":"Oracle APEX 页面锚点 导航插件","expectedTopicIds":[23462],"minimumMatchedTerms":2}
+{"id":"M030-Q036","query":"Interactive Grid 保存 变更预览","expectedTopicIds":[23421],"minimumMatchedTerms":2}
+{"id":"M030-Q037","query":"Oracle APEX RAG 生成式 AI 聊天机器人","expectedTopicIds":[23401],"minimumMatchedTerms":2}
+{"id":"M030-Q038","query":"mix-color APEX Universal Theme 颜色","expectedTopicIds":[23381],"minimumMatchedTerms":2}
+{"id":"M030-Q039","query":"APEX 交互式网格 显示更多 按钮","expectedTopicIds":[23241],"minimumMatchedTerms":2}
+{"id":"M030-Q040","query":"APEX 集合 会话状态 泄漏","expectedTopicIds":[23240],"minimumMatchedTerms":2}
+{"id":"M030-Q041","query":"Oracle APEX 环境标识 横幅","expectedTopicIds":[23238],"minimumMatchedTerms":2}
+{"id":"M030-Q042","query":"Oracle APEX Oracle 23ai RAG 应用","expectedTopicIds":[23235],"minimumMatchedTerms":2}
+{"id":"M030-Q043","query":"23ai 26ai APEX 迁移 无数据丢失","expectedTopicIds":[23234],"minimumMatchedTerms":2}
+{"id":"M030-Q044","query":"Sankey PRO Oracle APEX 财务 流向","expectedTopicIds":[23232],"minimumMatchedTerms":2}
+{"id":"M030-Q045","query":"Oracle APEX 动态 导航 菜单","expectedTopicIds":[23231],"minimumMatchedTerms":2}
+{"id":"M030-Q046","query":"Oracle APEX 现代化 工作区 应用 类型 模板","expectedTopicIds":[23213],"minimumMatchedTerms":2}
+{"id":"M030-Q047","query":"Oracle APEX 动态 创建 页面项","expectedTopicIds":[23212],"minimumMatchedTerms":2}
+{"id":"M030-Q048","query":"JavaScript Oracle APEX 页面项 数字 输入","expectedTopicIds":[23210],"minimumMatchedTerms":2}
+{"id":"M030-Q049","query":"APEX 多选 项目 分组 技巧","expectedTopicIds":[23190],"minimumMatchedTerms":2}
+{"id":"M030-Q050","query":"APEX MLE JavaScript 外部 API JSON 数组","expectedTopicIds":[23188],"minimumMatchedTerms":2}

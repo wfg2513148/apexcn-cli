@@ -1,6 +1,6 @@
 {
   "name": "apexcn-cli",
-  "version": "0.60.0",
+  "version": "0.70.0",
   "type": "module",
   "bin": {
     "apexcn": "./dist/index.js"
@@ -10,12 +10,14 @@
     "dist/",
     "docs/",
     "eval/rag/",
+    "eval/collection/",
     "eval/retrieval/",
     "issues.json",
     "roadmap.json",
     "scripts/e2e-readonly.sh",
     "scripts/baseline-report.mjs",
     "scripts/eval-rag.mjs",
+    "scripts/eval-collection.mjs",
     "scripts/eval-retrieval.mjs",
     "scripts/retrieval-eval-score.mjs",
     "scripts/generate-release-checksums.mjs",
@@ -32,6 +34,7 @@
     "check:workflows": "node scripts/check-workflows.mjs",
     "context:compact": "node scripts/compact-iteration-context.mjs",
     "eval:rag": "node scripts/eval-rag.mjs --report",
+    "eval:collection": "node scripts/eval-collection.mjs --report",
     "eval:retrieval": "node scripts/eval-retrieval.mjs --report",
     "qualify:mcp": "node scripts/qualify-mcp.mjs",
     "roadmap:render": "node scripts/check-roadmap.mjs --write-docs",

@@ -159,6 +159,14 @@ const commonReadScenarios: Scenario[] = [
   scenario("collection build multiple topics", "把帖子 30549 和 30752 做成离线知识合集", "collection build", "read", ["read"], "none", ["--topic-id <id>", "--output-dir <dir>", "--json"]),
   scenario("collection build query and category", "按 ORDS 关键词和新手入门板块构建知识合集", "collection build", "read", ["read"], "none", ["--query <keyword>", "--category-id <id>", "--json"]),
   scenario("collection build date range", "构建 6 月份 APEXLang 相关文章合集", "collection build", "read", ["read"], "none", ["--from-date <date>", "--to-date <date>", "--json"]),
+  scenario("collection sync", "只读增量刷新这个本地知识合集", "collection sync", "read", ["read"], "none", ["--dir <dir>", "--json"]),
+  scenario("collection favorites", "把我的收藏一键转成本地知识合集", "collection favorites", "read", ["read"], "none", ["--output-dir <dir>", "--json"]),
+  scenario("collection export", "把本地知识合集导出成可验证 bundle", "collection export", "read", ["read"], "none", ["--dir <dir>", "--output <file>", "--json"]),
+  scenario("collection verify bundle", "离线验证知识合集 bundle", "collection verify-bundle", "read", ["read"], "none", ["--bundle <file>", "--json"]),
+  scenario("collection import", "把已验证 bundle 导入空目录", "collection import", "read", ["read"], "none", ["--bundle <file>", "--output-dir <dir>", "--json"]),
+  scenario("collection restore", "从 bundle 恢复损坏的知识合集文件", "collection restore", "read", ["read"], "none", ["--bundle <file>", "--dir <dir>", "--json"]),
+  scenario("collection automation plan", "为本地合集创建零网络只读自动化计划", "collection automation plan", "read", ["read"], "none", ["--dir <dir>", "--output <file>", "--json"]),
+  scenario("collection automation run", "运行离线只读计划并抑制重复输出", "collection automation run", "read", ["read"], "none", ["--plan <file>", "--output <file>", "--json"]),
   scenario("collection index", "给这个本地知识合集建立离线检索索引", "collection index", "read", ["read"], "none", ["--dir <dir>", "--json"]),
   scenario("collection query", "在本地知识合集里搜索 ORDS 401", "collection query", "read", ["read"], "none", ["--dir <dir>", "--top-k <n>", "--explain", "--json"]),
   scenario("collection stats", "查看本地知识合集索引统计信息", "collection stats", "read", ["read"], "none", ["--dir <dir>", "--json"]),
@@ -809,6 +817,121 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
       }
     },
     {
+      name: "collection sync refreshes with GET only",
+      userSays: "只读增量刷新这个本地知识合集。",
+      commandPath: "collection sync",
+      prepare: (context) => prepareCollection(context, join(context.tmpDir, "collection")),
+      argv: (context) => ["node", "apexcn", "collection", "sync", "--dir", join(context.tmpDir, "collection"), "--json"],
+      responseForUrl: collectionFetch,
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "collection-sync", unchangedCount: 1 }));
+      }
+    },
+    {
+      name: "collection favorites imports readonly export",
+      userSays: "把我的收藏一键转成本地知识合集。",
+      commandPath: "collection favorites",
+      argv: (context) => ["node", "apexcn", "collection", "favorites", "--output-dir", join(context.tmpDir, "favorites"), "--json"],
+      responseForUrl: (url, init) => {
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/me/favorites/export?pageSize=50");
+        expect(init?.method ?? "GET").toBe("GET");
+        return Response.json({ requestId: "req-favorite-export", items: [{ topicId: 1, title: "REST API", content: "REST API content", url: "https://oracleapex.cn/t/1", relationCreatedDate: "2026-07-01", updatedDate: "2026-07-02", provenance: { source: "favorite", topicId: 1 } }], page: { hasMore: false, nextCursor: null } });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "collection-favorites", topicCount: 1 }));
+      }
+    },
+    {
+      name: "collection export creates deterministic bundle",
+      userSays: "把本地知识合集导出成可验证 bundle。",
+      commandPath: "collection export",
+      prepare: (context) => prepareCollection(context, join(context.tmpDir, "collection")),
+      argv: (context) => ["node", "apexcn", "collection", "export", "--dir", join(context.tmpDir, "collection"), "--output", join(context.tmpDir, "bundle.json"), "--json"],
+      responseForUrl: collectionFetch,
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "collection-export", documentCount: 1, bundleHash: expect.any(String) }));
+      }
+    },
+    {
+      name: "collection verify bundle is offline",
+      userSays: "离线验证知识合集 bundle。",
+      commandPath: "collection verify-bundle",
+      prepare: (context) => prepareCollectionBundle(context, join(context.tmpDir, "collection"), join(context.tmpDir, "bundle.json")),
+      argv: (context) => ["node", "apexcn", "collection", "verify-bundle", "--bundle", join(context.tmpDir, "bundle.json"), "--json"],
+      responseForUrl: collectionFetch,
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "collection-bundle-verification", ok: true }));
+      }
+    },
+    {
+      name: "collection import restores an empty directory",
+      userSays: "把已验证 bundle 导入空目录。",
+      commandPath: "collection import",
+      prepare: (context) => prepareCollectionBundle(context, join(context.tmpDir, "collection"), join(context.tmpDir, "bundle.json")),
+      argv: (context) => ["node", "apexcn", "collection", "import", "--bundle", join(context.tmpDir, "bundle.json"), "--output-dir", join(context.tmpDir, "imported"), "--json"],
+      responseForUrl: collectionFetch,
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "collection-import", documentCount: 1 }));
+      }
+    },
+    {
+      name: "collection restore repairs managed files",
+      userSays: "从 bundle 恢复损坏的知识合集文件。",
+      commandPath: "collection restore",
+      prepare: async (context) => {
+        const dir = join(context.tmpDir, "collection");
+        await prepareCollectionBundle(context, dir, join(context.tmpDir, "bundle.json"));
+        await writeFile(join(dir, "topics", "1.json"), "corrupt\n", "utf8");
+      },
+      argv: (context) => ["node", "apexcn", "collection", "restore", "--bundle", join(context.tmpDir, "bundle.json"), "--dir", join(context.tmpDir, "collection"), "--json"],
+      responseForUrl: collectionFetch,
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "collection-restore", documentCount: 1 }));
+      }
+    },
+    {
+      name: "collection automation plan is offline",
+      userSays: "为本地合集创建零网络只读自动化计划。",
+      commandPath: "collection automation plan",
+      prepare: (context) => prepareCollection(context, join(context.tmpDir, "collection")),
+      argv: (context) => ["node", "apexcn", "collection", "automation", "plan", "--dir", join(context.tmpDir, "collection"), "--query", "REST", "--output", join(context.tmpDir, "plan.json"), "--json"],
+      responseForUrl: collectionFetch,
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "collection-automation-plan", networkRequests: 0, unattendedWriteRequests: 0 }));
+      }
+    },
+    {
+      name: "collection automation run is offline",
+      userSays: "运行离线只读计划并抑制重复输出。",
+      commandPath: "collection automation run",
+      prepare: async (context) => {
+        const dir = join(context.tmpDir, "collection");
+        await prepareCollection(context, dir);
+        await context.program.parseAsync(["node", "apexcn", "collection", "automation", "plan", "--dir", dir, "--query", "REST", "--output", join(context.tmpDir, "plan.json"), "--json"]);
+      },
+      argv: (context) => ["node", "apexcn", "collection", "automation", "run", "--plan", join(context.tmpDir, "plan.json"), "--output", join(context.tmpDir, "result.json"), "--json"],
+      responseForUrl: collectionFetch,
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "collection-automation-result", networkRequests: 0, unattendedWriteRequests: 0 }));
+      }
+    },
+    {
       name: "collection verify checks local artifacts",
       userSays: "验证这个本地知识合集是否完整可用。",
       commandPath: "collection verify",
@@ -1388,6 +1511,11 @@ function workflowRunArgv(runDir: string): string[] {
 
 async function prepareCollection(context: ScenarioRuntime, outputDir: string): Promise<void> {
   await context.program.parseAsync(["node", "apexcn", "collection", "build", "--query", "REST", "--limit", "1", "--output-dir", outputDir, "--json"]);
+}
+
+async function prepareCollectionBundle(context: ScenarioRuntime, collectionDir: string, bundlePath: string): Promise<void> {
+  await prepareCollection(context, collectionDir);
+  await context.program.parseAsync(["node", "apexcn", "collection", "export", "--dir", collectionDir, "--output", bundlePath, "--json"]);
 }
 
 async function prepareSavedDraft(context: ScenarioRuntime): Promise<void> {

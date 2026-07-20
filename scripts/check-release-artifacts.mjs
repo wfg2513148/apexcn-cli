@@ -103,6 +103,10 @@ function verifyArtifacts() {
     "package/package.json",
     "package/agent-skill/SKILL.md",
     "package/docs/quickstart.md",
+    "package/eval/collection/corpus-source.json",
+    "package/eval/collection/oracle.jsonl",
+    "package/eval/collection/real-topics.jsonl",
+    "package/eval/collection/results/v0.70.0.json",
     "package/eval/rag/questions.zh.jsonl",
     "package/eval/rag/expected-references.jsonl",
     "package/issues.json",
@@ -111,6 +115,7 @@ function verifyArtifacts() {
     "package/dist/version.js",
     "package/node_modules/commander/package.json",
     "package/scripts/eval-rag.mjs",
+    "package/scripts/eval-collection.mjs",
     "package/scripts/generate-release-checksums.mjs",
     "package/scripts/install-agent.sh",
     "package/scripts/install-agent.ps1"

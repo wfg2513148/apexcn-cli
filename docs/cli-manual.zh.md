@@ -254,9 +254,34 @@ apexcn collection build \
   --json
 
 apexcn collection verify --dir collection --json
+apexcn collection sync --dir collection --json
+apexcn collection index --dir collection --incremental --json
 ```
 
-`collection build` 只读取 API，不执行写操作。它会按 query 输入顺序、每个 query 的搜索顺序、最后显式 `--topic-id` 的顺序聚合 topic，并按 `id/topicId/threadId` 去重。输出目录包含 `collection.json`、`index.md` 和 `topics/<id>.json`。每个 topic artifact 使用稳定包装：`kind: "collection-topic"`、`schemaVersion: 1`、`id`、`sources`、`request`、`requestId` 和 `result`。`collection.json.files` 记录 index 和 topic 文件的 `path`、`sha256`、`size`，供 `collection verify` 本地校验。单个 topic 拉取失败时会记录到 `errors`，保留已成功产物，并返回非零退出码。
+`collection build` 与 `collection sync` 只发送 GET，不执行 API 写操作；当前 profile 的 base URL 与 collection 来源不一致时，sync 会在刷新前失败。collection manifest v2 为每个 topic 和整个 collection 保存 canonical content hash；requestId 与生成时间不影响这些 hash。`index --incremental` 会复用 canonical hash 未变化的索引记录。
+
+可从当前认证用户的收藏只读导出直接构建资料库，并做确定性离线迁移：
+
+```bash
+apexcn collection favorites --output-dir favorites --json
+apexcn collection export --dir favorites --output favorites.bundle.json --json
+apexcn collection verify-bundle --bundle favorites.bundle.json --json
+apexcn collection import --bundle favorites.bundle.json --output-dir restored --json
+apexcn collection restore --bundle favorites.bundle.json --dir favorites --json
+```
+
+`collection favorites` 遍历服务端认证只读 cursor，保留完整正文、URL、topicId、收藏时间、更新时间和 provenance。import 要求目标目录为空；restore 只覆盖 bundle 管理的文件，不删除无关文件。
+
+离线自动化不访问网络，也不能发送社区写请求：
+
+```bash
+apexcn collection automation plan --dir favorites --query "ORDS auth" --output plan.json --json
+apexcn collection automation run --plan plan.json --output result.json --json
+```
+
+plan/run 不绑定具体调度器，可由用户选择的本地 scheduler 调用 `automation run`；相同 plan 与 content hash 的重复执行会抑制重复输出。
+
+结果明确记录 `networkRequests: 0` 和 `unattendedWriteRequests: 0`；同一计划与同一 collection 内容重复执行时会抑制重复输出。
 
 ## draft
 

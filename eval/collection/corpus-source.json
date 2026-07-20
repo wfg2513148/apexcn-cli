@@ -1,0 +1,42 @@
+{
+  "kind": "apexcn-collection-corpus-source",
+  "schemaVersion": 1,
+  "realTopicCount": 57,
+  "syntheticTopicCount": 9943,
+  "totalDocumentCount": 10000,
+  "realPercent": 0.57,
+  "syntheticPercent": 99.43,
+  "sourceDataset": {
+    "path": "eval/retrieval/questions.zh.jsonl",
+    "version": "M030-LIVE-ZH-2",
+    "sha256": "7b681ca050bf1afb4c17fe56fb76e6ad6c1208dd32debcab7ada9f160606865b",
+    "questionCount": 60,
+    "answerableCount": 50,
+    "unanswerableCount": 10
+  },
+  "sourceScorer": {
+    "version": "grounded-topic-and-reference-v2",
+    "note": "Top-5 hit requires a versioned expected topic id; citation coverage independently requires expected terms in user-visible source evidence."
+  },
+  "sourceEnvironment": {
+    "name": "dev@oci",
+    "method": "GET",
+    "requestCount": 57,
+    "writeRequestCount": 0
+  },
+  "sourceEnvironmentHash": "b608ad22774725103780741b0f330819b4ec33bce0cfda6b4c4deeab1435f59e",
+  "snapshotSource": {
+    "jsonlSha256": "1ef5adb4e7225707787ad8fa3c8c96631cf2673894fe0cf296d063e2fa1c90da",
+    "manifestSha256": "e346354344c20b97f403cd7ac391eda03df6f5c6a46edb3510e5f435b9157620",
+    "availableCount": 57,
+    "unavailableCount": 0
+  },
+  "realTopicsSha256": "3676fb51560b8a9f84ca118c189872cd27b8f902225b04722e6418c8de1a3a4c",
+  "oracleSha256": "7dbfc01890536b230d70ea144ecee95f6889b435b5b8461090d4aa6d1ef4d9bd",
+  "integrityRules": [
+    "all topic ids are unique",
+    "synthetic documents use unique ids and unique content markers",
+    "no repeated document is used to reach 10000 documents",
+    "ranking oracle is frozen before collection implementation benchmarking"
+  ]
+}

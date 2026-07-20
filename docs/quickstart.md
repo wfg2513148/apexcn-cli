@@ -225,6 +225,13 @@ apexcn search "向量索引" --category-id 4 --from-date 2026-01-01 --to-date 20
 apexcn research "REST API" --limit 3 --json
 apexcn collection build --query "REST API" --query "ORDS" --topic-id 30549 --output-dir ./collection --json
 apexcn collection verify --dir ./collection --json
+apexcn collection sync --dir ./collection --json
+apexcn collection index --dir ./collection --incremental --json
+apexcn collection favorites --output-dir ./favorites --json
+apexcn collection export --dir ./favorites --output ./favorites.bundle.json --json
+apexcn collection verify-bundle --bundle ./favorites.bundle.json --json
+apexcn collection automation plan --dir ./favorites --query "ORDS auth" --output ./plan.json --json
+apexcn collection automation run --plan ./plan.json --output ./result.json --json
 apexcn draft question --title "APEX 问题" --problem "现象描述" --research-file research.json --format text
 apexcn draft reply --topic-id 30549 --answer "回复建议" --format text
 apexcn review topic --title "APEX 问题" --content-file question.md --category-id 4 --json
@@ -241,7 +248,7 @@ apexcn workflow run --resume ./run --execute --yes --json
 `--page-size` 支持 1 到 50。搜索结果如果返回 `page.nextCursor`，用 `apexcn search "<关键词>" --cursor "<nextCursor>" --json` 读取下一页；`--offset` 仅作为兼容参数保留。需要缩小搜索范围时，用 `--category-id`、`--from-date` 和 `--to-date`。
 需要查看最新帖子时，用 `apexcn topic recent --since-hours 48 --json`；CLI 会优先调用 `GET /api/v1/topics`，旧服务端会自动降级到搜索和帖子详情组合。
 需要给 AI agent 一次性整理可引用资料时，用 `research` 直接生成搜索结果和帖子详情组合的研究包。
-需要把多个搜索词和指定帖子整理成可离线复用的资料库时，用 `collection build`；使用前可用 `collection verify` 本地校验文件 hash 和 topic artifact。
+需要把多个搜索词和指定帖子整理成可离线复用的资料库时，用 `collection build`；用 `collection sync` 做 GET-only 增量刷新，`index --incremental` 只重建 canonical hash 变化的文档。收藏可用 `collection favorites` 一步导入。迁移使用 export/verify-bundle/import/restore；离线计划使用 automation plan/run，网络请求和无人值守写请求均为零。
 需要把问题信息和研究包整理成可发帖正文时，用本地 `draft question` 生成 Markdown 草稿。该命令不需要认证、不调用 API；`--format text` 输出可保存为 `question.md` 并传给 `workflow run --goal topic-create --content-file`。
 需要先起草回帖时，用本地 `draft reply --format text` 生成 Markdown 回复，再传给 `workflow run --goal reply-create --content-file`。
 发布预览前，用本地 `review topic` 检查 Markdown 草稿是否仍含 `待补充`、过短正文或疑似密钥；该命令不替代 `topic create --preview`。

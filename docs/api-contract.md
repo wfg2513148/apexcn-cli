@@ -59,6 +59,8 @@
 
 `me capabilities` 对应 `/api/v1/capabilities`。通知、收件箱、规则和隐私端点若无权威数据，成功响应仍必须明确包含 `available: false`、`status: "UNAVAILABLE"`、`unavailableReason` 和 `requestId`。CLI 不把 truthful unavailable 改写为伪造的空数组或正文。
 
+collection manifest v2 在每个 topic 与顶层保存 canonical hash；hash 排除 requestId 与生成时间，只绑定内容和 provenance。collection bundle v1 对排序后的全部托管文件保存内容、size、SHA-256 与整体 bundle hash。`collection automation` v1 仅允许 `mode: "offline"`，结果固定包含 `networkRequests: 0`、`unattendedWriteRequests: 0` 和 execution hash。
+
 本地草稿 inventory 使用 `stored-draft` v1 包装原有 `question-draft` 或 `reply-draft`。`draft-inventory-export` v1 包含 `sourceProfileId`、`exportedAt` 和 `drafts[]`；profile 标识是 profile 名的 SHA-256，不包含 profile 名或 token。导入保留 draft id、时间戳和 payload 字段，只将 `ownerProfileId` 绑定到当前 active profile。
 
 ## Error Envelope
