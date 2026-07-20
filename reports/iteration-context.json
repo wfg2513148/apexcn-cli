@@ -1,15 +1,15 @@
 {
   "kind": "apexcn-iteration-context",
   "schemaVersion": 1,
-  "generatedAt": "2026-07-20T08:26:30.502Z",
+  "generatedAt": "2026-07-20T09:36:59.483Z",
   "release": {
-    "version": "0.80.2",
-    "tag": "v0.80.2",
-    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v0.80.2"
+    "version": "0.80.3",
+    "tag": "v0.80.3",
+    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v0.80.3"
   },
   "repository": {
     "branch": "main",
-    "commit": "6101d81f58701c459e7df2e706f80c1a09b4d357"
+    "commit": "10db004dfafbc111235b964c80a2d6acf3dde4b1"
   },
   "milestone": {
     "completedIterationFor": null,
@@ -17,41 +17,40 @@
     "resumeMilestoneStatus": "in_progress"
   },
   "enhancedCapabilities": [
-    "新增顶层 `apexcn -apikey <key>` 快捷入口，普通字母数字 key 支持带引号或不带引号输入。",
-    "快捷入口固定写入生产 ORDS base URL 的默认 `prod` profile 并设为 active，配置文件继续使用 `0600` 权限。",
-    "配置过程不调用社区 API、不回显 key，并在解析完成后从 Commander option state 清除 key 引用。",
-    "原有 `auth set-token --token-env`、多 profile、env-to-file fallback 和审计能力保持不变。"
+    "`apexcn ask` 现在会把服务端相对 `card_link` 和 `threadUrl` 转换为可直接打开的 `https://oracleapex.cn/ords/f?p=...` 社区帖子链接。",
+    "链接规范化完整保留服务端 `cs` 校验和，并继续把外部原文链接保存在 `originalUrl`。",
+    "当引用只有 topic ID 而没有真实链接时，CLI 不再生成必然 404 的 `/t/{id}` 伪链接。",
+    "新增聚焦命令回归和自然语言 Codex 场景，覆盖可点击来源链接。"
   ],
   "unexpectedProblems": [
-    "Commander 对多字母单横线选项生成首字母大写的内部属性名，需要显式读取和清理 `Apikey` state。",
-    "用户要求的命令行直传方式比环境变量方式简单，但 key 可能进入 shell 历史并短暂出现在进程列表中。",
-    "带引号与不带引号在 CLI 收到的 argv 中没有差异，因此必须通过真实 shell 调用分别验证，而不能只依赖单元测试描述。",
-    "0.8 的真实 Windows lifecycle、独立新手验证和七天只读 soak 仍按用户此前决定暂停，本补丁不能关闭整个里程碑。"
+    "初步现象像服务端 URL 契约缺口，但真实生产响应已经提供带校验和的相对 `card_link`；缺陷实际位于 CLI 引用增强逻辑。",
+    "现有测试把错误的 `/t/{id}` 形式固化为预期，需要同步修正命令测试和自然语言场景。",
+    "固定服务端 Codex 任务的归档会话文件已缺失，无法继续投递；确认 API 已提供修复所需字段后，该外部任务不再构成本次发布阻塞。",
+    "通用只读 e2e 脚本因当前 shell 未设置 `APEXCN_API_KEY` 而跳过，但使用既有活动 profile 的真实只读 `ask` 与 URL GET 验证已通过。"
   ],
   "rootCauses": [
-    "现有认证入口以多 profile、base URL 和 credential backend 灵活性为主，缺少面向首次用户的固定默认值快捷路径。",
-    "shell 引号由 shell 消费而非 CLI 解析，单元测试 argv 无法单独证明两种用户输入写法都可用。",
-    "命令行直传 secret 的易用性与历史记录、进程列表暴露风险之间存在不可消除的安全取舍。",
-    "roadmap 0.8 的完整验收包含跨平台实机、独立 validator 和长期 soak，局部认证体验补丁不能替代这些证据。"
+    "`enrichAskReference` 只接受绝对 `canonicalUrl/threadUrl`，没有解析 API 返回的 APEX 相对 `card_link`。",
+    "当引用含 topic ID 时，旧逻辑优先硬编码不存在的 Discourse 风格 `/t/{id}` 路径，遮蔽了后端已经提供的有效 APEX 页面链接。",
+    "回归测试只验证字符串形状，没有用真实 HTTP 状态证明生成后的链接能够打开。"
   ],
   "preventionActions": [
-    "新增快捷入口的保存、默认 profile、生产 base URL、无网络、无回显、option state 清理和非法值拒绝测试。",
-    "使用隔离配置和发布资产分别执行带引号与不带引号的真实 shell 命令，并核验 `0600` 权限。",
-    "README、quickstart、用户指南、CLI 手册、迁移说明、安装器提示和 bundled skill 均说明快捷入口与安全取舍。",
-    "继续保留 `--token-env` 作为高安全需求方案，并拒绝空值、占位符、非 ASCII 和含空白 token。"
+    "测试用例包含带 `cs` 的真实 APEX `card_link` 形状，并断言校验和在绝对 URL 中保持不变。",
+    "保留只有 topic ID 的反例，明确要求不生成未经服务端提供的社区 URL。",
+    "发布前同时验证旧 `/t/23722` 返回 404、修复后的 APEX URL 返回 200，并用本地构建执行真实只读 `ask`。",
+    "继续要求 Codex 消费 `url/threadUrl` 的真实值，不根据 topic ID 自行推导站点路由。"
   ],
   "nextMilestoneGoal": "保持 roadmap 0.8 为 in_progress；待用户明确恢复后，继续真实 Windows lifecycle、完整新手独立验证和七天只读 soak，并在全部 AC 达标后关闭 0.8。",
   "expectedResults": [
-    "首次用户用一条 `apexcn -apikey` 命令完成默认生产 profile 配置，再运行 `apexcn me --json` 验证身份。",
-    "全新 Windows 环境完成安装、快捷认证、升级、回滚和卸载的实机证据。",
-    "新的用户可见新手 validator 使用 v0.80.2 release 完成完整 baseline 与 0.8 adverse suite。",
-    "七天只读 soak 成功率至少 99.5%，无社区写入和凭据泄漏；全部验收完成后才允许激活后续里程碑。"
+    "升级到 v0.80.3 后，Codex 展示的 `ask` 社区帖子标题链接可直接打开对应 APEX 页面。",
+    "服务端返回的校验和链接和外部原文链接保持各自语义，不再相互覆盖。",
+    "缺少真实帖子 URL 的引用不会再误导用户点击 404 地址。",
+    "0.8 后续验证继续使用 v0.80.3 release 资产，同时保持独立 validator、Windows lifecycle 和 soak 门禁不变。"
   ],
   "majorRisks": [
-    "命令行 secret 可能保存在 shell 历史或短暂暴露于进程列表，敏感环境应使用 `auth set-token --token-env`。",
-    "真实 Windows lifecycle 仍暂停，不能用 macOS shell 与 PowerShell 静态测试替代。",
-    "独立 validator 与七天 soak 尚未完成，v0.80.2 只证明本次认证快捷入口和既有自动化回归。",
-    "0.5 继续 blocked/unreleased；v0.80.2 不得作为 0.5 完成或发布依据。"
+    "APEX 页面链接依赖服务端生成的 checksum；如果服务端未来改变 `card_link` 形状，需要同步更新契约测试。",
+    "仍使用 v0.80.2 或更早版本的全局安装不会自动获得修复，必须升级到 v0.80.3。",
+    "真实 Windows lifecycle、独立新手验证和七天只读 soak 仍暂停，本补丁不能作为 roadmap 0.8 完成证据。",
+    "0.5 继续 blocked/unreleased；v0.80.3 不得作为 0.5 完成或发布依据。"
   ],
   "activeIssues": [],
   "resume": {
