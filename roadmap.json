@@ -1638,16 +1638,16 @@
       "releaseLine": "0.60.x",
       "title": "可审计内容操作",
       "objective": "让授权用户通过可恢复、hash-bound、可审计的 CLI workflow 执行内容变更，同时 Agent 只能生成 preview。",
-      "status": "in_progress",
+      "status": "completed",
       "activationGate": {
         "status": "approved",
         "previousMilestoneId": "0.5",
         "confirmationRef": "user-delegated-fresh-m060-goal-2026-07-18"
       },
       "completionReview": {
-        "status": "not_due",
-        "summaryEvidenceId": null,
-        "confirmationRef": null
+        "status": "approved",
+        "summaryEvidenceId": "M060-E-R32",
+        "confirmationRef": "M060-R32-20260720T101202+0800"
       },
       "capabilities": [
         {
@@ -1666,7 +1666,7 @@
             "server:content-write-contracts",
             "server:isolated-write-test-surface"
           ],
-          "status": "partial",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M060-AC-001",
             "M060-AC-008"
@@ -1676,7 +1676,9 @@
           ],
           "evidenceIds": [
             "M060-E-LOCAL",
-            "M060-E-SERVER"
+            "M060-E-SERVER",
+            "M060-E-R32",
+            "M060-E-AUDIT"
           ]
         },
         {
@@ -1692,7 +1694,7 @@
             "automatic editorial approval"
           ],
           "dependencies": [],
-          "status": "partial",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M060-AC-004",
             "M060-AC-007"
@@ -1701,7 +1703,8 @@
             "M060-V-NEGATIVE"
           ],
           "evidenceIds": [
-            "M060-E-LOCAL"
+            "M060-E-LOCAL",
+            "M060-E-R32"
           ]
         },
         {
@@ -1728,7 +1731,7 @@
             "server:content-write-contracts",
             "server:isolated-write-test-surface"
           ],
-          "status": "partial",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M060-AC-002",
             "M060-AC-003",
@@ -1743,7 +1746,8 @@
           ],
           "evidenceIds": [
             "M060-E-LOCAL",
-            "M060-E-SERVER"
+            "M060-E-SERVER",
+            "M060-E-R32"
           ]
         },
         {
@@ -1763,7 +1767,7 @@
             "server:content-write-contracts",
             "server:isolated-write-test-surface"
           ],
-          "status": "implemented",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M060-AC-001",
             "M060-AC-008"
@@ -1773,7 +1777,9 @@
             "M060-V-CLEANUP"
           ],
           "evidenceIds": [
-            "M060-E-SERVER"
+            "M060-E-SERVER",
+            "M060-E-R32",
+            "M060-E-AUDIT"
           ]
         },
         {
@@ -1795,7 +1801,7 @@
             "server:content-write-contracts",
             "server:isolated-write-test-surface"
           ],
-          "status": "not_started",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M060-AC-010"
           ],
@@ -1803,7 +1809,9 @@
             "M060-V-VISUAL"
           ],
           "evidenceIds": [
-            "M060-E-SERVER"
+            "M060-E-SERVER",
+            "M060-E-P14",
+            "M060-E-R32"
           ]
         },
         {
@@ -1819,7 +1827,7 @@
             "MCP execute-write"
           ],
           "dependencies": [],
-          "status": "partial",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M060-AC-011"
           ],
@@ -1827,7 +1835,8 @@
             "M060-V-AGENT-PREVIEW"
           ],
           "evidenceIds": [
-            "M060-E-MCP-PREVIEW"
+            "M060-E-MCP-PREVIEW",
+            "M060-E-R32"
           ]
         }
       ],
@@ -1841,8 +1850,10 @@
           "target": 20,
           "unit": "workflows",
           "measurementMethod": "isolated dev@oci validator run",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M060-E-R32"
+          ],
           "measurementProfileId": "PROFILE-WRITE-BACK-DUAL-EVIDENCE"
         },
         {
@@ -1854,8 +1865,10 @@
           "target": 100,
           "unit": "percent",
           "measurementMethod": "workflow artifact hash comparison",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M060-E-R32"
+          ],
           "measurementProfileId": "PROFILE-WRITE-BACK-DUAL-EVIDENCE"
         },
         {
@@ -1867,8 +1880,10 @@
           "target": 100,
           "unit": "percent",
           "measurementMethod": "negative workflow matrix",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M060-E-R32"
+          ],
           "measurementProfileId": "PROFILE-WRITE-BACK-DUAL-EVIDENCE"
         },
         {
@@ -1880,8 +1895,10 @@
           "target": 0,
           "unit": "bypasses",
           "measurementMethod": "delete preview approval and execute attack scenarios",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M060-E-R32"
+          ],
           "measurementProfileId": "PROFILE-WRITE-BACK-DUAL-EVIDENCE"
         },
         {
@@ -1893,8 +1910,10 @@
           "target": 0,
           "unit": "writes",
           "measurementMethod": "idempotence and resume scenarios",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M060-E-R32"
+          ],
           "measurementProfileId": "PROFILE-WRITE-BACK-DUAL-EVIDENCE"
         },
         {
@@ -1906,8 +1925,10 @@
           "target": 0,
           "unit": "writes",
           "measurementMethod": "fault-injected isolated workflow runs",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M060-E-R32"
+          ],
           "measurementProfileId": "PROFILE-WRITE-BACK-DUAL-EVIDENCE"
         },
         {
@@ -1919,8 +1940,10 @@
           "target": 0,
           "unit": "findings",
           "measurementMethod": "artifact and log secret scan",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M060-E-R32"
+          ],
           "measurementProfileId": "PROFILE-WRITE-BACK-DUAL-EVIDENCE"
         },
         {
@@ -1932,8 +1955,11 @@
           "target": 0,
           "unit": "resources",
           "measurementMethod": "post-run isolated environment inventory",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M060-E-R32",
+            "M060-E-AUDIT"
+          ],
           "measurementProfileId": "PROFILE-WRITE-BACK-DUAL-EVIDENCE"
         },
         {
@@ -1945,8 +1971,10 @@
           "target": 0,
           "unit": "issues",
           "measurementMethod": "issues.json entries scoped to milestone 0.6",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M060-E-R32"
+          ],
           "measurementProfileId": "PROFILE-WRITE-BACK-DUAL-EVIDENCE"
         },
         {
@@ -1959,8 +1987,11 @@
           "unit": "percent",
           "measurementMethod": "dual evidence validator report against an existing apexcn forums APEX page",
           "measurementProfileId": "PROFILE-WRITE-BACK-DUAL-EVIDENCE",
-          "status": "pending",
-          "evidenceIds": []
+          "status": "pass",
+          "evidenceIds": [
+            "M060-E-P14",
+            "M060-E-R32"
+          ]
         },
         {
           "id": "M060-AC-011",
@@ -1972,8 +2003,10 @@
           "unit": "bypasses",
           "measurementMethod": "preview tool call and network trace",
           "measurementProfileId": "PROFILE-WRITE-BACK-DUAL-EVIDENCE",
-          "status": "pending",
-          "evidenceIds": []
+          "status": "pass",
+          "evidenceIds": [
+            "M060-E-R32"
+          ]
         }
       ],
       "validatorScenarios": [
@@ -2035,6 +2068,34 @@
           "description": "Fixed apexcn-forums task 019f2888-ef40-7b20-9af7-e4495f3a1091 delivered API contract 0.6.0-candidate and a dev-only isolated write surface. Real smoke covered anonymous, muted and outside-surface rejection; topic and reply create, update and delete; idempotent replay; stale-version conflict; 404; 429; transport recovery semantics; and zero residual topics, posts, or idempotency records.",
           "commit": "55cc890aa31033345fd2811b33d35895350079a9",
           "sha256": "56f92aa57f66eea3387844bc33d90f96b02c097b7d5627e17e787816e3057b62"
+        },
+        {
+          "id": "M060-E-P14",
+          "kind": "server_browser_validation",
+          "path": "/Users/kwang/apexcn-forums/output/p14-existing-apex-contract/20260720T020032Z/README.md",
+          "description": "Fresh user-visible apexcn-forums Terra/high task independently proved six isolated DEV API operations in system Google Chrome on the existing app 102 page 14, with no dedicated HTML endpoint or new APEX page, then removed all objects and exact audit rows.",
+          "threadId": "019f7d3c-f13c-7370-acbe-a934c8e2cd64",
+          "commit": "e9ce2de78eb9b1c30dcd6b676c2403bcaa2564e6",
+          "sha256": "a73d76f9b1b3dcfb2fc0dd81102962d13b033b32e519c94eff33309b2930f2d2"
+        },
+        {
+          "id": "M060-E-R32",
+          "kind": "independent_validator",
+          "path": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-m060-r32-20260720T101202+0800/report.json",
+          "description": "Fresh visible Luna/high novice R32 passed 30/30 baseline, 6/6 dynamic, 20/20 first-attempt isolated writes, and 20/20 backend plus existing app 102 page 14 system-Chrome evidence against frozen candidate f802b443; no CLI issue or business residual remained.",
+          "threadId": "019f7d50-e94d-77b0-b712-1613b4cd8e09",
+          "assignmentRef": "M060-R32-20260720T101202+0800",
+          "commit": "68645b5c2906111adb1fa85b0f5a723947ff26a9",
+          "sha256": "43461f693a27a08abad915700d3de7450f921d8738dd5525d3373feec41c1718"
+        },
+        {
+          "id": "M060-E-AUDIT",
+          "kind": "server_cleanup",
+          "path": "/Users/kwang/apexcn-forums/output/m060-r32-audit-cleanup/m060-r32-audit-final-20260720T022827Z/README.md",
+          "description": "The fixed replacement apexcn-forums Terra/high task fail-closed on exact 20/20 pre-counts, deleted only those 20 idempotency and 20 SUCCESS audit rows, and proved exact pairs, four topics, and three replies at zero with four authenticated API 404 responses.",
+          "threadId": "019f7d08-d733-74a2-9178-3a87d60b22be",
+          "commit": "e9ce2de78eb9b1c30dcd6b676c2403bcaa2564e6",
+          "sha256": "808a46e06ff6ecd50fc112c0a8d2cba8e31908e919996ca13f28985f77ca1d8d"
         }
       ],
       "userOutcome": "授权用户能够安全完成内容变更，并从最终页面确认写入结果；Agent 无法绕过 workflow。",
@@ -3443,10 +3504,12 @@
       "capabilityIds": [
         "M060-CAP-WORKFLOW"
       ],
-      "status": "open",
+      "status": "mitigated",
       "blockingAt": "completion",
       "description": "workflow expiry、reviewer、idempotence 和恢复矩阵尚未资格化",
-      "resolutionEvidenceIds": []
+      "resolutionEvidenceIds": [
+        "M060-E-R32"
+      ]
     },
     {
       "id": "RISK-070-REAL-CORPUS",
