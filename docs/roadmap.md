@@ -254,7 +254,7 @@
 | `M060-AC-007` | `pending` | workflow、审核和测试证据中无密钥泄露。 | `= 0 findings` | artifact and log secret scan |
 | `M060-AC-008` | `pending` | 隔离测试资源残留为零。 | `= 0 resources` | post-run isolated environment inventory |
 | `M060-AC-009` | `pending` | 当前里程碑不存在活动 P0/P1 问题。 | `= 0 issues` | issues.json entries scoped to milestone 0.6 |
-| `M060-AC-010` | `pending` | 20 个隔离写 workflow 全部具备同一对象的后端证据与 Codex 真实浏览器视觉证据。 | `= 100 percent` | dual evidence validator report |
+| `M060-AC-010` | `pending` | 20 个隔离写 workflow 全部具备同一对象的后端证据，以及系统 Google Chrome 在 apexcn forums 既有 APEX 页面上的视觉证据。 | `= 100 percent` | dual evidence validator report against an existing apexcn forums APEX page |
 | `M060-AC-011` | `pending` | 全部 preview-only MCP 工具返回 willExecute=false 且真实写请求为零。 | `= 0 bypasses` | preview tool call and network trace |
 
 ### 活动问题
