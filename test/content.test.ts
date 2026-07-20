@@ -2055,7 +2055,7 @@ describe("content commands", () => {
       "APEX 可以用 REST Data Source。",
       "Sources:",
       "1. REST Data - https://oracleapex.cn/t/42 | score 0.88 | 第一行 第二行",
-      "2. 43 - https://oracleapex.cn/t/43",
+      "2. 43",
       "requestId: req-ask",
       ""
     ].join("\n"));
@@ -2112,14 +2112,14 @@ describe("content commands", () => {
     expect(stdout.join("")).toContain("filters: categoryId=4 fromDate=2026-07-01 toDate=2026-07-05 tag=ORDS\n");
   });
 
-  test("ask enriches backend references with stable topic URLs", async () => {
+  test("ask enriches backend references with absolute community topic URLs", async () => {
     const { program, stdout } = await configuredProgram(async () =>
       Response.json({
         answer: "APEXLang supports single page imports.",
         sources: [
           {
             card_title: "APEXLang import",
-            card_link: "f?p=100:14:::::P14_THREAD_ID:29667",
+            card_link: "f?p=100:14:::::P14_THREAD_ID:29667&cs=checksum",
             source_url: "https://oracleapex.cn/ords/r/apex-cn/website/thread?session=abc"
           }
         ],
@@ -2139,7 +2139,7 @@ describe("content commands", () => {
           {
             id: 29667,
             title: "APEXLang import",
-            url: "https://oracleapex.cn/t/29667",
+            url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:29667&cs=checksum",
             originalUrl: "https://oracleapex.cn/ords/r/apex-cn/website/thread?session=abc"
           }
         ]
@@ -2147,10 +2147,10 @@ describe("content commands", () => {
       sources: [
         {
           card_title: "APEXLang import",
-          card_link: "f?p=100:14:::::P14_THREAD_ID:29667",
+          card_link: "f?p=100:14:::::P14_THREAD_ID:29667&cs=checksum",
           source_url: "https://oracleapex.cn/ords/r/apex-cn/website/thread?session=abc",
-          url: "https://oracleapex.cn/t/29667",
-          threadUrl: "https://oracleapex.cn/t/29667",
+          url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:29667&cs=checksum",
+          threadUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:29667&cs=checksum",
           originalUrl: "https://oracleapex.cn/ords/r/apex-cn/website/thread?session=abc"
         }
       ],
@@ -2158,7 +2158,7 @@ describe("content commands", () => {
     });
   });
 
-  test("ask replaces relative thread links with stable absolute topic URLs", async () => {
+  test("ask resolves relative thread links to absolute community topic URLs", async () => {
     const { program, stdout } = await configuredProgram(async () =>
       Response.json({
         answer: "ORDS 403 should be checked against the granted roles.",
@@ -2181,8 +2181,8 @@ describe("content commands", () => {
     expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
       sources: [
         expect.objectContaining({
-          url: "https://oracleapex.cn/t/23142",
-          threadUrl: "https://oracleapex.cn/t/23142",
+          url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:23142",
+          threadUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:23142",
           originalUrl: "https://blog.example/apex-ords"
         })
       ],
@@ -2191,7 +2191,7 @@ describe("content commands", () => {
         sources: [
           expect.objectContaining({
             id: 23142,
-            url: "https://oracleapex.cn/t/23142",
+            url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:23142",
             originalUrl: "https://blog.example/apex-ords"
           })
         ]
@@ -2230,8 +2230,8 @@ describe("content commands", () => {
       references: [
         expect.objectContaining({
           card_title: "ORDS OAuth",
-          url: "https://oracleapex.cn/t/23722",
-          threadUrl: "https://oracleapex.cn/t/23722"
+          url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:23722",
+          threadUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:23722"
         })
       ]
     }));

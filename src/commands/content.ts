@@ -1651,16 +1651,28 @@ function textList(value: unknown): string {
 }
 
 function enrichAskReference(source: Record<string, unknown>): Record<string, unknown> {
-  const topicId = topicIdFromAskReference(source);
-  const topicUrl = firstAbsoluteUrl(source.canonicalUrl, source.threadUrl)
-    ?? (topicId === undefined ? undefined : `https://oracleapex.cn/t/${topicId}`)
-    ?? firstAbsoluteUrl(source.url, source.source_url);
+  const threadUrl = absoluteCommunityTopicUrl(source.threadUrl)
+    ?? absoluteCommunityTopicUrl(source.card_link);
+  const topicUrl = firstAbsoluteUrl(source.canonicalUrl)
+    ?? threadUrl
+    ?? firstAbsoluteUrl(source.url);
   return compactBody({
     ...source,
     url: topicUrl,
-    threadUrl: firstAbsoluteUrl(source.threadUrl) ?? topicUrl,
+    threadUrl: threadUrl ?? topicUrl,
     originalUrl: source.originalUrl ?? source.source_url
   });
+}
+
+function absoluteCommunityTopicUrl(value: unknown): string | undefined {
+  const url = fieldText(value).trim();
+  if (/^https?:\/\//i.test(url)) {
+    return url;
+  }
+  if (!/^f\?p=/i.test(url)) {
+    return undefined;
+  }
+  return `https://oracleapex.cn/ords/${url.replace(/^f\?p=:/i, "f?p=100:")}`;
 }
 
 function firstAbsoluteUrl(...values: unknown[]): string | undefined {

@@ -340,7 +340,7 @@ const EXECUTABLE_NATURAL_LANGUAGE_SCENARIOS: ExecutableNaturalLanguageScenario[]
       expect(init?.body).toBe(JSON.stringify({ question: "APEXLang 支持单页面导入吗？", topK: 1 }));
       return Response.json({
         answer: "支持。",
-        sources: [{ card_link: "f?p=100:14:::::P14_THREAD_ID:29667" }],
+        sources: [{ card_link: "f?p=100:14:::::P14_THREAD_ID:29667&cs=checksum" }],
         requestId: "req-ask"
       });
     },
@@ -348,8 +348,8 @@ const EXECUTABLE_NATURAL_LANGUAGE_SCENARIOS: ExecutableNaturalLanguageScenario[]
       expect(fetch).toHaveBeenCalledOnce();
       expect(stderr).toBe("");
       expect(JSON.parse(stdout).sources[0]).toEqual(expect.objectContaining({
-        url: "https://oracleapex.cn/t/29667",
-        threadUrl: "https://oracleapex.cn/t/29667"
+        url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:29667&cs=checksum",
+        threadUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:29667&cs=checksum"
       }));
     }
   },

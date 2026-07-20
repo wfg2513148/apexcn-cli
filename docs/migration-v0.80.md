@@ -8,6 +8,8 @@ Starting with 0.80.1, the public one-click installer takes no arguments. It inst
 
 Starting with 0.80.2, `apexcn -apikey "YOUR_API_KEY"` saves a file-backed key to the default `prod` profile. Ordinary alphanumeric keys also work without quotes. The shortcut does not echo the key or call the community API, but command-line secrets may remain in shell history or appear briefly in process listings; `auth set-token --token-env` remains available for higher-security setups.
 
+Starting with 0.80.3, `apexcn ask` converts APEX `card_link` and relative thread references into absolute `https://oracleapex.cn/ords/f?p=...` topic URLs while preserving checksum parameters. It no longer invents `/t/{id}` links when the API provides no real topic URL.
+
 ```bash
 bash -o pipefail -c 'curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash'
 ```
