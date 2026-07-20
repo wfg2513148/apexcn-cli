@@ -2115,11 +2115,11 @@
       "releaseLine": "0.70.x",
       "title": "本地知识资产与只读自动化",
       "objective": "让用户构建可复现的本地知识资产，并在没有无人值守写入的前提下自动化只读知识流程。",
-      "status": "planned",
+      "status": "in_progress",
       "activationGate": {
-        "status": "waiting",
+        "status": "approved",
         "previousMilestoneId": "0.6",
-        "confirmationRef": null
+        "confirmationRef": "v0.60.0-release-verified-2026-07-20"
       },
       "completionReview": {
         "status": "not_due",
