@@ -258,6 +258,7 @@ export function validateRoadmap({ roadmap, issues, roadmapMarkdown, issuesMarkdo
   check(visualVerification?.testAccountPolicy?.createAccountPerRun === false, "write-back tests must not create an account per run", problems);
   check(visualVerification?.testAccountPolicy?.credentialsStoredInRepository === false, "test account credentials must stay outside the repository", problems);
   check(roadmap.testingBindings?.server?.threadId === "019f2888-ef40-7b20-9af7-e4495f3a1091", "server thread binding drifted", problems);
+  check(nonEmpty(roadmap.testingBindings?.server?.replacementThreadId), "server replacement thread binding is missing", problems);
   check(roadmap.testingBindings?.server?.model === "gpt-5.6-terra", "server model must be gpt-5.6-terra", problems);
   check(roadmap.testingBindings?.server?.reasoningEffort === "high", "server reasoning must be high", problems);
   check(roadmap.testingBindings?.server?.apiKeyEnvironment === "dev@oci", "server API key environment must be dev@oci", problems);
@@ -293,7 +294,11 @@ export function validateRoadmap({ roadmap, issues, roadmapMarkdown, issuesMarkdo
     check(Array.isArray(dependency.milestoneIds) && dependency.milestoneIds.length > 0, `dependency ${dependency.id} needs milestoneIds`, problems);
     check(dependency.readinessEvidence && typeof dependency.readinessEvidence === "object", `dependency ${dependency.id} needs readiness evidence`, problems);
     if (dependency.owner === "server") {
-      check(dependency.resolutionThreadId === roadmap.testingBindings.server.threadId, `server dependency ${dependency.id} must route to the fixed server thread`, problems);
+      const allowedServerThreadIds = new Set([
+        roadmap.testingBindings.server.threadId,
+        roadmap.testingBindings.server.replacementThreadId
+      ]);
+      check(allowedServerThreadIds.has(dependency.resolutionThreadId), `server dependency ${dependency.id} must route to a registered server thread`, problems);
     }
     if (dependency.status === "ready") {
       const evidenceValues = Object.values(dependency.readinessEvidence ?? {});
@@ -495,7 +500,11 @@ export function validateRoadmap({ roadmap, issues, roadmapMarkdown, issuesMarkdo
       check(milestoneCriterionIds.has(criterionId), `issue ${issue.id} references unknown criterion ${criterionId}`, problems);
     }
     if (issue.owner === "server" || issue.owner === "cross_repo") {
-      check(issue.serverThreadId === roadmap.testingBindings.server.threadId, `server routing drift for ${issue.id}`, problems);
+      const allowedServerThreadIds = new Set([
+        roadmap.testingBindings.server.threadId,
+        roadmap.testingBindings.server.replacementThreadId
+      ]);
+      check(allowedServerThreadIds.has(issue.serverThreadId), `server routing drift for ${issue.id}`, problems);
     }
   }
 

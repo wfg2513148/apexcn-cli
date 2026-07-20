@@ -56,8 +56,10 @@ export function createIterationContext({
   git,
   generatedAt = new Date().toISOString()
 }) {
-  const milestone = roadmap.milestones.find((entry) => entry.id === summary.milestoneId)
-    ?? roadmap.milestones.find((entry) => entry.status !== "completed")
+  const completedMilestoneIndex = roadmap.milestones.findIndex((entry) => entry.id === summary.milestoneId);
+  const milestone = roadmap.milestones
+    .slice(completedMilestoneIndex >= 0 ? completedMilestoneIndex + 1 : 0)
+    .find((entry) => entry.status !== "completed")
     ?? null;
   const activeIssues = issues.issues.map((issue) => ({
     id: issue.id,

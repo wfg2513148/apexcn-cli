@@ -1,53 +1,9 @@
 {
   "schemaVersion": 1,
   "product": "apexcn-cli",
-  "updatedAt": "2026-07-18",
+  "updatedAt": "2026-07-20",
   "activeOnly": true,
-  "issues": [
-    {
-      "id": "ISSUE-070-002",
-      "kind": "cross_repo_capability_gap",
-      "title": "Add favorites-to-collection flow",
-      "priority": "P1",
-      "status": "open",
-      "owner": "cross_repo",
-      "milestoneId": "0.7",
-      "blockingMilestones": [
-        "0.7"
-      ],
-      "rootCauseStatus": "known",
-      "description": "A stable favorite topic export contract is required before the CLI can create a faithful one-step local collection.",
-      "acceptanceCriterionIds": [
-        "M070-AC-010"
-      ],
-      "dependencies": [
-        "server:favorite-topic-export"
-      ],
-      "serverThreadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
-      "serverCommit": null,
-      "apiContractVersion": null,
-      "cliCommit": null,
-      "validatorRound": "historical-novice-audit-retry-2026-07-06",
-      "source": {
-        "type": "independent-validator-thread",
-        "threadId": "019f362d-52df-7e33-9bc8-2fdc2eaa7caf",
-        "assignmentRef": "historical-novice-audit-retry-2026-07-06",
-        "report": "apexcn-cli-novice-audit-retry-2026-07-06.md",
-        "findingRefs": [
-          "Q094"
-        ],
-        "observedCliVersion": "0.18.8",
-        "persona": "novice",
-        "firstAttemptEvidencePreserved": true,
-        "actualOutputSummary": "黑盒测试无法将收藏主题一键构建为忠实的本地 collection。",
-        "expectedUserOutcome": "用户可从服务端收藏清单构建可验证、可离线查询的本地知识集合。",
-        "responsibilityAssessment": "cross_repo",
-        "scenarioOrExplorationRef": [
-          "Q094"
-        ]
-      }
-    }
-  ],
+  "issues": [],
   "sourcePolicy": {
     "allowedSource": "independent-validator-thread",
     "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",

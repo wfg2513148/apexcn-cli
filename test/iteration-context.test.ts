@@ -38,11 +38,22 @@ afterEach(() => {
 describe("iteration context compaction", () => {
   test("builds a bounded handoff with active issues and resume order", () => {
     const packageJson = loadJson("package.json");
+    const roadmap = loadJson("roadmap.json");
+    roadmap.milestones[1].status = "in_progress";
+    const issues = loadJson("issues.json");
+    issues.issues.push({
+      id: "ISSUE-TEST",
+      milestoneId: "0.7",
+      priority: "P1",
+      owner: "cli",
+      status: "open",
+      title: "Test issue"
+    });
     const context = createIterationContext({
       summary: validSummary(),
       packageJson,
-      roadmap: loadJson("roadmap.json"),
-      issues: loadJson("issues.json"),
+      roadmap,
+      issues,
       release: {
         tag: `v${packageJson.version}`,
         url: `https://github.com/wfg2513148/apexcn-cli/releases/tag/v${packageJson.version}`
@@ -69,6 +80,11 @@ describe("iteration context compaction", () => {
       "roadmap.json",
       "issues.json"
     ]);
+    expect(context.milestone).toEqual({
+      completedIterationFor: "0.2",
+      resumeMilestoneId: "0.3",
+      resumeMilestoneStatus: "in_progress"
+    });
     expect(Buffer.byteLength(output)).toBeLessThanOrEqual(12_288);
   });
 

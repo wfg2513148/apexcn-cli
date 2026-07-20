@@ -20,6 +20,38 @@ function validationInput(roadmap = loadJson("roadmap.json"), issues = loadJson("
   };
 }
 
+function activeServerIssue(serverThreadId: string) {
+  return {
+    id: "ISSUE-TEST-SERVER",
+    kind: "cross_repo_capability_gap",
+    title: "Test server gap",
+    priority: "P1",
+    status: "open",
+    owner: "cross_repo",
+    milestoneId: "0.7",
+    blockingMilestones: ["0.7"],
+    description: "Test-only server issue fixture.",
+    acceptanceCriterionIds: ["M070-AC-010"],
+    dependencies: ["server:favorite-topic-export"],
+    serverThreadId,
+    validatorRound: "TEST-ROUND",
+    source: {
+      type: "independent-validator-thread",
+      threadId: "test-validator-thread",
+      assignmentRef: "TEST-ROUND",
+      report: "test-report.md",
+      findingRefs: ["TEST-FINDING"],
+      scenarioOrExplorationRef: ["M070-V-FAVORITES"],
+      observedCliVersion: "0.70.0",
+      persona: "novice",
+      firstAttemptEvidencePreserved: true,
+      actualOutputSummary: "Test actual output.",
+      expectedUserOutcome: "Test expected outcome.",
+      responsibilityAssessment: "cross_repo"
+    }
+  };
+}
+
 describe("roadmap contract", () => {
   test("passes the repository roadmap quality gate", () => {
     const roadmap = loadJson("roadmap.json");
@@ -159,6 +191,7 @@ describe("roadmap contract", () => {
     });
     expect(roadmap.testingBindings.server).toEqual(expect.objectContaining({
       threadId: "019f2888-ef40-7b20-9af7-e4495f3a1091",
+      replacementThreadId: "019f7d08-d733-74a2-9178-3a87d60b22be",
       model: "gpt-5.6-terra",
       reasoningEffort: "high",
       apiKeyEnvironment: "dev@oci"
@@ -194,14 +227,19 @@ describe("roadmap contract", () => {
     expect(problems).toContain("validated capability M020-CAP-INSTALL needs independent validator evidence");
   });
 
-  test("keeps issues.json active-only and server gaps on the fixed server thread", () => {
+  test("keeps issues.json active-only and server gaps on a registered server thread", () => {
     const roadmap = loadJson("roadmap.json");
     const issues = loadJson("issues.json");
+    issues.issues.push(activeServerIssue(roadmap.testingBindings.server.replacementThreadId));
     expect(issues.issues.every((issue: { status: string }) => ["open", "in_progress", "blocked"].includes(issue.status))).toBe(true);
+    const registeredServerThreadIds = [
+      roadmap.testingBindings.server.threadId,
+      roadmap.testingBindings.server.replacementThreadId
+    ];
     expect(issues.issues.filter((issue: { owner: string }) => ["server", "cross_repo"].includes(issue.owner))).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          serverThreadId: roadmap.testingBindings.server.threadId
+          serverThreadId: expect.stringMatching(new RegExp(`^(${registeredServerThreadIds.join("|")})$`))
         })
       ])
     );
@@ -214,6 +252,7 @@ describe("roadmap contract", () => {
   test("rejects active issues without independent validator provenance", () => {
     const roadmap = loadJson("roadmap.json");
     const issues = loadJson("issues.json");
+    issues.issues.push(activeServerIssue(roadmap.testingBindings.server.replacementThreadId));
     delete issues.issues[0].source;
 
     const problems = validateRoadmap(validationInput(roadmap, issues));

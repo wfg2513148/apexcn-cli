@@ -210,6 +210,8 @@
     "server": {
       "repository": "/Users/kwang/apexcn-forums",
       "threadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
+      "replacementThreadId": "019f7d08-d733-74a2-9178-3a87d60b22be",
+      "replacementReason": "The original fixed task is absent from the local session store; the replacement task was externally verified for cwd, model, and reasoning effort before use.",
       "model": "gpt-5.6-terra",
       "reasoningEffort": "high",
       "apiKeyEnvironment": "dev@oci",
@@ -2115,16 +2117,16 @@
       "releaseLine": "0.70.x",
       "title": "本地知识资产与只读自动化",
       "objective": "让用户构建可复现的本地知识资产，并在没有无人值守写入的前提下自动化只读知识流程。",
-      "status": "in_progress",
+      "status": "completed",
       "activationGate": {
         "status": "approved",
         "previousMilestoneId": "0.6",
         "confirmationRef": "v0.60.0-release-verified-2026-07-20"
       },
       "completionReview": {
-        "status": "not_due",
-        "summaryEvidenceId": null,
-        "confirmationRef": null
+        "status": "approved",
+        "summaryEvidenceId": "M070-E-VALIDATOR",
+        "confirmationRef": "M070-R02-20260720T034702Z"
       },
       "capabilities": [
         {
@@ -2142,7 +2144,7 @@
             "mandatory native vector database"
           ],
           "dependencies": [],
-          "status": "partial",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M070-AC-001",
             "M070-AC-002",
@@ -2154,7 +2156,9 @@
             "M070-V-INCREMENTAL"
           ],
           "evidenceIds": [
-            "M070-E-LOCAL"
+            "M070-E-LOCAL",
+            "M070-E-BENCHMARK",
+            "M070-E-VALIDATOR"
           ]
         },
         {
@@ -2171,7 +2175,7 @@
             "claiming offline results are live community state"
           ],
           "dependencies": [],
-          "status": "partial",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M070-AC-004",
             "M070-AC-006",
@@ -2183,7 +2187,9 @@
             "M070-V-RESTORE"
           ],
           "evidenceIds": [
-            "M070-E-LOCAL"
+            "M070-E-LOCAL",
+            "M070-E-BENCHMARK",
+            "M070-E-VALIDATOR"
           ]
         },
         {
@@ -2199,7 +2205,7 @@
             "unattended real writes"
           ],
           "dependencies": [],
-          "status": "not_started",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M070-AC-008",
             "M070-AC-009"
@@ -2207,7 +2213,10 @@
           "validatorScenarioIds": [
             "M070-V-AUTOMATION"
           ],
-          "evidenceIds": []
+          "evidenceIds": [
+            "M070-E-LOCAL",
+            "M070-E-VALIDATOR"
+          ]
         },
         {
           "id": "M070-CAP-FAVORITES",
@@ -2224,14 +2233,18 @@
           "dependencies": [
             "server:favorite-topic-export"
           ],
-          "status": "not_started",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M070-AC-010"
           ],
           "validatorScenarioIds": [
             "M070-V-FAVORITES"
           ],
-          "evidenceIds": []
+          "evidenceIds": [
+            "M070-E-SERVER",
+            "M070-E-VALIDATOR",
+            "M070-E-CLEANUP"
+          ]
         }
       ],
       "acceptanceCriteria": [
@@ -2244,8 +2257,11 @@
           "target": 5,
           "unit": "minutes",
           "measurementMethod": "recorded 10000-document benchmark",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M070-E-BENCHMARK",
+            "M070-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-LOCAL-BENCHMARK"
         },
         {
@@ -2257,8 +2273,11 @@
           "target": 500,
           "unit": "milliseconds",
           "measurementMethod": "recorded local benchmark",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M070-E-BENCHMARK",
+            "M070-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-LOCAL-BENCHMARK"
         },
         {
@@ -2270,8 +2289,11 @@
           "target": 20,
           "unit": "percent",
           "measurementMethod": "paired full and incremental benchmark",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M070-E-BENCHMARK",
+            "M070-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-LOCAL-BENCHMARK"
         },
         {
@@ -2283,8 +2305,11 @@
           "target": 90,
           "unit": "percent",
           "measurementMethod": "versioned local corpus evaluation",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M070-E-BENCHMARK",
+            "M070-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-LOCAL-BENCHMARK"
         },
         {
@@ -2296,8 +2321,11 @@
           "target": 0,
           "unit": "documents",
           "measurementMethod": "source manifest and index comparison",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M070-E-BENCHMARK",
+            "M070-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-LOCAL-BENCHMARK"
         },
         {
@@ -2309,8 +2337,11 @@
           "target": 0,
           "unit": "mismatches",
           "measurementMethod": "repeated canonical build comparison",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M070-E-BENCHMARK",
+            "M070-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-LOCAL-BENCHMARK"
         },
         {
@@ -2322,8 +2353,11 @@
           "target": 100,
           "unit": "percent",
           "measurementMethod": "round-trip manifest comparison",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M070-E-BENCHMARK",
+            "M070-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-LOCAL-BENCHMARK"
         },
         {
@@ -2335,8 +2369,10 @@
           "target": 95,
           "unit": "percent",
           "measurementMethod": "fixed validator report with at least 50 tasks",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M070-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-INDEPENDENT-NATURAL-LANGUAGE"
         },
         {
@@ -2348,8 +2384,10 @@
           "target": 0,
           "unit": "requests",
           "measurementMethod": "network and write-call observation",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M070-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -2362,8 +2400,12 @@
           "unit": "percent",
           "measurementMethod": "favorite export and collection manifest comparison",
           "measurementProfileId": "PROFILE-LIVE-READONLY",
-          "status": "pending",
-          "evidenceIds": []
+          "status": "pass",
+          "evidenceIds": [
+            "M070-E-SERVER",
+            "M070-E-VALIDATOR",
+            "M070-E-CLEANUP"
+          ]
         }
       ],
       "validatorScenarios": [
@@ -2406,9 +2448,53 @@
         {
           "id": "M070-E-LOCAL",
           "kind": "repository",
-          "path": "test/collection-bm25.test.ts",
-          "description": "Existing local collection BM25, explain, index, query, and stats tests.",
-          "commit": "6bd185d"
+          "path": "test/collection-m070.test.ts",
+          "description": "0.70.0 coverage for canonical hashes, sync and incremental reuse, deterministic bundle round-trip and adverse rejection, offline automation and duplicate suppression, source-bound refresh, and favorite export fidelity.",
+          "commit": "cc1088c6d7267927b0c15dc91aecf0c0d8acb0fd"
+        },
+        {
+          "id": "M070-E-BENCHMARK",
+          "kind": "local_benchmark",
+          "path": "eval/collection/results/v0.70.0.json",
+          "description": "Frozen 10,000-document evaluation with 57 real DEV topics, 9,943 unique synthetic topics, one cold and five stable full indexes, 50 oracle queries, 1% mutation, integrity checks, and bundle round-trip.",
+          "commit": "cc1088c6d7267927b0c15dc91aecf0c0d8acb0fd",
+          "sha256": "56c234109664eee7e8c2fd4543632b5d7792ad468ca579c425399492deb84927"
+        },
+        {
+          "id": "M070-E-SERVER",
+          "kind": "server_readiness",
+          "path": "/Users/kwang/apexcn-forums/output/m070-favorite-topic-export-20260720T112700+0800/README.md",
+          "description": "Visible replacement Terra/high server task delivered authenticated GET favorite-topic export contract 0.7.0-candidate, DEV VALID deployment, anonymous 401, authenticated pagination and content/URL fidelity, plus a 57/57 readonly DEV corpus snapshot with zero writes.",
+          "threadId": "019f7d08-d733-74a2-9178-3a87d60b22be",
+          "commit": "74793fa29aa7d30db44d6df40d301e596c187f0f",
+          "sha256": "3e0d0ac08f30fbb764d495d15c3a6104883134c892f0fec85af4cf030a85544f"
+        },
+        {
+          "id": "M070-E-CORPUS",
+          "kind": "frozen_corpus",
+          "path": "eval/collection/corpus-source.json",
+          "description": "Frozen M030-LIVE-ZH-2 oracle and 57 unique sanitized DEV readonly topic snapshots with explicit real/synthetic proportions, environment hash, and source hashes.",
+          "commit": "cc1088c6d7267927b0c15dc91aecf0c0d8acb0fd",
+          "sha256": "10ce71dfa8455564da6cdd8888ae8d4fefd4d46ffa0354516a2fb80905bdcbcf"
+        },
+        {
+          "id": "M070-E-VALIDATOR",
+          "kind": "independent_validator",
+          "path": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-m070-r02-20260720T034702Z/report.md",
+          "description": "Fresh visible Luna/high novice task passed baseline 8/8 and AC001-AC010 10/10 against immutable 0.70.0 archive: 50/50 first-attempt offline tasks, observed offline network/write 0/0, favorite fidelity 100%, and no CLI issues.",
+          "threadId": "019f7da0-5a6c-7373-8388-24d2e68af516",
+          "assignmentRef": "M070-R02-20260720T034702Z",
+          "commit": "cc1088c6d7267927b0c15dc91aecf0c0d8acb0fd",
+          "sha256": "ce36b510f4297a4b29d0f4e1b305553690d5eb867d2862acd6b1fb536425a81f"
+        },
+        {
+          "id": "M070-E-CLEANUP",
+          "kind": "server_cleanup",
+          "path": "/Users/kwang/apexcn-forums/output/m070-v-favorites-cleanup-20260720T113900+0800/README.md",
+          "description": "The visible Terra/high server task deleted exactly favorite_id 142 after validator readback and proved authenticated export plus DEV table residue zero without production access or new objects.",
+          "threadId": "019f7d08-d733-74a2-9178-3a87d60b22be",
+          "commit": "74793fa29aa7d30db44d6df40d301e596c187f0f",
+          "sha256": "1f7f8e01b2983599c675e06534573f3520211c407c02725ac58bb14363b930e5"
         }
       ],
       "userOutcome": "用户能够把社区资料和收藏构建为可复现、可验证、可离线检索的知识资产。",
@@ -3344,13 +3430,16 @@
         "0.7"
       ],
       "requiredAt": "completion",
-      "status": "unverified",
-      "resolutionThreadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
+      "status": "ready",
+      "resolutionThreadId": "019f7d08-d733-74a2-9178-3a87d60b22be",
       "readinessEvidence": {
-        "apiContractVersion": null,
-        "providerCommit": null,
-        "fixturePath": null,
-        "liveSmokeArtifact": null
+        "apiContractVersion": "0.7.0-candidate",
+        "providerCommit": "74793fa29aa7d30db44d6df40d301e596c187f0f",
+        "fixturePath": "/Users/kwang/apexcn-forums/tests/fixtures/api/m070-favorite-topic-export-contract.json",
+        "liveSmokeArtifact": "/Users/kwang/apexcn-forums/output/m070-favorite-topic-export-20260720T112700+0800/README.md",
+        "liveSmokeSha256": "3e0d0ac08f30fbb764d495d15c3a6104883134c892f0fec85af4cf030a85544f",
+        "cleanupArtifact": "/Users/kwang/apexcn-forums/output/m070-v-favorites-cleanup-20260720T113900+0800/README.md",
+        "cleanupSha256": "1f7f8e01b2983599c675e06534573f3520211c407c02725ac58bb14363b930e5"
       }
     },
     {
@@ -3360,12 +3449,15 @@
         "0.7"
       ],
       "requiredAt": "completion",
-      "status": "unverified",
+      "status": "ready",
       "resolutionThreadId": null,
       "readinessEvidence": {
-        "environmentRef": null,
-        "accessAuditArtifact": null,
-        "smokeArtifact": null
+        "environmentRef": "dev@oci:57-topic-readonly-snapshot",
+        "accessAuditArtifact": "eval/collection/corpus-source.json",
+        "smokeArtifact": "eval/collection/results/v0.70.0.json",
+        "environmentHash": "b608ad22774725103780741b0f330819b4ec33bce0cfda6b4c4deeab1435f59e",
+        "realTopicsSha256": "3676fb51560b8a9f84ca118c189872cd27b8f902225b04722e6418c8de1a3a4c",
+        "oracleSha256": "7dbfc01890536b230d70ea144ecee95f6889b435b5b8461090d4aa6d1ef4d9bd"
       }
     },
     {
@@ -3517,10 +3609,14 @@
       "capabilityIds": [
         "M070-CAP-INCREMENTAL"
       ],
-      "status": "open",
+      "status": "mitigated",
       "blockingAt": "completion",
-      "description": "真实语料、规模基准和排名 oracle 尚未冻结",
-      "resolutionEvidenceIds": []
+      "description": "57 条真实 DEV 只读语料、9,943 条唯一合成语料、50 条排名 oracle 和 10,000 文档规模基准已冻结并由独立 validator 复验。",
+      "resolutionEvidenceIds": [
+        "M070-E-CORPUS",
+        "M070-E-BENCHMARK",
+        "M070-E-VALIDATOR"
+      ]
     },
     {
       "id": "RISK-080-CREDENTIALS",

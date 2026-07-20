@@ -50,7 +50,7 @@
 | `0.4` | `0.40.x` | 个人工作台与能力协商 | `completed` | 0 | `approved` | `approved` |
 | `0.5` | `0.50.x` | AI Agent 只读适配层 | `blocked` | 0 | `approved` | `approved` |
 | `0.6` | `0.60.x` | 可审计内容操作 | `completed` | 0 | `approved` | `approved` |
-| `0.7` | `0.70.x` | 本地知识资产与只读自动化 | `in_progress` | 1 | `approved` | `not_due` |
+| `0.7` | `0.70.x` | 本地知识资产与只读自动化 | `completed` | 0 | `approved` | `approved` |
 | `0.8` | `0.80.x` | 组织治理与生命周期资格化 | `planned` | 0 | `waiting` | `not_due` |
 | `0.9` | `0.90.x` | GA 候选版本 | `planned` | 0 | `waiting` | `not_due` |
 
@@ -280,36 +280,34 @@
 
 | ID | Capability | Status | User value |
 |---|---|---|---|
-| `M070-CAP-INCREMENTAL` | 增量 collection | `partial` | 大规模资料更新时无需重复完整构建，并能发现重复、遗漏和陈旧数据。 |
-| `M070-CAP-OFFLINE` | 可复现离线知识包 | `partial` | 资料可离线检索、导出、验证、导入和恢复。 |
-| `M070-CAP-AUTOMATION` | 可重复的只读任务 | `not_started` | 用户可计划摘要和资料任务，同时保持真实写操作需要人工批准。 |
-| `M070-CAP-FAVORITES` | 收藏转本地知识资产 | `not_started` | 用户可将收藏主题一键转换为保留来源的本地 collection。 |
+| `M070-CAP-INCREMENTAL` | 增量 collection | `validated` | 大规模资料更新时无需重复完整构建，并能发现重复、遗漏和陈旧数据。 |
+| `M070-CAP-OFFLINE` | 可复现离线知识包 | `validated` | 资料可离线检索、导出、验证、导入和恢复。 |
+| `M070-CAP-AUTOMATION` | 可重复的只读任务 | `validated` | 用户可计划摘要和资料任务，同时保持真实写操作需要人工批准。 |
+| `M070-CAP-FAVORITES` | 收藏转本地知识资产 | `validated` | 用户可将收藏主题一键转换为保留来源的本地 collection。 |
 
 ### 核心验收
 
 | ID | Status | Metric | Target | Measurement |
 |---|---|---|---|---|
-| `M070-AC-001` | `pending` | 10,000 文档在记录的参考环境中 5 分钟内完成索引。 | `<= 5 minutes` | recorded 10000-document benchmark |
-| `M070-AC-002` | `pending` | 10,000 文档索引查询 P95 不超过 500ms。 | `<= 500 milliseconds` | recorded local benchmark |
-| `M070-AC-003` | `pending` | 1% 文档变化的增量索引耗时不超过完整索引的 20%。 | `<= 20 percent` | paired full and incremental benchmark |
-| `M070-AC-004` | `pending` | 本地基准 Top-10 期望引用命中率至少 90%。 | `>= 90 percent` | versioned local corpus evaluation |
-| `M070-AC-005` | `pending` | 同步后重复和缺失文档为零。 | `= 0 documents` | source manifest and index comparison |
-| `M070-AC-006` | `pending` | 相同 canonical 输入生成相同内容 hash。 | `= 0 mismatches` | repeated canonical build comparison |
-| `M070-AC-007` | `pending` | export/verify/import/restore 保留全部文档和 provenance。 | `= 100 percent` | round-trip manifest comparison |
-| `M070-AC-008` | `pending` | 至少 50 个离线自然语言任务首次成功率不低于 95%。 | `>= 95 percent` | fixed validator report with at least 50 tasks |
-| `M070-AC-009` | `pending` | 离线模式网络请求和自动化无人值守写请求均为零。 | `= 0 requests` | network and write-call observation |
-| `M070-AC-010` | `pending` | 收藏转 collection 时正文、URL、topicId 和 provenance 保真率为 100%。 | `= 100 percent` | favorite export and collection manifest comparison |
+| `M070-AC-001` | `pass` | 10,000 文档在记录的参考环境中 5 分钟内完成索引。 | `<= 5 minutes` | recorded 10000-document benchmark |
+| `M070-AC-002` | `pass` | 10,000 文档索引查询 P95 不超过 500ms。 | `<= 500 milliseconds` | recorded local benchmark |
+| `M070-AC-003` | `pass` | 1% 文档变化的增量索引耗时不超过完整索引的 20%。 | `<= 20 percent` | paired full and incremental benchmark |
+| `M070-AC-004` | `pass` | 本地基准 Top-10 期望引用命中率至少 90%。 | `>= 90 percent` | versioned local corpus evaluation |
+| `M070-AC-005` | `pass` | 同步后重复和缺失文档为零。 | `= 0 documents` | source manifest and index comparison |
+| `M070-AC-006` | `pass` | 相同 canonical 输入生成相同内容 hash。 | `= 0 mismatches` | repeated canonical build comparison |
+| `M070-AC-007` | `pass` | export/verify/import/restore 保留全部文档和 provenance。 | `= 100 percent` | round-trip manifest comparison |
+| `M070-AC-008` | `pass` | 至少 50 个离线自然语言任务首次成功率不低于 95%。 | `>= 95 percent` | fixed validator report with at least 50 tasks |
+| `M070-AC-009` | `pass` | 离线模式网络请求和自动化无人值守写请求均为零。 | `= 0 requests` | network and write-call observation |
+| `M070-AC-010` | `pass` | 收藏转 collection 时正文、URL、topicId 和 provenance 保真率为 100%。 | `= 100 percent` | favorite export and collection manifest comparison |
 
 ### 活动问题
 
-| ID | Priority | Owner | Status | Title |
-|---|---|---|---|---|
-| `ISSUE-070-002` | `P1` | `cross_repo` | `open` | Add favorites-to-collection flow |
+无。
 
 ### 人工交接门禁
 
 - Activation: `approved`
-- Completion review: `not_due`
+- Completion review: `approved`
 - 完成后必须总结：增强能力、未预估问题、根因、规避措施、下一阶段目标、量化预期和主要风险。
 - 发布验证和上下文压缩完成后，自动批准完成审查并启动下一里程碑。
 
@@ -411,8 +409,8 @@
 
 ## 依赖与就绪风险
 
-- 结构化依赖：13 项；未就绪：7 项。
-- 就绪风险：12 项；开放：8 项。
+- 结构化依赖：13 项；未就绪：5 项。
+- 就绪风险：12 项；开放：7 项。
 
 ## 非目标
 
