@@ -7,6 +7,10 @@ import { createProgram, isCliEntrypoint } from "../src/index.js";
 import type { Command } from "commander";
 
 describe("CLI entrypoint detection", () => {
+  test("documents the top-level API key shortcut", () => {
+    expect(createProgram().helpInformation()).toContain("-apikey <token>");
+  });
+
   test("prints the package version", async () => {
     const output: string[] = [];
     const program = createProgram({
@@ -17,7 +21,7 @@ describe("CLI entrypoint detection", () => {
 
     await expect(program.parseAsync(["node", "apexcn", "--version"])).rejects.toMatchObject({ code: "commander.version" });
 
-    expect(output.join("")).toBe("0.80.1\n");
+    expect(output.join("")).toBe("0.80.2\n");
   });
 
   test("prints a machine-readable command manifest", async () => {
@@ -31,7 +35,7 @@ describe("CLI entrypoint detection", () => {
 
     const manifest = JSON.parse(output.join(""));
     expect(manifest.schemaVersion).toBe(1);
-    expect(manifest.version).toBe("0.80.1");
+    expect(manifest.version).toBe("0.80.2");
     expect(manifest.schema).toEqual({
       safetyEffects: ["read", "api-write", "destructive", "config-read", "config-write", "auth", "secret", "diagnostic", "manifest"],
       previewPolicies: ["required", "available", "none"],

@@ -22,7 +22,9 @@ import { createMeCommand } from "./commands/me.js";
 import { createMcpCommand } from "./commands/mcp.js";
 import { createReviewCommand } from "./commands/review.js";
 import { createWorkflowCommand } from "./commands/workflow.js";
+import { DEFAULT_BASE_URL, setProfile } from "./config.js";
 import { descriptorForPath } from "./core/command-registry.js";
+import { isUsableCredential } from "./core/credential-store.js";
 import { formatCliUsageError } from "./output.js";
 import { COMMAND_MANIFEST_JSON_SCHEMA } from "./schemas/command-manifest.js";
 import { CLI_VERSION } from "./version.js";
@@ -45,6 +47,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   program.name("apexcn");
   program.version(CLI_VERSION);
   program.option("--config <path>", "config file path", parseConfigPath);
+  program.option("-apikey <token>", "configure the API key for the default production profile");
   const commandOptions = {
     stdout: io.stdout,
     stderr: io.stderr,
@@ -54,6 +57,29 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
       return resolveConfigPath(activeCliConfigPath, options.configPath);
     }
   };
+  program.action(async (programOptions: { Apikey?: string }) => {
+    const apiKey = programOptions.Apikey;
+    if (apiKey === undefined) {
+      return;
+    }
+    if (apiKey.trim().length === 0) {
+      io.stderr("API key must not be blank\n");
+      process.exitCode = 1;
+      return;
+    }
+    if (!isUsableCredential(apiKey)) {
+      io.stderr("API key must use visible ASCII characters and must not be an example placeholder\n");
+      process.exitCode = 1;
+      return;
+    }
+    await setProfile(
+      "prod",
+      { baseUrl: DEFAULT_BASE_URL, token: apiKey },
+      commandOptions.configPath,
+      { overwriteInvalid: true, switchCurrent: true }
+    );
+    io.stdout("API key configured for profile prod\n");
+  });
   program.addCommand(createAuthCommand(commandOptions));
   program.addCommand(createDoctorCommand(commandOptions));
   program.addCommand(createDraftCommand(commandOptions));
@@ -85,6 +111,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
       activeCliConfigPath = undefined;
       activeJsonErrors = false;
       program.setOptionValue("config", undefined);
+      program.setOptionValue("Apikey", undefined);
     }
   };
   return program;

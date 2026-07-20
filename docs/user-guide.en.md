@@ -128,6 +128,8 @@ For local offline search:
 
 > Help me reconfigure the apexcn-cli API key. I will provide the new key. Verify the account after configuration and do not print the full key.
 
+You can also run `apexcn -apikey "your real API key"` yourself. Quotes are optional for an ordinary alphanumeric key. Replace the example text, and remember that the command may be retained in shell history.
+
 ## 17. When Something Breaks
 
 > apexcn-cli seems broken. Please run the built-in diagnostics first, then check the install location, login state, account info, category list, and search capability. Tell me exactly which step failed.

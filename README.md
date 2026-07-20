@@ -32,28 +32,26 @@ irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-a
 
 ### 安装后单独认证
 
-安装完成后，再在自己的 shell 中设置真实 API key，并让 CLI 只保存环境变量名：
+安装完成后，在自己的 shell 中执行一条命令即可保存 API key：
 
 ```bash
-read -rsp 'APEXCN API key: ' APEXCN_API_KEY && printf '\n'
-export APEXCN_API_KEY
-apexcn auth set-token \
-  --profile agent-prod \
-  --base-url https://oracleapex.cn/ords/api \
-  --token-env APEXCN_API_KEY
+apexcn -apikey "YOUR_API_KEY"
 apexcn me --json
 ```
 
-Windows PowerShell 可在安装完成后的新命令中安全读取：
+普通字母数字 key 也可以不加引号：
 
-```powershell
-$secureKey = Read-Host "APEXCN API key" -AsSecureString
-$env:APEXCN_API_KEY = [Net.NetworkCredential]::new("", $secureKey).Password
-apexcn auth set-token --profile agent-prod --base-url https://oracleapex.cn/ords/api --token-env APEXCN_API_KEY
-apexcn me --json
+```bash
+apexcn -apikey xxxxxx
 ```
 
-不要把 `你的_API_KEY` 或 `YOUR_API_KEY` 原样当作 token。安装脚本不会读取 `APEXCN_API_KEY`；认证命令会拒绝示例占位符、非 ASCII 字符和带空白的 token。
+请把示例值整体替换为真实 key。该快捷命令会把 key 保存到权限为 `0600` 的默认 `prod` profile，不会回显 key，也不会在配置时调用社区 API。因为命令行参数可能进入 shell 历史和短暂出现在进程列表中，对安全要求更高时可继续使用环境变量方式：
+
+```bash
+apexcn auth set-token --profile prod --token-env APEXCN_API_KEY
+```
+
+不要把 `你的_API_KEY` 或 `YOUR_API_KEY` 原样当作 token。安装脚本不会读取 API key；认证命令会拒绝示例占位符、非 ASCII 字符和带空白的 token。
 
 ## 安装后怎么用
 

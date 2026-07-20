@@ -53,20 +53,26 @@ apexcn mcp serve --readonly
 保存 API key：
 
 ```bash
-apexcn auth set-token \
-  --profile agent-prod \
-  --base-url https://oracleapex.cn/ords/api \
-  --token "$APEXCN_API_KEY"
+# 最简单的默认 prod profile 配置；普通字母数字 key 无需引号
+apexcn -apikey "YOUR_API_KEY"
+apexcn -apikey xxxxxx
 
+# 高安全需求：只保存环境变量名
 apexcn auth set-token \
   --profile agent-env \
   --base-url https://oracleapex.cn/ords/api \
   --token-env APEXCN_API_KEY
+
+# 高级 profile 配置
+apexcn auth set-token \
+  --profile agent-prod \
+  --base-url https://oracleapex.cn/ords/api \
+  --token "$APEXCN_API_KEY"
 ```
 
 安装脚本不接收或配置 API key；以上认证命令只在安装成功后的独立步骤执行。
 
-`--token-env <name>` 只保存环境变量名。同时传 `--token-env` 和 `--token` 时，运行时优先使用环境凭据，缺失或无效时回退到文件凭据；两个 backend 都没有可用 token 时，API 命令会在发起请求前 fail closed。token 必须由可用于 HTTP header 的可见 ASCII 字符组成，不能包含空白，也不能是 `你的_API_KEY`、`YOUR_API_KEY` 等示例占位符。`--base-url` 必须是绝对 `http` 或 `https` URL。
+`-apikey` 把 key 保存到权限为 `0600` 的默认 `prod` profile，不回显 key，也不调用社区 API。引号只用于保护 shell 特殊字符；命令行参数可能进入 shell 历史和短暂出现在进程列表中。`--token-env <name>` 只保存环境变量名，适合更高安全要求。同时传 `--token-env` 和 `--token` 时，运行时优先使用环境凭据，缺失或无效时回退到文件凭据；两个 backend 都没有可用 token 时，API 命令会在发起请求前 fail closed。token 必须由可用于 HTTP header 的可见 ASCII 字符组成，不能包含空白，也不能是 `你的_API_KEY`、`YOUR_API_KEY` 等示例占位符。`--base-url` 必须是绝对 `http` 或 `https` URL。
 如果只想保存 profile 而不切换当前 profile，加 `--no-switch`。
 
 查看当前 profile：

@@ -39,20 +39,26 @@ Compatibility and deployment guides explicitly require verification against offi
 Save an API key:
 
 ```bash
-apexcn auth set-token \
-  --profile agent-prod \
-  --base-url https://oracleapex.cn/ords/api \
-  --token "$APEXCN_API_KEY"
+# Simplest default prod profile; ordinary alphanumeric keys need no quotes
+apexcn -apikey "YOUR_API_KEY"
+apexcn -apikey xxxxxx
 
+# Higher-security environment-variable configuration
 apexcn auth set-token \
   --profile agent-env \
   --base-url https://oracleapex.cn/ords/api \
   --token-env APEXCN_API_KEY
+
+# Advanced profile configuration
+apexcn auth set-token \
+  --profile agent-prod \
+  --base-url https://oracleapex.cn/ords/api \
+  --token "$APEXCN_API_KEY"
 ```
 
 The installer never accepts or configures an API key. Run these authentication commands only as a separate step after installation succeeds.
 
-`--token-env <name>` stores only the environment variable name. Pass both `--token-env` and `--token` to use the environment credential first and the file credential as fallback. Invalid or missing environment credentials fall back to the file store; if neither backend supplies a usable token, API commands fail before making a request. Tokens must contain visible ASCII characters only, must not contain whitespace, and must not be example placeholders such as `YOUR_API_KEY`. `--base-url` must be an absolute `http` or `https` URL.
+`-apikey` stores the key in the default `prod` profile with `0600` file permissions, does not echo it, and makes no community API request. Quotes only protect shell-special characters. Command-line arguments may enter shell history and appear briefly in process listings; use `--token-env <name>` when that risk is unacceptable. Pass both `--token-env` and `--token` to use the environment credential first and the file credential as fallback. Invalid or missing environment credentials fall back to the file store; if neither backend supplies a usable token, API commands fail before making a request. Tokens must contain visible ASCII characters only, must not contain whitespace, and must not be example placeholders such as `YOUR_API_KEY`. `--base-url` must be an absolute `http` or `https` URL.
 Add `--no-switch` when you want to save a profile without making it current.
 
 Show current profile:

@@ -40,6 +40,63 @@ describe("auth command", () => {
     expect(text).not.toContain("abcdefghijklmnopqrstuvwxyz");
   });
 
+  test("top-level -apikey configures the default production profile without quotes or network access", async () => {
+    const configPath = await tempConfigPath();
+    const token = "abcdefghijklmnopqrstuvwxyz123456";
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "-apikey", token]);
+
+    expect(JSON.parse(await readFile(configPath, "utf8"))).toEqual({
+      current: "prod",
+      profiles: {
+        prod: {
+          baseUrl: "https://oracleapex.cn/ords/api",
+          token
+        }
+      }
+    });
+    expect(stdout.join("")).toBe("API key configured for profile prod\n");
+    expect(stdout.join("")).not.toContain(token);
+    expect(stderr.join("")).toBe("");
+    expect(fetch).not.toHaveBeenCalled();
+    expect(program.opts().Apikey).toBeUndefined();
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  test("top-level -apikey rejects blank, placeholder, and non-header-safe values without writing config", async () => {
+    for (const token of ["", "你的_API_KEY", "YOUR_API_KEY", "contains space"]) {
+      const configPath = await tempConfigPath();
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      const program = createProgram({
+        configPath,
+        stdout: (text) => stdout.push(text),
+        stderr: (text) => stderr.push(text)
+      });
+
+      await program.parseAsync(["node", "apexcn", "-apikey", token]);
+
+      await expect(readFile(configPath, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).toBe(
+        token.trim().length === 0
+          ? "API key must not be blank\n"
+          : "API key must use visible ASCII characters and must not be an example placeholder\n"
+      );
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+    }
+  });
+
   test("auth set-token configures an environment credential without storing its value", async () => {
     const configPath = await tempConfigPath();
     const stdout: string[] = [];

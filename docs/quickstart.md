@@ -88,17 +88,14 @@ apexcn --version
 然后在独立步骤中配置认证并验证：
 
 ```bash
-read -rsp 'APEXCN API key: ' APEXCN_API_KEY && printf '\n'
-export APEXCN_API_KEY
-apexcn auth set-token \
-  --profile agent-prod \
-  --base-url https://oracleapex.cn/ords/api \
-  --token-env APEXCN_API_KEY
+apexcn -apikey "YOUR_API_KEY"
 apexcn auth show --json
 apexcn auth audit --json
 apexcn me --json
 apexcn category list --json
 ```
+
+普通字母数字 key 可不加引号，例如 `apexcn -apikey xxxxxx`。引号只用于保护 shell 特殊字符，不是必需格式。必须把示例值替换为真实 key；CLI 不会回显 key，也不会在配置时调用社区 API。
 
 如果 shell 找不到 `apexcn`，或者 `command -v apexcn` 显示的不是安装脚本最后输出的目录，先把该目录放到 `PATH` 前面。macOS / Linux 默认是 `~/.local/bin`，Windows 默认是 `%LOCALAPPDATA%\apexcn\bin`。
 
@@ -138,19 +135,26 @@ apexcn <command>
 保存 API key：
 
 ```bash
-apexcn auth set-token \
-  --profile prod \
-  --base-url https://oracleapex.cn/ords/api \
-  --token "$APEXCN_API_KEY"
+# 最简单：保存到默认 prod profile
+apexcn -apikey "YOUR_API_KEY"
 
-# 只保存变量名，不把环境变量值写入配置
+# 普通字母数字 key 可不加引号
+apexcn -apikey xxxxxx
+
+# 高安全需求：只保存环境变量名，不把环境变量值写入配置
 apexcn auth set-token \
   --profile agent-env \
   --base-url https://oracleapex.cn/ords/api \
   --token-env APEXCN_API_KEY
+
+# 高级 profile 配置
+apexcn auth set-token \
+  --profile prod \
+  --base-url https://oracleapex.cn/ords/api \
+  --token "$APEXCN_API_KEY"
 ```
 
-保存后，`prod` 会成为当前 active profile。后续命令不需要再传 `--profile`。
+`-apikey` 保存后，`prod` 会成为当前 active profile。后续命令不需要再传 `--profile`。快捷命令会把 key 写入权限为 `0600` 的本地配置；命令行参数可能进入 shell 历史和短暂出现在进程列表中，对安全要求更高时请使用 `--token-env`。
 
 `--token-env` 只保存变量名；同时传 `--token-env` 与 `--token` 时按 env→file 顺序回退。两个 backend 都不可用时，API 请求会 fail closed。token 必须由可用于 HTTP header 的可见 ASCII 字符组成，不能包含空白，也不能是 `你的_API_KEY`、`YOUR_API_KEY` 等示例占位符；`--base-url` 必须是绝对 `http` 或 `https` URL。
 

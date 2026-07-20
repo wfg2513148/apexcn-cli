@@ -105,7 +105,7 @@ try {
   Write-Host "  $CliRoot"
   Write-Host ""
   Write-Host "Authentication is configured after installation:"
-  Write-Host "  apexcn auth set-token --profile agent-prod --token-env <ENV_NAME>"
+  Write-Host '  apexcn -apikey "YOUR_API_KEY"'
   Write-Host "  apexcn me --json"
   Write-Host ""
   Write-Host "If your shell cannot find apexcn, add $BinDir to PATH."

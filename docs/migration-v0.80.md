@@ -6,6 +6,8 @@
 
 Starting with 0.80.1, the public one-click installer takes no arguments. It installs the CLI launcher and user-level agent skills, requires Node.js 20+, and always verifies `apexcn-cli.tgz` against `checksums.txt`. Installation never consumes or validates an API key; configure authentication only after installation succeeds.
 
+Starting with 0.80.2, `apexcn -apikey "YOUR_API_KEY"` saves a file-backed key to the default `prod` profile. Ordinary alphanumeric keys also work without quotes. The shortcut does not echo the key or call the community API, but command-line secrets may remain in shell history or appear briefly in process listings; `auth set-token --token-env` remains available for higher-security setups.
+
 ```bash
 bash -o pipefail -c 'curl -fsSL https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash'
 ```

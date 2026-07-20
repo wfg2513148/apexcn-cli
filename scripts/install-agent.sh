@@ -94,6 +94,6 @@ printf 'apexcn-cli installation complete.\n\n'
 printf 'Launcher:\n  %s\n\n' "$launcher"
 printf 'Installed source:\n  %s\n\n' "$cli_root"
 printf 'Authentication is configured after installation:\n'
-printf '  apexcn auth set-token --profile agent-prod --token-env <ENV_NAME>\n'
+printf '  apexcn -apikey "YOUR_API_KEY"\n'
 printf '  apexcn me --json\n'
 printf '\nIf your shell cannot find apexcn:\n  export PATH="%s:$PATH"\n' "$bin_dir"
