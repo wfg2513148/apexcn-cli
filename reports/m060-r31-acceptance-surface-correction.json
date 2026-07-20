@@ -1,0 +1,64 @@
+{
+  "kind": "apexcn-cli-validator-acceptance-surface-correction",
+  "schemaVersion": 1,
+  "milestoneId": "0.6",
+  "validatorThread": "019f7d20-8012-74d3-886a-d50fefea7d66",
+  "assignmentRef": "M060-R31",
+  "candidate": {
+    "version": "0.60.0",
+    "commit": "68645b5c2906111adb1fa85b0f5a723947ff26a9",
+    "tarballSha256": "f802b443aca3abeee707668eaa8163487071dd6be27b1085cd269bd4bddaf69f"
+  },
+  "validatorResult": {
+    "reportedDecision": "PASS",
+    "baselinePassed": 30,
+    "baselineRequired": 30,
+    "dynamicPassed": 6,
+    "dynamicRequired": 6,
+    "liveFirstAttemptsPassed": 20,
+    "liveFirstAttemptsRequired": 20,
+    "productIssueCount": 0,
+    "residualWriteTestResources": 0,
+    "reportPath": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-m060-r31-20260720T090343+0800/report.json",
+    "reportSha256": "74b28e5ff3e144735f557bc77594457e920b5db348e883fd2feedfc45cedcb71",
+    "sha256SumsSha256": "52457998d0cbd6b3def55b9b66bb8269f6cd0a8b331e34777c2badd408904feb"
+  },
+  "mainAcceptanceDecision": "NOT_ACCEPTED_FOR_MILESTONE",
+  "reason": "The validator contract used the dedicated ORDS HTML endpoint for browser evidence. The user clarified that visual acceptance must open the existing apexcn forums APEX topic page and observe the API-written object there. A new page or dedicated HTML endpoint cannot substitute for the existing application page.",
+  "responsibility": "scope-and-server-visual-routing",
+  "cliIssueAdmitted": false,
+  "issuesJsonChanged": false,
+  "serverCorrection": {
+    "commit": "e9ce2de78eb9b1c30dcd6b676c2403bcaa2564e6",
+    "existingPageContract": "DEV app 102 page 14",
+    "dedicatedVisualEndpointAccepted": false,
+    "serverEvidencePath": "/Users/kwang/apexcn-forums/output/m060-existing-apex-page/m060-existing-apex-page-20260720T014500Z",
+    "serverEvidenceReadmeSha256": "0f7d994a04de400ef6884d48179002372d7c38961685fab3778f93a14e27d4f8",
+    "serverEvidenceSha256SumsSha256": "a71e5457164d2a906b5eccd98741443bdd19ca2c0fa59750f33750529f3f346a"
+  },
+  "independentServerPageTest": {
+    "thread": "019f7d3c-f13c-7370-acbe-a934c8e2cd64",
+    "decision": "PASS",
+    "topicId": 25241,
+    "replyId": 186232,
+    "existingPage": "DEV app 102 page 14",
+    "systemChromeVersion": "150.0.7871.125",
+    "writeOperations": 6,
+    "residualBusinessObjects": 0,
+    "residualIdempotencyRows": 0,
+    "residualSuccessAuditRows": 0,
+    "evidencePath": "/Users/kwang/apexcn-forums/output/p14-existing-apex-contract/20260720T020032Z",
+    "readmeSha256": "a73d76f9b1b3dcfb2fc0dd81102962d13b033b32e519c94eff33309b2930f2d2",
+    "sha256SumsSha256": "80fe16aa3e52ab281cc66d78b446176a06c412a71cd3cb7c71bace1a89bb18c6"
+  },
+  "r31AuditCleanup": {
+    "evidencePath": "/Users/kwang/apexcn-forums/output/m060-r31-audit-cleanup/m060-r31-audit-final-20260720T013948Z",
+    "readmeSha256": "3dffc6ad4f3f499a5d11435cfdae2aab9457b565ca12afb8db397667ac2475aa",
+    "sha256SumsSha256": "45bd27284800bc8357be2dc1b5307518d2838ecbc41f8d4341b1c30cbb652766",
+    "idempotencyBefore": 20,
+    "successAuditBefore": 20,
+    "idempotencyAfter": 0,
+    "successAuditAfter": 0
+  },
+  "requiredNextAction": "Create a fresh validator round whose system-Google-Chrome evidence opens only the API-returned existing DEV app 102 page 14 URL for every write state."
+}
