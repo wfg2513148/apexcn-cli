@@ -2514,11 +2514,11 @@
       "releaseLine": "0.80.x",
       "title": "组织治理与生命周期资格化",
       "objective": "让团队在支持的平台上治理策略、凭据、兼容性、审计、支持和生命周期操作。",
-      "status": "planned",
+      "status": "in_progress",
       "activationGate": {
-        "status": "waiting",
+        "status": "approved",
         "previousMilestoneId": "0.7",
-        "confirmationRef": null
+        "confirmationRef": "v0.70.0-release-verified-2026-07-20"
       },
       "completionReview": {
         "status": "not_due",

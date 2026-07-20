@@ -1,68 +1,57 @@
 {
   "kind": "apexcn-iteration-context",
   "schemaVersion": 1,
-  "generatedAt": "2026-07-20T02:47:38.222Z",
+  "generatedAt": "2026-07-20T04:15:37.610Z",
   "release": {
-    "version": "0.60.0",
-    "tag": "v0.60.0",
-    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v0.60.0"
+    "version": "0.70.0",
+    "tag": "v0.70.0",
+    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v0.70.0"
   },
   "repository": {
     "branch": "main",
-    "commit": "54c567c8ab822ac0bd1690c747c67377130c51e0"
+    "commit": "e6ce2e317f40e92f5bfbc3e0e8ed802ea8b19be7"
   },
   "milestone": {
-    "completedIterationFor": "0.6",
-    "resumeMilestoneId": "0.7",
+    "completedIterationFor": "0.7",
+    "resumeMilestoneId": "0.8",
     "resumeMilestoneStatus": "in_progress"
   },
   "enhancedCapabilities": [
-    "授权用户可通过 topic 和 reply 的 create、update、delete workflow 完成隔离内容变更，并获得持久 preview、approval、execute、verify、diff 和 audit artifacts。",
-    "所有执行请求都与 canonical preview hash、目标 profile/base URL、请求 payload、expiry、operation key 和 payload hash 绑定，支持安全恢复且拒绝 stale、mismatch、tamper 和 duplicate completion。",
-    "内容草稿与 review 在 API preview 前阻断疑似密钥和不合格内容；MCP 仅暴露 preview-only 工具，willExecute=false，未开放 execute-write。",
-    "写回验收同时使用后端/API 证据和系统 Google Chrome 在 apexcn forums 现有 DEV app 102 Page 14 的真实视觉证据，不使用新页面或专用 HTML renderer。"
+    "用户可把本地或服务端只读主题同步为带 canonical hash、来源和陈旧状态的可复现 collection，并在 1% 变化时复用未变化文档。",
+    "collection 可确定性导出、完整性验证、导入和恢复；篡改、缺失 hash、路径穿越和来源漂移在落盘前失败关闭。",
+    "离线自然语言查询与只读 automation plan/run 在网络请求和无人值守写请求均为零的边界内运行，并抑制重复输出。",
+    "收藏主题通过已认证的只读 export contract 一步转换为本地 collection，正文、URL、topicId、时间与 provenance 保真率为 100%。"
   ],
   "unexpectedProblems": [
-    "早期 validator 多次被 intake、浏览器控制器、scope 或 harness 问题中断；这些基础设施问题均未错误写入 issues.json。",
-    "R31 虽按当时 scope 通过，但使用了专用 ORDS HTML visual endpoint；用户澄清后，该结果被正确降级为非里程碑证据并创建全新 R32。",
-    "原固定 apexcn-forums 服务任务已从本机 session store 删除，必须以相同仓库、Terra/high 和可见任务边界透明替代。",
-    "DEV API 数据与生产论坛存在相同数字 id 碰撞风险，且现有 DEV APEX 应用实际为 app 102 而非默认 app 100。"
+    "首轮 validator intake scope 错把不存在的 pending_issues.json 列为必需输入，任务在安装和产品调用前失败；该基础设施问题未写入 issues.json。",
+    "独立 R02 在 adverse fixture 准备时首次生成了缺少 SHA 的无效离线 fixture，产品按设计在索引前拒绝；validator 修复自有 fixture 并透明排除该 setup attempt。",
+    "原固定 apexcn-forums task 已从本机 session store 删除，本轮必须外部核验并登记可见 Terra/high 替代任务，roadmap checker 也需接受透明登记的替代路由。",
+    "0.7 issue 闭环后，两条 roadmap 单测仍假定 issues.json 至少有一条活动 issue，需改为测试内构造 fixture。"
   ],
   "rootCauses": [
-    "初始视觉契约把可独立渲染的 HTML endpoint 等同于用户实际使用的现有 APEX 页面，验收对象定义过宽。",
-    "浏览器会话复用与其他 Codex/Chrome 进程存在干扰，且线程内模型自述不能可靠代表真实调度模型。",
-    "服务端 URL 生成曾依赖错误的默认 APEX app id，没有显式绑定 DEV 与 production schema/application 边界。",
-    "写 workflow 的审计与幂等记录不会随业务对象删除自动移除，需要 current-round exact key 的 fail-closed 清理。"
+    "R01 scope 沿用了旧验证项目的可选文件约定，没有先按当前仓库实际必需输入冻结 intake。",
+    "adverse fixture 生成器的第一次自检输入不完整；CLI 的 fail-closed 校验正确，问题位于 validator 自有 setup。",
+    "server task ID 曾被校验脚本硬编码为唯一合法值，无法表达原 task 消失后的已核验替代任务。",
+    "roadmap 测试读取活动 issue 作为隐式 fixture，使测试结果依赖业务状态而非独立构造的契约输入。"
   ],
   "preventionActions": [
-    "后续写回 scope 必须显式命名现有 APEX app/page，并在 runner 中拒绝 /api/v1/.../visual、新页面和专用 validation renderer。",
-    "每轮 validator 都从 Codex session turn_context 外部核验实际 model、effort 和 cwd；intake 失败任务不得进入产品验证。",
-    "系统 Chrome 使用全新临时 persistent profile，不 attach 或复用其他 Codex/用户浏览器进程，并保留 DOM、截图、status 和 URL 契约。",
-    "服务端清理必须从 current-round artifacts 提取 exact operation key/request id，先断言精确计数，再在单事务中删除并复核业务/API/审计为零。"
+    "后续 validator scope 只冻结仓库当前存在且规则明确要求的输入；intake/environment 失败继续在产品调用前停止并单独归类。",
+    "adverse harness 必须先自验 fixture 完整性，setup 尝试与产品资格尝试分开计数并在报告中披露。",
+    "跨仓库任务替代必须在 testingBindings 中保留历史主 ID、替代 ID、原因和外部 model/effort/cwd 核验，不改写历史证据。",
+    "roadmap 契约测试不再依赖 issues.json 非空；所有 issue 路由与 provenance 负例使用测试内 fixture。"
   ],
-  "nextMilestoneGoal": "0.7 让用户构建可复现、可验证、可增量更新的本地知识资产，并在零网络和零无人值守写请求的离线边界内完成只读自动化。",
+  "nextMilestoneGoal": "0.8 让团队在支持的平台上治理策略、凭据、兼容性、审计、支持和生命周期操作，而不扩展新的产品主线。",
   "expectedResults": [
-    "10,000 文档完整索引在参考环境中不超过 5 分钟，查询 P95 不超过 500ms，1% 增量更新不超过完整索引耗时的 20%。",
-    "Top-10 期望引用命中率至少 90%，canonical 输入 hash 零漂移，同步后重复和缺失文档为零。",
-    "export、verify、import、restore 保留 100% 文档与 provenance，至少 50 个离线自然语言任务首次成功率不低于 95%。",
-    "离线模式网络请求和无人值守写请求均为零；收藏转 collection 的正文、URL、topicId 和 provenance 保真率为 100%。"
+    "策略决策准确率、审计完整性与篡改检测、issue 路由准确率均达到 100%，redaction fuzz 泄漏为 0。",
+    "三个受支持 API contract 版本和三个平台 lifecycle suite 全部通过。",
+    "七天只读成功率至少 99.5%，credential store 与 fallback 覆盖率达到 100%。"
   ],
   "majorRisks": [
-    "0.7 的真实语料、10,000 文档规模基准与排名 oracle 尚未冻结，必须在 JIT intake 中先建立可复现实验材料。",
-    "活动 cross-repo issue ISSUE-070-002 依赖 apexcn-forums 的 favorite-topic export contract，服务端能力必须先达到 activation-ready。",
-    "0.5 仍为 blocked 且 v0.50.0 未发布；0.7 不得把 0.6 的成功误写为 0.5 补验或发布依据。",
-    "索引性能、provenance 保真和零网络边界必须由全新 novice validator 独立测量，不能只依赖单元测试或 builder benchmark。"
+    "0.8 的可选 credential store 与 fallback 策略尚未资格化。",
+    "跨平台升级、回滚和卸载 runner 尚未证明可用。",
+    "0.5 仍保持 blocked/unreleased；0.8 不得把后续里程碑完成误写为 0.5 验收或发布依据。"
   ],
-  "activeIssues": [
-    {
-      "id": "ISSUE-070-002",
-      "milestoneId": "0.7",
-      "priority": "P1",
-      "owner": "cross_repo",
-      "status": "open",
-      "title": "Add favorites-to-collection flow"
-    }
-  ],
+  "activeIssues": [],
   "resume": {
     "readOrder": [
       "reports/iteration-context.json",
