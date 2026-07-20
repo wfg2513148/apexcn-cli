@@ -20,6 +20,13 @@ export interface CredentialStore {
 
 type DirectCredentialStore = CredentialStore & { kind: "file" | "env" };
 
+export function isUsableCredential(value: string | undefined): value is string {
+  if (!value || !/^[\x21-\x7e]+$/.test(value)) {
+    return false;
+  }
+  return !/^(?:your[_-]?api[_-]?key|api[_-]?key|<api[_ -]?key>|changeme|replace[_ -]?me)$/i.test(value);
+}
+
 export function fileCredentialStore(configPath?: string): DirectCredentialStore {
   return {
     kind: "file",
@@ -34,13 +41,22 @@ export function fileCredentialStore(configPath?: string): DirectCredentialStore 
     },
     async audit(profile) {
       const config = await loadConfig(configPath);
-      const tokenPresent = Boolean(config.profiles[profile]?.token);
+      const token = config.profiles[profile]?.token;
+      const tokenPresent = Boolean(token);
+      const tokenValid = isUsableCredential(token);
       return {
-        ok: tokenPresent,
+        ok: tokenValid,
         profile,
         store: "file",
         tokenPresent,
-        issues: tokenPresent ? [] : [{ code: "missing-token", message: `No token stored for profile ${profile}` }]
+        issues: tokenValid
+          ? []
+          : [{
+              code: tokenPresent ? "invalid-token" : "missing-token",
+              message: tokenPresent
+                ? `The stored token for profile ${profile} is not a usable API credential`
+                : `No token stored for profile ${profile}`
+            }]
       };
     }
   };
@@ -59,13 +75,22 @@ export function envCredentialStore(env: NodeJS.ProcessEnv = process.env, variabl
       throw new Error("Environment credential store is read-only. Remove the environment variable outside apexcn-cli.");
     },
     async audit(profile) {
-      const tokenPresent = Boolean(env[variableName]);
+      const token = env[variableName];
+      const tokenPresent = Boolean(token);
+      const tokenValid = isUsableCredential(token);
       return {
-        ok: tokenPresent,
+        ok: tokenValid,
         profile,
         store: "env",
         tokenPresent,
-        issues: tokenPresent ? [] : [{ code: "missing-env-token", message: `${variableName} is not set` }]
+        issues: tokenValid
+          ? []
+          : [{
+              code: tokenPresent ? "invalid-env-token" : "missing-env-token",
+              message: tokenPresent
+                ? `${variableName} does not contain a usable API credential`
+                : `${variableName} is not set`
+            }]
       };
     }
   };
@@ -75,7 +100,8 @@ export function fallbackCredentialStore(primary: DirectCredentialStore, fallback
   return {
     kind: "fallback",
     async get(profile) {
-      return (await primary.get(profile)) || fallback.get(profile);
+      const primaryToken = await primary.get(profile);
+      return isUsableCredential(primaryToken) ? primaryToken : fallback.get(profile);
     },
     async set(profile, token, profileConfig) {
       await fallback.set(profile, token, profileConfig);
@@ -88,7 +114,7 @@ export function fallbackCredentialStore(primary: DirectCredentialStore, fallback
         primary.audit(profile),
         fallback.audit(profile)
       ]);
-      const selected = primaryAudit.tokenPresent ? primary : fallbackAudit.tokenPresent ? fallback : undefined;
+      const selected = primaryAudit.ok ? primary : fallbackAudit.ok ? fallback : undefined;
       return {
         ok: selected !== undefined,
         profile,
@@ -96,8 +122,8 @@ export function fallbackCredentialStore(primary: DirectCredentialStore, fallback
         tokenPresent: selected !== undefined,
         selectedStore: selected?.kind === "file" || selected?.kind === "env" ? selected.kind : undefined,
         backends: [
-          { store: primary.kind, available: primaryAudit.tokenPresent },
-          { store: fallback.kind, available: fallbackAudit.tokenPresent }
+          { store: primary.kind, available: primaryAudit.ok },
+          { store: fallback.kind, available: fallbackAudit.ok }
         ],
         issues: selected
           ? []

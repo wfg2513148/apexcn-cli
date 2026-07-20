@@ -10,11 +10,7 @@ param(
   [string]$Repo = $(if ($env:APEXCN_CLI_REPO) { $env:APEXCN_CLI_REPO } else { "" }),
   [string]$Ref = $(if ($env:APEXCN_CLI_REF) { $env:APEXCN_CLI_REF } else { "main" }),
   [string]$InstallRoot = $(if ($env:APEXCN_CLI_INSTALL_ROOT) { $env:APEXCN_CLI_INSTALL_ROOT } else { Join-Path $env:LOCALAPPDATA "apexcn\tools\apexcn-cli" }),
-  [string]$BinDir = $(if ($env:APEXCN_CLI_BIN_DIR) { $env:APEXCN_CLI_BIN_DIR } else { Join-Path $env:LOCALAPPDATA "apexcn\bin" }),
-  [string]$Profile = $(if ($env:APEXCN_CLI_PROFILE) { $env:APEXCN_CLI_PROFILE } else { "agent-prod" }),
-  [string]$BaseUrl = $(if ($env:APEXCN_CLI_BASE_URL) { $env:APEXCN_CLI_BASE_URL } else { "https://oracleapex.cn/ords/api" }),
-  [string]$Token = $(if ($env:APEXCN_API_KEY) { $env:APEXCN_API_KEY } else { "" }),
-  [string]$VerifyTimeoutMs = $(if ($env:APEXCN_CLI_VERIFY_TIMEOUT_MS) { $env:APEXCN_CLI_VERIFY_TIMEOUT_MS } else { "10000" })
+  [string]$BinDir = $(if ($env:APEXCN_CLI_BIN_DIR) { $env:APEXCN_CLI_BIN_DIR } else { Join-Path $env:LOCALAPPDATA "apexcn\bin" })
 )
 
 Set-StrictMode -Version Latest
@@ -481,64 +477,17 @@ function Install-AgentSkills {
   }
 }
 
-function Configure-Auth {
-  if (-not $Token) {
-    Write-Step "APEXCN_API_KEY not provided; skipping auth configuration."
-    return
-  }
-  Write-Step "Configuring apexcn auth profile '$Profile' without printing the API key."
-  $apexcn = Join-Path $BinDir "apexcn.cmd"
-  if ($DryRun) {
-    Write-Step "DRY-RUN: $apexcn auth set-token --profile $Profile --base-url $BaseUrl --token [redacted]"
-    return
-  }
-  Invoke-Apexcn @("auth", "set-token", "--profile", $Profile, "--base-url", $BaseUrl, "--token", $Token) | Out-Null
-}
-
-function Invoke-ApexcnVerify {
-  param([string[]]$Args)
-  if ($env:APEXCN_HTTP_TIMEOUT_MS) {
-    Invoke-Apexcn $Args
-    return
-  }
-
-  $previous = $env:APEXCN_HTTP_TIMEOUT_MS
-  $env:APEXCN_HTTP_TIMEOUT_MS = $VerifyTimeoutMs
-  try {
-    Invoke-Apexcn $Args
-  } finally {
-    if ($null -eq $previous) {
-      Remove-Item Env:APEXCN_HTTP_TIMEOUT_MS -ErrorAction SilentlyContinue
-    } else {
-      $env:APEXCN_HTTP_TIMEOUT_MS = $previous
-    }
-  }
-}
-
 function Verify-Install {
   $apexcn = Join-Path $BinDir "apexcn.cmd"
   if ($DryRun) {
     Write-Step "DRY-RUN: would run $apexcn --help"
     Repair-ShellLauncher
     Test-ShellLauncher
-    if ($Token) { Write-Step "DRY-RUN: would run $apexcn me --json" }
     return
   }
   Invoke-Apexcn @("--help") | Out-Null
   Repair-ShellLauncher
   Test-ShellLauncher
-  if ($Token) {
-    if ($VerifyTimeoutMs -notmatch '^[1-9][0-9]*$') {
-      throw "APEXCN_CLI_VERIFY_TIMEOUT_MS must be a positive integer."
-    }
-    $effectiveTimeout = $(if ($env:APEXCN_HTTP_TIMEOUT_MS) { $env:APEXCN_HTTP_TIMEOUT_MS } else { $VerifyTimeoutMs })
-    Write-Step "Checking apexcn account with timeout ${effectiveTimeout}ms."
-    Invoke-Apexcn @("auth", "show", "--json") | Out-Null
-    Invoke-ApexcnVerify @("me", "--json") 2>$null | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-      Write-Step "Auth profile saved, but account check failed. Run: apexcn me --json"
-    }
-  }
 }
 
 function Repair-ShellLauncher {
@@ -548,7 +497,7 @@ function Repair-ShellLauncher {
     $command = Get-Command "apexcn.cmd" -ErrorAction SilentlyContinue
   }
   if ((-not $command) -or ($command.Source -eq $expected)) { return }
-  if ((-not $Yes) -or (Test-LooksLikeApexcnCli $command.Source)) { return }
+  if (-not $Yes) { return }
   if (-not (Test-LauncherFileLooksLikeApexcnCli $command.Source)) { return }
 
   Write-Step "Replacing shadowing apexcn launcher: $($command.Source)"
@@ -612,14 +561,16 @@ Install-CurrentAgentSkill
 if ($InstallAgentSkills -or ((-not (Test-CurrentAgentOptOut)) -and ((-not $CurrentAgentSkillInstalled) -or $Yes))) {
   Install-AgentSkills
 }
-Configure-Auth
 Verify-Install
 
 Write-Host ""
 Write-Host "apexcn-cli installation complete."
 Write-Host "Launcher: $BinDir\apexcn.cmd"
 Write-Host "Installed source: $InstallRoot"
-Write-Host "Recommended next check:"
+Write-Host "Authentication is configured after installation."
+Write-Host "Set APEXCN_API_KEY in your shell, then run:"
+Write-Host "  apexcn auth set-token --profile agent-prod --base-url https://oracleapex.cn/ords/api --token-env APEXCN_API_KEY"
+Write-Host "Recommended checks:"
 Write-Host "  apexcn auth show --json"
 Write-Host "  apexcn me --json"
 Write-Host ""

@@ -50,7 +50,9 @@ apexcn auth set-token \
   --token-env APEXCN_API_KEY
 ```
 
-`--token-env <name>` stores only the environment variable name. Pass both `--token-env` and `--token` to use the environment credential first and the file credential as fallback. If neither backend supplies a token, API commands fail before making a request. Token values, profile names, and base URLs cannot be blank or whitespace-only. `--base-url` must be an absolute `http` or `https` URL.
+The installer never accepts or configures an API key. Run these authentication commands only as a separate step after installation succeeds.
+
+`--token-env <name>` stores only the environment variable name. Pass both `--token-env` and `--token` to use the environment credential first and the file credential as fallback. Invalid or missing environment credentials fall back to the file store; if neither backend supplies a usable token, API commands fail before making a request. Tokens must contain visible ASCII characters only, must not contain whitespace, and must not be example placeholders such as `YOUR_API_KEY`. `--base-url` must be an absolute `http` or `https` URL.
 Add `--no-switch` when you want to save a profile without making it current.
 
 Show current profile:

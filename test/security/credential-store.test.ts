@@ -108,4 +108,33 @@ describe("credential store abstraction", () => {
       profile: "test"
     });
   });
+
+  test("runtime rejects invalid header credentials and falls back from an invalid env value", async () => {
+    const configPath = await tempConfigPath();
+    await setCurrentProfile("test", {
+      baseUrl: "https://oracleapex.cn/ords/test",
+      token: "file-secret",
+      tokenEnv: "APEXCN_TEST_TOKEN"
+    }, configPath);
+
+    expect(await loadRuntimeSession(configPath, { APEXCN_TEST_TOKEN: "你的_API_KEY" })).toEqual({
+      ok: true,
+      session: {
+        profile: "test",
+        baseUrl: "https://oracleapex.cn/ords/test",
+        token: "file-secret",
+        credentialStore: "file"
+      }
+    });
+
+    await setCurrentProfile("test", {
+      baseUrl: "https://oracleapex.cn/ords/test",
+      token: "你的_API_KEY"
+    }, configPath);
+    expect(await loadRuntimeSession(configPath, {})).toEqual({
+      ok: false,
+      reason: "no-credential",
+      profile: "test"
+    });
+  });
 });

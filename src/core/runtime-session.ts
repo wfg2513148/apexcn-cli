@@ -1,5 +1,5 @@
 import { loadConfig } from "../config.js";
-import { profileCredentialStore } from "./credential-store.js";
+import { isUsableCredential, profileCredentialStore } from "./credential-store.js";
 
 export type RuntimeSession = {
   profile: string;
@@ -24,7 +24,7 @@ export async function loadRuntimeSession(
   }
   const store = profileCredentialStore(current, configPath, env);
   const token = await store.get(profile);
-  if (!token) {
+  if (!isUsableCredential(token)) {
     return { ok: false, reason: "no-credential", profile };
   }
   const audit = await store.audit(profile);

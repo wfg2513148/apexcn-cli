@@ -10,7 +10,7 @@
 
 ## 快速安装
 
-先准备一个 APEX 中文社区 API key，把下面命令里的 `你的_API_KEY` 换成自己的 key。
+安装和认证是两个独立步骤。安装命令不接收 API key，也不会配置账号或联网验号。
 
 ### 推荐：在 AI 工具里安装
 
@@ -19,13 +19,13 @@
 macOS / Linux：
 
 ```bash
-APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -o pipefail -c 'curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300 https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash -s -- --yes'
+APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -o pipefail -c 'curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300 https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash -s -- --yes'
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
+$env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
 ```
 
 ### 只安装终端命令
@@ -35,14 +35,39 @@ $env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_I
 macOS / Linux：
 
 ```bash
-APEXCN_API_KEY='你的_API_KEY' bash -o pipefail -c 'curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300 https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash -s -- --yes'
+bash -o pipefail -c 'curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300 https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash -s -- --yes'
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
+$env:APEXCN_CLI_YES="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
 ```
+
+### 安装后单独认证
+
+安装完成后，再在自己的 shell 中设置真实 API key，并让 CLI 只保存环境变量名：
+
+```bash
+read -rsp 'APEXCN API key: ' APEXCN_API_KEY && printf '\n'
+export APEXCN_API_KEY
+apexcn auth set-token \
+  --profile agent-prod \
+  --base-url https://oracleapex.cn/ords/api \
+  --token-env APEXCN_API_KEY
+apexcn me --json
+```
+
+Windows PowerShell 可在安装完成后的新命令中安全读取：
+
+```powershell
+$secureKey = Read-Host "APEXCN API key" -AsSecureString
+$env:APEXCN_API_KEY = [Net.NetworkCredential]::new("", $secureKey).Password
+apexcn auth set-token --profile agent-prod --base-url https://oracleapex.cn/ords/api --token-env APEXCN_API_KEY
+apexcn me --json
+```
+
+不要把 `你的_API_KEY` 或 `YOUR_API_KEY` 原样当作 token。安装脚本不会读取 `APEXCN_API_KEY`；认证命令会拒绝示例占位符、非 ASCII 字符和带空白的 token。
 
 ## 安装后怎么用
 
@@ -104,6 +129,7 @@ apexcn guide performance --json
 
 ```bash
 command -v apexcn
+apexcn --version
 apexcn doctor --json
 apexcn auth show --json
 apexcn me --json

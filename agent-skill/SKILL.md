@@ -52,6 +52,7 @@ apexcn auth set-token \
 ```
 
 This stores only the environment variable name. Pass both `--token-env` and `--token` only when a file fallback is intentionally required.
+Never pass an API key to `install-agent.sh` or `install-agent.ps1`. Installation and authentication are separate operations; install first, then configure the environment-variable name with `auth set-token`.
 
 ## Agent Rules
 

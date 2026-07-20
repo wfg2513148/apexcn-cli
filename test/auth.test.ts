@@ -281,26 +281,61 @@ describe("auth command", () => {
     }
   });
 
-  test("auth set-token stores non-blank tokens exactly as provided", async () => {
+  test("auth set-token rejects non-header-safe and example placeholder tokens without writing config", async () => {
+    for (const token of ["  abcdefghijklmnopqrstuvwxyz  ", "你的_API_KEY", "YOUR_API_KEY", "<API_KEY>"]) {
+      const configPath = await tempConfigPath();
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      const program = createProgram({
+        configPath,
+        stdout: (text) => stdout.push(text),
+        stderr: (text) => stderr.push(text)
+      });
+
+      await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", token, "--profile", "prod"]);
+      await program.parseAsync(["node", "apexcn", "auth", "show"]);
+
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).toBe(
+        "Token must use visible ASCII characters and must not be an example placeholder\nNo active profile\n"
+      );
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+    }
+  });
+
+  test("auth audit identifies legacy file and environment placeholder credentials", async () => {
     const configPath = await tempConfigPath();
+    await writeConfig(configPath, {
+      current: "file-profile",
+      profiles: {
+        "file-profile": { baseUrl: "https://oracleapex.cn/ords/api", token: "YOUR_API_KEY" },
+        "env-profile": {
+          baseUrl: "https://oracleapex.cn/ords/api",
+          token: "",
+          tokenEnv: "APEXCN_TEST_TOKEN"
+        }
+      }
+    });
+    vi.stubEnv("APEXCN_TEST_TOKEN", "你的_API_KEY");
     const stdout: string[] = [];
-    const stderr: string[] = [];
     const program = createProgram({
       configPath,
       stdout: (text) => stdout.push(text),
-      stderr: (text) => stderr.push(text)
+      stderr: () => undefined
     });
 
-    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "  abcdefghijklmnopqrstuvwxyz  ", "--profile", "prod"]);
-    await program.parseAsync(["node", "apexcn", "auth", "show", "--json"]);
+    await program.parseAsync(["node", "apexcn", "auth", "audit", "--json"]);
 
-    expect(stderr.join("")).toBe("");
-    expect(JSON.parse(stdout[1])).toEqual({
-      profile: "prod",
-      baseUrl: "https://oracleapex.cn/ords/api",
-      token: "  ab...yz  "
-    });
-    expect(process.exitCode).toBeUndefined();
+    const audit = JSON.parse(stdout.join(""));
+    expect(audit.ok).toBe(false);
+    expect(audit.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "invalid-token", profile: "file-profile" }),
+      expect.objectContaining({ code: "invalid-env-token", profile: "env-profile" })
+    ]));
+    expect(stdout.join("")).not.toContain("YOUR_API_KEY");
+    expect(stdout.join("")).not.toContain("你的_API_KEY");
+    expect(process.exitCode).toBe(1);
   });
 
   test("auth set-token rejects blank profile and base URL without writing config", async () => {

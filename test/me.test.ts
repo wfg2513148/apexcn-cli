@@ -900,6 +900,41 @@ describe("me command", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("rejects a legacy placeholder token before fetch instead of reporting a network error", async () => {
+    const configPath = await tempConfigPath();
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(configPath, JSON.stringify({
+      current: "agent-prod",
+      profiles: {
+        "agent-prod": {
+          baseUrl: "https://oracleapex.cn/ords/api",
+          token: "你的_API_KEY"
+        }
+      }
+    }));
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const stderr: string[] = [];
+    const program = createProgram({
+      configPath,
+      stdout: () => undefined,
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "me", "--json"]);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(JSON.parse(stderr.join(""))).toEqual({
+      ok: false,
+      error: expect.objectContaining({
+        code: "NO_CREDENTIAL",
+        message: "No credential is available for profile agent-prod"
+      })
+    });
+    expect(stderr.join("")).not.toContain("network");
+    expect(process.exitCode).toBe(1);
+  });
+
   test("reports invalid config without making API requests", async () => {
     const configPath = await tempConfigPath();
     await mkdir(dirname(configPath), { recursive: true });

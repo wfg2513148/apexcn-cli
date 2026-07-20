@@ -44,7 +44,7 @@
 - 创建本机 `apexcn` 命令。
 - 可选把 skill 安装到已检测到的 Codex、Claude、OpenCode 等 AI 工具中，让后续 agent 知道如何安全调用 CLI。
 - 如果安装命令是在支持的 AI 工具内执行，默认会把 skill 安装到当前用户运行该命令的 AI 工具全局 Skills 目录。
-- 如果提供 `APEXCN_API_KEY`，自动配置生产 API profile。
+- 不接收、不保存 API key，也不在安装阶段执行账号 API 检查；认证在安装成功后单独配置。
 
 当前生产 ORDS base URL 是：
 
@@ -57,7 +57,7 @@ https://oracleapex.cn/ords/api
 macOS / Linux：
 
 ```bash
-APEXCN_API_KEY='你的_API_KEY' APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -o pipefail -c 'curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300 https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash -s -- --yes'
+APEXCN_CLI_INSTALL_AGENT_SKILLS=1 bash -o pipefail -c 'curl -fsSL --retry 5 --retry-delay 2 --connect-timeout 20 --max-time 300 https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh | bash -s -- --yes'
 ```
 
 macOS / Linux 命令通过外层 `bash -o pipefail -c` 执行管道；如果 GitHub 下载失败，整条命令会以失败状态退出，不会把空输入当成安装成功。
@@ -65,8 +65,10 @@ macOS / Linux 命令通过外层 `bash -o pipefail -c` 执行管道；如果 Git
 Windows PowerShell：
 
 ```powershell
-$env:APEXCN_API_KEY="你的_API_KEY"; $env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
+$env:APEXCN_CLI_YES="1"; $env:APEXCN_CLI_INSTALL_AGENT_SKILLS="1"; irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
 ```
+
+安装命令不接收 API key。即使调用安装脚本的 shell 已经存在 `APEXCN_API_KEY`，安装器也不会读取、保存或验证它。
 
 安装脚本默认下载固定文件名的 CLI 包：
 
@@ -91,10 +93,22 @@ $env:APEXCN_CLI_DRY_RUN="1"
 
 自动化测试或受控环境中，如需禁止安装脚本根据当前 AI 工具自动写入 skill，可设置 `APEXCN_CLI_CURRENT_AGENT=none`；显式设置 `APEXCN_CLI_INSTALL_AGENT_SKILLS=1` 时仍会安装已检测到的工具 skill。
 
-安装完成后验证：
+安装完成后先确认 shell 使用的是刚安装的 launcher：
 
 ```bash
 command -v apexcn
+apexcn --version
+```
+
+然后在独立步骤中配置认证并验证：
+
+```bash
+read -rsp 'APEXCN API key: ' APEXCN_API_KEY && printf '\n'
+export APEXCN_API_KEY
+apexcn auth set-token \
+  --profile agent-prod \
+  --base-url https://oracleapex.cn/ords/api \
+  --token-env APEXCN_API_KEY
 apexcn auth show --json
 apexcn auth audit --json
 apexcn me --json
@@ -153,7 +167,7 @@ apexcn auth set-token \
 
 保存后，`prod` 会成为当前 active profile。后续命令不需要再传 `--profile`。
 
-`--token-env` 只保存变量名；同时传 `--token-env` 与 `--token` 时按 env→file 顺序回退。两个 backend 都不可用时，API 请求会 fail closed。token 值、profile 和 base URL 不能是空字符串或只有空白字符；`--base-url` 必须是绝对 `http` 或 `https` URL。
+`--token-env` 只保存变量名；同时传 `--token-env` 与 `--token` 时按 env→file 顺序回退。两个 backend 都不可用时，API 请求会 fail closed。token 必须由可用于 HTTP header 的可见 ASCII 字符组成，不能包含空白，也不能是 `你的_API_KEY`、`YOUR_API_KEY` 等示例占位符；`--base-url` 必须是绝对 `http` 或 `https` URL。
 
 查看当前配置，不会泄露完整 token：
 

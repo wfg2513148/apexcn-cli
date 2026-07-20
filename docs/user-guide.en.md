@@ -4,9 +4,13 @@ This guide is for users who use apexcn-cli through an AI tool. You do not need t
 
 ## 1. First Use
 
-Prepare your APEX Chinese Community API key, then tell your AI tool:
+Install the CLI first without supplying an API key:
 
-> Please install and configure apexcn-cli for me. I will provide my APEX Chinese Community API key. After setup, verify my account, category list, and search capability.
+> Please install apexcn-cli and its skill. Do not request, store, or verify an API key during installation. First confirm that the installed launcher resolves to the new version.
+
+Configure authentication only after installation succeeds:
+
+> I will set APEXCN_API_KEY in my own shell. Configure apexcn-cli to store only that environment variable name without reading or printing its value, then verify my account, category list, and search capability.
 
 If it is already installed, say:
 

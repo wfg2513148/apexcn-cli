@@ -9,6 +9,7 @@ import {
   setCurrentProfileName,
   setProfile
 } from "../config.js";
+import { isUsableCredential } from "../core/credential-store.js";
 
 export type CommandIo = {
   stdout: (text: string) => void;
@@ -37,6 +38,11 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
       }
       if (commandOptions.token !== undefined && commandOptions.token.trim().length === 0) {
         options.stderr("Token must not be blank\n");
+        process.exitCode = 1;
+        return;
+      }
+      if (commandOptions.token !== undefined && !isUsableCredential(commandOptions.token)) {
+        options.stderr("Token must use visible ASCII characters and must not be an example placeholder\n");
         process.exitCode = 1;
         return;
       }
@@ -297,7 +303,12 @@ function authAudit(config: unknown, configPath: string, env: NodeJS.ProcessEnv =
     const baseUrl = typeof value.baseUrl === "string" ? value.baseUrl : "";
     const token = typeof value.token === "string" ? value.token : "";
     const tokenEnv = typeof value.tokenEnv === "string" ? value.tokenEnv : undefined;
-    const envTokenPresent = tokenEnv ? Boolean(env[tokenEnv]) : false;
+    const envToken = tokenEnv ? env[tokenEnv] : undefined;
+    const envTokenPresent = Boolean(envToken);
+    const fileTokenValid = !token || isUsableCredential(token);
+    const envTokenValid = !envToken || isUsableCredential(envToken);
+    const fileCredentialAvailable = Boolean(token) && fileTokenValid;
+    const envCredentialAvailable = envTokenPresent && envTokenValid;
     if (!isValidBaseUrl(baseUrl)) {
       issues.push({ code: "invalid-base-url", message: "Profile baseUrl must be an absolute http or https URL.", profile: name });
     } else {
@@ -308,7 +319,21 @@ function authAudit(config: unknown, configPath: string, env: NodeJS.ProcessEnv =
         warnings.push({ code: "insecure-base-url", message: "Profile uses http instead of https.", profile: name });
       }
     }
-    if (!token.trim() && !envTokenPresent) {
+    if (token && !fileTokenValid) {
+      issues.push({
+        code: "invalid-token",
+        message: "Profile token must use visible ASCII characters and must not be an example placeholder.",
+        profile: name
+      });
+    }
+    if (envToken && !envTokenValid) {
+      issues.push({
+        code: "invalid-env-token",
+        message: `${tokenEnv} does not contain a usable API credential.`,
+        profile: name
+      });
+    }
+    if (!fileCredentialAvailable && !envCredentialAvailable && !token && !envToken) {
       issues.push({
         code: tokenEnv ? "missing-fallback-token" : "missing-token",
         message: tokenEnv

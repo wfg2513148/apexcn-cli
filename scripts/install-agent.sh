@@ -8,10 +8,6 @@ repo_url="${APEXCN_CLI_REPO:-}"
 repo_ref="${APEXCN_CLI_REF:-main}"
 install_root="${APEXCN_CLI_INSTALL_ROOT:-$HOME/.apexcn/tools/apexcn-cli}"
 bin_dir="${APEXCN_CLI_BIN_DIR:-$HOME/.local/bin}"
-base_url="${APEXCN_CLI_BASE_URL:-https://oracleapex.cn/ords/api}"
-profile="${APEXCN_CLI_PROFILE:-agent-prod}"
-token="${APEXCN_API_KEY:-}"
-verify_timeout_ms="${APEXCN_CLI_VERIFY_TIMEOUT_MS:-10000}"
 source_dir=""
 yes="${APEXCN_CLI_YES:-0}"
 dry_run="${APEXCN_CLI_DRY_RUN:-0}"
@@ -43,13 +39,9 @@ Options:
   --ref <name>                Git branch/tag/commit to install when --repo is used.
   --install-root <path>       Install root. Defaults to ~/.apexcn/tools/apexcn-cli.
   --bin-dir <path>            Directory for the apexcn launcher. Defaults to ~/.local/bin.
-  --profile <name>            CLI auth profile. Defaults to agent-prod.
-  --base-url <url>            ORDS API base URL. Defaults to production API URL.
-  --token <token>             API key. Prefer APEXCN_API_KEY instead.
   -h, --help                  Show this help.
 
 Environment:
-  APEXCN_API_KEY              Optional API key used to configure auth.
   APEXCN_CLI_YES=1            Same as --yes.
   APEXCN_CLI_DRY_RUN=1        Same as --dry-run.
   APEXCN_CLI_INSTALL_CODEX_SKILL=1
@@ -61,8 +53,6 @@ Environment:
   APEXCN_CLI_PACKAGE_URL      Override source package URL.
   APEXCN_CLI_CHECKSUMS_URL    Override checksums.txt URL. Defaults to package URL directory.
   APEXCN_CLI_SKIP_CHECKSUM=1  Explicitly skip release package checksum verification.
-  APEXCN_CLI_VERIFY_TIMEOUT_MS
-                              Account-check timeout in milliseconds after auth setup. Defaults to 10000.
 USAGE
 }
 
@@ -285,21 +275,6 @@ parse_args() {
       --bin-dir)
         bin_dir="${2:-}"
         [[ -n "$bin_dir" ]] || die "--bin-dir requires a value"
-        shift 2
-        ;;
-      --profile)
-        profile="${2:-}"
-        [[ -n "$profile" ]] || die "--profile requires a value"
-        shift 2
-        ;;
-      --base-url)
-        base_url="${2:-}"
-        [[ -n "$base_url" ]] || die "--base-url requires a value"
-        shift 2
-        ;;
-      --token)
-        token="${2:-}"
-        [[ -n "$token" ]] || die "--token requires a value"
         shift 2
         ;;
       -h|--help)
@@ -656,54 +631,17 @@ install_agent_skills() {
   fi
 }
 
-configure_auth() {
-  if [[ -z "$token" ]]; then
-    log "APEXCN_API_KEY not provided; skipping auth configuration."
-    return
-  fi
-
-  log "Configuring apexcn auth profile '$profile' without printing the API key."
-  if [[ "$dry_run" == "1" ]]; then
-    log "DRY-RUN: $bin_dir/apexcn auth set-token --profile $profile --base-url $base_url --token [redacted]"
-    return
-  fi
-
-  "$bin_dir/apexcn" auth set-token \
-    --profile "$profile" \
-    --base-url "$base_url" \
-    --token "$token" >/dev/null
-}
-
-run_apexcn_verify() {
-  if [[ -n "${APEXCN_HTTP_TIMEOUT_MS:-}" ]]; then
-    "$bin_dir/apexcn" "$@"
-  else
-    APEXCN_HTTP_TIMEOUT_MS="$verify_timeout_ms" "$bin_dir/apexcn" "$@"
-  fi
-}
-
 verify_install() {
   if [[ "$dry_run" == "1" ]]; then
     run_cmd "$bin_dir/apexcn" --help
     repair_shell_launcher
     check_shell_launcher
-    if [[ -n "$token" ]]; then
-      log "DRY-RUN: would run $bin_dir/apexcn me --json"
-    fi
     return
   fi
 
   "$bin_dir/apexcn" --help >/dev/null
   repair_shell_launcher
   check_shell_launcher
-  if [[ -n "$token" ]]; then
-    [[ "$verify_timeout_ms" =~ ^[1-9][0-9]*$ ]] || die "APEXCN_CLI_VERIFY_TIMEOUT_MS must be a positive integer."
-    log "Checking apexcn account with timeout ${APEXCN_HTTP_TIMEOUT_MS:-$verify_timeout_ms}ms."
-    "$bin_dir/apexcn" auth show --json >/dev/null
-    if ! run_apexcn_verify me --json >/dev/null 2>&1; then
-      log "Auth profile saved, but account check failed. Run: apexcn me --json"
-    fi
-  fi
 }
 
 repair_shell_launcher() {
@@ -713,9 +651,6 @@ repair_shell_launcher() {
   [[ -n "$resolved" && "$resolved" != "$expected" ]] || return 0
 
   if [[ "$yes" != "1" || ! -w "$(dirname "$resolved")" ]]; then
-    return 0
-  fi
-  if launcher_looks_like_apexcn_cli "$resolved"; then
     return 0
   fi
   if [[ ! -L "$resolved" ]] && ! launcher_file_looks_like_apexcn_cli "$resolved"; then
@@ -776,7 +711,11 @@ Launcher:
 Installed source:
   $install_root
 
-Recommended next check:
+Authentication is configured after installation.
+Set APEXCN_API_KEY in your shell, then run:
+  apexcn auth set-token --profile agent-prod --base-url https://oracleapex.cn/ords/api --token-env APEXCN_API_KEY
+
+Recommended checks:
   apexcn auth show --json
   apexcn me --json
 
@@ -805,7 +744,6 @@ main() {
   elif ! current_agent_opt_out && { [[ "$current_agent_skill_installed" != "1" ]] || [[ "$yes" == "1" ]]; }; then
     install_agent_skills
   fi
-  configure_auth
   verify_install
   print_summary
 }
