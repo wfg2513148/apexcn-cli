@@ -1,55 +1,54 @@
 {
   "kind": "apexcn-iteration-context",
   "schemaVersion": 1,
-  "generatedAt": "2026-07-20T04:15:37.610Z",
+  "generatedAt": "2026-07-20T05:18:52.942Z",
   "release": {
-    "version": "0.70.0",
-    "tag": "v0.70.0",
-    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v0.70.0"
+    "version": "0.80.0",
+    "tag": "v0.80.0",
+    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v0.80.0"
   },
   "repository": {
     "branch": "main",
-    "commit": "e6ce2e317f40e92f5bfbc3e0e8ed802ea8b19be7"
+    "commit": "fc12daa29d7de3bd614c3b10a6afd3bdc6442b77"
   },
   "milestone": {
-    "completedIterationFor": "0.7",
+    "completedIterationFor": null,
     "resumeMilestoneId": "0.8",
     "resumeMilestoneStatus": "in_progress"
   },
   "enhancedCapabilities": [
-    "用户可把本地或服务端只读主题同步为带 canonical hash、来源和陈旧状态的可复现 collection，并在 1% 变化时复用未变化文档。",
-    "collection 可确定性导出、完整性验证、导入和恢复；篡改、缺失 hash、路径穿越和来源漂移在落盘前失败关闭。",
-    "离线自然语言查询与只读 automation plan/run 在网络请求和无人值守写请求均为零的边界内运行，并抑制重复输出。",
-    "收藏主题通过已认证的只读 export contract 一步转换为本地 collection，正文、URL、topicId、时间与 provenance 保真率为 100%。"
+    "发布策略治理与 hash-chain 审计：六类 topic/reply 写操作默认拒绝，创建和更新要求审批，删除要求两名不同审批者，保存的 JSON/NDJSON 记录可检测缺失、重排、篡改和额外事件。",
+    "发布服务端能力兼容性窗口：CLI 接受 0.8、0.7、0.6 contract，支持 require-capability，并对未来、过旧、缺失和畸形 contract 失败关闭。",
+    "发布环境变量凭据配置与运行时安全回退、0600 doctor snapshot、10,000-case redaction fuzz 和 issue routing matrix。",
+    "发布 macOS/Linux shell 与 Windows PowerShell 生命周期脚本、只读 soak runner 和 v0.80 迁移说明；macOS/Linux 实际生命周期已通过。"
   ],
   "unexpectedProblems": [
-    "首轮 validator intake scope 错把不存在的 pending_issues.json 列为必需输入，任务在安装和产品调用前失败；该基础设施问题未写入 issues.json。",
-    "独立 R02 在 adverse fixture 准备时首次生成了缺少 SHA 的无效离线 fixture，产品按设计在索引前拒绝；validator 修复自有 fixture 并透明排除该 setup attempt。",
-    "原固定 apexcn-forums task 已从本机 session store 删除，本轮必须外部核验并登记可见 Terra/high 替代任务，roadmap checker 也需接受透明登记的替代路由。",
-    "0.7 issue 闭环后，两条 roadmap 单测仍假定 issues.json 至少有一条活动 issue，需改为测试内构造 fixture。"
+    "用户在独立验证完成 intake、候选安装、版本、help 和 commands 后暂停了剩余场景，因此本次只能发布已完成能力，不能关闭 0.8 验收。",
+    "原 context compact 默认把任何发布都视为里程碑完成；直接运行会把仍为 in_progress 的 0.8 错误交接到 0.9。",
+    "Windows 实机 lifecycle 和七天只读 soak 尚未形成足以支持验收声明的证据。"
   ],
   "rootCauses": [
-    "R01 scope 沿用了旧验证项目的可选文件约定，没有先按当前仓库实际必需输入冻结 intake。",
-    "adverse fixture 生成器的第一次自检输入不完整；CLI 的 fail-closed 校验正确，问题位于 validator 自有 setup。",
-    "server task ID 曾被校验脚本硬编码为唯一合法值，无法表达原 task 消失后的已核验替代任务。",
-    "roadmap 测试读取活动 issue 作为隐式 fixture，使测试结果依赖业务状态而非独立构造的契约输入。"
+    "发布可用能力与关闭整个 roadmap milestone 是两个不同事件，而旧 compact 数据模型只覆盖后者。",
+    "跨平台实机与七天持续运行需要独立环境和时间窗口，用户暂停后不能用单元测试或短时成功替代。",
+    "独立 validator 的完整动态场景尚未开始执行，已完成的安装与发现性检查不足以代表产品验收。"
   ],
   "preventionActions": [
-    "后续 validator scope 只冻结仓库当前存在且规则明确要求的输入；intake/environment 失败继续在产品调用前停止并单独归类。",
-    "adverse harness 必须先自验 fixture 完整性，setup 尝试与产品资格尝试分开计数并在报告中披露。",
-    "跨仓库任务替代必须在 testingBindings 中保留历史主 ID、替代 ID、原因和外部 model/effort/cwd 核验，不改写历史证据。",
-    "roadmap 契约测试不再依赖 issues.json 非空；所有 issue 路由与 provenance 负例使用测试内 fixture。"
+    "context compact 现在读取 roadmap 实际状态：未完成里程碑发布时写入 completedIterationFor=null，并继续 resume 同一 in_progress milestone。",
+    "Release notes 和冻结 snapshot 明确列出未执行、已暂停和不可声明的资格边界，0.8 acceptance criteria 与 completion review 保持未关闭。",
+    "发布资产检查新增 lifecycle、soak、兼容性、凭据、诊断、路由和迁移文件要求，并由回归测试覆盖。"
   ],
-  "nextMilestoneGoal": "0.8 让团队在支持的平台上治理策略、凭据、兼容性、审计、支持和生命周期操作，而不扩展新的产品主线。",
+  "nextMilestoneGoal": "继续完成 roadmap 0.8 尚未闭环的 Windows 实机 lifecycle、完整新手独立验证和七天只读 soak；在这些证据达到 AC 后再关闭 0.8，而不是启动 0.9。",
   "expectedResults": [
-    "策略决策准确率、审计完整性与篡改检测、issue 路由准确率均达到 100%，redaction fuzz 泄漏为 0。",
-    "三个受支持 API contract 版本和三个平台 lifecycle suite 全部通过。",
-    "七天只读成功率至少 99.5%，credential store 与 fallback 覆盖率达到 100%。"
+    "全新 Windows 环境完成安装、升级、回滚和卸载，认证保留与失败恢复证据完整。",
+    "新的或恢复执行的用户可见新手 validator 完成完整 baseline 与 0.8 adverse suite，所有 finding 进入 issues.json 并闭环。",
+    "七天只读 soak 成功率至少 99.5%，无社区写入、无凭据泄漏，并形成可复核证据。",
+    "0.8 全部 acceptance criteria、独立验证、issue closure 和 completion review 完成后，才允许激活 0.9。"
   ],
   "majorRisks": [
-    "0.8 的可选 credential store 与 fallback 策略尚未资格化。",
-    "跨平台升级、回滚和卸载 runner 尚未证明可用。",
-    "0.5 仍保持 blocked/unreleased；0.8 不得把后续里程碑完成误写为 0.5 验收或发布依据。"
+    "Windows 实机尚未执行，PowerShell 脚本当前只有自动化测试和静态发布检查支持。",
+    "七天 soak 暂停前只有 4 次成功操作，远低于时间和样本要求。",
+    "独立 validator 尚未执行主要产品场景，当前 0 个 CLI finding 只能描述已执行子集。",
+    "0.5 继续 blocked/unreleased；v0.80.0 不得作为 0.5 完成或发布依据。"
   ],
   "activeIssues": [],
   "resume": {
@@ -61,7 +60,7 @@
     "instructions": [
       "Re-read current repository state before planning.",
       "Create only a just-in-time plan for the active milestone.",
-      "After release closure, automatically activate only the next planned milestone and create its dedicated goal."
+      "Resume the existing milestone; do not activate a later milestone until its acceptance and completion review are closed."
     ]
   }
 }
