@@ -1,43 +1,26 @@
 # apexcn-cli
 
-把 APEX 中文社区装进本地 AI 工具里。你可以少开网页、少复制链接，直接让 AI agent 帮你搜索社区帖子、总结资料、起草提问和回复、发帖回帖、收藏订阅。
+`apexcn-cli` 是连接本地 AI 助手与 [APEX 中文社区](https://oracleapex.cn/) 的工具。
 
-## APEX 中文社区是什么
+安装后，你不必记命令，也不必在网页之间反复查找和复制内容。直接告诉 AI 你想做什么，它就可以帮你：
 
-[APEX 中文社区](https://oracleapex.cn/) 是面向 Oracle APEX 中文用户的交流社区。社区按“问题求助”“新手入门”“进阶技巧”“建议与意见反馈”等板块组织内容；你可以在网页里阅读、提问和回复，也可以通过 `apexcn-cli` 让本地 AI 工具检索、整理或在确认后操作这些内容。
+- 搜索和总结 APEX 中文资料；
+- 阅读帖子并整理排查步骤、学习笔记或检查清单；
+- 根据社区内容回答问题，并附上可核对的帖子链接；
+- 起草提问、回复或修改内容，等你确认后再执行；
+- 收藏、订阅和整理对自己有用的帖子。
 
-![APEX 中文社区首页和内容板块](docs/assets/readme/apexcn-community-home.jpg)
+第一次使用只需三步：**安装 apexcn-cli → 获取社区 API Key → 把 Key 加入 apexcn-cli**。
 
-> 上图为 2026 年 7 月 21 日真实社区首页。未登录时，右上角账号入口显示为 `nobody`。
+## 第一步：一键安装 apexcn-cli
 
-## 如何获取 API Key
+### 推荐：让 AI 帮你安装
 
-API Key 用于证明 CLI 请求来自你的社区账号。它不是安装 `apexcn-cli` 的前置参数：先从社区网页获取 Key，再在本机单独配置即可。
+把下面这句话发给你正在使用的本地 AI 助手：
 
-1. 打开 [oracleapex.cn](https://oracleapex.cn/)，点击右上角的 `nobody`。
-2. 注册新账号，或使用已有账号/Google 认证登录。
-3. 登录后点击右上角账号菜单，选择 **API Key 管理**。
-4. 在弹窗中点击 **复制**，保存当前 API Key。
+> 请帮我一键安装 apexcn-cli。安装完成后检查版本是否可用。安装命令不接收 API key，也不要向我索取 API key。
 
-![APEX 中文社区 API Key 管理弹窗](docs/assets/readme/apexcn-api-key-management.png)
-
-> 上图来自真实账号页面，账号标识和 Key 已专门遮盖。页面中的 **重新生成** 会撤销旧 Key 并创建新 Key；只有在 Key 丢失、疑似泄露或确实需要轮换时才使用。
-
-请把 API Key 当作密码保管：不要发到帖子、聊天记录或 issue，不要提交到 Git 仓库，也不要在截图中保留完整值。CLI 和文档示例只使用 `YOUR_API_KEY` 作为占位符。
-
-## 适合谁
-
-- 刚开始用 APEX 中文社区，不想记命令的小白用户。
-- 想让本地 AI 工具读取社区帖子、整理答案、生成排查清单的用户。
-- 需要在终端里直接操作社区内容的进阶用户。
-
-## 快速安装
-
-安装和认证是两个独立步骤。安装命令不接收 API key，也不会配置账号或联网验号。
-
-### 推荐：在 AI 工具里安装
-
-把这条命令发给你正在使用的 AI 工具，让它执行。安装完成后，AI 通常就能自动识别 APEX 中文社区相关请求。
+### 也可以自己安装
 
 macOS / Linux：
 
@@ -51,182 +34,152 @@ Windows PowerShell：
 irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
 ```
 
-两条命令都不接收参数，会安装 CLI launcher 和用户级 agent skill。安装器要求本机已有 Node.js 20+、校验 release 包的 SHA-256，并在发现可识别的旧 launcher 时直接更新它。
+安装命令不接收 API key。安装程序会检查电脑上是否已有 Node.js 20 或更高版本；如果缺少，请让 AI 帮你安装 Node.js 后再执行一次。
 
-### 安装后单独认证
+## APEX 中文社区是什么
 
-完成上面的“获取 API Key”步骤后，在自己的 shell 中执行一条命令即可保存它：
+`apexcn-cli` 使用的内容来自 APEX 中文社区。这里汇集了 Oracle APEX 开发者分享的问题解答、新手教程、进阶技巧和实践经验。
+
+你仍然可以直接打开社区网页阅读和交流；`apexcn-cli` 的作用，是让 AI 帮你更快地找到、理解和使用这些内容。
+
+![APEX 中文社区首页和内容板块](docs/assets/readme/apexcn-community-home.jpg)
+
+社区主要包含以下板块：
+
+- **APEX 问题求助**：提交开发中遇到的问题，寻找社区帮助；
+- **APEX 新手入门**：学习环境搭建、基础教程和常见问题；
+- **APEX 进阶技巧**：查找开发技巧、最佳实践和完整案例；
+- **建议与意见反馈**：向社区提出建议或反馈问题。
+
+## 如何获取 API Key
+
+API Key 用来确认 `apexcn-cli` 正在以你的社区账号访问内容。请按下面的步骤获取：
+
+1. 打开 [APEX 中文社区](https://oracleapex.cn/)；
+2. 点击右上角的 `nobody`，注册新账号或登录已有账号；
+3. 登录后打开右上角账号菜单，选择 **API Key 管理**；
+4. 在弹窗中点击 **复制**。
+
+![APEX 中文社区 API Key 管理弹窗](docs/assets/readme/apexcn-api-key-management.png)
+
+弹窗中的 **重新生成** 会立即撤销旧 Key。只有在 Key 丢失、疑似泄露或需要更换时才点击它。
+
+API Key 和密码一样重要。不要把它发到帖子、聊天记录或 issue 中，也不要在截图里保留完整 Key。
+
+## 把 API Key 加入 apexcn-cli
+
+打开本机终端，先把下面命令中的 `YOUR_API_KEY` 整体替换成刚刚复制的真实 Key，再执行：
 
 ```bash
 apexcn -apikey "YOUR_API_KEY"
-apexcn me --json
 ```
 
-普通字母数字 key 也可以不加引号：
+普通字母和数字组成的 Key 也可以不加引号：
 
 ```bash
 apexcn -apikey xxxxxx
 ```
 
-请把示例值整体替换为真实 key。该快捷命令会把 key 保存到权限为 `0600` 的默认 `prod` profile，不会回显 key，也不会在配置时调用社区 API。因为命令行参数可能进入 shell 历史和短暂出现在进程列表中，对安全要求更高时可继续使用环境变量方式：
+不要直接照抄 `YOUR_API_KEY` 或 `xxxxxx`，它们只是占位示例。配置完成后，用下面的命令检查当前账号：
 
 ```bash
-apexcn auth set-token --profile prod --token-env APEXCN_API_KEY
+apexcn me
 ```
 
-不要把 `你的_API_KEY` 或 `YOUR_API_KEY` 原样当作 token。安装脚本不会读取 API key；认证命令会拒绝示例占位符、非 ASCII 字符和带空白的 token。
+能看到自己的社区账号信息，就说明安装和配置已经完成。以后通常只需向 AI 说出需求，不必自己输入 `apexcn` 命令。
 
-## 安装后怎么用
+## 遇到问题怎么办
 
-在 AI 工具里直接用自然语言说需求。多数情况下不需要显式说 `apexcn-cli`，只要说清楚你要访问 APEX 中文社区或 oracleapex.cn。
+如果 AI 没有识别 `apexcn-cli`，先重启 AI 工具，然后对它说：
 
-### 搜索和总结
+> 请检查 apexcn-cli 是否安装成功，并确认当前账号、社区板块和搜索功能是否可用。不要输出完整 API Key。
 
-> 帮我在 APEX 中文社区搜索 REST API 相关帖子，总结前 5 条，并带上每条帖子的真实链接和原文链接。
+如果仍然无法使用，可查看：
 
-> 搜一下 oracleapex.cn 里关于 ORDS 认证失败的帖子，整理成排查清单。
+- [小白用户手册](docs/user-guide.zh.md)
+- [命令行终端手册](docs/cli-manual.zh.md)
+- [快速使用说明](docs/quickstart.md)
 
-> 查一下 APEX 中文社区有没有 JSON_TABLE 的新手示例，按适合阅读的顺序列出来。
+## Top 20 典型使用话术
 
-> 总结最近 48 小时更新的 APEX 中文社区帖子，按主题归纳并带上链接。
+以下内容可以直接发给 AI。涉及发布、修改或删除时，建议保留“先预览、等我确认”的要求。
 
-### 查看和整理帖子
+1. **搜索新手资料**
 
-> 打开社区帖子 30549，帮我总结主要内容、关键步骤、注意事项和真实链接。
+   > 请在 APEX 中文社区搜索适合小白学习的入门帖子，挑选 5 篇，按阅读顺序排列并附上真实链接。
 
-> 把这几条 APEX 中文社区帖子整理成一份学习笔记，每条写清楚适合谁看、解决什么问题、链接是什么。
+2. **搜索具体问题**
 
-### 新手任务路径
+   > 请搜索 APEX 调用 REST API 返回 401 的相关帖子，按相关程度排序，并告诉我每篇可能解决什么问题。
 
-> 给我一条从安装、检索到安全提问的 APEX 中文社区学习路径。
+3. **查找代码示例**
 
-> 给我一份 APEX 应用部署前后的检查清单，并说明哪些结论还需要核对官方文档。
+   > 请在 APEX 中文社区查找 JSON_TABLE 的新手示例，整理关键代码、使用条件和原帖链接。
 
-终端中可直接查看本地策展视图：
+4. **了解社区近期内容**
 
-```bash
-apexcn guide learning --json
-apexcn guide compatibility --apex-version 24.2 --ords-version 24.4 --json
-apexcn guide deployment --format text
-apexcn guide security --json
-apexcn guide performance --json
-```
+   > 请总结最近 7 天 APEX 中文社区的新内容，按新手入门、问题求助和进阶技巧分类。
 
-### 起草和发布内容
+5. **总结指定帖子**
 
-> 我遇到 APEX 调用 REST API 返回 401。请先搜索社区已有讨论，再帮我起草一篇提问帖。先不要发布，给我确认。
+   > 请打开社区帖子 30549，总结主要内容、操作步骤、注意事项和真实链接。
 
-> 请把我确认后的内容发布到合适的 APEX 中文社区板块。发布前先告诉我标题、板块、正文和标签。
+6. **判断帖子是否适用**
 
-### 回复、收藏和订阅
+   > 请阅读这个社区帖子，并判断它能否解决我在 APEX 中拿不到 REST API 返回 JSON 的问题，说明理由和仍需确认的地方。
 
-> 帮我给帖子 30549 起草一条友好的回复，先给我预览，不要直接发布。
+7. **比较多篇帖子**
 
-> 帮我收藏帖子 30549，并把真实链接发给我。
+   > 请比较这 3 篇帖子给出的解决方法，列出共同点、差异、适用版本和各自风险。
 
-> 帮我订阅帖子 30549，后续方便关注更新。
+8. **根据社区内容回答问题**
 
-## 验证安装
+   > 请根据 APEX 中文社区已有内容回答“Oracle APEX 如何调用 REST API”，并为每个关键结论附上参考帖子链接。
 
-你可以让 AI 检查：
+9. **整理排查清单**
 
-> 请检查 apexcn-cli 是否安装成功，并确认当前登录账号、板块列表和搜索能力是否正常。不要输出完整 API key。
+   > 请根据社区帖子整理一份 ORDS 认证失败排查清单，按最容易检查到最深入的顺序排列。
 
-也可以自己在终端里执行：
+10. **制定学习路线**
 
-```bash
-command -v apexcn
-apexcn --version
-apexcn doctor --json
-apexcn auth show --json
-apexcn me --json
-apexcn me stats --json
-apexcn category list --json
-apexcn stats category --json
-```
+    > 请为 APEX 小白制定一条从页面开发到调用 REST API 的学习路线，并为每个阶段推荐社区帖子。
 
-能看到账号信息和板块列表，就可以用了。
+11. **整理个人学习笔记**
 
-## 使用手册
+    > 请把这些帖子整理成学习笔记，每篇写清楚适合谁看、解决什么问题、关键步骤和原帖链接。
 
-- 小白用户手册（中文）：[docs/user-guide.zh.md](docs/user-guide.zh.md)
-- Beginner Guide (English)：[docs/user-guide.en.md](docs/user-guide.en.md)
-- 命令行终端手册（中文）：[docs/cli-manual.zh.md](docs/cli-manual.zh.md)
-- Terminal Manual (English)：[docs/cli-manual.en.md](docs/cli-manual.en.md)
-- 快速说明：[docs/quickstart.md](docs/quickstart.md)
-- 产品路线图：[docs/roadmap.md](docs/roadmap.md)
-- 0.30.x 迁移说明：[docs/migration-v0.30.md](docs/migration-v0.30.md)
-- 0.40.x 迁移说明：[docs/migration-v0.40.md](docs/migration-v0.40.md)
-- 0.50.x 迁移说明：[docs/migration-v0.50.md](docs/migration-v0.50.md)
-- 0.60.x 迁移说明：[docs/migration-v0.60.md](docs/migration-v0.60.md)
-- 0.70.x 迁移说明：[docs/migration-v0.70.md](docs/migration-v0.70.md)
-- 0.80.x 迁移说明：[docs/migration-v0.80.md](docs/migration-v0.80.md)
-- MCP Agent 接入：[docs/mcp.md](docs/mcp.md)
-- MCP 客户端兼容：[docs/mcp-client-compatibility.md](docs/mcp-client-compatibility.md)
-- JSON/API 契约：[docs/api-contract.md](docs/api-contract.md)
-- RAG 与 live readonly 检索质量：[docs/rag-quality.md](docs/rag-quality.md)
-- 安全模型：[docs/security-model.md](docs/security-model.md)
+12. **查看当前账号**
 
-## AI Agent / MCP
+    > 请检查 apexcn-cli 当前登录的是哪个社区账号。不要显示完整 API Key。
 
-CLI 仍是主入口。MCP 是可选的本地 stdio 适配层，默认 readonly：
+13. **了解发帖板块**
 
-```bash
-apexcn mcp tools --json
-apexcn mcp inspect --json
-apexcn mcp serve --readonly
-```
+    > 请列出 APEX 中文社区的板块，并根据我的问题推荐最适合发帖的板块，说明原因。
 
-MCP preview-only 写工具只生成 `willExecute: false` 的预览请求。topic/reply 的真实创建、修改和删除必须走 CLI 的 hash-bound workflow；直接 topic/reply 写命令只保留 `--preview` / `--dry-run`。MCP 不提供 execute-write。
+14. **起草求助帖**
 
-## 常见问题
+    > 我在 APEX 调用 REST API 时遇到 401。请先搜索社区已有讨论，再帮我起草一篇求助帖。先给我预览，不要发布。
 
-如果 AI 没有自动识别 APEX 中文社区相关请求，先重启 AI 工具，或让 AI 检查 `apexcn-cli` skill 是否已经安装到当前 AI 工具能读取的位置。
+15. **完善问题描述**
 
-如果 shell 找不到 `apexcn`，或者 `command -v apexcn` 显示的不是安装脚本最后输出的目录，把该目录放到 `PATH` 前面。默认通常是：
+    > 请把我的问题整理成一篇清楚的社区帖子，包含环境、操作步骤、实际结果、期望结果、报错信息和已尝试方法。
 
-- macOS / Linux：`~/.local/bin`
-- Windows：`%LOCALAPPDATA%\apexcn\bin`
+16. **发布已确认的帖子**
 
-macOS / Linux 可先执行：
+    > 请把我确认后的内容发布到合适的社区板块。发布前再次显示标题、正文、板块和标签，等我确认后再执行。
 
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-```
+17. **起草友好回复**
 
-如果要换 API key，可以对 AI 说：
+    > 请为帖子 30549 起草一条友好的回复，说明我的解决方法并补充必要步骤。先预览，不要发布。
 
-> 请帮我重新配置 apexcn-cli 的 API key。我会提供新的 key。配置后请验证账号是否可用，不要输出完整 key。
+18. **收藏有用帖子**
 
-终端用户可参考 [命令行终端手册（中文）](docs/cli-manual.zh.md) 或 [Terminal Manual (English)](docs/cli-manual.en.md)。
+    > 请收藏帖子 30549，并把它的真实链接发给我。
 
-## 开发
+19. **订阅帖子更新**
 
-```bash
-npm ci
-npm run build
-npm test
-npm run check:release
-```
+    > 请订阅帖子 30549，完成后告诉我订阅结果和帖子链接。
 
-本地构建后可用只读命令抽查 v0.4 过滤能力：
+20. **自动诊断使用问题**
 
-```bash
-node dist/index.js topic list --view unanswered --page-size 2 --json
-node dist/index.js search "ORDS" --tags APEX,ORDS --has-useful-reply --json
-node dist/index.js ask "最近 ORDS API 有哪些更新？" --tag ORDS --from 2026-07-01 --to 2026-07-05 --json
-```
-
-稳定安装文件：
-
-```text
-https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh
-https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1
-https://github.com/wfg2513148/apexcn-cli/releases/latest/download/apexcn-cli.tgz
-https://github.com/wfg2513148/apexcn-cli/releases/latest/download/checksums.txt
-https://github.com/wfg2513148/apexcn-cli/releases/latest/download/apexcn-cli.tgz.sha256
-https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh.sha256
-https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1.sha256
-```
-
-Release assets 使用 SHA-256 校验。安装脚本必须下载 `checksums.txt` 并校验 `apexcn-cli.tgz`；校验不可跳过。
+    > apexcn-cli 好像不能用了。请检查安装位置、版本、登录状态、社区板块和搜索功能，告诉我失败在哪一步，不要输出完整 API Key。
