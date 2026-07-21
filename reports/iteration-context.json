@@ -1,15 +1,15 @@
 {
   "kind": "apexcn-iteration-context",
   "schemaVersion": 1,
-  "generatedAt": "2026-07-21T01:17:16.322Z",
+  "generatedAt": "2026-07-21T01:29:02.487Z",
   "release": {
-    "version": "0.80.4",
-    "tag": "v0.80.4",
-    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v0.80.4"
+    "version": "0.80.5",
+    "tag": "v0.80.5",
+    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v0.80.5"
   },
   "repository": {
     "branch": "main",
-    "commit": "9d38f1b87c72ba544aec2bb1f0126535944a2d68"
+    "commit": "38bd031a1c77396a011aafeb5ad56118dd81af41"
   },
   "milestone": {
     "completedIterationFor": null,
@@ -17,34 +17,35 @@
     "resumeMilestoneStatus": "in_progress"
   },
   "enhancedCapabilities": [
-    "README now introduces the APEX Chinese Community with a real anonymous homepage screenshot and explains the available content sections.",
-    "First-time users now have an exact visual path to sign in, open API Key management, copy the current Key, configure it with apexcn -apikey, and verify the account.",
-    "The guide explicitly warns that regenerating a Key revokes the previous Key and documents basic secret-handling precautions.",
-    "Release v0.80.4 includes both privacy-safe screenshot assets and an automated documentation consistency check."
+    "POSIX and PowerShell installers now keep custom install and bin paths contained and do not rewrite an apexcn launcher elsewhere on PATH.",
+    "Default one-click installs still refresh a recognized older apexcn-cli launcher so existing shells resolve the new persistent installation.",
+    "Lifecycle tests now use operation-specific isolated PATH values and cannot select a developer machine launcher.",
+    "Release v0.80.5 was installed from the public latest endpoint and both local launchers now resolve the persistent package and report version 0.80.5."
   ],
   "unexpectedProblems": [
-    "The first login-page screenshot inherited browser autofill and exposed an account identifier, so it was discarded instead of entering the repository.",
-    "The authenticated browser control session timed out while attempting an extra account-menu screenshot; the already verified API Key management page supplied the required end-state evidence without retrying any write action."
+    "The v0.80.4 lifecycle test inherited the host PATH and rewrote /usr/local/bin/apexcn to a temporary test package that was deleted after the test, causing dist/index.js failures in later agent workflows.",
+    "The first complete post-fix test run exposed a misplaced PowerShell source assertion in the shell source test; the assertion was moved and the full suite rerun."
   ],
   "rootCauses": [
-    "Authenticated community pages intentionally display account identity and Key material, so raw screenshots are not safe documentation assets.",
-    "The previous README assumed users already knew what the community was and where its API Key management entry lived."
+    "The lifecycle test supplied custom install and bin roots but did not isolate PATH, so command -v apexcn selected the real host launcher.",
+    "The installer treated default one-click installs and explicitly customized test/lifecycle installs identically when updating an already resolved launcher."
   ],
   "preventionActions": [
-    "Commit only anonymous or fully redacted community screenshots, inspect every final asset at original resolution, and never keep a draft that contains autofilled credentials.",
-    "Keep the API Key acquisition route in README and assert that every referenced onboarding screenshot remains present and non-empty.",
-    "Do not invoke the community Key regeneration action during documentation capture; verify its semantics from the owning server implementation instead."
+    "Only default install and bin paths may trigger shell-resolved launcher replacement; customized paths remain strictly contained.",
+    "A regression now preserves an external launcher byte-for-byte while installing successfully into custom paths.",
+    "Full test verification records the real launcher checksum before and after the suite; both hashes matched after this fix.",
+    "Every launcher-related patch release is reinstalled through the public latest one-line command and verified from both resolved and user-local launchers."
   ],
   "nextMilestoneGoal": "Keep roadmap milestone 0.8 active and its remaining Windows lifecycle, fresh independent novice validation, and seven-day readonly soak work paused until the user explicitly resumes it.",
   "expectedResults": [
-    "A new user can understand the community, obtain an API Key, configure apexcn-cli, and verify the account without guessing the web navigation path.",
-    "The latest GitHub Release resolves to v0.80.4 with seven checksum-verified assets.",
-    "No paused 0.8 acceptance gate is executed or represented as complete."
+    "Automated lifecycle qualification can no longer leave the user's apexcn command pointing at a deleted temporary directory.",
+    "Public one-click installation resolves apexcn through the persistent user installation and returns version 0.80.5.",
+    "No community API write, API Key generation, Windows lifecycle round, independent validation round, or soak run is performed by this patch."
   ],
   "majorRisks": [
-    "Community navigation labels or layout may change, making screenshots and step text stale even though the CLI remains compatible.",
-    "Using apexcn -apikey places the argument in shell history and may briefly expose it in the process list; the environment-variable method remains the safer alternative.",
-    "Roadmap 0.8 core acceptance criteria remain pending because Windows lifecycle validation, independent validation, and the seven-day soak are still paused by the user."
+    "Default installs intentionally retain the ability to refresh a recognized writable older launcher; ownership detection must remain narrow and covered by tests.",
+    "Real Windows lifecycle qualification remains paused, so the PowerShell change is covered by source and available local tests but is not claimed as completed Windows acceptance.",
+    "Roadmap 0.8 core acceptance criteria remain pending while the user-paused validation and soak gates are not resumed."
   ],
   "activeIssues": [],
   "resume": {
