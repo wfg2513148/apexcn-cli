@@ -1,9 +1,122 @@
 {
   "schemaVersion": 1,
   "product": "apexcn-cli",
-  "updatedAt": "2026-07-20",
+  "updatedAt": "2026-07-21",
   "activeOnly": true,
   "issues": [],
+  "enhancementRequests": [
+    {
+      "id": "ENH-REPLY-OWNERSHIP-001",
+      "status": "in_progress",
+      "reportedAt": "2026-07-21",
+      "reportedBy": "user",
+      "observedCliVersion": "1.0.0",
+      "title": "支持回复已有回复并删除本人回复",
+      "currentBehavior": [
+        "CLI 在真实使用中无法回复一个已经存在的回复",
+        "CLI 在真实使用中无法删除当前账号自己发布的回复"
+      ],
+      "requiredOutcomes": [
+        "用户能够选择目标回复并发布层级正确的回复",
+        "用户能够在预览、明确确认和权限校验后删除本人发布的回复"
+      ],
+      "relatedAuditFindings": [
+        {
+          "id": "CLI-WORKFLOW-PARENT-CONTEXT",
+          "status": "fixed_in_candidate",
+          "summary": "直接回复预览支持 parentPostId，但 workflow plan/run、持久化状态和最终请求未传递该字段"
+        },
+        {
+          "id": "CLI-WORKFLOW-TAGS-CONTEXT",
+          "status": "fixed_in_candidate",
+          "summary": "主题直接预览支持 tags，但可执行 workflow 在创建、更新和标签单独更新时丢失该字段"
+        },
+        {
+          "id": "CLI-REPLY-REVIEW-TARGET-CONTEXT",
+          "status": "fixed_in_candidate",
+          "summary": "workflow plan 生成的回复审查步骤未携带 topicId 和 parentPostId，无法完整核对目标"
+        },
+        {
+          "id": "CLI-PERSONAL-LIST-WRITE-CONTEXT",
+          "status": "fixed_in_candidate",
+          "summary": "个人主题和回复的文本输出未显示 version、canEdit、canDelete，回复列表还缺少 parentPostId"
+        },
+        {
+          "id": "SERVER-READ-MODEL-WRITE-CONTEXT",
+          "status": "server_completed",
+          "summary": "个人内容与主题详情读取模型缺少完成安全编辑和删除所需的版本、归属和权限字段"
+        },
+        {
+          "id": "SERVER-REPLY-UPDATE-CONTRACT",
+          "status": "server_completed",
+          "summary": "OpenAPI 曾把 parentPostId 错误声明为回复更新字段，但服务端只允许创建时选择父回复"
+        }
+      ],
+      "candidate": {
+        "version": "1.0.1",
+        "artifact": "artifacts/apexcn-cli.tgz",
+        "status": "local_gates_passed_pending_independent_validation"
+      },
+      "serverCapabilityAuditRequired": true,
+      "serverTask": {
+        "threadId": "019f835b-6053-7110-9719-6f5b7b0ce1ba",
+        "repository": "/Users/kwang/apexcn-forums",
+        "status": "completed",
+        "commit": "cc312c4",
+        "productionValidation": "passed_with_zero_residue"
+      },
+      "executionOrder": [
+        "apexcn-forums-if-server-change-required",
+        "apexcn-cli",
+        "apexcn-cli-test"
+      ],
+      "promotionToActiveIssue": "only-after-fresh-independent-validator-finding"
+    }
+  ],
+  "developmentExtensionProtocol": {
+    "schemaVersion": 1,
+    "scope": "all-future-cli-capability-extensions",
+    "crossRepositoryMutationFromSingleSessionAllowed": false,
+    "server": {
+      "repository": "/Users/kwang/apexcn-forums",
+      "taskVisibility": "user-visible-codex-desktop-task",
+      "sessionCwdMustEqualRepository": true,
+      "requiredWhen": "APEX application or ORDS REST API capability is missing or incorrect",
+      "completionEvidence": [
+        "server commit",
+        "API contract",
+        "DEV API evidence",
+        "cleanup evidence"
+      ]
+    },
+    "cli": {
+      "repository": "/Users/kwang/apexcn-cli",
+      "startsAfterRequiredServerEvidence": true,
+      "mustNotMaskServerGap": true,
+      "requiredEvidence": [
+        "focused tests",
+        "full quality gates",
+        "immutable candidate artifact"
+      ]
+    },
+    "validator": {
+      "repository": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
+      "taskVisibility": "user-visible-codex-desktop-task",
+      "freshTaskRequired": true,
+      "sessionCwdMustEqualRepository": true,
+      "realScenarioSimulationRequired": true,
+      "backendAndBrowserEvidenceRequired": true,
+      "cleanupRequired": true
+    },
+    "sequence": [
+      "audit-server-capability",
+      "extend-apexcn-forums-when-required",
+      "extend-apexcn-cli",
+      "freeze-cli-candidate",
+      "validate-in-fresh-apexcn-cli-test-task",
+      "close-issues-and-release"
+    ]
+  },
   "sourcePolicy": {
     "allowedSource": "independent-validator-thread",
     "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",

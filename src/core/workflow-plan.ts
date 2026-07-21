@@ -16,11 +16,13 @@ export type WorkflowPlanInput = {
   keyword?: string;
   topicId?: number;
   replyId?: number;
+  parentPostId?: number;
   categoryId?: number;
   title?: string;
   problem?: string;
   answer?: string;
   contentFile?: string;
+  tags?: string;
   ifVersion?: number;
   confirmTitle?: string;
   confirmId?: number;
@@ -92,7 +94,7 @@ function stepsForGoal(input: WorkflowPlanInput, files: Record<string, string>): 
     const steps = [
       step("topic-view", "Fetch topic context", topicViewCommand(input, files), "api-read", [], [files.topic], false),
       step("draft-reply", "Draft local reply", draftReplyCommand(input, files), "local", [files.topic], [files.reply], false),
-      step("review-reply", "Review local reply draft", `apexcn review reply --content-file ${shellArg(files.reply)} --json`, "local", [files.reply], [], false),
+      step("review-reply", "Review local reply draft", reviewReplyCommand(input, files.reply), "local", [files.reply], [], false),
       step("preview-reply-create", "Run auditable reply create preview", workflowRunPreviewCommand(input, files), "api-write-preview", [files.reply], [files.preview], false)
     ];
     return input.includeExecute
@@ -100,7 +102,7 @@ function stepsForGoal(input: WorkflowPlanInput, files: Record<string, string>): 
       : steps;
   }
   if (isContentWorkflowGoal(input.goal)) {
-    const content = input.goal.endsWith("-create") || input.goal.endsWith("-update");
+    const content = input.goal.endsWith("-create") || input.goal === "reply-update" || Boolean(input.contentFile);
     const steps = [
       ...(content ? [step("review-content", "Review content before preview", reviewContentCommand(input), "local", [contentFile(input, files)], [], false)] : []),
       step(`preview-${input.goal}`, `Run auditable ${input.goal} preview`, workflowRunPreviewCommand(input, files), "api-write-preview", content ? [contentFile(input, files)] : [], [files.preview], false)
@@ -147,7 +149,7 @@ function missingInputsForGoal(input: WorkflowPlanInput): string[] {
   if (input.goal === "topic-update") {
     if (input.topicId === undefined) missing.push("--topic-id");
     if (input.ifVersion === undefined) missing.push("--if-version");
-    if (!input.contentFile && !text(input.title) && input.categoryId === undefined) missing.push("--content-file|--title|--category-id");
+    if (!input.contentFile && !text(input.title) && !text(input.tags) && input.categoryId === undefined) missing.push("--content-file|--title|--tags|--category-id");
   }
   if (input.goal === "topic-delete") {
     if (input.topicId === undefined) missing.push("--topic-id");
@@ -160,6 +162,7 @@ function missingInputsForGoal(input: WorkflowPlanInput): string[] {
   }
   if (input.goal === "reply-update") {
     if (input.replyId === undefined) missing.push("--reply-id");
+    if (input.topicId === undefined) missing.push("--topic-id");
     if (input.ifVersion === undefined) missing.push("--if-version");
     if (!input.contentFile) missing.push("--content-file");
   }
@@ -183,7 +186,7 @@ function draftQuestionCommand(input: WorkflowPlanInput, files: Record<string, st
 }
 
 function reviewTopicCommand(input: WorkflowPlanInput, files: Record<string, string>): string {
-  return `apexcn review topic --title ${shellArg(input.title ?? "<title>")} --content-file ${shellArg(contentFile(input, files))}${input.categoryId === undefined ? "" : ` --category-id ${input.categoryId}`} --json`;
+  return `apexcn review topic --title ${shellArg(input.title ?? "<title>")} --content-file ${shellArg(contentFile(input, files))}${input.categoryId === undefined ? "" : ` --category-id ${input.categoryId}`}${input.tags ? ` --tags ${shellArg(input.tags)}` : ""} --json`;
 }
 
 function topicViewCommand(input: WorkflowPlanInput, files: Record<string, string>): string {
@@ -191,7 +194,11 @@ function topicViewCommand(input: WorkflowPlanInput, files: Record<string, string
 }
 
 function draftReplyCommand(input: WorkflowPlanInput, files: Record<string, string>): string {
-  return `apexcn draft reply --topic-id ${input.topicId ?? "<topic-id>"} --answer ${shellArg(input.answer ?? "<answer>")} --topic-file ${shellArg(files.topic)} --format text > ${shellArg(files.reply)}`;
+  return `apexcn draft reply --topic-id ${input.topicId ?? "<topic-id>"}${input.parentPostId === undefined ? "" : ` --parent-post-id ${input.parentPostId}`} --answer ${shellArg(input.answer ?? "<answer>")} --topic-file ${shellArg(files.topic)} --format text > ${shellArg(files.reply)}`;
+}
+
+function reviewReplyCommand(input: WorkflowPlanInput, contentFile: string): string {
+  return `apexcn review reply --topic-id ${input.topicId ?? "<topic-id>"}${input.parentPostId === undefined ? "" : ` --parent-post-id ${input.parentPostId}`} --content-file ${shellArg(contentFile)} --json`;
 }
 
 function withApprovalAndExecute(
@@ -212,11 +219,13 @@ function workflowRunPreviewCommand(input: WorkflowPlanInput, files: Record<strin
   if (input.keyword) args.push("--keyword", shellArg(input.keyword));
   if (input.topicId !== undefined) args.push("--topic-id", String(input.topicId));
   if (input.replyId !== undefined) args.push("--reply-id", String(input.replyId));
+  if (input.parentPostId !== undefined) args.push("--parent-post-id", String(input.parentPostId));
   if (input.categoryId !== undefined) args.push("--category-id", String(input.categoryId));
   if (input.title) args.push("--title", shellArg(input.title));
   if (input.problem) args.push("--problem", shellArg(input.problem));
   if (input.answer) args.push("--answer", shellArg(input.answer));
   if (input.contentFile) args.push("--content-file", shellArg(input.contentFile));
+  if (input.tags) args.push("--tags", shellArg(input.tags));
   if (input.ifVersion !== undefined) args.push("--if-version", String(input.ifVersion));
   if (input.confirmTitle) args.push("--confirm-title", shellArg(input.confirmTitle));
   if (input.confirmId !== undefined) args.push("--confirm-id", String(input.confirmId));
@@ -226,7 +235,10 @@ function workflowRunPreviewCommand(input: WorkflowPlanInput, files: Record<strin
 
 function reviewContentCommand(input: WorkflowPlanInput): string {
   const kind = input.goal.startsWith("reply-") ? "reply" : "topic";
-  return `apexcn review ${kind} --content-file ${shellArg(input.contentFile ?? "<content-file>")} --json`;
+  if (kind === "reply") {
+    return reviewReplyCommand(input, input.contentFile ?? "<content-file>");
+  }
+  return `apexcn review topic${input.title ? ` --title ${shellArg(input.title)}` : ""}${input.categoryId === undefined ? "" : ` --category-id ${input.categoryId}`}${input.tags ? ` --tags ${shellArg(input.tags)}` : ""} --content-file ${shellArg(input.contentFile ?? "<content-file>")} --json`;
 }
 
 function isContentWorkflowGoal(goal: WorkflowGoal): boolean {

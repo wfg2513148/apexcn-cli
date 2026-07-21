@@ -191,6 +191,43 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
   check(issues.schemaVersion === 1, "issues.schemaVersion must be 1", problems);
   check(issues.product === "apexcn-cli", "issues.product must be apexcn-cli", problems);
   check(issues.activeOnly === true, "issues.json must contain active issues only", problems);
+  const extensionProtocol = issues.developmentExtensionProtocol;
+  check(extensionProtocol?.schemaVersion === 1, "development extension protocol schema must be 1", problems);
+  check(extensionProtocol?.scope === "all-future-cli-capability-extensions", "development extension protocol must apply to all future CLI capability extensions", problems);
+  check(extensionProtocol?.crossRepositoryMutationFromSingleSessionAllowed === false, "cross-repository extension work must use repository-owned tasks", problems);
+  check(extensionProtocol?.server?.repository === "/Users/kwang/apexcn-forums", "server extension repository binding drifted", problems);
+  check(extensionProtocol?.server?.taskVisibility === "user-visible-codex-desktop-task", "server extension must use a user-visible Codex Desktop task", problems);
+  check(extensionProtocol?.server?.sessionCwdMustEqualRepository === true, "server extension task cwd must equal the server repository", problems);
+  check(extensionProtocol?.cli?.repository === "/Users/kwang/apexcn-cli", "CLI extension repository binding drifted", problems);
+  check(extensionProtocol?.cli?.startsAfterRequiredServerEvidence === true, "CLI extension must wait for required server evidence", problems);
+  check(extensionProtocol?.cli?.mustNotMaskServerGap === true, "CLI extension must not mask a server gap", problems);
+  check(extensionProtocol?.validator?.repository === "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test", "extension validator repository binding drifted", problems);
+  check(extensionProtocol?.validator?.taskVisibility === "user-visible-codex-desktop-task", "extension validation must use a user-visible Codex Desktop task", problems);
+  check(extensionProtocol?.validator?.freshTaskRequired === true, "extension validation must use a fresh task", problems);
+  check(extensionProtocol?.validator?.sessionCwdMustEqualRepository === true, "extension validator task cwd must equal its repository", problems);
+  check(extensionProtocol?.validator?.realScenarioSimulationRequired === true, "extension validation must simulate real scenarios", problems);
+  check(extensionProtocol?.validator?.backendAndBrowserEvidenceRequired === true, "extension validation needs backend and browser evidence", problems);
+  check(extensionProtocol?.validator?.cleanupRequired === true, "extension validation must clean up scoped test data", problems);
+  check(equalArrays(extensionProtocol?.sequence, [
+    "audit-server-capability",
+    "extend-apexcn-forums-when-required",
+    "extend-apexcn-cli",
+    "freeze-cli-candidate",
+    "validate-in-fresh-apexcn-cli-test-task",
+    "close-issues-and-release"
+  ]), "development extension sequence drifted", problems);
+  const enhancementRequestIds = new Set();
+  const enhancementRequestStatuses = new Set(["requested", "in_progress", "blocked"]);
+  for (const request of issues.enhancementRequests ?? []) {
+    unique(request.id, "enhancement request", enhancementRequestIds, problems);
+    check(enhancementRequestStatuses.has(request.status), `enhancement request ${request.id} has an invalid active status`, problems);
+    check(nonEmpty(request.title), `enhancement request ${request.id} needs a title`, problems);
+    check(Array.isArray(request.currentBehavior) && request.currentBehavior.length > 0, `enhancement request ${request.id} needs current behavior`, problems);
+    check(Array.isArray(request.requiredOutcomes) && request.requiredOutcomes.length > 0, `enhancement request ${request.id} needs required outcomes`, problems);
+    check(request.serverCapabilityAuditRequired === true, `enhancement request ${request.id} must audit server capability`, problems);
+    check(equalArrays(request.executionOrder, ["apexcn-forums-if-server-change-required", "apexcn-cli", "apexcn-cli-test"]), `enhancement request ${request.id} execution order drifted`, problems);
+    check(request.promotionToActiveIssue === "only-after-fresh-independent-validator-finding", `enhancement request ${request.id} must not bypass validator issue admission`, problems);
+  }
   check(roadmap.executionProtocol?.planningMode === "just_in_time", "planningMode must be just_in_time", problems);
   check(roadmap.executionProtocol?.preGeneratedImplementationPlans === false, "preGeneratedImplementationPlans must be false", problems);
   check(roadmap.executionProtocol?.nextMilestoneRequiresManualConfirmation === false, "milestones must continue automatically after release closure", problems);
@@ -526,6 +563,10 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
   check(agentsText.includes("issues.json") && agentsText.includes("actual validator findings only"), "AGENTS.md must restrict issues.json to validator findings", problems);
   check(agentsText.includes("Codex in-app browser") && agentsText.includes("database-only"), "AGENTS.md must require visual write-back validation", problems);
   check(agentsText.includes("existing dedicated test account"), "AGENTS.md must require test account reuse", problems);
+  check(agentsText.includes("CLI Capability Extension Protocol") && agentsText.includes("issues.json.enhancementRequests"), "AGENTS.md must define the CLI capability extension protocol", problems);
+  check(agentsText.includes("/Users/kwang/apexcn-forums") && agentsText.includes("server-capability audit"), "AGENTS.md must route server extensions to apexcn-forums", problems);
+  check(agentsText.includes("freeze an immutable candidate artifact") && agentsText.includes("/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test"), "AGENTS.md must require frozen-candidate validation in apexcn-cli-test", problems);
+  check(agentsText.includes("replying to an existing reply") && agentsText.includes("deleting a reply owned by the authenticated test account"), "AGENTS.md must cover nested-reply and own-reply deletion scenarios", problems);
   return problems;
 }
 

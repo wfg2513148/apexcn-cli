@@ -50,15 +50,49 @@ describe("MCP tools", () => {
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
 
-    const result = await callMcpTool("apexcn_topic_create_preview", { title: "Title", content: "Body", categoryId: 4 }, mcpPolicy(true));
+    const result = await callMcpTool("apexcn_topic_create_preview", { title: "Title", content: "Body", categoryId: 4, tags: "APEX,ORDS" }, mcpPolicy(true));
 
     expect(result).toEqual(expect.objectContaining({
       ok: true,
       mode: "preview",
       willExecute: false,
-      request: expect.objectContaining({ method: "POST", path: "/api/v1/topics" })
+      request: expect.objectContaining({ method: "POST", path: "/api/v1/topics", body: expect.objectContaining({ tags: "APEX,ORDS" }) })
     }));
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("reply create preview preserves the selected parent reply", async () => {
+    const result = await callMcpTool(
+      "apexcn_reply_create_preview",
+      { topicId: 42, parentPostId: 100, content: "Nested reply" },
+      mcpPolicy(true)
+    );
+
+    expect(result).toEqual(expect.objectContaining({
+      ok: true,
+      willExecute: false,
+      request: {
+        method: "POST",
+        path: "/api/v1/topics/42/replies",
+        body: { content: "Nested reply", parentPostId: 100 }
+      }
+    }));
+  });
+
+  test("workflow plan preserves nested reply and topic tag inputs", async () => {
+    const replyPlan = await callMcpTool(
+      "apexcn_workflow_plan",
+      { goal: "reply", topicId: 42, parentPostId: 100, answer: "Nested reply" },
+      mcpPolicy(false)
+    ) as { steps: Array<{ command: string }> };
+    const topicPlan = await callMcpTool(
+      "apexcn_workflow_plan",
+      { goal: "topic-create", categoryId: 4, title: "Tagged topic", contentFile: "topic.md", tags: "APEX,ORDS" },
+      mcpPolicy(false)
+    ) as { steps: Array<{ command: string }> };
+
+    expect(replyPlan.steps.map((step) => step.command).join("\n")).toContain("--parent-post-id 100");
+    expect(topicPlan.steps.map((step) => step.command).join("\n")).toContain('--tags "APEX,ORDS"');
   });
 
   test("update previews use the verified ORDS POST contract without network", async () => {

@@ -36,11 +36,13 @@ type WorkflowRunOptions = FormatOption & {
   keyword?: string;
   topicId?: number;
   replyId?: number;
+  parentPostId?: number;
   categoryId?: number;
   title?: string;
   problem?: string;
   answer?: string;
   contentFile?: string;
+  tags?: string;
   ifVersion?: number;
   confirmTitle?: string;
   confirmId?: number;
@@ -123,11 +125,13 @@ type WorkflowRunInputs = {
   keyword?: string;
   topicId?: number;
   replyId?: number;
+  parentPostId?: number;
   categoryId?: number;
   title?: string;
   problem?: string;
   answer?: string;
   contentFile?: string;
+  tags?: string;
   ifVersion?: number;
   confirmTitle?: string;
   confirmId?: number;
@@ -187,11 +191,13 @@ export function createWorkflowCommand(options: WorkflowCommandOptions): Command 
     .option("--keyword <keyword>", "search or research keyword")
     .option("--topic-id <id>", "topic id", parsePositiveInteger)
     .option("--reply-id <id>", "reply id", parsePositiveInteger)
+    .option("--parent-post-id <id>", "parent reply id for nested reply creation", parsePositiveInteger)
     .option("--category-id <id>", "category id", parsePositiveInteger)
     .option("--title <title>", "topic title")
     .option("--problem <text>", "question problem text for ask-question")
     .option("--answer <text>", "reply answer text for reply")
     .option("--content-file <path>", "existing Markdown content file for publish-topic")
+    .option("--tags <csv>", "topic tags for create/update")
     .option("--if-version <n>", "current object version for update/delete", parsePositiveInteger)
     .option("--confirm-title <title>", "exact topic title confirmation for topic delete")
     .option("--confirm-id <id>", "exact reply id confirmation for reply delete", parsePositiveInteger)
@@ -214,11 +220,13 @@ export function createWorkflowCommand(options: WorkflowCommandOptions): Command 
     .option("--keyword <keyword>", "search or research keyword for ask-question")
     .option("--topic-id <id>", "topic id for reply or topic update/delete", parsePositiveInteger)
     .option("--reply-id <id>", "reply id for reply update/delete", parsePositiveInteger)
+    .option("--parent-post-id <id>", "parent reply id for nested reply creation", parsePositiveInteger)
     .option("--category-id <id>", "category id for topic create preview", parsePositiveInteger)
     .option("--title <title>", "topic title for ask-question")
     .option("--problem <text>", "question problem text for ask-question")
     .option("--answer <text>", "reply answer text for reply")
     .option("--content-file <path>", "Markdown content for topic/reply update")
+    .option("--tags <csv>", "topic tags for create/update")
     .option("--if-version <n>", "current object version for update/delete", parsePositiveInteger)
     .option("--confirm-title <title>", "exact topic title confirmation for topic delete")
     .option("--confirm-id <id>", "exact reply id confirmation for reply delete", parsePositiveInteger)
@@ -1326,7 +1334,8 @@ async function executeRunSteps(state: WorkflowRunState, runDir: string, session:
       const body = {
         categoryId: effectiveCategoryId(state, options),
         title: effectiveTitle(state, options),
-        content
+        content,
+        tags: effectiveTags(state, options)
       };
       const request = replaySafeRequest(state, "POST", "/api/v1/topics", body);
       await writeJson(state.artifacts.preview, {
@@ -1374,7 +1383,10 @@ async function executeRunSteps(state: WorkflowRunState, runDir: string, session:
     const content = await readFile(state.artifacts.reply, "utf8");
     const topicId = effectiveTopicId(state, options);
     const path = `/api/v1/topics/${topicId}/replies`;
-    const request = replaySafeRequest(state, "POST", path, { content });
+    const request = replaySafeRequest(state, "POST", path, compactObject({
+      content,
+      parentPostId: state.inputs.parentPostId
+    }));
     await writeJson(state.artifacts.preview, {
       kind: "workflow-preview",
       schemaVersion: 1,
@@ -1448,14 +1460,16 @@ async function contentMutationRequest(state: WorkflowRunState): Promise<Workflow
     return replaySafeRequest(state, "POST", "/api/v1/topics", {
       categoryId: requiredWorkflowId(state.inputs.categoryId, "category id"),
       title: fieldText(state.inputs.title),
-      content
+      content,
+      tags: state.inputs.tags
     });
   }
   if (state.goal === "topic-update") {
     const body = compactObject({
       categoryId: state.inputs.categoryId,
       title: state.inputs.title,
-      content: state.inputs.contentFile && state.artifacts.content ? await readFile(state.artifacts.content, "utf8") : undefined
+      content: state.inputs.contentFile && state.artifacts.content ? await readFile(state.artifacts.content, "utf8") : undefined,
+      tags: state.inputs.tags
     });
     return replaySafeRequest(state, "POST", `/api/v1/topics/${requiredWorkflowId(state.inputs.topicId, "topic id")}`, body, state.inputs.ifVersion);
   }
@@ -1484,7 +1498,7 @@ async function contentMutationRequest(state: WorkflowRunState): Promise<Workflow
       state,
       "POST",
       `/api/v1/topics/${requiredWorkflowId(state.inputs.topicId, "topic id")}/replies`,
-      { content }
+      compactObject({ content, parentPostId: state.inputs.parentPostId })
     );
   }
   return replaySafeRequest(
@@ -1654,11 +1668,13 @@ function workflowRunInputs(options: WorkflowRunOptions): WorkflowRunInputs {
     keyword: fieldText(options.keyword).trim() || undefined,
     topicId: options.topicId,
     replyId: options.replyId,
+    parentPostId: options.parentPostId,
     categoryId: options.categoryId,
     title: fieldText(options.title).trim() || undefined,
     problem: fieldText(options.problem).trim() || undefined,
     answer: fieldText(options.answer).trim() || undefined,
     contentFile: fieldText(options.contentFile).trim() || undefined,
+    tags: fieldText(options.tags).trim() || undefined,
     ifVersion: options.ifVersion,
     confirmTitle: fieldText(options.confirmTitle).trim() || undefined,
     confirmId: options.confirmId
@@ -1744,8 +1760,8 @@ function missingInputsForRun(options: WorkflowRunOptions, goal: WorkflowRunGoal)
   } else if (goal === "topic-update") {
     if (options.topicId === undefined) missing.push("--topic-id");
     if (options.ifVersion === undefined) missing.push("--if-version");
-    if (!options.contentFile && !fieldText(options.title).trim() && options.categoryId === undefined) {
-      missing.push("--content-file|--title|--category-id");
+    if (!options.contentFile && !fieldText(options.title).trim() && !fieldText(options.tags).trim() && options.categoryId === undefined) {
+      missing.push("--content-file|--title|--tags|--category-id");
     }
   } else if (goal === "topic-delete") {
     if (options.topicId === undefined) missing.push("--topic-id");
@@ -2221,6 +2237,10 @@ function effectiveTitle(state: WorkflowRunState, options: WorkflowRunOptions): s
     throw new Error("Workflow run is missing title input.");
   }
   return value;
+}
+
+function effectiveTags(state: WorkflowRunState, options: WorkflowRunOptions): string | undefined {
+  return fieldText(options.tags ?? state.inputs.tags).trim() || undefined;
 }
 
 function effectiveProblem(state: WorkflowRunState, options: WorkflowRunOptions): string {

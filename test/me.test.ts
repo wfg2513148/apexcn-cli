@@ -316,8 +316,8 @@ describe("me command", () => {
     const stdout: string[] = [];
     const stderr: string[] = [];
     const responses: Record<string, unknown> = {
-      "/api/v1/me/topics?pageSize=2&offset=4": { kind: "me-topics", items: [{ id: 42, title: "Topic", createdDate: "2026-07-01", updatedDate: "2026-07-02", url: "https://oracleapex.cn/t/42" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } },
-      "/api/v1/me/replies?pageSize=2&offset=4": { kind: "me-replies", items: [{ id: 90, topicId: 42, topic: { title: "Topic" }, createdDate: "2026-07-02", updatedDate: "2026-07-03", url: "https://oracleapex.cn/t/42#90" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } },
+      "/api/v1/me/topics?pageSize=2&offset=4": { kind: "me-topics", items: [{ id: 42, title: "Topic", version: 3, canEdit: true, canDelete: true, createdDate: "2026-07-01", updatedDate: "2026-07-02", url: "https://oracleapex.cn/t/42" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } },
+      "/api/v1/me/replies?pageSize=2&offset=4": { kind: "me-replies", items: [{ id: 90, replyId: 90, topicId: 42, parentPostId: 80, version: 2, canEdit: true, canDelete: true, topic: { title: "Topic" }, createdDate: "2026-07-02", updatedDate: "2026-07-03", url: "https://oracleapex.cn/t/42#90" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } },
       "/api/v1/me/favorites?pageSize=2&offset=4": { kind: "me-favorites", items: [{ topicId: 43, title: "Favorite", relationCreatedDate: "2026-07-04", updatedDate: "2026-07-05", url: "https://oracleapex.cn/t/43" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } },
       "/api/v1/me/subscriptions?pageSize=2&offset=4": { kind: "me-subscriptions", items: [{ topicId: 44, title: "Subscription", relationCreatedDate: "2026-07-04", updatedDate: "2026-07-05", url: "https://oracleapex.cn/t/44" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } }
     };
@@ -332,11 +332,15 @@ describe("me command", () => {
     });
 
     await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz", "--base-url", "https://oracleapex.cn/ords/test", "--profile", "test@oci"]);
+    const textByCommand: Record<string, string> = {};
     for (const command of ["topics", "replies", "favorites", "subscriptions"]) {
       stdout.length = 0;
       await program.parseAsync(["node", "apexcn", "me", command, "--page-size", "2", "--offset", "4", "--format", "text"]);
       expect(stdout.join("")).toContain("https://oracleapex.cn/t/");
+      textByCommand[command] = stdout.join("");
     }
+    expect(textByCommand.topics).toContain("\t3\ttrue\ttrue\t");
+    expect(textByCommand.replies).toContain("90\t42\t80\t2\ttrue\ttrue\t");
 
     expect(fetch).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/me/topics?pageSize=2&offset=4", expect.any(Object));
     expect(fetch).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/me/replies?pageSize=2&offset=4", expect.any(Object));

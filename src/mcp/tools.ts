@@ -41,11 +41,13 @@ export async function callMcpTool(name: string, args: unknown = {}, policy: McpP
         keyword: optionalString(value, "keyword"),
         topicId: optionalNumber(value, "topicId"),
         replyId: optionalNumber(value, "replyId"),
+        parentPostId: optionalNumber(value, "parentPostId"),
         categoryId: optionalNumber(value, "categoryId"),
         title: optionalString(value, "title"),
         problem: optionalString(value, "problem"),
         answer: optionalString(value, "answer"),
         contentFile: optionalString(value, "contentFile"),
+        tags: optionalString(value, "tags"),
         ifVersion: optionalNumber(value, "ifVersion"),
         confirmTitle: optionalString(value, "confirmTitle"),
         confirmId: optionalNumber(value, "confirmId"),
@@ -104,12 +106,12 @@ export async function callMcpTool(name: string, args: unknown = {}, policy: McpP
 
 function previewWriteTool(name: string, args: Record<string, unknown>): unknown {
   if (name === "apexcn_topic_create_preview") {
-    return previewPlan({ method: "POST", path: "/api/v1/topics", body: { title: requiredString(args, "title"), content: requiredString(args, "content"), categoryId: requiredNumber(args, "categoryId") } });
+    return previewPlan({ method: "POST", path: "/api/v1/topics", body: compact({ title: requiredString(args, "title"), content: requiredString(args, "content"), categoryId: requiredNumber(args, "categoryId"), tags: optionalString(args, "tags") }) });
   }
   if (name === "apexcn_topic_update_preview") {
-    const body = compact({ title: optionalString(args, "title"), content: optionalString(args, "content"), categoryId: optionalNumber(args, "categoryId") });
+    const body = compact({ title: optionalString(args, "title"), content: optionalString(args, "content"), categoryId: optionalNumber(args, "categoryId"), tags: optionalString(args, "tags") });
     if (Object.keys(body).length === 0) {
-      throw new Error("At least one of title, content, or categoryId is required");
+      throw new Error("At least one of title, content, categoryId, or tags is required");
     }
     return previewPlan({ method: "POST", path: `/api/v1/topics/${requiredNumber(args, "topicId")}`, body });
   }
@@ -117,7 +119,7 @@ function previewWriteTool(name: string, args: Record<string, unknown>): unknown 
     return previewPlan({ method: "DELETE", path: `/api/v1/topics/${requiredNumber(args, "topicId")}`, body: { confirmTitle: requiredString(args, "confirmTitle") } });
   }
   if (name === "apexcn_reply_create_preview") {
-    return previewPlan({ method: "POST", path: `/api/v1/topics/${requiredNumber(args, "topicId")}/replies`, body: { content: requiredString(args, "content") } });
+    return previewPlan({ method: "POST", path: `/api/v1/topics/${requiredNumber(args, "topicId")}/replies`, body: compact({ content: requiredString(args, "content"), parentPostId: optionalNumber(args, "parentPostId") }) });
   }
   if (name === "apexcn_reply_update_preview") {
     return previewPlan({ method: "POST", path: `/api/v1/replies/${requiredNumber(args, "replyId")}`, body: { content: requiredString(args, "content") } });

@@ -43,3 +43,14 @@
 - Reuse the existing dedicated test account for write-back validation. Do not create a new account for each run; only maintain or replace it when it is unavailable or lacks the required minimum permissions.
 - Route missing or incorrect ORDS REST API capability to the fixed server thread before adapting the CLI. Do not hide server gaps with CLI-only workarounds.
 - A dedicated minimum-privilege apexcn forums API key may be created and used in `dev@oci` for required validation. Never commit it, print it, include it in evidence, or use it for production community writes.
+
+## CLI Capability Extension Protocol
+
+- Apply this protocol to every future CLI capability extension and behavior-gap repair. Record user-confirmed enhancement requirements in `issues.json.enhancementRequests`; keep them separate from validator-originated active findings in `issues.json.issues`.
+- Start with a server-capability audit. If the APEX application or ORDS REST API is missing or incorrect, create or route a dedicated user-visible Codex Desktop task whose session `cwd` is exactly `/Users/kwang/apexcn-forums`. That task owns the application/ORDS change, server tests, DEV API evidence, commit, and scoped cleanup.
+- Do not implement a CLI fallback that masks a missing server capability. When server work is required, accept its API contract and DEV evidence before implementing the corresponding CLI change in the `/Users/kwang/apexcn-cli` task.
+- After the CLI change passes focused and full local quality gates, freeze an immutable candidate artifact and checksum. Then create a fresh user-visible Codex Desktop validation task whose session `cwd` is exactly `/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test`.
+- The validator must simulate the complete real user scenario on the frozen candidate, preserve first-attempt evidence, inspect backend/API results and the real rendered application in the Codex in-app browser, and clean up only the created test data.
+- For reply capability changes, the assigned scenarios must include replying to an existing reply and deleting a reply owned by the authenticated test account, with permission-denial cases for replies owned by other accounts.
+- Keep repository ownership isolated: the apexcn-forums task changes only the server repository, the apexcn-cli task changes only the CLI repository, and the apexcn-cli-test task produces independent evidence without repairing the candidate.
+- Close the enhancement request or promote/remove an active issue only after server evidence (when required), CLI gates, fresh independent real-scenario validation, cleanup proof, push, and release are all complete.

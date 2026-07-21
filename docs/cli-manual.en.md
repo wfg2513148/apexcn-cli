@@ -511,6 +511,22 @@ Create a nested reply:
 apexcn reply create 30549 --parent-post-id 201480 --content "One more detail." --preview
 ```
 
+The direct command above only previews the request. Preserve `parentPostId` through the auditable workflow for a real publish:
+
+```bash
+apexcn workflow run \
+  --goal reply-create \
+  --topic-id 30549 \
+  --parent-post-id 201480 \
+  --content-file ./reply.md \
+  --output-dir ./nested-reply-run \
+  --json
+apexcn workflow approve --run-dir ./nested-reply-run --json
+apexcn workflow run --resume ./nested-reply-run --execute --yes --json
+```
+
+Before execution, use `topic view` to confirm that the parent reply belongs to the same topic and verify the `parentPostId` in `preview.json`.
+
 Edit a reply:
 
 ```bash
@@ -525,6 +541,23 @@ Delete a reply:
 apexcn reply delete 201480 --yes --force --preview
 apexcn post delete 201480 --yes --force --preview
 ```
+
+To delete your own reply, first read `replyId`, `topicId`, `version`, `canDelete`, and the real URL from `me replies --json`. Continue only when `canDelete` is `true`, then bind the returned version into the delete workflow:
+
+```bash
+apexcn me replies --page-size 10 --json
+apexcn workflow run \
+  --goal reply-delete \
+  --reply-id 201480 \
+  --confirm-id 201480 \
+  --if-version 2 \
+  --output-dir ./reply-delete-run \
+  --json
+apexcn workflow approve --run-dir ./reply-delete-run --json
+apexcn workflow run --resume ./reply-delete-run --execute --yes --json
+```
+
+After `409 VERSION_CONFLICT`, read the current version and create a new preview and approval. Do not modify and reuse the old approval.
 
 ## favorite
 

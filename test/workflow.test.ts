@@ -171,6 +171,8 @@ describe("workflow commands", () => {
       "reply",
       "--topic-id",
       "30549",
+      "--parent-post-id",
+      "201480",
       "--answer",
       "Check the Web Credential first.",
       "--include-execute"
@@ -189,6 +191,9 @@ describe("workflow commands", () => {
       mode: "api-write-execute",
       requiresConfirmation: true
     }));
+    expect(plan.steps.find((step: { id: string }) => step.id === "draft-reply").command).toContain("--parent-post-id 201480");
+    expect(plan.steps.find((step: { id: string }) => step.id === "review-reply").command).toContain("--parent-post-id 201480");
+    expect(plan.steps.find((step: { id: string }) => step.id === "preview-reply-create").command).toContain("--parent-post-id 201480");
     expect(plan.checkpoints.confirmations).toEqual(["approve-reply-create", "execute-reply-create"]);
     expect(plan.safetySummary.requiresConfirmation).toBe(true);
   });
@@ -380,6 +385,8 @@ describe("workflow commands", () => {
       "reply",
       "--topic-id",
       "30549",
+      "--parent-post-id",
+      "201480",
       "--answer",
       "Check the Web Credential first.",
       "--output-dir",
@@ -390,9 +397,16 @@ describe("workflow commands", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect((fetch.mock.calls[0][1] as RequestInit | undefined)?.method).toBeUndefined();
     expect(await readJson(join(runDir, "topic.json"))).toEqual(expect.objectContaining({ kind: "workflow-topic" }));
+    expect(await readJson(join(runDir, "run.json"))).toEqual(expect.objectContaining({
+      inputs: expect.objectContaining({ parentPostId: 201480 })
+    }));
     expect(await readJson(join(runDir, "preview.json"))).toEqual(expect.objectContaining({
       kind: "workflow-preview",
-      request: expect.objectContaining({ method: "POST", path: "/api/v1/topics/30549/replies" })
+      request: expect.objectContaining({
+        method: "POST",
+        path: "/api/v1/topics/30549/replies",
+        body: expect.objectContaining({ parentPostId: 201480 })
+      })
     }));
   });
 
@@ -1022,6 +1036,8 @@ describe("workflow commands", () => {
       "42",
       "--content-file",
       contentFile,
+      "--tags",
+      "APEX,REST",
       "--if-version",
       "3",
       "--output-dir",
@@ -1040,6 +1056,7 @@ describe("workflow commands", () => {
         path: "/api/v1/topics/42",
         body: expect.objectContaining({
           content: "Updated topic body with auditable workflow evidence.",
+          tags: "APEX,REST",
           ifVersion: 3,
           operationKey: expect.stringMatching(/^[A-Za-z0-9._:-]{16,128}$/),
           payloadHash: expect.stringMatching(/^[a-f0-9]{64}$/)
@@ -1048,7 +1065,7 @@ describe("workflow commands", () => {
     }));
     const previewBody = (preview.request as { body: Record<string, unknown> }).body;
     expect(previewBody.payloadHash).toBe(createHash("sha256")
-      .update(JSON.stringify({ content: "Updated topic body with auditable workflow evidence." }), "utf8")
+      .update(JSON.stringify({ content: "Updated topic body with auditable workflow evidence.", tags: "APEX,REST" }), "utf8")
       .digest("hex"));
 
     const approver = workflowProgram();
@@ -1080,6 +1097,7 @@ describe("workflow commands", () => {
       expect(body.operationKey).toBe(previewBody.operationKey);
       expect(body.payloadHash).toBe(previewBody.payloadHash);
       expect(body.ifVersion).toBe(3);
+      expect(body.tags).toBe("APEX,REST");
       return Response.json({ ok: true, requestId: "req_update", id: 42, version: 4, changed: true });
     });
     vi.stubGlobal("fetch", executeFetch);
@@ -1128,6 +1146,31 @@ describe("workflow commands", () => {
     ]));
   });
 
+  test("workflow topic update supports tags-only changes without a content artifact", async () => {
+    const runDir = await tempPath("topic-tags-update");
+    const env = await configuredWorkflowProgram(async () => Response.json({ error: "unexpected" }, { status: 500 }));
+
+    await env.program.parseAsync([
+      "node", "apexcn", "workflow", "run",
+      "--goal", "topic-update",
+      "--topic-id", "42",
+      "--tags", "APEX,ORDS",
+      "--if-version", "3",
+      "--output-dir", runDir
+    ]);
+
+    expect(await readJson(join(runDir, "preview.json"))).toEqual(expect.objectContaining({
+      request: expect.objectContaining({
+        body: expect.objectContaining({ tags: "APEX,ORDS", ifVersion: 3 })
+      })
+    }));
+    const state = await readJson(join(runDir, "run.json"));
+    expect(state.steps).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "capture-content", status: "skipped" }),
+      expect.objectContaining({ id: "review-content", status: "skipped" })
+    ]));
+  });
+
   test("workflow supports generic topic and reply creation from reviewed content files", async () => {
     const topicDir = await tempPath("topic-create");
     const topicFile = join(dirname(topicDir), "topic-create.md");
@@ -1138,6 +1181,7 @@ describe("workflow commands", () => {
       "--goal", "topic-create",
       "--category-id", "8",
       "--title", "Auditable topic",
+      "--tags", "APEX,ORDS",
       "--content-file", topicFile,
       "--output-dir", topicDir
     ]);
@@ -1149,6 +1193,7 @@ describe("workflow commands", () => {
         body: expect.objectContaining({
           categoryId: 8,
           title: "Auditable topic",
+          tags: "APEX,ORDS",
           content: "A reviewed topic body for the isolated write workflow.",
           operationKey: expect.any(String),
           payloadHash: expect.stringMatching(/^[a-f0-9]{64}$/)
@@ -1165,6 +1210,7 @@ describe("workflow commands", () => {
       "node", "apexcn", "workflow", "run",
       "--goal", "reply-create",
       "--topic-id", "42",
+      "--parent-post-id", "100",
       "--content-file", replyFile,
       "--output-dir", replyDir
     ]);
@@ -1175,6 +1221,7 @@ describe("workflow commands", () => {
         path: "/api/v1/topics/42/replies",
         body: expect.objectContaining({
           content: "A reviewed reply body for the isolated write workflow.",
+          parentPostId: 100,
           operationKey: expect.any(String),
           payloadHash: expect.stringMatching(/^[a-f0-9]{64}$/)
         })

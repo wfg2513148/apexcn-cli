@@ -513,6 +513,22 @@ printf '正文来自 stdin\n' | apexcn reply create 30549 --content-file - --pre
 apexcn reply create 30549 --parent-post-id 201480 --content "补充说明。" --preview
 ```
 
+上面的直接命令只用于查看请求。真实发布请让 `parentPostId` 贯穿可审计工作流：
+
+```bash
+apexcn workflow run \
+  --goal reply-create \
+  --topic-id 30549 \
+  --parent-post-id 201480 \
+  --content-file ./reply.md \
+  --output-dir ./nested-reply-run \
+  --json
+apexcn workflow approve --run-dir ./nested-reply-run --json
+apexcn workflow run --resume ./nested-reply-run --execute --yes --json
+```
+
+执行前应通过 `topic view` 确认父回复属于同一主题，并检查 `preview.json` 中的 `parentPostId` 是否正确。
+
 编辑回复：
 
 ```bash
@@ -527,6 +543,23 @@ apexcn post edit 201480 --content "使用 post 别名更新。" --preview
 apexcn reply delete 201480 --yes --force --preview
 apexcn post delete 201480 --yes --force --preview
 ```
+
+删除本人回复时，先从 `me replies --json` 读取 `replyId`、`topicId`、`version`、`canDelete` 和真实 URL。只有 `canDelete` 为 `true` 才继续，并用返回的版本创建删除工作流：
+
+```bash
+apexcn me replies --page-size 10 --json
+apexcn workflow run \
+  --goal reply-delete \
+  --reply-id 201480 \
+  --confirm-id 201480 \
+  --if-version 2 \
+  --output-dir ./reply-delete-run \
+  --json
+apexcn workflow approve --run-dir ./reply-delete-run --json
+apexcn workflow run --resume ./reply-delete-run --execute --yes --json
+```
+
+如果执行返回 `409 VERSION_CONFLICT`，重新读取当前版本并生成新的预览和批准记录；不要修改旧的 approval 后重试。
 
 ## favorite
 

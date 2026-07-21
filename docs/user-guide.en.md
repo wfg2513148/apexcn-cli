@@ -86,6 +86,8 @@ For profile or machine migration:
 
 > Reply to a specific reply under topic 30549 with my additional test result. Preview first, then publish after I confirm.
 
+For this request, the AI first confirms that the selected reply belongs to topic 30549 and preserves its reply id in the preview so the publish cannot silently become a top-level reply.
+
 ## 11. Edit and Delete Replies
 
 > Open my reply 201480 and polish it. Show me the updated version first; do not save it directly.
@@ -93,6 +95,8 @@ For profile or machine migration:
 > Update reply 201480 with the confirmed text.
 
 > Delete reply 201480. Before deleting, confirm that it is the reply I intended to remove.
+
+The AI should also verify that the reply belongs to the current account, that the server permits deletion, and that the approval uses the freshly read content version. If the version changes, it must create a new preview instead of reusing the old approval.
 
 ## 12. Favorite and Unfavorite
 

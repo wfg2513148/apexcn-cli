@@ -69,6 +69,8 @@ For a human who explicitly chooses the simplest file-backed setup, `apexcn -apik
 - Use `apexcn review reply` before `reply create --dry-run` when you have a local Markdown reply or reply-draft JSON. It is local-only, validates topic/parent ids, detects weak replies and possible secrets, and never publishes.
 - Use `apexcn workflow plan` when you need a machine-readable sequence of local, preview, and execute steps. It only plans; it never executes commands.
 - Use `apexcn workflow run` when you need the CLI to run a resumable workflow with persisted artifacts. The default run reads API data and writes local `run.json`, draft files, review data, and `preview.json`; it does not publish.
+- To reply to an existing reply, first read `apexcn topic view <topic-id> --json` and identify the target reply's `replyId` and matching `topicId`. Preserve that target through draft, review, and execution with `--parent-post-id <reply-id>`; the final approved request must contain the same `parentPostId`.
+- To edit or delete the authenticated account's content, start with `apexcn me topics --json` or `apexcn me replies --json`. Continue only when `canEdit` or `canDelete` is `true`, and bind the returned `version` into `--if-version`. Never infer ownership from a remembered id or URL.
 - Approve a workflow preview with `apexcn workflow approve --run-dir <run-dir> --json` after reviewing `preview.json`. This records a hash-bound approval artifact. If the selected policy requires two approvers, pass distinct `--approved-by` and `--second-approver` values.
 - Only execute an approved workflow with `apexcn workflow run --resume <run-dir> --execute --yes --policy <file> --json`. Execution refuses missing or stale approvals, enforces the supplied policy before any API write, and reuses the approved preview request body for the final POST.
 - Use `apexcn workflow verify --run-dir <run-dir> --json` to locally verify workflow artifacts, approval hashes, and execute evidence. Add `--write-report` when the user needs `verification.json` for audit records.
@@ -102,7 +104,7 @@ For a human who explicitly chooses the simplest file-backed setup, `apexcn -apik
 - For API write previews, do not preflight with `category list` or `topic view`; pass the same required write flags and add `--preview` or `--dry-run`.
 - Do not rely on interactive prompts. Supply required non-interactive flags explicitly.
 - Before deleting a topic, run `apexcn topic view <thread_id> --json`, then pass `--yes --force --confirm-title "<exact title>"`.
-- Before deleting a reply, confirm the target post id belongs to the intended thread, then pass `--yes --force`.
+- Before deleting a reply, use `apexcn me replies --json` to confirm `replyId`, `topicId`, `version`, `canDelete`, and URL. Create a `reply-delete` workflow with matching `--reply-id` and `--confirm-id`, approve its preview, then execute the approved run. Direct `reply delete --yes --force` is preview-only and does not perform the real write.
 - When reporting search results, topic summaries, or inspected content to a user, include each topic's real URL from `url` or `threadUrl`; include `originalUrl` too when present.
 - Preserve `provenance.requestIds` and `provenance.sources` from search, topic, ask, and research outputs in downstream evidence.
 - Do not infer an exact total from search results. If `page.hasMore` is true, report a lower bound such as "at least N results" and suggest narrowing by category or date.

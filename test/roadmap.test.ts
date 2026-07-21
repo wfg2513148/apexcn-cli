@@ -249,6 +249,37 @@ describe("roadmap contract", () => {
     expect(problems).toContain(`issues.json contains non-active status for ${issues.issues[0].id}`);
   });
 
+  test("locks the repository-owned CLI extension sequence", () => {
+    const roadmap = loadJson("roadmap.json");
+    const issues = loadJson("issues.json");
+    const protocol = issues.developmentExtensionProtocol;
+
+    expect(protocol.sequence).toEqual([
+      "audit-server-capability",
+      "extend-apexcn-forums-when-required",
+      "extend-apexcn-cli",
+      "freeze-cli-candidate",
+      "validate-in-fresh-apexcn-cli-test-task",
+      "close-issues-and-release"
+    ]);
+    expect(protocol.server).toEqual(expect.objectContaining({
+      repository: "/Users/kwang/apexcn-forums",
+      taskVisibility: "user-visible-codex-desktop-task",
+      sessionCwdMustEqualRepository: true
+    }));
+    expect(protocol.validator).toEqual(expect.objectContaining({
+      repository: "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
+      freshTaskRequired: true,
+      realScenarioSimulationRequired: true,
+      backendAndBrowserEvidenceRequired: true,
+      cleanupRequired: true
+    }));
+
+    protocol.sequence = ["extend-apexcn-cli", "extend-apexcn-forums-when-required"];
+    const problems = validateRoadmap(validationInput(roadmap, issues));
+    expect(problems).toContain("development extension sequence drifted");
+  });
+
   test("rejects active issues without independent validator provenance", () => {
     const roadmap = loadJson("roadmap.json");
     const issues = loadJson("issues.json");

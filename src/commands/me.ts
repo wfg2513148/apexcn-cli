@@ -329,6 +329,9 @@ function formatTopicListText(data: unknown): string {
   return itemsFromData(data).map((item) => [
     fieldText(item.id ?? item.topicId),
     fieldText(item.title),
+    fieldText(item.version),
+    fieldText(item.canEdit),
+    fieldText(item.canDelete),
     fieldText(item.createdDate),
     fieldText(item.updatedDate),
     fieldText(item.url ?? item.threadUrl)
@@ -339,8 +342,12 @@ function formatReplyListText(data: unknown): string {
   return itemsFromData(data).map((item) => {
     const topic = isRecord(item.topic) ? item.topic : {};
     return [
-      fieldText(item.id ?? item.postId),
+      fieldText(item.id ?? item.replyId ?? item.postId),
       fieldText(item.topicId ?? topic.id ?? topic.topicId),
+      fieldText(item.parentPostId),
+      fieldText(item.version),
+      fieldText(item.canEdit),
+      fieldText(item.canDelete),
       fieldText(topic.title ?? item.topicTitle),
       fieldText(item.createdDate),
       fieldText(item.updatedDate),
