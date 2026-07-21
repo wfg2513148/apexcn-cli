@@ -2,6 +2,29 @@
 
 把 APEX 中文社区装进本地 AI 工具里。你可以少开网页、少复制链接，直接让 AI agent 帮你搜索社区帖子、总结资料、起草提问和回复、发帖回帖、收藏订阅。
 
+## APEX 中文社区是什么
+
+[APEX 中文社区](https://oracleapex.cn/) 是面向 Oracle APEX 中文用户的交流社区。社区按“问题求助”“新手入门”“进阶技巧”“建议与意见反馈”等板块组织内容；你可以在网页里阅读、提问和回复，也可以通过 `apexcn-cli` 让本地 AI 工具检索、整理或在确认后操作这些内容。
+
+![APEX 中文社区首页和内容板块](docs/assets/readme/apexcn-community-home.jpg)
+
+> 上图为 2026 年 7 月 21 日真实社区首页。未登录时，右上角账号入口显示为 `nobody`。
+
+## 如何获取 API Key
+
+API Key 用于证明 CLI 请求来自你的社区账号。它不是安装 `apexcn-cli` 的前置参数：先从社区网页获取 Key，再在本机单独配置即可。
+
+1. 打开 [oracleapex.cn](https://oracleapex.cn/)，点击右上角的 `nobody`。
+2. 注册新账号，或使用已有账号/Google 认证登录。
+3. 登录后点击右上角账号菜单，选择 **API Key 管理**。
+4. 在弹窗中点击 **复制**，保存当前 API Key。
+
+![APEX 中文社区 API Key 管理弹窗](docs/assets/readme/apexcn-api-key-management.png)
+
+> 上图来自真实账号页面，账号标识和 Key 已专门遮盖。页面中的 **重新生成** 会撤销旧 Key 并创建新 Key；只有在 Key 丢失、疑似泄露或确实需要轮换时才使用。
+
+请把 API Key 当作密码保管：不要发到帖子、聊天记录或 issue，不要提交到 Git 仓库，也不要在截图中保留完整值。CLI 和文档示例只使用 `YOUR_API_KEY` 作为占位符。
+
 ## 适合谁
 
 - 刚开始用 APEX 中文社区，不想记命令的小白用户。
@@ -32,7 +55,7 @@ irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-a
 
 ### 安装后单独认证
 
-安装完成后，在自己的 shell 中执行一条命令即可保存 API key：
+完成上面的“获取 API Key”步骤后，在自己的 shell 中执行一条命令即可保存它：
 
 ```bash
 apexcn -apikey "YOUR_API_KEY"

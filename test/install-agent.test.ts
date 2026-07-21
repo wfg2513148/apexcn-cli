@@ -129,7 +129,7 @@ describe("zero-argument one-click installers", () => {
       expect(execFileSync(join(root, "bin", "apexcn"), ["--version"], {
         env,
         encoding: "utf8"
-      })).toBe("0.80.3\n");
+      })).toBe("0.80.4\n");
       expect(existsSync(join(root, "home", ".apexcn", "config.json"))).toBe(false);
       expect(existsSync(join(root, "home", ".agents", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
       expect(existsSync(join(root, "home", ".codex", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
@@ -193,7 +193,7 @@ exit 0
 
       expect(result.status, result.stderr).toBe(0);
       expect(result.stdout).toContain("Updated shell-resolved launcher");
-      expect(execFileSync(shadow, ["--version"], { env, encoding: "utf8" })).toBe("0.80.3\n");
+      expect(execFileSync(shadow, ["--version"], { env, encoding: "utf8" })).toBe("0.80.4\n");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -226,7 +226,7 @@ exit 0
       expect(execFileSync(process.execPath, [
         join(root, "install", "package", "dist", "index.js"),
         "--version"
-      ], { env, encoding: "utf8" })).toBe("0.80.3\n");
+      ], { env, encoding: "utf8" })).toBe("0.80.4\n");
       expect(existsSync(join(root, "home", ".apexcn", "config.json"))).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });

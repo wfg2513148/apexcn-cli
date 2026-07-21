@@ -67,6 +67,23 @@ describe("documentation consistency", () => {
     }
   });
 
+  test("README community onboarding uses real screenshot assets", () => {
+    const readme = read("README.md");
+    const screenshots = [
+      "docs/assets/readme/apexcn-community-home.jpg",
+      "docs/assets/readme/apexcn-api-key-management.png"
+    ];
+
+    expect(readme).toContain("## APEX 中文社区是什么");
+    expect(readme).toContain("## 如何获取 API Key");
+
+    for (const screenshot of screenshots) {
+      expect(readme).toContain(`](${screenshot})`);
+      expect(existsSync(join(repoRoot, screenshot))).toBe(true);
+      expect(readFileSync(join(repoRoot, screenshot)).byteLength).toBeGreaterThan(10_000);
+    }
+  });
+
   test("MCP docs list every registered MCP tool", () => {
     const doc = read("docs/mcp.md");
 
