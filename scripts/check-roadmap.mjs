@@ -1,13 +1,11 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const roadmapPath = join(repoRoot, "roadmap.json");
 const issuesPath = join(repoRoot, "issues.json");
-const roadmapMarkdownPath = join(repoRoot, "docs/roadmap.md");
-const issuesMarkdownPath = join(repoRoot, "issues.md");
 const agentsPath = join(repoRoot, "AGENTS.md");
 
 export function renderRoadmap(roadmap, issues) {
@@ -30,7 +28,7 @@ export function renderRoadmap(roadmap, issues) {
     "- 每个主会话开始时必须读取 `roadmap.json` 与 `issues.json`。",
     "- 只为当前里程碑生成即时执行计划，不预制后续里程碑实施计划。",
     "- 每个里程碑必须启动一个独立 Codex 目标模式，直至全部验收、独立复验、问题清零和发版闭环完成。",
-    "- 每轮验证必须在固定测试项目中新建独立小白任务线程；主会话按当前里程碑和实际风险动态下发结构化测试范围。",
+    "- 每轮验证必须在固定测试项目中新建独立且无实现先验的任务线程；主会话按当前里程碑和实际风险动态下发结构化测试范围。",
     "- 固定基线套件与动态里程碑/逆向探索套件分开执行和计分，旧线程只作为历史证据。",
     "- `issues.json` 只接收独立 validator 线程实际观察且证据完整的问题；规划缺口进入 `readinessRisks`。",
     "- 同一时间最多一个里程碑为 `in_progress`。",
@@ -134,7 +132,7 @@ export function renderRoadmap(roadmap, issues) {
     "",
     "## 非目标",
     "",
-    "- 不自动升级到 `1.0.0`。",
+    "- 不自动升级到 `2.0.0`。",
     "- 不开放 MCP execute-write 或远端 HTTP MCP Server。",
     "- 不在自动化测试中执行生产社区写操作。",
     "- 不用 CLI 补丁掩盖 ORDS REST API 能力缺口。",
@@ -170,7 +168,7 @@ export function renderIssues(issues) {
   return lines.join("\n");
 }
 
-export function validateRoadmap({ roadmap, issues, roadmapMarkdown, issuesMarkdown, agentsText }) {
+export function validateRoadmap({ roadmap, issues, agentsText }) {
   const problems = [];
   const expectedStages = ["0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9"];
   const expectedReleaseLines = expectedStages.map((stage) => `0.${stage.slice(2)}0.x`);
@@ -518,8 +516,6 @@ export function validateRoadmap({ roadmap, issues, roadmapMarkdown, issuesMarkdo
     check(blockers.length === 0, `completed milestone ${milestone.id} still has blocking P0/P1 issues`, problems);
   }
 
-  check(roadmapMarkdown === renderRoadmap(roadmap, issues), "docs/roadmap.md is not synchronized with roadmap.json", problems);
-  check(issuesMarkdown === renderIssues(issues), "issues.md is not synchronized with issues.json", problems);
   check(agentsText.includes("roadmap.json") && agentsText.includes("issues.json"), "AGENTS.md must require roadmap.json and issues.json", problems);
   check(agentsText.includes("automatically mark") && agentsText.includes("Do not wait for additional user confirmation"), "AGENTS.md must require automatic milestone continuation", problems);
   check(agentsText.includes("[skip ci]") && agentsText.includes("gh release create"), "AGENTS.md must define direct release closure", problems);
@@ -575,17 +571,9 @@ function readJson(path) {
 function main() {
   const roadmap = readJson(roadmapPath);
   const issues = readJson(issuesPath);
-  const writeDocs = process.argv.slice(2).includes("--write-docs");
-  if (writeDocs) {
-    writeFileSync(roadmapMarkdownPath, renderRoadmap(roadmap, issues));
-    writeFileSync(issuesMarkdownPath, renderIssues(issues));
-  }
-
   const problems = validateRoadmap({
     roadmap,
     issues,
-    roadmapMarkdown: readFileSync(roadmapMarkdownPath, "utf8"),
-    issuesMarkdown: readFileSync(issuesMarkdownPath, "utf8"),
     agentsText: readFileSync(agentsPath, "utf8")
   });
   if (problems.length > 0) {

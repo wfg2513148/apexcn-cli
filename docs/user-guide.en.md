@@ -1,6 +1,6 @@
-# apexcn-cli Beginner Guide
+# apexcn-cli User Guide
 
-This guide is for users who use apexcn-cli through an AI tool. You do not need to remember terminal commands or flags. Tell the AI agent what you want, let it operate the CLI, and ask it to preview important changes before publishing.
+This guide is for APEX developers who use apexcn-cli through an AI tool. You do not need to memorize terminal commands or flags. Describe the intended outcome, let the AI assistant operate the CLI, and require a preview and explicit confirmation before any publish, update, or delete action.
 
 ## 1. First Use
 
@@ -22,7 +22,7 @@ If it is already installed, say:
 
 > Search for “ORDS authentication failure” and group the results into “most useful”, “extra reading”, and “less related”.
 
-> Search for “APEX JSON_TABLE” posts and order them from beginner-friendly to advanced.
+> Search for “APEX JSON_TABLE” posts and order them from foundational to advanced.
 
 ## 3. Read and Summarize a Topic
 
@@ -110,27 +110,19 @@ For profile or machine migration:
 
 > Search for “APEX REST API” posts and turn the first 5 results into study notes. For each result include: who it is for, main idea, actionable steps, real URL, and original URL.
 
-> Turn these posts into an “APEX REST API beginner roadmap”, ordered from basic to advanced.
-
-## 15. AI Agent / MCP
-
-If your AI tool supports MCP, use the local stdio server in readonly mode by default:
-
-> Check that apexcn-cli MCP is readonly and list the available tools.
-
-Preview-only write tools can generate requests with `willExecute: false`, but real publishing still goes through CLI workflow.
+> Turn these posts into an “APEX REST API learning path”, ordered from foundational to advanced.
 
 For local offline search:
 
 > Build a BM25 index for my local collection, then query ORDS authentication failures with explain mode.
 
-## 16. Change API Key or Reconfigure
+## 15. Change API Key or Reconfigure
 
 > Help me reconfigure the apexcn-cli API key. I will provide the new key. Verify the account after configuration and do not print the full key.
 
 You can also run `apexcn -apikey "your real API key"` yourself. Quotes are optional for an ordinary alphanumeric key. Replace the example text, and remember that the command may be retained in shell history.
 
-## 17. When Something Breaks
+## 16. Troubleshooting
 
 > apexcn-cli seems broken. Please run the built-in diagnostics first, then check the install location, login state, account info, category list, and search capability. Tell me exactly which step failed.
 

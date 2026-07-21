@@ -2,9 +2,9 @@
 
 ## Versioning Policy
 
-- Iterations at the same capability level as the recent collection/auth governance/content quality/diagnostics upgrades count as `0.x` releases only.
-- Routine daily iterations count as `0.0.x` patch releases only.
-- Do not use `1.0.0` or higher unless the user explicitly redefines the product maturity threshold.
+- The product maturity threshold was explicitly redefined on 2026-07-21; `1.0.0` is the first formal release line.
+- Backward-compatible routine iterations use `1.x` patch or minor releases according to semantic versioning.
+- Do not use `2.0.0` or higher unless the user explicitly authorizes a breaking major release.
 
 ## Roadmap Execution Protocol
 

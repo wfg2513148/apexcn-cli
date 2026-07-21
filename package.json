@@ -1,6 +1,6 @@
 {
   "name": "apexcn-cli",
-  "version": "0.80.6",
+  "version": "1.0.0",
   "type": "module",
   "bin": {
     "apexcn": "./dist/index.js"
@@ -9,23 +9,10 @@
     "agent-skill/",
     "dist/",
     "docs/",
-    "eval/rag/",
-    "eval/collection/",
-    "eval/retrieval/",
-    "issues.json",
-    "roadmap.json",
-    "scripts/e2e-readonly.sh",
-    "scripts/baseline-report.mjs",
-    "scripts/eval-rag.mjs",
-    "scripts/eval-collection.mjs",
-    "scripts/eval-retrieval.mjs",
-    "scripts/retrieval-eval-score.mjs",
-    "scripts/generate-release-checksums.mjs",
     "scripts/install-agent.ps1",
     "scripts/install-agent.sh",
     "scripts/lifecycle-agent.ps1",
     "scripts/lifecycle-agent.sh",
-    "scripts/soak-readonly.mjs",
     "README.md"
   ],
   "scripts": {
@@ -37,10 +24,8 @@
     "check:workflows": "node scripts/check-workflows.mjs",
     "context:compact": "node scripts/compact-iteration-context.mjs",
     "eval:rag": "node scripts/eval-rag.mjs --report",
-    "eval:collection": "node scripts/eval-collection.mjs --report",
     "eval:retrieval": "node scripts/eval-retrieval.mjs --report",
     "qualify:mcp": "node scripts/qualify-mcp.mjs",
-    "roadmap:render": "node scripts/check-roadmap.mjs --write-docs",
     "soak:readonly": "node scripts/soak-readonly.mjs",
     "test": "vitest run",
     "test:e2e:readonly": "bash scripts/e2e-readonly.sh"

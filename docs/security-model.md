@@ -1,80 +1,77 @@
-# Security Model
+# apexcn-cli 安全模型
 
-## API Key 存储
+本文说明 apexcn-cli 正式版的认证、写操作、敏感信息保护和安装完整性策略。
 
-当前 CLI 使用本地配置文件保存 profile 和 baseUrl。`auth set-token --token <value>` 保存 file credential；`auth set-token --token-env <name>` 只保存环境变量名，不把其值写入配置。两者同时传入时，运行时优先读取环境变量，缺失时回退到 file credential。配置文件路径可通过 `--config` 或 `APEXCN_CONFIG_PATH` 指定。
+## API Key 与凭据存储
 
-## 文件权限策略
+apexcn-cli 支持两种凭据来源：
 
-配置文件和 workflow artifacts 应保存在用户本机目录。写入 token、workflow approval、support bundle 时必须避免 world-readable 权限；后续版本应将权限检查纳入 `auth audit --json`。
+- `file`：使用 `apexcn -apikey` 或 `auth set-token --token` 保存到本地配置文件；
+- `env`：使用 `auth set-token --token-env <name>` 只保存环境变量名，不保存环境变量值。
 
-## Credential Store 与 fallback 策略
+同时配置两种来源时，运行时优先读取环境变量；环境变量不可用时才回退到文件凭据。两种来源都不可用时，命令会在发送 API 请求前停止。
 
-0.80.x 支持 file 与 env 两种 credential store。`fallbackCredentialStore(primary, fallback)` 优先读取 primary；primary 不可用时才读取 fallback；两者都不可用时 fail closed。写入和删除只作用于 fallback，因此只读 env 可以安全作为 primary。`auth show`、`auth audit` 和 doctor snapshot 只记录 store 类型、变量名、是否命中和 backend 是否可用，不记录环境变量值。macOS Keychain、Windows Credential Manager 和 Linux Secret Service 尚不属于支持矩阵，不能在资格报告中宣称已支持。
+配置文件默认只允许当前用户读写，权限为 `0600`。API Key 可能出现在 shell 历史或短暂出现在进程列表中，因此共享设备或高安全环境应优先使用环境变量方式。
 
 ## Profile 隔离
 
-每个 profile 独立保存 baseUrl/token。CLI 命令通过当前 profile 调用 API，MCP 复用同一 profile，不另建认证路径。
+每个 profile 独立保存社区地址和凭据配置。切换 profile 不会复制或合并凭据；本地草稿也按 profile 隔离。
 
-## Preview / Dry Run 语义
+可使用以下命令检查配置状态，输出不会包含完整 API Key：
 
-- `preview`：展示即将发送的 request，不执行远端写入。
-- `dry-run`：验证参数与本地安全策略，不执行远端写入。
-- MCP preview-only 工具永远返回 `willExecute: false`。
-- 0.60.x 的 topic/reply 直接命令永远不执行写入；真实 CRUD 仅由已批准 CLI workflow 执行。
+```bash
+apexcn auth show --json
+apexcn auth audit --json
+```
 
-## Workflow Approval
+## 预览与确认
 
-workflow approval 同时绑定 profile、base URL、完整 request、preview hash 和 `expiresAt`。执行前任何目标、正文、版本、确认字段、operationKey、payloadHash 或期限变化都必须拒绝。timeout/5xx 只能复用同一 operationKey 恢复；409 必须创建新 workflow。
+- `preview`：展示准备发送的请求，不执行远端写入；
+- `dry-run`：验证参数和本地安全规则，不执行远端写入；
+- workflow：将预览、审查、批准和执行记录绑定为同一条可验证流程。
 
-topic/reply create/update 的正文副本在 preview 前进行空正文、占位符和疑似密钥扫描。delete workflow 需要版本，并把完整标题或精确回复 ID 纳入批准请求。
+话题和回复的真实创建、修改或删除必须通过已批准的 workflow 执行。批准记录会绑定 profile、社区地址、请求内容、预览哈希和有效期；目标或正文变化后，旧批准立即失效。
 
-## MCP Readonly 默认值
-
-MCP 面向 AI Agent，默认攻击面应最小化。第一版默认 readonly，只允许 read/local diagnostic/tool manifest；写操作必须 blocked 或 preview-only，真实 execute-write 不进入第一版。
+删除操作还会校验目标版本以及完整标题或精确回复 ID，避免误删相似内容。
 
 ## 写操作风险等级
 
-- medium：favorite/subscription add/remove。
-- high：topic/reply create/update。
-- destructive：topic/reply delete。
+- `medium`：收藏和订阅的添加或取消；
+- `high`：话题和回复的创建或修改；
+- `destructive`：话题和回复的删除。
 
-## Secret Redaction
+涉及 `high` 或 `destructive` 操作时，应先检查预览，再由用户明确确认。
 
-必须脱敏：
+## 敏感信息脱敏
 
-- `Authorization: Bearer ...`
-- `Bearer ...`
-- `api_key`、`apiKey`、`token`
-- `password`、`passwd`、`secret`
-- `Cookie`、`Set-Cookie`
+stdout、stderr、诊断快照和 workflow 证据会对以下内容进行脱敏：
 
-脱敏适用于 stdout/stderr JSON、doctor snapshot、workflow artifacts、MCP errors、测试 fixture。
+- Authorization Bearer Token；
+- API Key、token、password、passwd、secret 等字段；
+- Cookie 与 Set-Cookie；
+- URL 中的用户凭据。
 
-0.80.x 的确定性 fuzz 门禁覆盖 Authorization、JSON secret 字段、CLI 参数、URL userinfo 和 Cookie 等 10,000 个样本，任何明文残留都失败。
+确定性模糊测试覆盖 Authorization、JSON 敏感字段、命令行参数、URL userinfo 和 Cookie 等场景；检测到明文残留时，安全测试会失败。
 
-## Doctor Snapshot / Support Bundle
+## 诊断与支持快照
 
-不得包含完整 API key、Authorization header、Cookie、password、未脱敏 config 文件内容、真实 workflow 写请求中的敏感字段。使用 `apexcn doctor snapshot --output <file> --json` 保存脱敏快照时，文件权限为仅当前用户可读写。
+使用以下命令生成脱敏的本地诊断文件：
 
-## 生命周期操作
+```bash
+apexcn doctor snapshot --output ./support-snapshot.json --json
+```
 
-发行包包含 `scripts/lifecycle-agent.sh` 和 `scripts/lifecycle-agent.ps1`，支持 install、upgrade、rollback 和 uninstall。upgrade 会在安装前保留版本化备份，失败时恢复；rollback 和 uninstall 必须显式确认。uninstall 只删除 CLI 安装目录及由脚本创建的 launcher，并保留认证配置。
+快照不会包含完整 API Key、Authorization Header、Cookie、密码或未脱敏配置内容，输出文件仅允许当前用户读写。
 
-## Release Asset 校验
+## 安装与更新完整性
 
-Release 必须上传：
+公开 Release 提供以下文件：
 
-- `apexcn-cli.tgz`
-- `install-agent.sh`
-- `install-agent.ps1`
-- `checksums.txt`
-- `artifacts/apexcn-cli.tgz`
-- `artifacts/install-agent.sh`
-- `artifacts/install-agent.ps1`
-- `artifacts/checksums.txt`
-- `artifacts/apexcn-cli.tgz.sha256`
-- `artifacts/install-agent.sh.sha256`
-- `artifacts/install-agent.ps1.sha256`
+- `apexcn-cli.tgz`；
+- `install-agent.sh` 与 `install-agent.ps1`；
+- `checksums.txt`；
+- 三个发布文件对应的独立 `.sha256` 校验文件。
 
-安装脚本必须下载 `checksums.txt` 并用 SHA-256 校验 `apexcn-cli.tgz`。校验缺失或失败时必须停止安装，不提供跳过开关。
+安装脚本必须使用 `checksums.txt` 对下载包执行 SHA-256 校验。校验缺失或失败时安装立即停止，不提供跳过选项。
+
+生命周期脚本支持安装、升级、回滚和卸载。升级前会创建版本化备份，失败时恢复；回滚和卸载需要明确确认。卸载只删除 CLI 安装目录和脚本创建的 launcher，保留认证配置。

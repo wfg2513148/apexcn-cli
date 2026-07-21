@@ -1,6 +1,6 @@
 # apexcn-cli Terminal Manual
 
-This manual is for users running commands directly in a terminal. Examples assume the CLI is installed and authenticated.
+This manual is for developers who use apexcn-cli directly in a terminal. Except for installation and authentication examples, commands assume that installation and account configuration are complete.
 
 ## Global
 
@@ -22,7 +22,7 @@ When scripts need parseable failures, prefer passing `--json` to the command. JS
 
 ## guide
 
-Curated local task paths for novices. These commands do not read auth, call the API, deploy applications, or write community content:
+Curated local task paths for new users. These commands do not read auth, call the API, deploy applications, or write community content:
 
 ```bash
 apexcn guide learning --json
@@ -126,7 +126,7 @@ apexcn category list --format text
 
 ## stats
 
-Read aggregate statistic endpoints. Since 0.4.0-candidate, they support date windows and top-list sizing:
+Read aggregate statistics with optional date windows and result limits:
 
 ```bash
 apexcn stats category --json
@@ -170,7 +170,7 @@ apexcn me subscriptions --json
 
 `me` recursively redacts email, phone, IP, address, and secret-like fields by default. Only explicit `me --include-private` prints private account fields returned by the server. `me topics`, `me replies`, `me favorites`, and `me subscriptions` should continue with the server's opaque `page.nextCursor`. Numeric `offset/page.nextOffset` remains available for older servers, but `--cursor` and `--offset` cannot be combined.
 
-`me capabilities` reads the server `contractVersion` and capability inventory, then adds `clientCompatibility`. 0.80.x accepts only the declared 0.8, 0.7, and 0.6 candidate contract window; malformed, newer, or older contracts fail closed. The current 0.8 contract must advertise that full supported window. `--require-capability <ids...>` also exits nonzero when any requested capability is unavailable. `me notifications`, `me inbox`, `me rules`, and `me privacy` only relay authoritative readonly contracts. When a capability is missing, the CLI preserves `available: false`, `status: "UNAVAILABLE"`, `unavailableReason`, and `requestId`; it never fabricates empty messages, rules, or policy content.
+`me capabilities` reads the server `contractVersion` and capability inventory, then adds `clientCompatibility`. The client accepts only the declared 0.8, 0.7, and 0.6 candidate contract window; malformed, incomplete, newer, or older contracts fail closed. `--require-capability <ids...>` also exits nonzero when any requested capability is unavailable. `me notifications`, `me inbox`, `me rules`, and `me privacy` only relay authoritative readonly contracts. When a capability is missing, the CLI preserves `available: false`, `status: "UNAVAILABLE"`, `unavailableReason`, and `requestId`; it never fabricates empty messages, rules, or policy content.
 
 ## search
 
@@ -214,7 +214,7 @@ apexcn search "JSON" --from-date 2026-01-01 --to-date 2026-12-31 --json
 apexcn search "ApexLang" --page-size 5 --cursor "next-cursor" --json
 ```
 
-`--page-size` accepts 1 to 50. Common variants `ApexLang`, `APEXLang`, and `APEX Lang` are normalized to `ApexLang` before searching; JSON output includes `query.normalizedKeyword` when normalization happens. `--cursor` uses the backend `page.nextCursor` and is the preferred pagination contract starting with 0.2.0-candidate; `--offset` remains available for compatibility. Backend `createdDate` is the original topic creation timestamp, and `updatedDate` is the latest update timestamp. Narrow large result sets with `--category-id`, `--from-date`, and `--to-date`.
+`--page-size` accepts 1 to 50. Common variants `ApexLang`, `APEXLang`, and `APEX Lang` are normalized to `ApexLang` before searching; JSON output includes `query.normalizedKeyword` when normalization happens. `--cursor` uses the backend `page.nextCursor` and is the preferred pagination contract; `--offset` remains available for compatibility. Backend `createdDate` is the original topic creation timestamp, and `updatedDate` is the latest update timestamp. Narrow large result sets with `--category-id`, `--from-date`, and `--to-date`.
 
 When a search returns no rows, JSON output includes `emptyResult`, and text output suggests broader keywords, removing filters, and trying `search`, `research`, or `topic recent`.
 
@@ -228,7 +228,7 @@ apexcn topic recent --since-hours 48 --page-size 10 --json
 apexcn topic recent --category-id 4 --from-date 2026-07-01 --to-date 2026-07-04 --cursor "next-cursor" --format text
 ```
 
-`topic recent` is read-only and defaults to topics updated in the last 48 hours. It prefers the 0.2.0-candidate `GET /api/v1/topics` endpoint, whose items should include `createdDate` and `updatedDate`. If the runtime server has not promoted that endpoint yet, the command falls back to wildcard search and topic detail fetches to preserve fields such as `createdDate`, `originalUrl`, `tags`, and `viewCount` where possible. JSON output contains `kind: "topic-recent"`, `source`, `query`, `items`, `page`, `requestIds`, and `errors`. When `page.hasMore` is true, pass `page.nextCursor` back with `--cursor`.
+`topic recent` is read-only and defaults to topics updated in the last 48 hours. It prefers the `GET /api/v1/topics` endpoint, whose items should include `createdDate` and `updatedDate`. If the runtime server does not provide that endpoint, the command falls back to wildcard search and topic detail fetches to preserve fields such as `createdDate`, `originalUrl`, `tags`, and `viewCount` where possible. JSON output contains `kind: "topic-recent"`, `source`, `query`, `items`, `page`, `requestIds`, and `errors`. When `page.hasMore` is true, pass `page.nextCursor` back with `--cursor`.
 
 ## research
 
@@ -445,7 +445,7 @@ apexcn topic create \
   --preview
 ```
 
-Starting with 0.60.x, direct topic/reply commands are preview-only. Execute the reviewed content through a workflow:
+Direct topic/reply commands are preview-only. Execute reviewed content through a workflow:
 
 ```bash
 apexcn workflow run \

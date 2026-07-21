@@ -129,18 +129,20 @@ describe("release version check", () => {
       "agent-skill/SKILL.md",
       "dist/index.js",
       "docs/cli-manual.zh.md",
+      "docs/security-model.md",
       "docs/user-guide.en.md",
-      "issues.json",
       "node_modules/commander/package.json",
       "package.json",
-      "roadmap.json",
-      "scripts/baseline-report.mjs",
-      "scripts/e2e-readonly.sh",
       "scripts/install-agent.ps1",
-      "scripts/install-agent.sh"
+      "scripts/install-agent.sh",
+      "scripts/lifecycle-agent.ps1",
+      "scripts/lifecycle-agent.sh"
     ]));
     expect(files).not.toEqual(expect.arrayContaining([
       ".github/workflows/ci.yml",
+      "issues.json",
+      "roadmap.json",
+      "scripts/baseline-report.mjs",
       "scripts/check-release-version.mjs",
       "src/index.ts",
       "test/content.test.ts",
@@ -171,22 +173,21 @@ describe("release version check", () => {
         "package/dist/version.js",
         "package/node_modules/commander/package.json",
         "package/agent-skill/SKILL.md",
-        "package/docs/quickstart.md",
-        "package/docs/migration-v0.80.md",
-        "package/issues.json",
-        "package/roadmap.json",
+        "package/docs/cli-manual.en.md",
+        "package/docs/cli-manual.zh.md",
+        "package/docs/security-model.md",
+        "package/docs/user-guide.en.md",
+        "package/docs/user-guide.zh.md",
         "package/dist/core/capability-compatibility.js",
         "package/dist/core/credential-store.js",
         "package/dist/core/doctor-snapshot.js",
         "package/dist/core/issue-routing.js",
         "package/dist/core/runtime-session.js",
         "package/dist/core/workflow-plan.js",
-        "package/scripts/baseline-report.mjs",
         "package/scripts/install-agent.ps1",
         "package/scripts/install-agent.sh",
         "package/scripts/lifecycle-agent.ps1",
-        "package/scripts/lifecycle-agent.sh",
-        "package/scripts/soak-readonly.mjs"
+        "package/scripts/lifecycle-agent.sh"
       ]));
       expect(entries.some((entry) => entry.startsWith("package/.github/"))).toBe(false);
       expect(entries.some((entry) => entry.startsWith("package/artifacts/"))).toBe(false);
@@ -194,6 +195,9 @@ describe("release version check", () => {
       expect(entries.some((entry) => entry.startsWith("package/src/"))).toBe(false);
       expect(entries.some((entry) => entry.startsWith("package/test/"))).toBe(false);
       expect(entries).not.toEqual(expect.arrayContaining([
+        "package/issues.json",
+        "package/roadmap.json",
+        "package/scripts/baseline-report.mjs",
         "package/scripts/check-release-version.mjs",
         "package/scripts/check-release-artifacts.mjs",
         "package/tsconfig.json",

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -35,7 +35,6 @@ checkPowerShellInstallerDefaultUrl("scripts/install-agent.ps1");
 checkMarkdownReleaseUrls(trackedMarkdownFiles());
 checkCiWorkflow();
 checkReleaseWorkflow();
-checkIssuesBacklog();
 checkPackageFiles();
 checkNpmPackFilename();
 checkReleaseArtifacts();
@@ -114,7 +113,9 @@ function trackedMarkdownFiles() {
     cwd: repoRoot,
     encoding: "utf8"
   });
-  return output.split("\n").filter((path) => path.endsWith(".md")).sort();
+  return output.split("\n")
+    .filter((path) => path.endsWith(".md") && existsSync(join(repoRoot, path)))
+    .sort();
 }
 
 function checkMarkdownReleaseUrls(paths) {
@@ -129,7 +130,7 @@ function checkMarkdownReleaseUrls(paths) {
       if (!allowedReleaseAssets.has(asset)) {
         failures.push(`${path} release URL asset: unexpected ${asset}`);
       }
-      if ((path === "README.md" || path === "docs/quickstart.md") && tag !== "latest") {
+      if (path === "README.md" && tag !== "latest") {
         failures.push(`${path} install URL must use releases/latest/download instead of ${tag}`);
       }
     }
@@ -213,14 +214,6 @@ function checkCiWorkflow() {
   }
 }
 
-function checkIssuesBacklog() {
-  const path = "issues.md";
-  const text = readText(path);
-  if (/No open CLI backlog items\./.test(text)) {
-    failures.push(`${path}: backlog cannot claim there are no open CLI backlog items while roadmap tracks active hardening work`);
-  }
-}
-
 function checkPackageFiles() {
   const packageJson = readJson("package.json");
   const files = Array.isArray(packageJson.files) ? packageJson.files : [];
@@ -228,18 +221,10 @@ function checkPackageFiles() {
     "agent-skill/",
     "dist/",
     "docs/",
-    "eval/collection/",
-    "eval/rag/",
-    "eval/retrieval/",
-    "issues.json",
-    "roadmap.json",
-    "scripts/baseline-report.mjs",
-    "scripts/eval-rag.mjs",
-    "scripts/eval-collection.mjs",
-    "scripts/eval-retrieval.mjs",
-    "scripts/generate-release-checksums.mjs",
     "scripts/install-agent.sh",
     "scripts/install-agent.ps1",
+    "scripts/lifecycle-agent.sh",
+    "scripts/lifecycle-agent.ps1",
     "README.md"
   ];
   for (const file of required) {

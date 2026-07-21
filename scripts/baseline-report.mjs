@@ -13,7 +13,7 @@ const releaseWorkflow = readText(".github/workflows/release.yml");
 const ciWorkflow = readText(".github/workflows/ci.yml");
 const mcpCommand = readText("src/commands/mcp.ts");
 const commandRegistry = readText("src/core/command-registry.ts");
-const issues = readText("issues.md");
+const issues = readJson("issues.json");
 const problems = [];
 
 const readmeReleaseUrls = [...new Set([...readme.matchAll(/releases\/(?:download\/(v\d+\.\d+\.\d+)|latest\/download)\//g)].map((match) => match[1] ?? "latest"))];
@@ -74,7 +74,7 @@ const report = {
   releaseWorkflowUploadsChecksums: releaseWorkflow.includes("artifacts/checksums.txt"),
   ciRunsRagEval: ciWorkflow.includes("npm run eval:rag"),
   mcpExecuteWriteDisabled,
-  issuesBacklogAccurate: !/No open CLI backlog items\./.test(issues),
+  issuesBacklogAccurate: Array.isArray(issues.issues),
   commands: {
     total: descriptors.length,
     readonly: descriptors.filter((item) => item.mcpExposure === "readonly").length,

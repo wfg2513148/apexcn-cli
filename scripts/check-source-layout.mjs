@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -82,7 +82,9 @@ function gitFiles(...pathspecs) {
     cwd: repoRoot,
     encoding: "utf8"
   });
-  return output.split("\n").filter(Boolean).sort();
+  return output.split("\n")
+    .filter((path) => path && existsSync(join(repoRoot, path)))
+    .sort();
 }
 
 function readText(path) {

@@ -1,6 +1,6 @@
 # apexcn-cli 命令行终端手册
 
-这份面向在终端中直接执行命令的用户。所有示例默认已经完成安装和认证。
+本手册面向在终端中直接使用 apexcn-cli 的开发者。除安装和认证章节外，示例均假设已经完成安装与账号配置。
 
 ## 全局
 
@@ -12,9 +12,9 @@ apexcn commands --json
 apexcn --config /tmp/apexcn-config.json auth show --json
 ```
 
-建议脚本和 AI agent 都加 `--json`，方便解析。自动化需要隔离配置文件时，可使用根选项 `--config <path>` 或环境变量 `APEXCN_CONFIG_PATH`。
+建议脚本和 AI Agent 使用 `--json`，以便稳定解析输出。自动化需要隔离配置文件时，可使用根选项 `--config <path>` 或环境变量 `APEXCN_CONFIG_PATH`。
 
-AI agent 需要判断命令、别名、用途、风险分类、安全示例和可用选项时，优先使用 `apexcn commands --json`，不要解析 `--help` 文本。当前结构化 manifest 契约为 `schemaVersion === 1`；如果缺失或不支持，不要消费结构化的 `safety` 或 `examples` 字段，应升级 CLI 或请求用户确认。manifest 中的 `schema` 列出可用枚举值；`safety.effects` 描述命令影响，`safety.preview` 描述是否支持或要求预览，`safety.confirmation` 列出显式确认参数，`examples[].mode` 区分读取、预览和执行示例。
+AI Agent 需要判断命令、别名、用途、风险分类、安全示例和可用选项时，应优先使用 `apexcn commands --json`，不要解析 `--help` 文本。当前结构化 manifest 契约为 `schemaVersion === 1`；如果缺失或不支持，不要消费结构化的 `safety` 或 `examples` 字段，应升级 CLI 或请求用户确认。manifest 中的 `schema` 列出可用枚举值；`safety.effects` 描述命令影响，`safety.preview` 描述是否支持或要求预览，`safety.confirmation` 列出显式确认参数，`examples[].mode` 区分读取、预览和执行示例。
 
 manifest 还包含 additive 的 `manifestVersion === 2` 字段：`capability`、`apiEffect`、`riskLevel`、`authRequired`、`supportsJson`、`supportsPreview`、`supportsDryRun`、`mcpExposure` 和 `jsonContract`。旧字段保持兼容。`jsonContract` 指向成功 schema、统一错误 schema 和实际契约测试；不支持 JSON 的命令返回 `null`。
 
@@ -24,7 +24,7 @@ manifest 还包含 additive 的 `manifestVersion === 2` 字段：`capability`、
 
 ## guide
 
-本地策展的新手任务路径，不读取认证配置、不调用 API、不执行部署或社区写操作：
+本地策展的入门任务路径，不读取认证配置、不调用 API、不执行部署或社区写操作：
 
 ```bash
 apexcn guide learning --json
@@ -35,18 +35,6 @@ apexcn guide performance --json
 ```
 
 兼容性和部署视图会明确要求核对官方 Oracle 文档与目标环境，不把社区经验描述成官方认证结论。
-
-## MCP
-
-MCP 是可选 AI Agent 适配层，CLI 仍是主产品。默认只读：
-
-```bash
-apexcn mcp tools --json
-apexcn mcp inspect --json
-apexcn mcp serve --readonly
-```
-
-如需让 AI Agent 生成写操作预览，可使用 `apexcn mcp tools --allow-preview-write --json` 或 `apexcn mcp serve --allow-preview-write`。preview-only 工具不会执行真实写入，返回中必须包含 `willExecute: false`。真实写执行继续走 CLI workflow。
 
 ## auth
 
@@ -140,7 +128,7 @@ apexcn category list --format text
 
 ## stats
 
-读取聚合统计接口。0.4.0-candidate 起支持日期窗口和 top 列表大小：
+读取聚合统计接口，并按需设置日期窗口和结果数量：
 
 ```bash
 apexcn stats category --json
@@ -184,7 +172,7 @@ apexcn me subscriptions --json
 
 `me` 默认递归脱敏 email、手机号、IP、地址和 secret-like 字段；只有显式 `me --include-private` 才显示服务端返回的私有账号字段。`me topics`、`me replies`、`me favorites` 和 `me subscriptions` 优先使用服务端返回的 opaque `page.nextCursor` 继续分页；兼容旧服务端时仍可使用 `offset/page.nextOffset`，但 `--cursor` 与 `--offset` 不能同时使用。
 
-`me capabilities` 读取服务端 `contractVersion` 与能力矩阵，并增加 `clientCompatibility`。0.80.x 只接受已声明的 0.8、0.7、0.6 candidate 契约窗口；格式错误、更新或更旧的契约都 fail closed。当前 0.8 契约还必须公布完整支持窗口。`--require-capability <ids...>` 会在任一必需能力不可用时以非零状态退出。`me notifications`、`me inbox`、`me rules` 和 `me privacy` 只转发权威只读契约；能力缺失时保留服务端的 `available: false`、`status: "UNAVAILABLE"`、`unavailableReason` 和 `requestId`，不会生成空消息、规则或政策冒充真实数据。
+`me capabilities` 读取服务端 `contractVersion` 与能力矩阵，并增加 `clientCompatibility`。客户端只接受已声明的 0.8、0.7、0.6 candidate 契约窗口；格式错误、超出支持窗口或内容不完整的契约都会 fail closed。`--require-capability <ids...>` 会在任一必需能力不可用时以非零状态退出。`me notifications`、`me inbox`、`me rules` 和 `me privacy` 只转发权威只读契约；能力缺失时保留服务端的 `available: false`、`status: "UNAVAILABLE"`、`unavailableReason` 和 `requestId`，不会生成空消息、规则或政策冒充真实数据。
 
 ## search
 
@@ -228,7 +216,7 @@ apexcn search "JSON" --from-date 2026-01-01 --to-date 2026-12-31 --json
 apexcn search "ApexLang" --page-size 5 --cursor "next-cursor" --json
 ```
 
-`--page-size` 支持 1 到 50。常见写法 `ApexLang`、`APEXLang`、`APEX Lang` 会归一化为 `ApexLang` 发起搜索；JSON 输出会在发生归一化时包含 `query.normalizedKeyword`。`--cursor` 使用服务端 `page.nextCursor` 读取下一页，是 0.2.0-candidate 起推荐的分页方式；`--offset` 保留为兼容参数。后端返回 `createdDate` 表示话题创建时间，`updatedDate` 表示最近更新时间。需要缩小范围时，优先使用 `--category-id`、`--from-date` 和 `--to-date`。
+`--page-size` 支持 1 到 50。常见写法 `ApexLang`、`APEXLang`、`APEX Lang` 会归一化为 `ApexLang` 发起搜索；JSON 输出会在发生归一化时包含 `query.normalizedKeyword`。`--cursor` 使用服务端 `page.nextCursor` 读取下一页，是推荐的分页方式；`--offset` 保留为兼容参数。后端返回 `createdDate` 表示话题创建时间，`updatedDate` 表示最近更新时间。需要缩小范围时，优先使用 `--category-id`、`--from-date` 和 `--to-date`。
 
 如果搜索结果为空，JSON 输出会包含 `emptyResult`，文本输出会提示放宽关键词、移除过滤条件，并建议尝试 `search`、`research` 或 `topic recent`。
 
@@ -242,7 +230,7 @@ apexcn topic recent --since-hours 48 --page-size 10 --json
 apexcn topic recent --category-id 4 --from-date 2026-07-01 --to-date 2026-07-04 --cursor "next-cursor" --format text
 ```
 
-`topic recent` 是只读命令，默认读取最近 48 小时更新的话题。它优先调用 0.2.0-candidate 的 `GET /api/v1/topics`，返回项应包含 `createdDate` 和 `updatedDate`；如果运行时服务端尚未 promotion 该接口，会自动降级为 search 通配查询并按 topic detail 尽量补齐 `createdDate`、`originalUrl`、`tags`、`viewCount` 等字段。JSON 输出包含 `kind: "topic-recent"`、`source`、`query`、`items`、`page`、`requestIds` 和 `errors`。如果 `page.hasMore` 为 `true`，继续使用 `page.nextCursor` 调用 `--cursor`。
+`topic recent` 是只读命令，默认读取最近 48 小时更新的话题。它优先调用 `GET /api/v1/topics`，返回项应包含 `createdDate` 和 `updatedDate`；如果运行时服务端尚未提供该接口，会自动降级为 search 通配查询，并通过 topic detail 尽量补齐 `createdDate`、`originalUrl`、`tags`、`viewCount` 等字段。JSON 输出包含 `kind: "topic-recent"`、`source`、`query`、`items`、`page`、`requestIds` 和 `errors`。如果 `page.hasMore` 为 `true`，继续使用 `page.nextCursor` 调用 `--cursor`。
 
 ## research
 
@@ -459,7 +447,7 @@ apexcn topic create \
   --preview
 ```
 
-0.60.x 起，直接 topic/reply 命令只允许预览，不再执行真实写入。真实写入请使用 `workflow run --goal topic-create`：
+直接 topic/reply 命令只允许预览，不执行真实写入。真实写入请使用 `workflow run --goal topic-create`：
 
 ```bash
 apexcn workflow run \

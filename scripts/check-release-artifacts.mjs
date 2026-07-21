@@ -101,17 +101,13 @@ function verifyArtifacts() {
 
   const requiredFiles = [
     "package/package.json",
+    "package/README.md",
     "package/agent-skill/SKILL.md",
-    "package/docs/quickstart.md",
-    "package/docs/migration-v0.80.md",
-    "package/eval/collection/corpus-source.json",
-    "package/eval/collection/oracle.jsonl",
-    "package/eval/collection/real-topics.jsonl",
-    "package/eval/collection/results/v0.70.0.json",
-    "package/eval/rag/questions.zh.jsonl",
-    "package/eval/rag/expected-references.jsonl",
-    "package/issues.json",
-    "package/roadmap.json",
+    "package/docs/cli-manual.en.md",
+    "package/docs/cli-manual.zh.md",
+    "package/docs/security-model.md",
+    "package/docs/user-guide.en.md",
+    "package/docs/user-guide.zh.md",
     "package/dist/index.js",
     "package/dist/version.js",
     "package/dist/core/capability-compatibility.js",
@@ -121,14 +117,10 @@ function verifyArtifacts() {
     "package/dist/core/runtime-session.js",
     "package/dist/core/workflow-plan.js",
     "package/node_modules/commander/package.json",
-    "package/scripts/eval-rag.mjs",
-    "package/scripts/eval-collection.mjs",
-    "package/scripts/generate-release-checksums.mjs",
     "package/scripts/install-agent.sh",
     "package/scripts/install-agent.ps1",
     "package/scripts/lifecycle-agent.sh",
-    "package/scripts/lifecycle-agent.ps1",
-    "package/scripts/soak-readonly.mjs"
+    "package/scripts/lifecycle-agent.ps1"
   ];
   for (const file of requiredFiles) {
     if (!entries.has(file)) {
@@ -136,8 +128,11 @@ function verifyArtifacts() {
     }
   }
 
-  const forbiddenPrefixes = ["package/.git/", "package/.github/", "package/artifacts/", "package/coverage/", "package/src/", "package/test/"];
+  const forbiddenPrefixes = ["package/.git/", "package/.github/", "package/artifacts/", "package/coverage/", "package/eval/", "package/reports/", "package/src/", "package/test/"];
   const forbiddenFiles = [
+    "package/issues.json",
+    "package/roadmap.json",
+    "package/scripts/baseline-report.mjs",
     "package/scripts/check-release-version.mjs",
     "package/scripts/check-release-artifacts.mjs",
     "package/tsconfig.json",

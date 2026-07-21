@@ -38,7 +38,7 @@ irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-a
 
 ## APEX 中文社区是什么
 
-`apexcn-cli` 使用的内容来自 APEX 中文社区。这里汇集了 Oracle APEX 开发者分享的问题解答、新手教程、进阶技巧和实践经验。
+`apexcn-cli` 使用的内容来自 APEX 中文社区。这里汇集了 Oracle APEX 开发者分享的问题解答、入门教程、进阶技巧和实践经验。
 
 你仍然可以直接打开社区网页阅读和交流；`apexcn-cli` 的作用，是让 AI 帮你更快地找到、理解和使用这些内容。
 
@@ -47,7 +47,7 @@ irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-a
 社区主要包含以下板块：
 
 - **APEX 问题求助**：提交开发中遇到的问题，寻找社区帮助；
-- **APEX 新手入门**：学习环境搭建、基础教程和常见问题；
+- **APEX 新手入门**：查找环境搭建、基础教程和常见问题；
 - **APEX 进阶技巧**：查找开发技巧、最佳实践和完整案例；
 - **建议与意见反馈**：向社区提出建议或反馈问题。
 
@@ -96,17 +96,19 @@ apexcn me
 
 如果仍然无法使用，可查看：
 
-- [小白用户手册](docs/user-guide.zh.md)
+- [用户手册（中文）](docs/user-guide.zh.md)
+- [User Guide (English)](docs/user-guide.en.md)
 - [命令行终端手册](docs/cli-manual.zh.md)
-- [快速使用说明](docs/quickstart.md)
+- [Terminal Manual (English)](docs/cli-manual.en.md)
+- [安全模型](docs/security-model.md)
 
 ## Top 20 典型使用话术
 
 以下内容可以直接发给 AI。涉及发布、修改或删除时，建议保留“先预览、等我确认”的要求。
 
-1. **搜索新手资料**
+1. **搜索入门资料**
 
-   > 请在 APEX 中文社区搜索适合小白学习的入门帖子，挑选 5 篇，按阅读顺序排列并附上真实链接。
+   > 请在 APEX 中文社区搜索适合初次学习 APEX 的入门帖子，挑选 5 篇，按阅读顺序排列并附上真实链接。
 
 2. **搜索具体问题**
 
@@ -114,7 +116,7 @@ apexcn me
 
 3. **查找代码示例**
 
-   > 请在 APEX 中文社区查找 JSON_TABLE 的新手示例，整理关键代码、使用条件和原帖链接。
+   > 请在 APEX 中文社区查找 JSON_TABLE 的入门示例，整理关键代码、使用条件和原帖链接。
 
 4. **了解社区近期内容**
 
@@ -142,7 +144,7 @@ apexcn me
 
 10. **制定学习路线**
 
-    > 请为 APEX 小白制定一条从页面开发到调用 REST API 的学习路线，并为每个阶段推荐社区帖子。
+    > 请为初次接触 APEX 的开发者制定一条从页面开发到调用 REST API 的学习路线，并为每个阶段推荐社区帖子。
 
 11. **整理个人学习笔记**
 

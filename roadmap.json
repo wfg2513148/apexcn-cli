@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "product": "apexcn-cli",
-  "baselineRelease": "0.18.18",
+  "baselineRelease": "1.0.0",
   "updatedAt": "2026-07-18",
   "versionPolicy": {
     "productStageToReleaseLine": {
@@ -14,14 +14,14 @@
       "0.8": "0.80.x",
       "0.9": "0.90.x"
     },
-    "routineIteration": "0.0.x",
-    "allowVersion1": false,
-    "releaseLineSemantics": "产品阶段 0.N 映射到 SemVer 0.N0.x；例如阶段 0.5 使用 0.50.x，不代表回退到 0.5.0。",
+    "routineIteration": "1.x",
+    "allowVersion1": true,
+    "releaseLineSemantics": "产品已进入正式版，后续兼容更新遵循 SemVer 1.x；历史 0.x 里程碑仅保留为内部能力演进记录。",
     "milestoneEntryVersionBump": "minor",
     "goalModeIterationVersionBump": "patch",
     "previousPublicReleaseUpgradeSmokeRequired": true,
     "migrationNoteRequiredOnMinorCutover": true,
-    "preGaSupportWindow": "current-and-previous-release-line"
+    "preGaSupportWindow": "historical-0.x-to-1.0-upgrade"
   },
   "executionProtocol": {
     "planningMode": "just_in_time",
@@ -3205,7 +3205,7 @@
       "owner": "independent-validator",
       "purpose": "新手、个人、Agent 和跨角色首次尝试任务",
       "integrityRules": [
-        "每轮使用全新小白 validator 任务线程，禁止复用旧线程上下文",
+        "每轮使用全新且无实现先验的 validator 任务线程，禁止复用旧线程上下文",
         "固定公开 baseline suite 与当前里程碑动态 suite 分开下发、执行和计分",
         "适用于当前里程碑的固定 baseline suite 覆盖率必须为 100%",
         "动态 suite 必须包含 adverse exploration，且由主会话按当前里程碑和实际风险分配",
@@ -3304,7 +3304,7 @@
       "id": "GLOBAL-GATE-INDEPENDENT",
       "type": "manual",
       "appliesTo": "all",
-      "requirement": "新建的小白 validator 任务线程按当前里程碑动态场景完成复验且无未解决 blocking finding"
+      "requirement": "新建且无实现先验的 validator 任务线程按当前里程碑动态场景完成复验且无未解决 blocking finding"
     },
     {
       "id": "GLOBAL-GATE-VISUAL-WRITE",
