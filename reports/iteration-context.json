@@ -1,15 +1,15 @@
 {
   "kind": "apexcn-iteration-context",
   "schemaVersion": 1,
-  "generatedAt": "2026-07-20T09:36:59.483Z",
+  "generatedAt": "2026-07-21T01:17:16.322Z",
   "release": {
-    "version": "0.80.3",
-    "tag": "v0.80.3",
-    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v0.80.3"
+    "version": "0.80.4",
+    "tag": "v0.80.4",
+    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v0.80.4"
   },
   "repository": {
     "branch": "main",
-    "commit": "10db004dfafbc111235b964c80a2d6acf3dde4b1"
+    "commit": "9d38f1b87c72ba544aec2bb1f0126535944a2d68"
   },
   "milestone": {
     "completedIterationFor": null,
@@ -17,40 +17,34 @@
     "resumeMilestoneStatus": "in_progress"
   },
   "enhancedCapabilities": [
-    "`apexcn ask` 现在会把服务端相对 `card_link` 和 `threadUrl` 转换为可直接打开的 `https://oracleapex.cn/ords/f?p=...` 社区帖子链接。",
-    "链接规范化完整保留服务端 `cs` 校验和，并继续把外部原文链接保存在 `originalUrl`。",
-    "当引用只有 topic ID 而没有真实链接时，CLI 不再生成必然 404 的 `/t/{id}` 伪链接。",
-    "新增聚焦命令回归和自然语言 Codex 场景，覆盖可点击来源链接。"
+    "README now introduces the APEX Chinese Community with a real anonymous homepage screenshot and explains the available content sections.",
+    "First-time users now have an exact visual path to sign in, open API Key management, copy the current Key, configure it with apexcn -apikey, and verify the account.",
+    "The guide explicitly warns that regenerating a Key revokes the previous Key and documents basic secret-handling precautions.",
+    "Release v0.80.4 includes both privacy-safe screenshot assets and an automated documentation consistency check."
   ],
   "unexpectedProblems": [
-    "初步现象像服务端 URL 契约缺口，但真实生产响应已经提供带校验和的相对 `card_link`；缺陷实际位于 CLI 引用增强逻辑。",
-    "现有测试把错误的 `/t/{id}` 形式固化为预期，需要同步修正命令测试和自然语言场景。",
-    "固定服务端 Codex 任务的归档会话文件已缺失，无法继续投递；确认 API 已提供修复所需字段后，该外部任务不再构成本次发布阻塞。",
-    "通用只读 e2e 脚本因当前 shell 未设置 `APEXCN_API_KEY` 而跳过，但使用既有活动 profile 的真实只读 `ask` 与 URL GET 验证已通过。"
+    "The first login-page screenshot inherited browser autofill and exposed an account identifier, so it was discarded instead of entering the repository.",
+    "The authenticated browser control session timed out while attempting an extra account-menu screenshot; the already verified API Key management page supplied the required end-state evidence without retrying any write action."
   ],
   "rootCauses": [
-    "`enrichAskReference` 只接受绝对 `canonicalUrl/threadUrl`，没有解析 API 返回的 APEX 相对 `card_link`。",
-    "当引用含 topic ID 时，旧逻辑优先硬编码不存在的 Discourse 风格 `/t/{id}` 路径，遮蔽了后端已经提供的有效 APEX 页面链接。",
-    "回归测试只验证字符串形状，没有用真实 HTTP 状态证明生成后的链接能够打开。"
+    "Authenticated community pages intentionally display account identity and Key material, so raw screenshots are not safe documentation assets.",
+    "The previous README assumed users already knew what the community was and where its API Key management entry lived."
   ],
   "preventionActions": [
-    "测试用例包含带 `cs` 的真实 APEX `card_link` 形状，并断言校验和在绝对 URL 中保持不变。",
-    "保留只有 topic ID 的反例，明确要求不生成未经服务端提供的社区 URL。",
-    "发布前同时验证旧 `/t/23722` 返回 404、修复后的 APEX URL 返回 200，并用本地构建执行真实只读 `ask`。",
-    "继续要求 Codex 消费 `url/threadUrl` 的真实值，不根据 topic ID 自行推导站点路由。"
+    "Commit only anonymous or fully redacted community screenshots, inspect every final asset at original resolution, and never keep a draft that contains autofilled credentials.",
+    "Keep the API Key acquisition route in README and assert that every referenced onboarding screenshot remains present and non-empty.",
+    "Do not invoke the community Key regeneration action during documentation capture; verify its semantics from the owning server implementation instead."
   ],
-  "nextMilestoneGoal": "保持 roadmap 0.8 为 in_progress；待用户明确恢复后，继续真实 Windows lifecycle、完整新手独立验证和七天只读 soak，并在全部 AC 达标后关闭 0.8。",
+  "nextMilestoneGoal": "Keep roadmap milestone 0.8 active and its remaining Windows lifecycle, fresh independent novice validation, and seven-day readonly soak work paused until the user explicitly resumes it.",
   "expectedResults": [
-    "升级到 v0.80.3 后，Codex 展示的 `ask` 社区帖子标题链接可直接打开对应 APEX 页面。",
-    "服务端返回的校验和链接和外部原文链接保持各自语义，不再相互覆盖。",
-    "缺少真实帖子 URL 的引用不会再误导用户点击 404 地址。",
-    "0.8 后续验证继续使用 v0.80.3 release 资产，同时保持独立 validator、Windows lifecycle 和 soak 门禁不变。"
+    "A new user can understand the community, obtain an API Key, configure apexcn-cli, and verify the account without guessing the web navigation path.",
+    "The latest GitHub Release resolves to v0.80.4 with seven checksum-verified assets.",
+    "No paused 0.8 acceptance gate is executed or represented as complete."
   ],
   "majorRisks": [
-    "APEX 页面链接依赖服务端生成的 checksum；如果服务端未来改变 `card_link` 形状，需要同步更新契约测试。",
-    "仍使用 v0.80.2 或更早版本的全局安装不会自动获得修复，必须升级到 v0.80.3。",
-    "真实 Windows lifecycle、独立新手验证和七天只读 soak 仍暂停，本补丁不能作为 roadmap 0.8 完成证据。",
-    "0.5 继续 blocked/unreleased；v0.80.3 不得作为 0.5 完成或发布依据。"
+    "Community navigation labels or layout may change, making screenshots and step text stale even though the CLI remains compatible.",
+    "Using apexcn -apikey places the argument in shell history and may briefly expose it in the process list; the environment-variable method remains the safer alternative.",
+    "Roadmap 0.8 core acceptance criteria remain pending because Windows lifecycle validation, independent validation, and the seven-day soak are still paused by the user."
   ],
   "activeIssues": [],
   "resume": {
