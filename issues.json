@@ -3,7 +3,38 @@
   "product": "apexcn-cli",
   "updatedAt": "2026-07-21",
   "activeOnly": true,
-  "issues": [],
+  "issues": [
+    {
+      "id": "V102-R2-D07-CONFIG-KEY-BINDING-NETWORK",
+      "status": "in_progress",
+      "owner": "cli",
+      "priority": "P1",
+      "milestoneId": "0.8",
+      "title": "兼容 workflow 未在网络请求前绑定本地配置范围和 API Key",
+      "description": "已批准的兼容 workflow 从另一配置范围恢复、或在同 profile/baseUrl 下更换 API Key 时，会先发出网络请求才以 401 失败。修复候选已加入配置范围与凭据指纹绑定，等待新鲜独立复验。",
+      "validatorRound": "V102-R2",
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "019f83df-3875-7fa1-9851-e55dabd8fa1e",
+        "assignmentRef": "V102-R2",
+        "report": "run-v102-r2-20260721T165229+0800/final-report.md",
+        "findingRefs": ["V102-R2-D07-CONFIG-KEY-BINDING-NETWORK"],
+        "scenarioOrExplorationRef": ["D07"],
+        "observedCliVersion": "1.0.2",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "从另一配置范围恢复审批、或在同 profile/baseUrl 下更换 API Key 时，CLI 发出网络请求并返回 HTTP 401；未产生写入。",
+        "expectedUserOutcome": "配置范围、账号或社区与审批不一致时，应在任何网络请求前拒绝执行。",
+        "responsibilityAssessment": "cli"
+      },
+      "candidate": {
+        "version": "1.0.2",
+        "artifact": "artifacts/apexcn-cli.tgz",
+        "sha256": "0c73f6d9fe4880be8c9d34ead105d462e746db492e102a0928fba1c951417766"
+      },
+      "cleanup": "V102-R2 PASS_ZERO_RESIDUE_FOR_ALL_CURRENT_ROUND_WRITES"
+    }
+  ],
   "enhancementRequests": [
     {
       "id": "ENH-REPLY-OWNERSHIP-001",
@@ -55,13 +86,18 @@
           "id": "CLI-WORKFLOW-ARTIFACT-BINDING",
           "status": "fixed_in_candidate",
           "summary": "复制 workflow 目录后，run.json 中的绝对 artifact 路径会把副本 resume 重定向到原已批准目录，现已强制绑定到明确传入的 run directory"
+        },
+        {
+          "id": "CLI-WORKFLOW-ACCOUNT-CONFIG-BINDING",
+          "status": "fixed_in_candidate_pending_fresh_revalidation",
+          "summary": "兼容 workflow 审批现已绑定配置范围、API Key 指纹、profile 和 baseUrl，目标变化时在网络前拒绝"
         }
       ],
       "candidate": {
         "version": "1.0.2",
         "artifact": "artifacts/apexcn-cli.tgz",
-        "sha256": "46607379a5c00734a535547b43ce91d3dfebbfa3b39c6f8b3df66faff90372ea",
-        "status": "local_gates_passed_pending_fresh_independent_validation"
+        "sha256": "0c73f6d9fe4880be8c9d34ead105d462e746db492e102a0928fba1c951417766",
+        "status": "workflow_account_binding_fix_pending_fresh_independent_validation"
       },
       "serverCapabilityAuditRequired": true,
       "serverTask": {
@@ -111,11 +147,16 @@
       "responsibility": "cli-user-experience",
       "serverCapabilityAuditRequired": true,
       "expectedServerChange": "none-unless-audit-finds-a-contract-gap",
+      "serverAudit": {
+        "threadId": "019f835b-6053-7110-9719-6f5b7b0ce1ba",
+        "result": "existing_contract_sufficient_no_server_change",
+        "summary": "六条 topic/reply 写路由已统一覆盖版本、权限和幂等校验；operationId 可由 CLI 本地管理。"
+      },
       "candidate": {
         "version": "1.0.2",
         "artifact": "artifacts/apexcn-cli.tgz",
-        "sha256": "46607379a5c00734a535547b43ce91d3dfebbfa3b39c6f8b3df66faff90372ea",
-        "status": "local_gates_passed_pending_fresh_independent_validation"
+        "sha256": "0c73f6d9fe4880be8c9d34ead105d462e746db492e102a0928fba1c951417766",
+        "status": "workflow_account_binding_fix_pending_fresh_independent_validation"
       },
       "executionOrder": [
         "apexcn-forums-if-server-change-required",

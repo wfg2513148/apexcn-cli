@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { Command, InvalidArgumentError, Option } from "commander";
-import { ConfigFileError } from "../config.js";
+import { ConfigFileError, defaultConfigPath } from "../config.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
 import {
@@ -100,6 +100,7 @@ type Session = {
   profile: string;
   baseUrl: string;
   token: string;
+  configScope: string;
 };
 
 type WorkflowRunStatus = "running" | "preview-ready" | "completed" | "failed" | "execution-uncertain";
@@ -174,6 +175,8 @@ type WorkflowPreviewRequest = {
 type WorkflowTarget = {
   profile: string;
   baseUrl: string;
+  configScope?: string;
+  credentialFingerprint?: string;
 };
 
 type WorkflowVerificationIssue = {
@@ -429,7 +432,7 @@ async function diffWorkflow(io: CommandIo, options: WorkflowDiffOptions): Promis
   const preview = await readOptionalJson(loaded.state.artifacts.preview);
   const approval = await readOptionalJson(loaded.state.artifacts.approval);
   const previewRequest = verificationPreviewRequest(preview, loaded.state.artifacts.preview, []);
-  const previewTarget = isRecord(preview) ? verificationWorkflowTarget({ profile: preview.profile, baseUrl: preview.baseUrl }) : undefined;
+  const previewTarget = verificationWorkflowTarget(preview);
   const approvalRequest = isRecord(approval) ? verificationApprovalRequest(approval.request) : undefined;
   const approvalTarget = isRecord(approval) ? verificationWorkflowTarget(approval.target) : undefined;
   const currentHash = previewRequest && previewTarget ? workflowPreviewHash(previewTarget, previewRequest) : undefined;
@@ -651,7 +654,7 @@ async function workflowVerificationReport(runDir: string, state: WorkflowRunStat
   const approvalRequired = state.status === "completed" || state.status === "execution-uncertain" || executionAttempted;
   const preview = await readVerificationJson(state.artifacts.preview, issues, "invalid-preview", previewRequired);
   const previewRequest = preview ? verificationPreviewRequest(preview, state.artifacts.preview, issues) : undefined;
-  const previewTarget = isRecord(preview) ? verificationWorkflowTarget({ profile: preview.profile, baseUrl: preview.baseUrl }) : undefined;
+  const previewTarget = verificationWorkflowTarget(preview);
   if (preview && !previewTarget) {
     issues.push({ code: "invalid-preview-target", message: "Preview target is invalid.", path: state.artifacts.preview });
   }
@@ -1055,7 +1058,7 @@ function verifyBundleArtifact(artifact: Record<string, unknown>, verification: R
 function verifyBundleWorkflowChain(runId: string, status: string, artifacts: Map<string, Record<string, unknown>>, issues: WorkflowVerificationIssue[], warnings: WorkflowVerificationIssue[]): void {
   const preview = bundleJsonArtifact(artifacts, "preview", issues, status === "preview-ready" || status === "completed" || status === "execution-uncertain");
   const previewRequest = preview ? verificationPreviewRequest(preview, "bundle:preview", issues) : undefined;
-  const previewTarget = isRecord(preview) ? verificationWorkflowTarget({ profile: preview.profile, baseUrl: preview.baseUrl }) : undefined;
+  const previewTarget = verificationWorkflowTarget(preview);
   const previewHash = previewRequest && previewTarget ? workflowPreviewHash(previewTarget, previewRequest) : undefined;
   const approval = bundleJsonArtifact(artifacts, "approval", issues, status === "completed" || status === "execution-uncertain");
   if (!approval && status === "preview-ready") {
@@ -1278,7 +1281,14 @@ function verificationWorkflowTarget(value: unknown): WorkflowTarget | undefined 
   if (!isRecord(value) || typeof value.profile !== "string" || typeof value.baseUrl !== "string") {
     return undefined;
   }
-  return { profile: value.profile, baseUrl: value.baseUrl };
+  if (value.configScope !== undefined && typeof value.configScope !== "string") return undefined;
+  if (value.credentialFingerprint !== undefined && typeof value.credentialFingerprint !== "string") return undefined;
+  return compactObject({
+    profile: value.profile,
+    baseUrl: value.baseUrl,
+    configScope: value.configScope,
+    credentialFingerprint: value.credentialFingerprint
+  }) as WorkflowTarget;
 }
 
 function verificationExecute(
@@ -1341,8 +1351,7 @@ async function executeRunSteps(state: WorkflowRunState, runDir: string, session:
       await writeJson(state.artifacts.preview, {
         kind: "workflow-preview",
         schemaVersion: 1,
-        profile: session.profile,
-        baseUrl: session.baseUrl,
+        ...workflowTarget(session),
         request,
         result: null
       });
@@ -1390,8 +1399,7 @@ async function executeRunSteps(state: WorkflowRunState, runDir: string, session:
     await writeJson(state.artifacts.preview, {
       kind: "workflow-preview",
       schemaVersion: 1,
-      profile: session.profile,
-      baseUrl: session.baseUrl,
+      ...workflowTarget(session),
       request,
       result: null
     });
@@ -1441,8 +1449,7 @@ async function executeContentMutationSteps(
     await writeJson(state.artifacts.preview, {
       kind: "workflow-preview",
       schemaVersion: 1,
-      profile: session.profile,
-      baseUrl: session.baseUrl,
+      ...workflowTarget(session),
       request,
       result: null
     });
@@ -1814,7 +1821,12 @@ async function loadSession(io: WorkflowCommandOptions): Promise<Session | undefi
       process.exitCode = 1;
       return undefined;
     }
-    return runtime.session;
+    return {
+      profile: runtime.session.profile,
+      baseUrl: runtime.session.baseUrl,
+      token: runtime.session.token,
+      configScope: workflowConfigScope(io.configPath)
+    };
   } catch (error) {
     if (error instanceof ConfigFileError) {
       printError(io, { type: "config", message: error.message });
@@ -2071,8 +2083,8 @@ async function workflowApprovalError(state: WorkflowRunState): Promise<string | 
 
 async function workflowTargetError(state: WorkflowRunState, session: Session): Promise<string | undefined> {
   const preview = await workflowPreviewEnvelope(state.artifacts.preview);
-  if (preview.target.profile !== session.profile || preview.target.baseUrl !== session.baseUrl) {
-    return "Workflow execution target does not match the approved profile and base URL.";
+  if (canonicalJson(preview.target) !== canonicalJson(workflowTarget(session))) {
+    return "Workflow execution target does not match the approved local configuration, account, and community.";
   }
   return undefined;
 }
@@ -2095,7 +2107,7 @@ async function workflowPreviewEnvelope(path: string): Promise<{ target: Workflow
   if ((method !== "POST" && method !== "DELETE") || typeof requestPath !== "string" || !isRecord(preview.request.body)) {
     throw new Error(`Invalid workflow preview artifact: ${path}`);
   }
-  const target = verificationWorkflowTarget({ profile: preview.profile, baseUrl: preview.baseUrl });
+  const target = verificationWorkflowTarget(preview);
   if (!target) {
     throw new Error(`Invalid workflow preview target: ${path}`);
   }
@@ -2104,6 +2116,19 @@ async function workflowPreviewEnvelope(path: string): Promise<{ target: Workflow
 
 function workflowPreviewHash(target: WorkflowTarget, request: WorkflowPreviewRequest): string {
   return createHash("sha256").update(canonicalJson({ target, request }), "utf8").digest("hex");
+}
+
+function workflowTarget(session: Session): WorkflowTarget {
+  return {
+    profile: session.profile,
+    baseUrl: session.baseUrl,
+    configScope: session.configScope,
+    credentialFingerprint: createHash("sha256").update(session.token, "utf8").digest("hex")
+  };
+}
+
+function workflowConfigScope(configPath?: string): string {
+  return createHash("sha256").update(resolve(configPath ?? defaultConfigPath()), "utf8").digest("hex");
 }
 
 function canonicalJson(value: unknown): string {

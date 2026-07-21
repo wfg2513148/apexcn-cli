@@ -86,10 +86,11 @@ async function createQuestionPreview(runDir: string) {
 }
 
 async function createCompletedBundle(runDir: string, bundlePath: string): Promise<Record<string, unknown>> {
-  await createQuestionPreview(runDir);
+  const preview = await createQuestionPreview(runDir);
   const approver = workflowProgram();
   await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
-  const executor = await configuredWorkflowProgram(async () => Response.json({ requestId: "created-1", id: 1001 }));
+  vi.stubGlobal("fetch", vi.fn(async () => Response.json({ requestId: "created-1", id: 1001 })));
+  const executor = workflowProgram({ configPath: preview.configPath });
   await executor.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
   const exporter = workflowProgram();
   await exporter.program.parseAsync(["node", "apexcn", "workflow", "export", "--run-dir", runDir, "--output", bundlePath, "--json"]);
@@ -538,16 +539,18 @@ describe("workflow commands", () => {
     expect(approval.previewHash).toMatch(/^[a-f0-9]{64}$/);
     expect((await readJson(join(runDir, "run.json"))).nextAction).toContain("--execute --yes");
 
-    const second = await configuredWorkflowProgram(async (input, init) => {
+    const secondFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       expect(String(input)).toBe("https://oracleapex.cn/ords/test/api/v1/topics");
       expect(init?.method).toBe("POST");
       expect(String(init?.body)).toContain("Page process gets 403");
       expect(String(init?.body)).not.toContain("MUTATED AFTER PREVIEW");
       return Response.json({ requestId: "created-1", id: 1001 });
     });
+    vi.stubGlobal("fetch", secondFetch);
+    const second = workflowProgram({ configPath: first.configPath });
     await second.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
 
-    expect(second.fetch).toHaveBeenCalledTimes(1);
+    expect(secondFetch).toHaveBeenCalledTimes(1);
     const execute = await readJson(join(runDir, "execute.json"));
     expect(execute).toEqual(expect.objectContaining({
       kind: "workflow-execute",
@@ -641,7 +644,7 @@ describe("workflow commands", () => {
 
   test("workflow verify reports local evidence and writes report after approval", async () => {
     const runDir = await tempPath("verify-preview");
-    await createQuestionPreview(runDir);
+    const preview = await createQuestionPreview(runDir);
 
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
@@ -686,10 +689,11 @@ describe("workflow commands", () => {
 
   test("workflow verify validates completed execute evidence and detects tampering", async () => {
     const runDir = await tempPath("verify-completed");
-    await createQuestionPreview(runDir);
+    const preview = await createQuestionPreview(runDir);
     const approver = workflowProgram();
     await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
-    const executor = await configuredWorkflowProgram(async () => Response.json({ requestId: "created-1", id: 1001 }));
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ requestId: "created-1", id: 1001 })));
+    const executor = workflowProgram({ configPath: preview.configPath });
     await executor.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
 
     const completed = workflowProgram();
@@ -728,10 +732,11 @@ describe("workflow commands", () => {
 
   test("workflow export writes a portable bundle for a valid completed run", async () => {
     const runDir = await tempPath("export-valid");
-    await createQuestionPreview(runDir);
+    const preview = await createQuestionPreview(runDir);
     const approver = workflowProgram();
     await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
-    const executor = await configuredWorkflowProgram(async () => Response.json({ requestId: "created-1", id: 1001 }));
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ requestId: "created-1", id: 1001 })));
+    const executor = workflowProgram({ configPath: preview.configPath });
     await executor.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
 
     const output = join(runDir, "nested", "bundle.json");
@@ -1122,10 +1127,10 @@ describe("workflow commands", () => {
     expect(approval).toEqual(expect.objectContaining({
       previewHash: expect.stringMatching(/^[a-f0-9]{64}$/),
       expiresAt: expect.any(String),
-      target: {
+      target: expect.objectContaining({
         profile: "test@oci",
         baseUrl: "https://oracleapex.cn/ords/test"
-      }
+      })
     }));
 
     const executeFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
@@ -1421,6 +1426,53 @@ describe("workflow commands", () => {
     const tampered = workflowProgram({ configPath: env.configPath });
     await tampered.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes"]);
     expect(tampered.stderr.join("")).toContain("approval request");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("workflow binds approval to the local config scope and active credential before network", async () => {
+    const runDir = await tempPath("target-binding");
+    const contentFile = join(dirname(runDir), "target-binding-reply.md");
+    await writeFile(contentFile, "Target-bound reply content with enough detail for review.", "utf8");
+    const env = await configuredWorkflowProgram(async () => Response.json({ error: "unexpected" }, { status: 500 }));
+    await env.program.parseAsync([
+      "node",
+      "apexcn",
+      "workflow",
+      "run",
+      "--goal",
+      "reply-update",
+      "--reply-id",
+      "51",
+      "--content-file",
+      contentFile,
+      "--if-version",
+      "2",
+      "--output-dir",
+      runDir
+    ]);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--approved-by", "reviewer"]);
+
+    const copiedRunDir = await tempPath("copied-target-binding");
+    await cp(runDir, copiedRunDir, { recursive: true });
+    const alternateConfigPath = await tempConfigPath();
+    await mkdir(dirname(alternateConfigPath), { recursive: true });
+    await writeFile(alternateConfigPath, await readFile(env.configPath, "utf8"), { encoding: "utf8", mode: 0o600 });
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const copied = workflowProgram({ configPath: alternateConfigPath });
+    await copied.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", copiedRunDir, "--execute", "--yes"]);
+    expect(copied.stderr.join("")).toContain("approved local configuration, account, and community");
+    expect(fetch).not.toHaveBeenCalled();
+
+    process.exitCode = undefined;
+    const config = await readJson(env.configPath);
+    const profile = (config.profiles as Record<string, Record<string, unknown>>)["test@oci"];
+    profile.token = "different-account-credential-1234567890";
+    await writeFile(env.configPath, `${JSON.stringify(config, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+    const changedAccount = workflowProgram({ configPath: env.configPath });
+    await changedAccount.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes"]);
+    expect(changedAccount.stderr.join("")).toContain("approved local configuration, account, and community");
     expect(fetch).not.toHaveBeenCalled();
   });
 
