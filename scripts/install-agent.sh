@@ -8,8 +8,10 @@ set -euo pipefail
 
 package_url="${APEXCN_CLI_PACKAGE_URL:-https://github.com/wfg2513148/apexcn-cli/releases/latest/download/apexcn-cli.tgz}"
 checksums_url="${APEXCN_CLI_CHECKSUMS_URL:-${package_url%/*}/checksums.txt}"
-install_root="${APEXCN_CLI_INSTALL_ROOT:-$HOME/.apexcn/tools/apexcn-cli}"
-bin_dir="${APEXCN_CLI_BIN_DIR:-$HOME/.local/bin}"
+default_install_root="$HOME/.apexcn/tools/apexcn-cli"
+default_bin_dir="$HOME/.local/bin"
+install_root="${APEXCN_CLI_INSTALL_ROOT:-$default_install_root}"
+bin_dir="${APEXCN_CLI_BIN_DIR:-$default_bin_dir}"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
@@ -76,7 +78,10 @@ for skill_root in "$HOME/.agents/skills" "$HOME/.codex/skills" "$HOME/.config/op
   cp -R "$cli_root/agent-skill" "$skill_target"
 done
 
-resolved="$(command -v apexcn 2>/dev/null || true)"
+resolved=""
+if [[ "$install_root" == "$default_install_root" && "$bin_dir" == "$default_bin_dir" ]]; then
+  resolved="$(command -v apexcn 2>/dev/null || true)"
+fi
 if [[ -n "$resolved" && "$resolved" != "$launcher" ]]; then
   if [[ -f "$resolved" ]] && grep -q 'dist/index.js' "$resolved" && [[ -w "$(dirname "$resolved")" ]]; then
     cp "$launcher" "$resolved"

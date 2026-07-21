@@ -7,8 +7,11 @@ if ($args.Count -ne 0) {
 
 [string]$PackageUrl = $(if ($env:APEXCN_CLI_PACKAGE_URL) { $env:APEXCN_CLI_PACKAGE_URL } else { "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/apexcn-cli.tgz" })
 $ChecksumsUrl = if ($env:APEXCN_CLI_CHECKSUMS_URL) { $env:APEXCN_CLI_CHECKSUMS_URL } else { $PackageUrl.Substring(0, $PackageUrl.LastIndexOf("/") + 1) + "checksums.txt" }
-$InstallRoot = if ($env:APEXCN_CLI_INSTALL_ROOT) { $env:APEXCN_CLI_INSTALL_ROOT } else { Join-Path $env:LOCALAPPDATA "apexcn/tools/apexcn-cli" }
-$BinDir = if ($env:APEXCN_CLI_BIN_DIR) { $env:APEXCN_CLI_BIN_DIR } else { Join-Path $env:LOCALAPPDATA "apexcn/bin" }
+$DefaultInstallRoot = Join-Path $env:LOCALAPPDATA "apexcn/tools/apexcn-cli"
+$DefaultBinDir = Join-Path $env:LOCALAPPDATA "apexcn/bin"
+$InstallRoot = if ($env:APEXCN_CLI_INSTALL_ROOT) { $env:APEXCN_CLI_INSTALL_ROOT } else { $DefaultInstallRoot }
+$BinDir = if ($env:APEXCN_CLI_BIN_DIR) { $env:APEXCN_CLI_BIN_DIR } else { $DefaultBinDir }
+$UsingDefaultPaths = $InstallRoot -eq $DefaultInstallRoot -and $BinDir -eq $DefaultBinDir
 $TempDir = Join-Path ([IO.Path]::GetTempPath()) ("apexcn-cli-" + [guid]::NewGuid())
 
 function Write-Step([string]$Message) {
@@ -83,7 +86,7 @@ try {
   }
 
   $Resolved = (Get-Command apexcn -ErrorAction SilentlyContinue).Source
-  if ($Resolved -and $Resolved -ne $Launcher) {
+  if ($UsingDefaultPaths -and $Resolved -and $Resolved -ne $Launcher) {
     if ((Test-Path $Resolved) -and ((Get-Content -Raw $Resolved) -like "*dist*index.js*")) {
       Copy-Item -Force $Launcher $Resolved
       Write-Step "Updated shell-resolved launcher: $Resolved"

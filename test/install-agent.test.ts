@@ -66,6 +66,22 @@ function installEnvironment(
   };
 }
 
+function defaultInstallEnvironment(
+  root: string,
+  packagePaths: { archive: string; checksums: string },
+  extra: NodeJS.ProcessEnv = {}
+): NodeJS.ProcessEnv {
+  const home = join(root, "home");
+  mkdirSync(home, { recursive: true });
+  return {
+    ...process.env,
+    HOME: home,
+    APEXCN_CLI_PACKAGE_URL: `file://${packagePaths.archive}`,
+    APEXCN_CLI_CHECKSUMS_URL: `file://${packagePaths.checksums}`,
+    ...extra
+  };
+}
+
 describe("zero-argument one-click installers", () => {
   test("shell installer keeps a minimal public surface and mandatory checksum verification", () => {
     const script = readRepoFile("scripts/install-agent.sh");
@@ -103,6 +119,8 @@ describe("zero-argument one-click installers", () => {
     expect(script).toContain("Checksum verification failed");
     expect(script).toContain("Verified package checksum");
     expect(script).toContain("releases/latest/download/apexcn-cli.tgz");
+    expect(script).toContain("$UsingDefaultPaths");
+    expect(script).toContain("if ($UsingDefaultPaths -and $Resolved");
     expect(script).not.toContain("APEXCN_API_KEY");
     expect(script).not.toContain("param(");
     expect(script).not.toContain("[switch]");
@@ -129,7 +147,7 @@ describe("zero-argument one-click installers", () => {
       expect(execFileSync(join(root, "bin", "apexcn"), ["--version"], {
         env,
         encoding: "utf8"
-      })).toBe("0.80.4\n");
+      })).toBe("0.80.5\n");
       expect(existsSync(join(root, "home", ".apexcn", "config.json"))).toBe(false);
       expect(existsSync(join(root, "home", ".agents", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
       expect(existsSync(join(root, "home", ".codex", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
@@ -180,7 +198,7 @@ describe("zero-argument one-click installers", () => {
 exit 0
 `);
     chmodSync(shadow, 0o755);
-    const env = installEnvironment(root, packagePaths, {
+    const env = defaultInstallEnvironment(root, packagePaths, {
       PATH: `${shadowBin}${delimiter}${process.env.PATH ?? ""}`
     });
 
@@ -193,7 +211,40 @@ exit 0
 
       expect(result.status, result.stderr).toBe(0);
       expect(result.stdout).toContain("Updated shell-resolved launcher");
-      expect(execFileSync(shadow, ["--version"], { env, encoding: "utf8" })).toBe("0.80.4\n");
+      expect(execFileSync(shadow, ["--version"], { env, encoding: "utf8" })).toBe("0.80.5\n");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  posixTest("shell installer with custom paths never rewrites an external PATH launcher", () => {
+    const root = mkdtempSync(join(tmpdir(), "apexcn-zero-contained-"));
+    const packagePaths = preparePackage(root);
+    const externalBin = join(root, "external-bin");
+    const externalLauncher = join(externalBin, "apexcn");
+    const originalLauncher = `#!/usr/bin/env bash
+# external apexcn-cli launcher for dist/index.js
+printf 'external launcher\\n'
+`;
+    mkdirSync(externalBin);
+    writeFileSync(externalLauncher, originalLauncher);
+    chmodSync(externalLauncher, 0o755);
+    const env = installEnvironment(root, packagePaths, {
+      PATH: `${externalBin}${delimiter}${process.env.PATH ?? ""}`
+    });
+
+    try {
+      const result = spawnSync("bash", ["scripts/install-agent.sh"], {
+        cwd: repoRoot,
+        env,
+        encoding: "utf8"
+      });
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).not.toContain("Updated shell-resolved launcher");
+      expect(readFileSync(externalLauncher, "utf8")).toBe(originalLauncher);
+      expect(execFileSync(join(root, "bin", "apexcn"), ["--version"], { env, encoding: "utf8" }))
+        .toBe("0.80.5\n");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -226,7 +277,7 @@ exit 0
       expect(execFileSync(process.execPath, [
         join(root, "install", "package", "dist", "index.js"),
         "--version"
-      ], { env, encoding: "utf8" })).toBe("0.80.4\n");
+      ], { env, encoding: "utf8" })).toBe("0.80.5\n");
       expect(existsSync(join(root, "home", ".apexcn", "config.json"))).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });

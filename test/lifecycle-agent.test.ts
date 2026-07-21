@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
 import { cpSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { describe, expect, test } from "vitest";
 
 const repoRoot = join(__dirname, "..");
@@ -43,20 +43,21 @@ describe("cross-platform lifecycle assets", () => {
 
     const common = {
       cwd: repoRoot,
-      encoding: "utf8" as const,
-      env: {
-        ...process.env,
-        HOME: home,
-        APEXCN_CLI_PACKAGE_URL: `file://${archive}`,
-        APEXCN_CLI_CHECKSUMS_URL: `file://${checksums}`
-      }
+      encoding: "utf8" as const
     };
+    const environmentFor = (activeBinDir: string) => ({
+      ...process.env,
+      HOME: home,
+      APEXCN_CLI_PACKAGE_URL: `file://${archive}`,
+      APEXCN_CLI_CHECKSUMS_URL: `file://${checksums}`,
+      PATH: `${activeBinDir}${delimiter}${process.env.PATH ?? ""}`
+    });
     const installed = spawnSync("bash", [
       "scripts/lifecycle-agent.sh",
       "install",
       "--install-root", freshInstallRoot,
       "--bin-dir", freshBinDir
-    ], common);
+    ], { ...common, env: environmentFor(freshBinDir) });
     expect(installed.status, installed.stderr).toBe(0);
     expect((JSON.parse(readFileSync(join(freshInstallRoot, "package", "package.json"), "utf8")) as { version: string }).version)
       .toBe(version);
@@ -67,7 +68,7 @@ describe("cross-platform lifecycle assets", () => {
       "--install-root", installRoot,
       "--bin-dir", binDir,
       "--backup-root", backupRoot
-    ], common);
+    ], { ...common, env: environmentFor(binDir) });
     expect(upgraded.status, upgraded.stderr).toBe(0);
     const currentVersion = (JSON.parse(readFileSync(join(installRoot, "package", "package.json"), "utf8")) as { version: string }).version;
     expect(currentVersion).toBe(version);
@@ -84,7 +85,7 @@ describe("cross-platform lifecycle assets", () => {
       "--bin-dir", binDir,
       "--backup", backupPath,
       "--yes"
-    ], common);
+    ], { ...common, env: environmentFor(binDir) });
     expect(rolledBack.status, rolledBack.stderr).toBe(0);
     expect(rolledBack.stdout).toContain("Rollback complete: 0.60.0");
 
@@ -94,7 +95,7 @@ describe("cross-platform lifecycle assets", () => {
       "--install-root", installRoot,
       "--bin-dir", binDir,
       "--yes"
-    ], common);
+    ], { ...common, env: environmentFor(binDir) });
     expect(uninstalled.status, uninstalled.stderr).toBe(0);
     expect(uninstalled.stdout).toContain("Auth configuration was preserved");
   }, 60_000);
