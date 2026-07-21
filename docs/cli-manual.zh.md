@@ -16,7 +16,7 @@ apexcn --config /tmp/apexcn-config.json auth show --json
 
 AI Agent 需要判断命令、别名、用途、风险分类、安全示例和可用选项时，应优先使用 `apexcn commands --json`，不要解析 `--help` 文本。当前结构化 manifest 契约为 `schemaVersion === 1`；如果缺失或不支持，不要消费结构化的 `safety` 或 `examples` 字段，应升级 CLI 或请求用户确认。manifest 中的 `schema` 列出可用枚举值；`safety.effects` 描述命令影响，`safety.preview` 描述是否支持或要求预览，`safety.confirmation` 列出显式确认参数，`examples[].mode` 区分读取、预览和执行示例。
 
-manifest 还包含 additive 的 `manifestVersion === 2` 字段：`capability`、`apiEffect`、`riskLevel`、`authRequired`、`supportsJson`、`supportsPreview`、`supportsDryRun`、`mcpExposure` 和 `jsonContract`。旧字段保持兼容。`jsonContract` 指向成功 schema、统一错误 schema 和实际契约测试；不支持 JSON 的命令返回 `null`。
+manifest 还包含 additive 的 `manifestVersion === 2` 字段：`capability`、`apiEffect`、`riskLevel`、`authRequired`、`supportsJson`、`supportsPreview`、`supportsDryRun` 和 `jsonContract`。旧字段保持兼容。`jsonContract` 指向成功 schema、统一错误 schema 和实际契约测试；不支持 JSON 的命令返回 `null`。
 
 网络不稳定时，可设置 `APEXCN_HTTP_TIMEOUT_MS` 为所有社区 API 请求提供默认超时；`doctor --timeout-ms` 会覆盖这个默认值。空值或非正整数会被忽略。
 
@@ -378,51 +378,15 @@ apexcn review reply --topic-id 30549 --content-file reply.md --json
 
 `review reply` 支持 `--content-file <path|->` 或 `--draft-file <path|->`。`--draft-file` 只接受 `kind === "reply-draft"`、`schemaVersion === 1` 的草稿 JSON；如果同时传入 `--topic-id` 或 `--parent-post-id` 且与草稿不一致，会在 `reply-review.issues[]` 中报告。输入缺失、输入冲突、非法 topic id、空回复、过短回复、占位符和疑似密钥都会输出稳定的 `reply-review` JSON，而不是发送 API 请求。只有普通 Markdown 文件输入会生成 `apexcn reply create <topic-id> --content-file <file> --dry-run --json` 的 `suggestedCommand`。
 
-## workflow
+## 内容写入确认
 
-本地生成可审计执行计划，不读取认证配置，不调用 API，也不会执行计划中的命令：
-
-```bash
-apexcn workflow plan \
-  --goal ask-question \
-  --keyword "REST API" \
-  --title "APEX 中调用 REST API 返回 403" \
-  --problem "页面进程调用 REST API 时返回 403。" \
-  --category-id 4 \
-  --output-dir work \
-  --json
-```
-
-`--goal` 支持 `ask-question`、`reply`、`research-only`、`publish-topic`，以及 `topic-create/update/delete`、`reply-create/update/delete`。JSON 输出固定包含 `kind: "workflow-plan"`、`schemaVersion: 1`、`goal`、`steps`、`checkpoints`、`files` 和 `safetySummary`。CRUD 计划会明确列出 preview、hash-bound approval 和 execute；MCP 调用 plan 时永远不会执行这些步骤。
-
-运行可恢复工作流：
+发帖、回帖、编辑和删除统一采用两步操作。第一步运行对应的 `topic` 或 `reply` 命令，CLI 只生成预览并返回 `operationId`，不会写入社区。第二步在核对目标和内容后确认该编号：
 
 ```bash
-apexcn workflow run \
-  --goal ask-question \
-  --keyword "REST API" \
-  --title "APEX 中调用 REST API 返回 403" \
-  --problem "页面进程调用 REST API 时返回 403。" \
-  --category-id 4 \
-  --output-dir run \
-  --json
-
-apexcn workflow approve --run-dir run --approved-by reviewer --note "preview reviewed" --json
-apexcn workflow verify --run-dir run --write-report --json
-apexcn workflow export --run-dir run --output workflow-bundle.json --json
-apexcn workflow verify-bundle --bundle workflow-bundle.json --json
-apexcn workflow run --resume run --execute --yes --json
+apexcn confirm op_0123456789abcdef --yes --json
 ```
 
-默认运行生成 Markdown 草稿或读取内容文件副本，写入 `run.json`、`review.json` 和 `preview.json`，不会发送最终写请求。确认 `preview.json` 后，用 `workflow approve` 写入包含目标、完整请求、preview SHA-256 和 `expiresAt` 的 `approval.json`。只有 approval 的 runId、目标、请求、hash 和期限都有效时，`--resume <run-dir> --execute --yes` 才会执行最终写入，并写入 `execute.json`。401/429 修复后复用同一 run；timeout/5xx 结果不确定时也只能复用同一 run 和 operationKey；409 必须重新读取版本并创建、审核、批准新 workflow。
-
-`workflow verify` 是纯本地校验命令，会输出 `workflow-verification` 报告，检查 artifact 文件 hash、approval 与 preview 是否匹配、completed run 的 execute request 是否等于已批准 preview request。`--write-report` 会写入 `verification.json`，但不会修改 `run.json`。
-
-`workflow export` 是纯本地导出命令，会先运行同等 verification。默认只导出 `ok=true` 的工作流；需要归档失败证据时可加 `--allow-invalid`。普通输出文件会写入 `workflow-bundle`，stdout 返回导出摘要；`--output -` 会直接把完整 bundle 输出到 stdout。
-
-`workflow verify-bundle` 是纯本地 bundle 校验命令，不需要原始 run 目录。它会校验 bundle schema、artifact 内容 hash/size、embedded verification 是否匹配 artifact，并从 bundle 内的 preview、approval、execute 内容重新复核审批和执行链。
-
-计划只使用正文文件路径，不会内联长正文或密钥。只有显式加 `--include-execute` 才会加入 `workflow approve` 和最终 execute 步骤，两步都会标记 `requiresConfirmation: true`。
+确认命令只能执行该编号绑定的同一账号、社区地址和完整请求。内容、目标、版本或本地配置发生变化时，旧编号会被拒绝；重复确认不会再次写入。编号过期或返回 `409 VERSION_CONFLICT` 时，重新读取当前内容并创建新的预览。
 
 ## topic / thread
 
@@ -447,16 +411,10 @@ apexcn topic create \
   --preview
 ```
 
-直接 topic/reply 命令只允许预览，不执行真实写入。真实写入请使用 `workflow run --goal topic-create`：
+命令返回预览和操作编号，不会立即发布。确认内容后执行返回的确认命令：
 
 ```bash
-apexcn workflow run \
-  --goal topic-create \
-  --category-id 4 \
-  --title "APEX 中如何调用 REST API？" \
-  --content-file ./post.md \
-  --output-dir ./topic-create-run \
-  --json
+apexcn confirm <operation-id> --yes --json
 ```
 
 创建帖子，正文来自命令行参数：
@@ -480,17 +438,16 @@ printf '正文来自 stdin\n' | apexcn topic create --category-id 4 --title "std
 编辑帖子：
 
 ```bash
-apexcn topic update 30549 --content "更新后的正文。" --preview
-apexcn topic edit 30549 --title "更新后的标题" --content-file ./updated-post.md --preview
-apexcn thread edit 30549 --tags "APEX,REST" --preview
+apexcn topic update 30549 --if-version 2 --content "更新后的正文。" --preview
+apexcn topic edit 30549 --if-version 2 --title "更新后的标题" --content-file ./updated-post.md --preview
+apexcn thread edit 30549 --if-version 2 --tags "APEX,REST" --preview
 ```
 
 删除帖子：
 
 ```bash
 apexcn topic delete 30549 \
-  --yes \
-  --force \
+  --if-version 2 \
   --confirm-title "完整标题" \
   --preview
 ```
@@ -513,53 +470,32 @@ printf '正文来自 stdin\n' | apexcn reply create 30549 --content-file - --pre
 apexcn reply create 30549 --parent-post-id 201480 --content "补充说明。" --preview
 ```
 
-上面的直接命令只用于查看请求。真实发布请让 `parentPostId` 贯穿可审计工作流：
-
-```bash
-apexcn workflow run \
-  --goal reply-create \
-  --topic-id 30549 \
-  --parent-post-id 201480 \
-  --content-file ./reply.md \
-  --output-dir ./nested-reply-run \
-  --json
-apexcn workflow approve --run-dir ./nested-reply-run --json
-apexcn workflow run --resume ./nested-reply-run --execute --yes --json
-```
-
-执行前应通过 `topic view` 确认父回复属于同一主题，并检查 `preview.json` 中的 `parentPostId` 是否正确。
+执行前应通过 `topic view` 确认父回复属于同一主题，并检查预览中的 `parentPostId` 是否正确；确认后使用返回的操作编号。
 
 编辑回复：
 
 ```bash
-apexcn reply update 201480 --content "更新后的回复。" --preview
-apexcn reply edit 201480 --content-file ./reply-updated.md --preview
-apexcn post edit 201480 --content "使用 post 别名更新。" --preview
+apexcn reply update 201480 --if-version 2 --content "更新后的回复。" --preview
+apexcn reply edit 201480 --if-version 2 --content-file ./reply-updated.md --preview
+apexcn post edit 201480 --if-version 2 --content "使用 post 别名更新。" --preview
 ```
 
 删除回复：
 
 ```bash
-apexcn reply delete 201480 --yes --force --preview
-apexcn post delete 201480 --yes --force --preview
+apexcn reply delete 201480 --if-version 2 --preview
+apexcn post delete 201480 --if-version 2 --preview
 ```
 
-删除本人回复时，先从 `me replies --json` 读取 `replyId`、`topicId`、`version`、`canDelete` 和真实 URL。只有 `canDelete` 为 `true` 才继续，并用返回的版本创建删除工作流：
+删除本人回复时，先从 `me replies --json` 读取 `replyId`、`topicId`、`version`、`canDelete` 和真实 URL。只有 `canDelete` 为 `true` 才继续，并用返回的版本创建删除预览：
 
 ```bash
 apexcn me replies --page-size 10 --json
-apexcn workflow run \
-  --goal reply-delete \
-  --reply-id 201480 \
-  --confirm-id 201480 \
-  --if-version 2 \
-  --output-dir ./reply-delete-run \
-  --json
-apexcn workflow approve --run-dir ./reply-delete-run --json
-apexcn workflow run --resume ./reply-delete-run --execute --yes --json
+apexcn reply delete 201480 --if-version 2 --preview --json
+apexcn confirm <operation-id> --yes --json
 ```
 
-如果执行返回 `409 VERSION_CONFLICT`，重新读取当前版本并生成新的预览和批准记录；不要修改旧的 approval 后重试。
+如果执行返回 `409 VERSION_CONFLICT`，重新读取当前版本并生成新的预览；不要修改或复用旧操作编号。
 
 ## favorite
 
@@ -606,14 +542,11 @@ apexcn ask "Oracle APEX 如何调用 REST API？" --format text
 
 ## 常用组合
 
-契约和 MCP 清单：
+查看当前命令和安全提示：
 
 ```bash
 apexcn commands --json
 apexcn commands --json-schema
-apexcn mcp tools --json
-apexcn mcp tools --json --allow-preview-write
-apexcn mcp inspect --json
 ```
 
 本地资料包 BM25 检索：
@@ -622,25 +555,6 @@ apexcn mcp inspect --json
 apexcn collection index --dir ./collection --json
 apexcn collection query --dir ./collection "ORDS 认证失败" --top-k 5 --explain --json
 apexcn collection stats --dir ./collection --json
-```
-
-workflow policy、diff 和 audit log：
-
-```bash
-apexcn workflow policy init --output apexcn-policy.json
-apexcn workflow verify --run-dir ./run --policy apexcn-policy.json --json
-apexcn workflow diff --run-dir ./run --json
-apexcn workflow audit-log --run-dir ./run --format ndjson
-apexcn workflow audit-log --run-dir ./run --format ndjson > audit.ndjson
-apexcn workflow audit-log --run-dir ./run --verify-file audit.ndjson --json
-```
-
-默认 policy 对未配置命令一律拒绝，create/update 至少需要一名独立审批人，delete 至少需要两名，审计证据保留期为 90 天。所选 policy 要求双人审批时，在 `workflow approve` 中增加 `--second-approver <name>`。恢复执行命令必须传 `--policy <file>` 才会在任何 API 写入前强制执行该 policy。审计事件带 SHA-256 hash chain；`--verify-file` 会拒绝缺失、乱序、修改或额外事件。
-
-只读真实环境验收。没有 `APEXCN_API_KEY` 时脚本会跳过；有 key 时会检查 `doctor`、`me`、`category list`、`search` 和 `ask`，写操作只做 `--preview`：
-
-```bash
-npm run test:e2e:readonly
 ```
 
 搜索后查看第一条：
@@ -655,15 +569,17 @@ apexcn topic view 30354 --json
 ```bash
 apexcn category list --json
 apexcn topic create --category-id 4 --title "标题" --content-file ./post.md --preview
+apexcn confirm <operation-id> --yes --json
 ```
 
 删除前确认标题：
 
 ```bash
 apexcn topic view 30549 --json
-apexcn topic delete 30549 --yes --force --confirm-title "完整标题" --preview
+apexcn topic delete 30549 --if-version 2 --confirm-title "完整标题" --preview
+apexcn confirm <operation-id> --yes --json
 ```
 
 ## API 写操作 dry-run 分类
 
-一键安装脚本不接收参数，也没有 dry-run。CLI API `--preview` / `--dry-run` 用于打印将要发送的社区 API 写请求但不联网执行，输出包含 `dryRun`、`preview` 和 `mode`，便于区分真实预览和 dry-run。CLI API 预览只覆盖 `topic create/update/edit/delete`、`reply create/update/edit/delete`、`favorite add/remove`、`subscription add/remove`，别名 `thread` 和 `post` 继承同样分类。`ask` 虽然使用 POST，但属于只读 RAG 问答，不纳入 API 写操作预览。预览下不需要预先执行 `category list` 或 `topic view`；创建话题仍必须显式传 `--category-id`，删除话题仍必须传 `--yes --force --confirm-title`。
+一键安装脚本不接收参数，也没有 dry-run。CLI API `--preview` 用于创建带操作编号的社区写入预览，`--dry-run` 只打印请求但不保存待确认操作。预览只覆盖 `topic create/update/edit/delete`、`reply create/update/edit/delete`、`favorite add/remove`、`subscription add/remove`，别名 `thread` 和 `post` 继承同样分类。`ask` 虽然使用 POST，但属于只读问答，不纳入写操作预览。创建话题必须显式传 `--category-id`；编辑和删除必须使用刚读取的 `--if-version`；删除话题还必须传精确的 `--confirm-title`。

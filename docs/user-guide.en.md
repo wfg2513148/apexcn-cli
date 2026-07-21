@@ -2,6 +2,8 @@
 
 This guide is for APEX developers who use apexcn-cli through an AI tool. You do not need to memorize terminal commands or flags. Describe the intended outcome, let the AI assistant operate the CLI, and require a preview and explicit confirmation before any publish, update, or delete action.
 
+Every content change uses the same two-step confirmation. The AI first shows the business content and receives a short operation id. After you confirm, it uses that id to execute the exact change you reviewed. You do not need to manage directories or intermediate files.
+
 ## 1. First Use
 
 Install the CLI first without supplying an API key:
@@ -96,7 +98,7 @@ For this request, the AI first confirms that the selected reply belongs to topic
 
 > Delete reply 201480. Before deleting, confirm that it is the reply I intended to remove.
 
-The AI should also verify that the reply belongs to the current account, that the server permits deletion, and that the approval uses the freshly read content version. If the version changes, it must create a new preview instead of reusing the old approval.
+The AI should also verify that the reply belongs to the current account and that the server permits deletion, then create the operation id with the freshly read content version. If the version changes, it must create a new preview instead of reusing the old operation id.
 
 ## 12. Favorite and Unfavorite
 

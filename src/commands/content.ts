@@ -6,6 +6,7 @@ import { ConfigFileError } from "../config.js";
 import { createApiClient } from "../core/api-client.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
+import { confirmWriteOperation, createWriteOperation, type WriteOperationRequest, type WriteOperationSession } from "../core/write-operation.js";
 import {
   askCommunity,
   listAdmins,
@@ -47,19 +48,6 @@ type ApiRequestPlan = {
   query?: Record<string, string | number | boolean | undefined>;
   body?: unknown;
 };
-
-function blockDirectContentWrite(options: ApiCommandOptions, commandOptions: JsonOption & DryRunOption): boolean {
-  if (isRequestPreview(commandOptions)) {
-    return false;
-  }
-  printError(options, {
-    type: "safety",
-    message: "Direct topic/reply writes are disabled; use apexcn workflow run, approve, and resume instead",
-    exitCode: 1
-  }, undefined, commandOptions.json);
-  process.exitCode = 1;
-  return true;
-}
 
 type TopicFilterOptions = {
   categoryId?: number;
@@ -107,6 +95,36 @@ type AskFilterOptions = {
   toDate?: string;
   tag?: string;
 };
+
+export function createConfirmCommand(options: ApiCommandOptions): Command {
+  return new Command("confirm")
+    .description("confirm and execute a previously previewed community change")
+    .argument("<operation-id>", "operation id shown by topic or reply preview")
+    .requiredOption("--yes", "confirm the exact previewed change")
+    .option("--json", "pretty-print JSON")
+    .action(async (operationId: string, commandOptions: JsonOption & { yes: boolean }) => {
+      await runApi(options, commandOptions, async (session) => {
+        try {
+          const result = await confirmWriteOperation({
+            configPath: options.configPath,
+            session,
+            operationId
+          });
+          printData(options, result, commandOptions.json);
+        } catch (error) {
+          if (error instanceof HttpError || error instanceof NetworkError || error instanceof TimeoutError) {
+            throw error;
+          }
+          printError(options, {
+            type: "safety",
+            message: error instanceof Error ? error.message : String(error),
+            exitCode: 1
+          }, undefined, commandOptions.json);
+          process.exitCode = 1;
+        }
+      });
+    });
+}
 
 export function createCategoryCommand(options: ApiCommandOptions): Command {
   const category = new Command("category");
@@ -460,19 +478,15 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
             tags: commandOptions.tags
           })
         };
-        if (isRequestPreview(commandOptions)) {
+        if (commandOptions.dryRun) {
           printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
           return;
         }
-        if (blockDirectContentWrite(options, commandOptions)) {
-          return;
-        }
-        const data = await requestJson(session.baseUrl, request.path, {
-          token: session.token,
-          method: request.method,
-          body: request.body
+        await printWritePreview(options, commandOptions, session, {
+          action: "topic.create",
+          summary: `Create topic \"${commandOptions.title}\"`,
+          request
         });
-        printData(options, data, commandOptions.json);
       });
     });
 
@@ -485,10 +499,12 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
     .addOption(new Option("--content <text>", "inline content").conflicts("contentFile"))
     .addOption(new Option("--content-file <path>", "read content from file").conflicts("content"))
     .option("--tags <csv>")
+    .option("--if-version <version>", "current topic version", parsePositiveInteger)
     .option("--json", "pretty-print JSON")
     .option("--dry-run", "print the API request without sending it")
     .option("--preview", "preview the API request without sending it")
-    .action(async (id: number, commandOptions: JsonOption & DryRunOption & TopicWriteOptions & { categoryId?: number }) => {
+    .action(async (id: number, commandOptions: JsonOption & DryRunOption & TopicWriteOptions & { categoryId?: number; ifVersion?: number }) => {
+      if (!commandOptions.dryRun && !requireWriteVersion(options, commandOptions)) return;
       await runApi(options, commandOptions, async (session) => {
         const request = {
           method: "POST",
@@ -497,96 +513,54 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
             categoryId: commandOptions.categoryId,
             title: commandOptions.title,
             content: await optionalContentFromOptions(commandOptions, options, { implicitStdin: false }),
-            tags: commandOptions.tags
+            tags: commandOptions.tags,
+            ifVersion: commandOptions.ifVersion
           })
         };
-        if (isRequestPreview(commandOptions)) {
+        if (commandOptions.dryRun) {
           printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
           return;
         }
-        if (blockDirectContentWrite(options, commandOptions)) {
-          return;
-        }
-        const data = await requestJson(session.baseUrl, request.path, {
-          token: session.token,
-          method: request.method,
-          body: request.body
+        await printWritePreview(options, commandOptions, session, {
+          action: "topic.update",
+          summary: `Update topic ${id}`,
+          request
         });
-        printData(options, data, commandOptions.json);
       });
     });
 
   topic
     .command("delete")
     .argument("<id>", "topic id", parsePositiveInteger)
-    .option("--yes", "confirm delete")
-    .option("--force", "required for non-interactive delete")
-    .option("--confirm-title <title>", "required topic title confirmation")
+    .option("--yes", "legacy compatibility; use apexcn confirm after preview")
+    .option("--force", "legacy compatibility; use apexcn confirm after preview")
+    .option("--confirm-title <title>", "exact topic title confirmation")
+    .option("--if-version <version>", "current topic version", parsePositiveInteger)
     .option("--json", "pretty-print JSON")
     .option("--dry-run", "print the API request without sending it")
     .option("--preview", "preview the API request without sending it")
-    .action(async (id: number, commandOptions: JsonOption & DryRunOption & { yes?: boolean; force?: boolean; confirmTitle?: string }) => {
-      if (!commandOptions.yes || !commandOptions.force || !commandOptions.confirmTitle) {
-        if (isRequestPreview(commandOptions)) {
-          printError(options, { type: "safety", message: "Refusing to delete topic without --yes --force --confirm-title", exitCode: 1 }, undefined, commandOptions.json);
-          process.exitCode = 1;
-          return;
-        }
-        if (processStdin.isTTY === true && !commandOptions.yes && !commandOptions.force) {
-          if (blockDirectContentWrite(options, commandOptions)) {
-            return;
-          }
-          await runApi(options, commandOptions, async (session) => {
-            const topic = await requestJson<{ topic?: { title?: string; createdByName?: string; categoryName?: string } }>(session.baseUrl, `/api/v1/topics/${id}`, {
-              token: session.token
-            });
-            const title = topic.topic?.title;
-            if (!title) {
-              printError(options, { type: "validation", message: "Unable to load topic for confirmation", exitCode: 1 }, undefined, commandOptions.json);
-              process.exitCode = 1;
-              return;
-            }
-            options.stdout(`Delete topic: ${title}\n`);
-            if (topic.topic?.createdByName) {
-              options.stdout(`Author: ${topic.topic.createdByName}\n`);
-            }
-            if (topic.topic?.categoryName) {
-              options.stdout(`Category: ${topic.topic.categoryName}\n`);
-            }
-            const confirmed = await promptText(`Type the full topic title to delete: `);
-            if (confirmed !== title) {
-              printError(options, { type: "safety", message: "Delete cancelled", exitCode: 1 }, undefined, commandOptions.json);
-              process.exitCode = 1;
-              return;
-            }
-            const data = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token, method: "DELETE" });
-            printData(options, data, commandOptions.json);
-          });
-          return;
-        }
-        printError(options, { type: "safety", message: "Refusing to delete topic without --yes --force --confirm-title", exitCode: 1 }, undefined, commandOptions.json);
+    .action(async (id: number, commandOptions: JsonOption & DryRunOption & { yes?: boolean; force?: boolean; confirmTitle?: string; ifVersion?: number }) => {
+      if (!commandOptions.confirmTitle) {
+        printError(options, { type: "safety", message: "Missing --confirm-title for topic deletion", exitCode: 1 }, undefined, commandOptions.json);
         process.exitCode = 1;
         return;
       }
+      if (!commandOptions.dryRun && !requireWriteVersion(options, commandOptions)) return;
       await runApi(options, commandOptions, async (session) => {
-        const request = { method: "DELETE", path: `/api/v1/topics/${id}` };
-        if (isRequestPreview(commandOptions)) {
+        const request = {
+          method: "DELETE",
+          path: `/api/v1/topics/${id}`,
+          body: { confirmTitle: commandOptions.confirmTitle, ifVersion: commandOptions.ifVersion }
+        };
+        if (commandOptions.dryRun) {
           printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
           return;
         }
-        if (blockDirectContentWrite(options, commandOptions)) {
-          return;
-        }
-        const topic = await requestJson<{ topic?: { title?: string } }>(session.baseUrl, `/api/v1/topics/${id}`, {
-          token: session.token
+        await printWritePreview(options, commandOptions, session, {
+          action: "topic.delete",
+          summary: `Delete topic ${id} (\"${commandOptions.confirmTitle}\")`,
+          request
         });
-        if (topic.topic?.title !== commandOptions.confirmTitle) {
-          printError(options, { type: "safety", message: "Refusing to delete topic because --confirm-title does not match", exitCode: 1 }, undefined, commandOptions.json);
-          process.exitCode = 1;
-          return;
-        }
-        const data = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token, method: "DELETE" });
-        printData(options, data, commandOptions.json);
       });
     });
 
@@ -615,19 +589,17 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
             parentPostId: commandOptions.parentPostId
           })
         };
-        if (isRequestPreview(commandOptions)) {
+        if (commandOptions.dryRun) {
           printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
           return;
         }
-        if (blockDirectContentWrite(options, commandOptions)) {
-          return;
-        }
-        const data = await requestJson(session.baseUrl, request.path, {
-          token: session.token,
-          method: request.method,
-          body: request.body
+        await printWritePreview(options, commandOptions, session, {
+          action: "reply.create",
+          summary: commandOptions.parentPostId
+            ? `Reply to reply ${commandOptions.parentPostId} in topic ${topicId}`
+            : `Reply to topic ${topicId}`,
+          request
         });
-        printData(options, data, commandOptions.json);
       });
     });
 
@@ -637,78 +609,56 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
     .argument("<id>", "reply id", parsePositiveInteger)
     .addOption(new Option("--content <text>", "inline content").conflicts("contentFile"))
     .addOption(new Option("--content-file <path>", "read content from file").conflicts("content"))
+    .option("--if-version <version>", "current reply version", parsePositiveInteger)
     .option("--json", "pretty-print JSON")
     .option("--dry-run", "print the API request without sending it")
     .option("--preview", "preview the API request without sending it")
-    .action(async (id: number, commandOptions: JsonOption & DryRunOption & ReplyWriteOptions) => {
+    .action(async (id: number, commandOptions: JsonOption & DryRunOption & ReplyWriteOptions & { ifVersion?: number }) => {
+      if (!commandOptions.dryRun && !requireWriteVersion(options, commandOptions)) return;
       await runApi(options, commandOptions, async (session) => {
         const request = {
           method: "POST",
           path: `/api/v1/replies/${id}`,
-          body: { content: await contentFromOptions(commandOptions, options) }
+          body: { content: await contentFromOptions(commandOptions, options), ifVersion: commandOptions.ifVersion }
         };
-        if (isRequestPreview(commandOptions)) {
+        if (commandOptions.dryRun) {
           printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
           return;
         }
-        if (blockDirectContentWrite(options, commandOptions)) {
-          return;
-        }
-        const data = await requestJson(session.baseUrl, request.path, {
-          token: session.token,
-          method: request.method,
-          body: request.body
+        await printWritePreview(options, commandOptions, session, {
+          action: "reply.update",
+          summary: `Update reply ${id}`,
+          request
         });
-        printData(options, data, commandOptions.json);
       });
     });
 
   reply
     .command("delete")
     .argument("<id>", "reply id", parsePositiveInteger)
-    .option("--yes", "confirm delete")
-    .option("--force", "required for non-interactive delete")
+    .option("--yes", "legacy compatibility; use apexcn confirm after preview")
+    .option("--force", "legacy compatibility; use apexcn confirm after preview")
+    .option("--if-version <version>", "current reply version", parsePositiveInteger)
     .option("--json", "pretty-print JSON")
     .option("--dry-run", "print the API request without sending it")
     .option("--preview", "preview the API request without sending it")
-    .action(async (id: number, commandOptions: JsonOption & DryRunOption & { yes?: boolean; force?: boolean }) => {
-      if (!commandOptions.yes || !commandOptions.force) {
-        if (isRequestPreview(commandOptions)) {
-          printError(options, { type: "safety", message: "Refusing to delete reply without --yes --force", exitCode: 1 }, undefined, commandOptions.json);
-          process.exitCode = 1;
-          return;
-        }
-        if (processStdin.isTTY === true && !commandOptions.yes && !commandOptions.force) {
-          if (blockDirectContentWrite(options, commandOptions)) {
-            return;
-          }
-          const confirmed = await promptText("Type delete to delete this reply: ");
-          if (confirmed !== "delete") {
-            printError(options, { type: "safety", message: "Delete cancelled", exitCode: 1 }, undefined, commandOptions.json);
-            process.exitCode = 1;
-            return;
-          }
-          await runApi(options, commandOptions, async (session) => {
-            const data = await requestJson(session.baseUrl, `/api/v1/replies/${id}`, { token: session.token, method: "DELETE" });
-            printData(options, data, commandOptions.json);
-          });
-          return;
-        }
-        printError(options, { type: "safety", message: "Refusing to delete reply without --yes --force", exitCode: 1 }, undefined, commandOptions.json);
-        process.exitCode = 1;
-        return;
-      }
+    .action(async (id: number, commandOptions: JsonOption & DryRunOption & { yes?: boolean; force?: boolean; ifVersion?: number }) => {
+      if (!commandOptions.dryRun && !requireWriteVersion(options, commandOptions)) return;
       await runApi(options, commandOptions, async (session) => {
-        const request = { method: "DELETE", path: `/api/v1/replies/${id}` };
-        if (isRequestPreview(commandOptions)) {
+        const request = {
+          method: "DELETE",
+          path: `/api/v1/replies/${id}`,
+          body: { confirmId: id, ifVersion: commandOptions.ifVersion }
+        };
+        if (commandOptions.dryRun) {
           printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
           return;
         }
-        if (blockDirectContentWrite(options, commandOptions)) {
-          return;
-        }
-        const data = await requestJson(session.baseUrl, request.path, { token: session.token, method: request.method });
-        printData(options, data, commandOptions.json);
+        await printWritePreview(options, commandOptions, session, {
+          action: "reply.delete",
+          summary: `Delete reply ${id}`,
+          request
+        });
       });
     });
 
@@ -898,12 +848,48 @@ function printDryRun(options: CommandIo, session: Session, request: ApiRequestPl
   }), json);
 }
 
+async function printWritePreview(
+  options: ApiCommandOptions,
+  commandOptions: JsonOption & DryRunOption,
+  session: WriteOperationSession,
+  input: { action: string; summary: string; request: ApiRequestPlan }
+): Promise<void> {
+  if ((input.request.method !== "POST" && input.request.method !== "DELETE") || !input.request.body || !isRecord(input.request.body)) {
+    throw new CliValidationError("write preview requires a complete request body");
+  }
+  const preview = await createWriteOperation({
+    configPath: options.configPath,
+    session,
+    action: input.action,
+    summary: input.summary,
+    request: input.request as WriteOperationRequest
+  });
+  if (commandOptions.json || commandOptions.preview) {
+    printData(options, preview, commandOptions.json);
+    return;
+  }
+  options.stdout(`Preview: ${preview.summary}\n`);
+  options.stdout(`Operation: ${preview.operationId}\n`);
+  options.stdout(`Confirm: ${preview.confirmation.command}\n`);
+}
+
 function isRequestPreview(options: DryRunOption): boolean {
   return options.dryRun === true || options.preview === true;
 }
 
 function requestPreviewMode(options: DryRunOption): "dry-run" | "preview" {
   return options.preview === true && options.dryRun !== true ? "preview" : "dry-run";
+}
+
+function requireWriteVersion(options: CommandIo, commandOptions: JsonOption & { ifVersion?: number }): commandOptions is JsonOption & { ifVersion: number } {
+  if (commandOptions.ifVersion !== undefined) return true;
+  printError(options, {
+    type: "safety",
+    message: "Missing --if-version; read the current item first and create a fresh preview.",
+    exitCode: 1
+  }, undefined, commandOptions.json);
+  process.exitCode = 1;
+  return false;
 }
 
 async function contentFromOptions(options: { content?: string; contentFile?: string }, commandOptions: ApiCommandOptions): Promise<string> {

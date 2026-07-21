@@ -9,6 +9,7 @@ import {
   createAdminCommand,
   createAskCommand,
   createCategoryCommand,
+  createConfirmCommand,
   createRelationCommand,
   createReplyCommand,
   createResearchCommand,
@@ -86,7 +87,8 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   program.addCommand(createGuideCommand(commandOptions));
   program.addCommand(createMeCommand(commandOptions));
   program.addCommand(createReviewCommand(commandOptions));
-  program.addCommand(createWorkflowCommand(commandOptions));
+  program.addCommand(createConfirmCommand(commandOptions));
+  program.addCommand(createWorkflowCommand(commandOptions), { hidden: true });
   program.addCommand(createCollectionCommand(commandOptions));
   program.addCommand(createMcpCommand(commandOptions));
   program.addCommand(createAdminCommand(commandOptions));
@@ -211,7 +213,7 @@ function commandManifest(root: Command): CommandManifest {
       previewPolicies: [...PREVIEW_POLICIES],
       exampleModes: [...EXAMPLE_MODES]
     },
-    commands: root.commands.flatMap((child) => leafCommands(child)).map((item) => {
+    commands: root.commands.filter((child) => !(child as unknown as { _hidden?: boolean })._hidden).flatMap((child) => leafCommands(child)).map((item) => {
       const path = item.path.join(" ");
       const guidance = manifestGuidance(path);
       const descriptor = descriptorForPath(path);
@@ -248,6 +250,7 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "auth show": "show the active auth profile with a redacted token",
   "auth use": "switch the active auth profile",
   "category list": "list community categories",
+  "confirm": "confirm and execute a previously previewed community change",
   "collection build": "build a local multi-topic knowledge collection",
   "collection automation plan": "create a deterministic offline readonly automation plan",
   "collection automation run": "run an offline readonly automation plan with duplicate suppression",
@@ -288,7 +291,7 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "mcp inspect": "inspect local MCP mode, transport, and exposed tools",
   "mcp serve": "serve local stdio MCP tools",
   "mcp tools": "print the MCP tool manifest",
-  "reply create": "create a reply on a topic",
+  "reply create": "preview a reply before confirmation",
   "reply delete": "delete a reply after explicit confirmation",
   "reply update": "update an existing reply",
   "research": "build a research bundle from search results and topic content",
@@ -300,7 +303,7 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "stats topic": "show global or exact-tag-filtered topic counts",
   "subscription add": "subscribe to a community topic",
   "subscription remove": "unsubscribe from a community topic",
-  "topic create": "create a community topic",
+  "topic create": "preview a community topic before confirmation",
   "topic delete": "delete a topic after explicit confirmation",
   "topic list": "list community topics with server-side filters",
   "topic recent": "list recently updated community topics",
@@ -531,6 +534,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     safety: { effects: ["manifest"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn mcp tools --json", mode: "read" }]
   },
+  "confirm": {
+    safety: { effects: ["api-write"], preview: "none", confirmation: ["--yes"] },
+    examples: [{ command: "apexcn confirm <operation-id> --yes --json", mode: "execute" }]
+  },
   "reply create": {
     safety: { effects: ["api-write"], preview: "required", confirmation: [] },
     examples: [
@@ -538,14 +545,14 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     ]
   },
   "reply delete": {
-    safety: { effects: ["api-write", "destructive"], preview: "required", confirmation: ["--yes", "--force"] },
+    safety: { effects: ["api-write", "destructive"], preview: "required", confirmation: [] },
     examples: [
-      { command: "apexcn reply delete 67890 --yes --force --preview", mode: "preview" }
+      { command: "apexcn reply delete 67890 --if-version 2 --preview", mode: "preview" }
     ]
   },
   "reply update": {
     safety: { effects: ["api-write"], preview: "required", confirmation: [] },
-    examples: [{ command: "apexcn reply update 67890 --content-file ./updated-reply.md --preview", mode: "preview" }]
+    examples: [{ command: "apexcn reply update 67890 --if-version 2 --content-file ./updated-reply.md --preview", mode: "preview" }]
   },
   "research": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
@@ -609,9 +616,9 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     ]
   },
   "topic delete": {
-    safety: { effects: ["api-write", "destructive"], preview: "required", confirmation: ["--yes", "--force", "--confirm-title"] },
+    safety: { effects: ["api-write", "destructive"], preview: "required", confirmation: ["--confirm-title"] },
     examples: [
-      { command: 'apexcn topic delete 30549 --yes --force --confirm-title "精确标题" --preview', mode: "preview" }
+      { command: 'apexcn topic delete 30549 --if-version 2 --confirm-title "精确标题" --preview', mode: "preview" }
     ]
   },
   "topic list": {
@@ -631,7 +638,7 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "topic update": {
     safety: { effects: ["api-write"], preview: "required", confirmation: [] },
     examples: [
-      { command: "apexcn topic update 30549 --content-file ./updated-post.md --preview", mode: "preview" }
+      { command: "apexcn topic update 30549 --if-version 2 --content-file ./updated-post.md --preview", mode: "preview" }
     ]
   },
   "topic view": {

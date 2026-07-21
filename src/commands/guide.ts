@@ -39,7 +39,7 @@ export type NoviceGuide = {
 
 export function createGuideCommand(io: CommandIo): Command {
   return new Command("guide")
-    .description("show a curated novice task guide")
+    .description("show a curated APEX task guide")
     .addArgument(new Argument("<view>", "guide view").choices([...GUIDE_VIEWS]))
     .option("--apex-version <version>", "APEX version context")
     .option("--ords-version <version>", "ORDS version context")

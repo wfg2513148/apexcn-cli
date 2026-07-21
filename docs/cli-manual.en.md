@@ -12,7 +12,7 @@ apexcn commands --json
 apexcn --config /tmp/apexcn-config.json auth show --json
 ```
 
-Use `--json` in scripts and AI-agent workflows. Use root `--config <path>` or `APEXCN_CONFIG_PATH` when automation needs an isolated config file.
+Use `--json` in scripts and AI-assisted tasks. Use root `--config <path>` or `APEXCN_CONFIG_PATH` when automation needs an isolated config file.
 
 When an AI agent needs available commands, aliases, purposes, safety metadata, safe examples, and options, prefer `apexcn commands --json` instead of parsing `--help` text. The current structured manifest contract is `schemaVersion === 1`; if it is missing or unsupported, do not consume structured `safety` or `examples`, and upgrade the CLI or ask the user before continuing. In the manifest, `schema` lists available enum values, `safety.effects` describes command effects, `safety.preview` describes whether preview is available or required, `safety.confirmation` lists explicit confirmation flags, and `examples[].mode` separates read, preview, and execute examples. Additive `manifestVersion === 2` metadata includes `jsonContract`; JSON-capable commands point to their success schema, stable error schema, and contract test, while unsupported commands return `null`.
 
@@ -376,51 +376,15 @@ apexcn review reply --topic-id 30549 --content-file reply.md --json
 
 `review reply` accepts `--content-file <path|->` or `--draft-file <path|->`. `--draft-file` only accepts draft JSON with `kind === "reply-draft"` and `schemaVersion === 1`; if explicit `--topic-id` or `--parent-post-id` values disagree with the draft, the mismatch is reported in `reply-review.issues[]`. Missing input, conflicting input, invalid topic ids, blank replies, too-short replies, placeholders, and possible secrets all produce stable `reply-review` JSON instead of sending an API request. `suggestedCommand` is generated only for normal Markdown file input and uses `apexcn reply create <topic-id> --content-file <file> --dry-run --json`.
 
-## workflow
+## Confirming content changes
 
-Generate an auditable local execution plan. This command does not read auth config, call the API, or execute any planned command:
-
-```bash
-apexcn workflow plan \
-  --goal ask-question \
-  --keyword "REST API" \
-  --title "APEX REST API returns 403" \
-  --problem "A page process gets 403 when calling a REST API." \
-  --category-id 4 \
-  --output-dir work \
-  --json
-```
-
-`--goal` accepts `ask-question`, `reply`, `research-only`, `publish-topic`, and `topic-create/update/delete` or `reply-create/update/delete`. CRUD plans explicitly include preview, hash-bound approval, and execute; an MCP plan call never executes those steps.
-
-Run a resumable workflow:
+Topic and reply creation, editing, and deletion all use the same two-step action. First run the corresponding `topic` or `reply` command. The CLI creates a preview and returns an `operationId` without writing to the community. After reviewing the target and content, confirm that id:
 
 ```bash
-apexcn workflow run \
-  --goal ask-question \
-  --keyword "REST API" \
-  --title "APEX REST API returns 403" \
-  --problem "A page process gets 403 when calling a REST API." \
-  --category-id 4 \
-  --output-dir run \
-  --json
-
-apexcn workflow approve --run-dir run --approved-by reviewer --note "preview reviewed" --json
-apexcn workflow verify --run-dir run --write-report --json
-apexcn workflow export --run-dir run --output workflow-bundle.json --json
-apexcn workflow verify-bundle --bundle workflow-bundle.json --json
-apexcn workflow run --resume run --execute --yes --json
+apexcn confirm op_0123456789abcdef --yes --json
 ```
 
-The default run generates a Markdown draft or copies the supplied content file, then writes `run.json`, `review.json`, and `preview.json`; it sends no final write request. After reviewing `preview.json`, use `workflow approve` to bind the target, full request, SHA-256 hash, reviewer, and expiry in `approval.json`. Execute succeeds only while the runId, target, request, hash, and expiry remain valid. After 401 or 429, repair the condition and resume the same run. Timeout or 5xx has an uncertain outcome and must reuse the same run and operation key. A 409 requires a fresh object version and a new preview and approval.
-
-`workflow verify` is a local-only verification command. It outputs a `workflow-verification` report that checks artifact file hashes, approval-to-preview consistency, and whether a completed run's execute request equals the approved preview request. `--write-report` writes `verification.json` without modifying `run.json`.
-
-`workflow export` is a local-only export command that runs the same verification first. By default it exports only `ok=true` workflows; use `--allow-invalid` when you need to archive failure evidence. A normal file output writes a `workflow-bundle` and prints an export summary to stdout; `--output -` prints the full bundle to stdout.
-
-`workflow verify-bundle` is a local-only bundle verification command and does not need the original run directory. It checks the bundle schema, artifact content hash/size, embedded verification-to-artifact consistency, and independently replays the preview, approval, and execute evidence chain from bundled content.
-
-Plans use content file paths and never inline long bodies or secrets. `--include-execute` is the only way to add `workflow approve` and the final execute step; both are marked `requiresConfirmation: true`.
+Confirmation can execute only the exact account, community target, and request bound to that id. A changed target, body, version, or local configuration invalidates the id, and repeated confirmation never creates a second write. Create a fresh preview after expiry or `409 VERSION_CONFLICT`.
 
 ## topic / thread
 
@@ -445,16 +409,10 @@ apexcn topic create \
   --preview
 ```
 
-Direct topic/reply commands are preview-only. Execute reviewed content through a workflow:
+The command returns a preview and operation id without publishing. After reviewing the content, run the returned confirmation command:
 
 ```bash
-apexcn workflow run \
-  --goal topic-create \
-  --category-id 4 \
-  --title "How do I call a REST API from APEX?" \
-  --content-file ./post.md \
-  --output-dir ./topic-create-run \
-  --json
+apexcn confirm <operation-id> --yes --json
 ```
 
 Create a topic from an inline body:
@@ -478,17 +436,16 @@ Choose exactly one body source: `--content-file`, `--content`, or stdin. The CLI
 Edit a topic:
 
 ```bash
-apexcn topic update 30549 --content "Updated body." --preview
-apexcn topic edit 30549 --title "Updated title" --content-file ./updated-post.md --preview
-apexcn thread edit 30549 --tags "APEX,REST" --preview
+apexcn topic update 30549 --if-version 2 --content "Updated body." --preview
+apexcn topic edit 30549 --if-version 2 --title "Updated title" --content-file ./updated-post.md --preview
+apexcn thread edit 30549 --if-version 2 --tags "APEX,REST" --preview
 ```
 
 Delete a topic:
 
 ```bash
 apexcn topic delete 30549 \
-  --yes \
-  --force \
+  --if-version 2 \
   --confirm-title "Full title" \
   --preview
 ```
@@ -511,53 +468,32 @@ Create a nested reply:
 apexcn reply create 30549 --parent-post-id 201480 --content "One more detail." --preview
 ```
 
-The direct command above only previews the request. Preserve `parentPostId` through the auditable workflow for a real publish:
-
-```bash
-apexcn workflow run \
-  --goal reply-create \
-  --topic-id 30549 \
-  --parent-post-id 201480 \
-  --content-file ./reply.md \
-  --output-dir ./nested-reply-run \
-  --json
-apexcn workflow approve --run-dir ./nested-reply-run --json
-apexcn workflow run --resume ./nested-reply-run --execute --yes --json
-```
-
-Before execution, use `topic view` to confirm that the parent reply belongs to the same topic and verify the `parentPostId` in `preview.json`.
+Before confirmation, use `topic view` to confirm that the parent reply belongs to the same topic and verify the `parentPostId` in the preview. Then use the returned operation id.
 
 Edit a reply:
 
 ```bash
-apexcn reply update 201480 --content "Updated reply." --preview
-apexcn reply edit 201480 --content-file ./reply-updated.md --preview
-apexcn post edit 201480 --content "Updated through the post alias." --preview
+apexcn reply update 201480 --if-version 2 --content "Updated reply." --preview
+apexcn reply edit 201480 --if-version 2 --content-file ./reply-updated.md --preview
+apexcn post edit 201480 --if-version 2 --content "Updated through the post alias." --preview
 ```
 
 Delete a reply:
 
 ```bash
-apexcn reply delete 201480 --yes --force --preview
-apexcn post delete 201480 --yes --force --preview
+apexcn reply delete 201480 --if-version 2 --preview
+apexcn post delete 201480 --if-version 2 --preview
 ```
 
-To delete your own reply, first read `replyId`, `topicId`, `version`, `canDelete`, and the real URL from `me replies --json`. Continue only when `canDelete` is `true`, then bind the returned version into the delete workflow:
+To delete your own reply, first read `replyId`, `topicId`, `version`, `canDelete`, and the real URL from `me replies --json`. Continue only when `canDelete` is `true`, then use the returned version in the deletion preview:
 
 ```bash
 apexcn me replies --page-size 10 --json
-apexcn workflow run \
-  --goal reply-delete \
-  --reply-id 201480 \
-  --confirm-id 201480 \
-  --if-version 2 \
-  --output-dir ./reply-delete-run \
-  --json
-apexcn workflow approve --run-dir ./reply-delete-run --json
-apexcn workflow run --resume ./reply-delete-run --execute --yes --json
+apexcn reply delete 201480 --if-version 2 --preview --json
+apexcn confirm <operation-id> --yes --json
 ```
 
-After `409 VERSION_CONFLICT`, read the current version and create a new preview and approval. Do not modify and reuse the old approval.
+After `409 VERSION_CONFLICT`, read the current version and create a new preview. Do not modify or reuse the old operation id.
 
 ## favorite
 
@@ -604,14 +540,11 @@ Ask references try to derive clickable `https://oracleapex.cn/t/<id>` links from
 
 ## Common Flows
 
-Contracts and MCP manifests:
+Inspect current commands and safety guidance:
 
 ```bash
 apexcn commands --json
 apexcn commands --json-schema
-apexcn mcp tools --json
-apexcn mcp tools --json --allow-preview-write
-apexcn mcp inspect --json
 ```
 
 Local collection BM25 search:
@@ -620,25 +553,6 @@ Local collection BM25 search:
 apexcn collection index --dir ./collection --json
 apexcn collection query --dir ./collection "ORDS auth failed" --top-k 5 --explain --json
 apexcn collection stats --dir ./collection --json
-```
-
-Workflow policy, diff, and audit log:
-
-```bash
-apexcn workflow policy init --output apexcn-policy.json
-apexcn workflow verify --run-dir ./run --policy apexcn-policy.json --json
-apexcn workflow diff --run-dir ./run --json
-apexcn workflow audit-log --run-dir ./run --format ndjson
-apexcn workflow audit-log --run-dir ./run --format ndjson > audit.ndjson
-apexcn workflow audit-log --run-dir ./run --verify-file audit.ndjson --json
-```
-
-The default policy denies unconfigured commands, requires one distinct approver for create/update and two for delete, and retains audit evidence for 90 days. Add `--second-approver <name>` to `workflow approve` when the selected policy requires two people. Pass `--policy <file>` to the resumed execute command to enforce the policy before any API write. Audit events include a SHA-256 hash chain; `--verify-file` rejects missing, reordered, modified, or extra events.
-
-Readonly real-environment acceptance. The script skips when `APEXCN_API_KEY` is not set. With a key, it checks `doctor`, `me`, `category list`, `search`, and `ask`; write paths only run with `--preview`:
-
-```bash
-npm run test:e2e:readonly
 ```
 
 Search, then view a result:
@@ -653,15 +567,17 @@ Check categories before posting:
 ```bash
 apexcn category list --json
 apexcn topic create --category-id 4 --title "Title" --content-file ./post.md --preview
+apexcn confirm <operation-id> --yes --json
 ```
 
 Confirm title before deleting:
 
 ```bash
 apexcn topic view 30549 --json
-apexcn topic delete 30549 --yes --force --confirm-title "Full title" --preview
+apexcn topic delete 30549 --if-version 2 --confirm-title "Full title" --preview
+apexcn confirm <operation-id> --yes --json
 ```
 
 ## API write dry-run classification
 
-The one-click installer takes no arguments and has no dry-run mode. CLI API `--preview` / `--dry-run` prints the community API write request that would be sent without executing it, including `dryRun`, `preview`, and `mode` so agents can distinguish preview from dry-run. API write preview is available only for `topic create/update/edit/delete`, `reply create/update/edit/delete`, `favorite add/remove`, and `subscription add/remove`; aliases `thread` and `post` inherit the same classification. `ask` uses POST but is a read-like RAG command and is excluded. Preview does not require a prior `category list` or `topic view`; topic creation still requires `--category-id`, and topic deletion still requires `--yes --force --confirm-title`.
+The one-click installer takes no arguments and has no dry-run mode. CLI API `--preview` creates a saved community-write preview with an operation id; `--dry-run` only prints a request and does not save a confirmable action. Write preview is available for `topic create/update/edit/delete`, `reply create/update/edit/delete`, `favorite add/remove`, and `subscription add/remove`; aliases `thread` and `post` inherit the same classification. `ask` uses POST but is read-only and is excluded. Topic creation requires `--category-id`; editing and deletion require the freshly read `--if-version`; topic deletion also requires the exact `--confirm-title`.

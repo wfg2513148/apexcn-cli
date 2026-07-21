@@ -76,6 +76,11 @@ describe("CLI entrypoint detection", () => {
         safety: expect.objectContaining({ effects: ["manifest"], preview: "none" })
       }),
       expect.objectContaining({
+        path: "confirm",
+        options: expect.arrayContaining(["--yes", "--json"]),
+        safety: expect.objectContaining({ effects: ["api-write"], preview: "none", confirmation: ["--yes"] })
+      }),
+      expect.objectContaining({
         path: "draft question",
         options: expect.arrayContaining(["--research-file <path>", "--save", "--format <format>"]),
         safety: expect.objectContaining({ effects: ["read", "config-write"], preview: "none" }),
@@ -99,14 +104,6 @@ describe("CLI entrypoint detection", () => {
           expect.objectContaining({ command: 'apexcn review topic --title "标题" --content-file ./question.md --category-id 4 --json', mode: "read" })
         ])
       }),
-      expect.objectContaining({
-        path: "workflow plan",
-        options: expect.arrayContaining(["--goal <goal>", "--problem <text>", "--answer <text>", "--content-file <path>", "--include-execute", "--format <format>"]),
-        safety: expect.objectContaining({ effects: ["read"], preview: "none" }),
-        examples: expect.arrayContaining([
-          expect.objectContaining({ command: 'apexcn workflow plan --goal ask-question --keyword "REST API" --title "标题" --problem "问题描述" --category-id 4 --json', mode: "read" })
-        ])
-      })
     ]));
   });
 
@@ -138,9 +135,8 @@ describe("CLI entrypoint detection", () => {
       expect.objectContaining({ path: "draft question", description: "draft a local community question from structured inputs and research links" }),
       expect.objectContaining({ path: "draft reply", description: "draft a local community reply from structured inputs and references" }),
       expect.objectContaining({ path: "review topic", description: "review a local topic draft before API preview or publish" }),
-      expect.objectContaining({ path: "workflow plan", description: "plan a local, reviewable APEX Chinese Community workflow" }),
       expect.objectContaining({ path: "search", description: "search community topics" }),
-      expect.objectContaining({ path: "topic create", description: "create a community topic" }),
+      expect.objectContaining({ path: "topic create", description: "preview a community topic before confirmation" }),
       expect.objectContaining({ path: "reply delete", description: "delete a reply after explicit confirmation" })
     ]));
   });
@@ -171,10 +167,10 @@ describe("CLI entrypoint detection", () => {
         safety: expect.objectContaining({
           effects: expect.arrayContaining(["api-write", "destructive"]),
           preview: "required",
-          confirmation: ["--yes", "--force", "--confirm-title"]
+          confirmation: ["--confirm-title"]
         }),
         examples: expect.arrayContaining([
-          expect.objectContaining({ command: 'apexcn topic delete 30549 --yes --force --confirm-title "精确标题" --preview', mode: "preview" })
+          expect.objectContaining({ command: 'apexcn topic delete 30549 --if-version 2 --confirm-title "精确标题" --preview', mode: "preview" })
         ])
       }),
       expect.objectContaining({
@@ -182,10 +178,10 @@ describe("CLI entrypoint detection", () => {
         safety: expect.objectContaining({
           effects: expect.arrayContaining(["api-write", "destructive"]),
           preview: "required",
-          confirmation: ["--yes", "--force"]
+          confirmation: []
         }),
         examples: expect.arrayContaining([
-          expect.objectContaining({ command: "apexcn reply delete 67890 --yes --force --preview", mode: "preview" })
+          expect.objectContaining({ command: "apexcn reply delete 67890 --if-version 2 --preview", mode: "preview" })
         ])
       }),
       expect.objectContaining({
@@ -315,7 +311,7 @@ function leafCommandPaths(command: Command, prefix: string[] = [], includeCurren
   }
   return [
     ...current,
-    ...nextPrefixes.flatMap((parts) => command.commands.flatMap((child) => leafCommandPaths(child, parts, true)))
+    ...nextPrefixes.flatMap((parts) => command.commands.filter((child) => !(child as unknown as { _hidden?: boolean })._hidden).flatMap((child) => leafCommandPaths(child, parts, true)))
   ];
 }
 

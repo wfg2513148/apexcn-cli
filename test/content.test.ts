@@ -121,6 +121,7 @@ const neverApiDryRunCommands = [
   "collection verify",
   "collection verify-bundle",
   "commands",
+  "confirm",
   "doctor",
   "doctor snapshot",
   "draft delete",
@@ -1535,14 +1536,14 @@ describe("content commands", () => {
     }
   });
 
-  test("topic and reply direct writes require an approved workflow", async () => {
+  test("topic and reply writes create a confirmation operation without calling the API", async () => {
     const cases = [
       ["topic", "create", "--category-id", "2", "--title", "CLI title", "--content", "CLI body"],
-      ["topic", "update", "42", "--content", "Updated body"],
-      ["topic", "delete", "42", "--yes", "--force", "--confirm-title", "CLI title"],
+      ["topic", "update", "42", "--if-version", "1", "--content", "Updated body"],
+      ["topic", "delete", "42", "--if-version", "1", "--confirm-title", "CLI title"],
       ["reply", "create", "42", "--content", "Reply body"],
-      ["reply", "update", "100", "--content", "Reply updated"],
-      ["reply", "delete", "100", "--yes", "--force"]
+      ["reply", "update", "100", "--if-version", "1", "--content", "Reply updated"],
+      ["reply", "delete", "100", "--if-version", "1"]
     ];
 
     for (const args of cases) {
@@ -1551,11 +1552,10 @@ describe("content commands", () => {
       await program.parseAsync(["node", "apexcn", ...args]);
 
       expect(fetch).not.toHaveBeenCalled();
-      expect(stdout.join("")).toBe("");
-      expect(stderr.join("")).toBe(
-        "Direct topic/reply writes are disabled; use apexcn workflow run, approve, and resume instead\n"
-      );
-      expect(process.exitCode).toBe(1);
+      expect(stdout.join("")).toMatch(/Operation: op_[a-f0-9]{16}/);
+      expect(stdout.join("")).toContain("Confirm: apexcn confirm");
+      expect(stderr.join("")).toBe("");
+      expect(process.exitCode).toBeUndefined();
       process.exitCode = undefined;
       vi.unstubAllGlobals();
     }
@@ -1671,7 +1671,8 @@ describe("content commands", () => {
         profile: "test@oci",
         baseUrl: "https://oracleapex.cn/ords/test",
         method: "DELETE",
-        path: "/api/v1/topics/42"
+        path: "/api/v1/topics/42",
+        body: { confirmTitle: "CLI updated" }
       }
     ]);
   });
@@ -1694,18 +1695,19 @@ describe("content commands", () => {
     expect(fetch).not.toHaveBeenCalled();
     expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     const plans = stdout.join("").trim().split("\n").map((line) => JSON.parse(line));
-    expect(plans).toEqual([
-      {
-        dryRun: true,
-        preview: true,
-        mode: "preview",
-        profile: "test@oci",
-        baseUrl: "https://oracleapex.cn/ords/test",
-        method: "POST",
-        path: "/api/v1/topics/42/replies",
-        body: { content: "Preview body" }
-      },
-      {
+    expect(plans[0]).toEqual(expect.objectContaining({
+      kind: "write-preview",
+      dryRun: true,
+      preview: true,
+      mode: "preview",
+      profile: "test@oci",
+      baseUrl: "https://oracleapex.cn/ords/test",
+      method: "POST",
+      path: "/api/v1/topics/42/replies",
+      operationId: expect.stringMatching(/^op_[a-f0-9]{16}$/),
+      body: expect.objectContaining({ content: "Preview body", operationKey: expect.any(String), payloadHash: expect.any(String) })
+    }));
+    expect(plans[1]).toEqual({
         dryRun: true,
         preview: true,
         mode: "preview",
@@ -1713,8 +1715,7 @@ describe("content commands", () => {
         baseUrl: "https://oracleapex.cn/ords/test",
         method: "POST",
         path: "/api/v1/topics/42/favorite"
-      }
-    ]);
+      });
   });
 
   test("favorite and subscription previews exactly match the approved request", async () => {
@@ -1761,7 +1762,7 @@ describe("content commands", () => {
 
     await program.parseAsync(["node", "apexcn", "topic", "delete", "42"]);
 
-    expect(stderr.join("")).toBe("Refusing to delete topic without --yes --force --confirm-title\n");
+    expect(stderr.join("")).toBe("Missing --confirm-title for topic deletion\n");
     expect(process.exitCode).toBe(1);
   });
 
@@ -1835,7 +1836,7 @@ describe("content commands", () => {
     expect(fetch).not.toHaveBeenCalled();
     expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
       path: "/api/v1/topics",
-      body: { categoryId: 2, title: "CLI title", content: "file body" }
+      body: expect.objectContaining({ categoryId: 2, title: "CLI title", content: "file body" })
     }));
   });
 
@@ -1858,24 +1859,23 @@ describe("content commands", () => {
 
     await program.parseAsync(["node", "apexcn", "topic", "create", "--category-id", "2", "--title", "CLI title", "--content-file", "-", "--preview"]);
     await program.parseAsync(["node", "apexcn", "reply", "create", "42", "--content-file", "-", "--preview"]);
-    await program.parseAsync(["node", "apexcn", "topic", "update", "42", "--content-file", "-", "--preview"]);
-    await program.parseAsync(["node", "apexcn", "post", "edit", "100", "--content-file", "-", "--preview"]);
+    await program.parseAsync(["node", "apexcn", "topic", "update", "42", "--if-version", "1", "--content-file", "-", "--preview"]);
+    await program.parseAsync(["node", "apexcn", "post", "edit", "100", "--if-version", "1", "--content-file", "-", "--preview"]);
 
     expect(readStdin).toHaveBeenCalledTimes(4);
     expect(fetch).not.toHaveBeenCalled();
-    expect(stdout.join("").trim().split("\n").map((line) => JSON.parse(line).body)).toEqual([
-      { categoryId: 2, title: "CLI title", content: "topic stdin body" },
-      { content: "reply stdin body" },
-      { content: "topic update stdin body" },
-      { content: "reply update stdin body" }
-    ]);
+    const bodies = stdout.join("").trim().split("\n").map((line) => JSON.parse(line).body);
+    expect(bodies[0]).toEqual(expect.objectContaining({ categoryId: 2, title: "CLI title", content: "topic stdin body" }));
+    expect(bodies[1]).toEqual(expect.objectContaining({ content: "reply stdin body" }));
+    expect(bodies[2]).toEqual(expect.objectContaining({ content: "topic update stdin body", ifVersion: 1 }));
+    expect(bodies[3]).toEqual(expect.objectContaining({ content: "reply update stdin body", ifVersion: 1 }));
   });
 
   test("required content-file dash rejects zero-length stdin without calling the API", async () => {
     const cases = [
       ["node", "apexcn", "topic", "create", "--category-id", "2", "--title", "CLI title", "--content-file", "-"],
       ["node", "apexcn", "reply", "create", "42", "--content-file", "-"],
-      ["node", "apexcn", "reply", "update", "100", "--content-file", "-"]
+      ["node", "apexcn", "reply", "update", "100", "--if-version", "1", "--content-file", "-"]
     ];
 
     for (const argv of cases) {
@@ -1901,13 +1901,13 @@ describe("content commands", () => {
       { readStdin: async () => "", isStdinTTY: () => true }
     );
 
-    await program.parseAsync(["node", "apexcn", "topic", "update", "42", "--content-file", "-", "--preview"]);
+    await program.parseAsync(["node", "apexcn", "topic", "update", "42", "--if-version", "1", "--content-file", "-", "--preview"]);
 
     expect(fetch).not.toHaveBeenCalled();
     expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
       method: "POST",
       path: "/api/v1/topics/42",
-      body: { content: "" }
+      body: expect.objectContaining({ content: "", ifVersion: 1 })
     }));
   });
 
@@ -1920,16 +1920,14 @@ describe("content commands", () => {
       { readStdin, isStdinTTY: () => false }
     );
 
-    await program.parseAsync(["node", "apexcn", "thread", "edit", "42", "--title", "Updated title", "--preview", "--json"]);
+    await program.parseAsync(["node", "apexcn", "thread", "edit", "42", "--if-version", "1", "--title", "Updated title", "--preview", "--json"]);
 
     expect(readStdin).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
     expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
-      dryRun: true,
-      preview: true,
-      mode: "preview",
+      kind: "write-preview",
       path: "/api/v1/topics/42",
-      body: { title: "Updated title" }
+      body: expect.objectContaining({ title: "Updated title", ifVersion: 1 })
     }));
   });
 
@@ -1948,7 +1946,7 @@ describe("content commands", () => {
     expect(readStdin).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
     expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
-      body: { categoryId: 2, title: "CLI title", content: "dash file body" }
+      body: expect.objectContaining({ categoryId: 2, title: "CLI title", content: "dash file body" })
     }));
   });
 
@@ -2484,7 +2482,8 @@ describe("content commands", () => {
         profile: "test@oci",
         baseUrl: "https://oracleapex.cn/ords/test",
         method: "DELETE",
-        path: "/api/v1/replies/100"
+        path: "/api/v1/replies/100",
+        body: { confirmId: 100 }
       },
       {
         dryRun: true,

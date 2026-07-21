@@ -60,7 +60,8 @@
       "candidate": {
         "version": "1.0.2",
         "artifact": "artifacts/apexcn-cli.tgz",
-        "status": "artifact_binding_fix_pending_independent_validation"
+        "sha256": "46607379a5c00734a535547b43ce91d3dfebbfa3b39c6f8b3df66faff90372ea",
+        "status": "local_gates_passed_pending_fresh_independent_validation"
       },
       "serverCapabilityAuditRequired": true,
       "serverTask": {
@@ -69,6 +70,52 @@
         "status": "completed",
         "commit": "cc312c4",
         "productionValidation": "passed_with_zero_residue"
+      },
+      "executionOrder": [
+        "apexcn-forums-if-server-change-required",
+        "apexcn-cli",
+        "apexcn-cli-test"
+      ],
+      "promotionToActiveIssue": "only-after-fresh-independent-validator-finding"
+    },
+    {
+      "id": "ENH-WRITE-UX-002",
+      "status": "in_progress",
+      "reportedAt": "2026-07-21",
+      "reportedBy": "user",
+      "title": "隐藏 workflow 实现概念并简化内容写入体验",
+      "currentBehavior": [
+        "发帖、回帖、编辑和删除的普通用户路径直接暴露 workflow、artifact、run-dir、approve 和 resume 等实现概念",
+        "用户需要理解并手工衔接 workflow run、approve 和 resume 才能完成一次社区写入",
+        "现有错误提示、下一步提示、帮助和技能说明会把内部安全编排细节传递给普通用户"
+      ],
+      "requiredOutcomes": [
+        "普通用户通过 topic、reply 等业务命令或自然语言即可完成预览、确认和执行，不需要理解或直接操作 workflow",
+        "公开主路径的命令说明、错误提示、下一步提示、README、指南和 AI 使用说明不再要求用户接触 workflow、artifact、run-dir、approve 或 resume 等内部术语",
+        "提供面向业务动作的简洁确认入口，以操作编号关联待确认请求，不要求用户定位或管理工作流目录",
+        "内部继续保留预览后确认、请求哈希绑定、目标账号与环境绑定、防篡改、防重复执行、失败恢复和审计证据能力",
+        "现有 workflow 命令如因兼容性需要保留，只作为内部或兼容入口，不再作为普通用户的默认使用路径"
+      ],
+      "safetyConstraints": [
+        "不得通过恢复无审批的直接写入来实现简化",
+        "确认后只能执行用户预览并批准的同一请求",
+        "复制、移动或篡改本地状态不得跨目录复用其他操作的批准上下文",
+        "删除和其他高风险操作继续执行对象归属、版本和明确确认校验"
+      ],
+      "acceptanceCriteria": [
+        "首次使用者仅依据公开帮助和 README，可以在不接触 workflow 术语的情况下完成一次回帖预览、确认和发布",
+        "发帖、回帖、编辑和删除的普通路径均不输出要求用户执行 workflow run、approve 或 resume 的提示",
+        "自动化测试证明简化前后的审批哈希、目标绑定、防重复执行、篡改拒绝和审计能力等价",
+        "新鲜独立验证任务完成真实 API 写入、浏览器可见性检查和测试数据清理"
+      ],
+      "responsibility": "cli-user-experience",
+      "serverCapabilityAuditRequired": true,
+      "expectedServerChange": "none-unless-audit-finds-a-contract-gap",
+      "candidate": {
+        "version": "1.0.2",
+        "artifact": "artifacts/apexcn-cli.tgz",
+        "sha256": "46607379a5c00734a535547b43ce91d3dfebbfa3b39c6f8b3df66faff90372ea",
+        "status": "local_gates_passed_pending_fresh_independent_validation"
       },
       "executionOrder": [
         "apexcn-forums-if-server-change-required",

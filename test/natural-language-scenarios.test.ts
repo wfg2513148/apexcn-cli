@@ -56,6 +56,7 @@ type ScenarioRuntime = {
   fetch: ReturnType<typeof vi.fn>;
   readStdin?: () => Promise<string>;
   draftId?: string;
+  operationId?: string;
 };
 
 const GOOD_TOPIC_CONTENT = [
@@ -205,30 +206,8 @@ const draftAndReviewScenarios: Scenario[] = [
   scenario("review topic text output", "用文本方式显示发帖审查结果", "review topic", "read", ["read"], "none", ["--format <format>"])
 ];
 
-const workflowScenarios: Scenario[] = [
-  scenario("workflow plan ask question", "规划一次先搜索再起草提问的流程，不要执行发布", "workflow plan", "read", ["read"], "none", ["--goal <goal>", "--keyword <keyword>", "--json"]),
-  scenario("workflow plan reply", "规划一次回帖流程，只生成步骤", "workflow plan", "read", ["read"], "none", ["--goal <goal>", "--topic-id <id>", "--answer <text>"]),
-  scenario("workflow plan nested reply", "规划回复某条已有回复的流程", "workflow plan", "read", ["read"], "none", ["--parent-post-id <id>", "--topic-id <id>", "--answer <text>"]),
-  scenario("workflow plan research only", "只规划研究资料的流程", "workflow plan", "read", ["read"], "none", ["--goal <goal>", "--keyword <keyword>"]),
-  scenario("workflow plan publish topic", "规划发布已有 Markdown 的帖子流程", "workflow plan", "read", ["read"], "none", ["--content-file <path>", "--category-id <id>", "--title <title>"]),
-  scenario("workflow plan include execute", "规划流程时也把最终执行步骤列出来但不执行", "workflow plan", "read", ["read"], "none", ["--include-execute"]),
-  scenario("workflow run ask preview", "运行一个可恢复的提问 workflow，只生成预览和本地 artifacts", "workflow run", "preview", ["read", "api-write"], "required", ["--goal <goal>", "--output-dir <path>", "--json"]),
-  scenario("workflow run reply preview", "运行一个回帖 workflow，只到 preview，不发布", "workflow run", "preview", ["read", "api-write"], "required", ["--goal <goal>", "--topic-id <id>", "--answer <text>"]),
-  scenario("workflow run nested reply preview", "运行一个楼中楼回复 workflow，只到 preview", "workflow run", "preview", ["read", "api-write"], "required", ["--parent-post-id <id>", "--topic-id <id>", "--content-file <path>"]),
-  scenario("workflow run own reply delete preview", "删除我自己的回复，先生成绑定版本的预览", "workflow run", "preview", ["read", "api-write"], "required", ["--reply-id <id>", "--confirm-id <id>", "--if-version <n>"]),
-  scenario("workflow run topic tags", "通过安全 workflow 发布带标签的帖子", "workflow run", "preview", ["read", "api-write"], "required", ["--tags <csv>", "--content-file <path>"]),
-  scenario("workflow approve", "我已看过 workflow preview，记录批准 artifact", "workflow approve", "read", ["read"], "none", ["--run-dir <run-dir>", "--json"]),
-  scenario("workflow approve with note", "批准 workflow preview 并写一条审核备注", "workflow approve", "read", ["read"], "none", ["--approved-by <name>", "--note <text>"]),
-  scenario("workflow policy init", "生成一份 workflow policy 模板", "workflow policy init", "read", ["read"], "none", ["--output <file>", "--json"]),
-  scenario("workflow verify", "验证 workflow run 目录里的证据和 approval hash", "workflow verify", "read", ["read"], "none", ["--run-dir <run-dir>", "--json"]),
-  scenario("workflow verify with policy", "按 workflow policy 验证 run 目录", "workflow verify", "read", ["read"], "none", ["--policy <file>", "--json"]),
-  scenario("workflow verify write report", "验证 workflow 并写出 verification.json", "workflow verify", "read", ["read"], "none", ["--write-report", "--json"]),
-  scenario("workflow diff", "对比 workflow preview 和 approval 绑定请求", "workflow diff", "read", ["read"], "none", ["--run-dir <run-dir>", "--json"]),
-  scenario("workflow audit log", "导出 workflow 审计日志 NDJSON", "workflow audit-log", "read", ["read"], "none", ["--run-dir <run-dir>", "--format <format>"]),
-  scenario("workflow export", "把 workflow 证据导出成单文件归档", "workflow export", "read", ["read"], "none", ["--run-dir <run-dir>", "--output <file>", "--json"]),
-  scenario("workflow export allow invalid", "即使 workflow 校验不完整也导出证据包", "workflow export", "read", ["read"], "none", ["--allow-invalid", "--json"]),
-  scenario("workflow verify bundle", "验证别人发来的 workflow bundle", "workflow verify-bundle", "read", ["read"], "none", ["--bundle <file>", "--json"]),
-  scenario("workflow execute approved", "执行已经批准过的 workflow 最终发布步骤", "workflow run", "execute", ["read", "api-write"], "required", ["--resume <run-dir>", "--execute", "--yes", "--json"], ["--execute", "--yes"])
+const confirmationScenarios: Scenario[] = [
+  scenario("confirm previewed community change", "我已确认刚才预览的内容，请使用操作编号执行", "confirm", "execute", ["api-write"], "none", ["--yes", "--json"], ["--yes"])
 ];
 
 const writePreviewScenarios: Scenario[] = [
@@ -247,25 +226,19 @@ const writePreviewScenarios: Scenario[] = [
   scenario("preview favorite remove", "预览取消收藏帖子请求", "favorite remove", "preview", ["api-write"], "available", ["--preview"]),
   scenario("preview subscription add", "预览订阅帖子请求", "subscription add", "preview", ["api-write"], "available", ["--preview"]),
   scenario("preview subscription remove", "预览取消订阅帖子请求", "subscription remove", "preview", ["api-write"], "available", ["--preview"]),
-  scenario("preview topic delete", "删除帖子前先预览请求并确认精确标题", "topic delete", "preview", ["api-write", "destructive"], "required", ["--yes", "--force", "--confirm-title <title>", "--preview"], ["--yes", "--force", "--confirm-title"]),
-  scenario("preview thread delete alias intent", "删除 thread 前需要强确认", "topic delete", "preview", ["api-write", "destructive"], "required", ["--yes", "--force", "--confirm-title <title>"], ["--yes", "--force", "--confirm-title"]),
-  scenario("preview reply delete", "删除回复前先预览请求", "reply delete", "preview", ["api-write", "destructive"], "required", ["--yes", "--force", "--preview"], ["--yes", "--force"]),
-  scenario("preview post delete alias intent", "删除 post 前需要 yes 和 force", "reply delete", "preview", ["api-write", "destructive"], "required", ["--yes", "--force"], ["--yes", "--force"]),
+  scenario("preview topic delete", "删除帖子前先预览请求并确认精确标题", "topic delete", "preview", ["api-write", "destructive"], "required", ["--if-version <version>", "--confirm-title <title>", "--preview"], ["--confirm-title"]),
+  scenario("preview thread delete alias intent", "删除 thread 前需要精确标题和当前版本", "topic delete", "preview", ["api-write", "destructive"], "required", ["--if-version <version>", "--confirm-title <title>"], ["--confirm-title"]),
+  scenario("preview reply delete", "删除回复前先预览请求", "reply delete", "preview", ["api-write", "destructive"], "required", ["--if-version <version>", "--preview"]),
+  scenario("preview post delete alias intent", "删除 post 前需要当前版本和操作编号确认", "reply delete", "preview", ["api-write", "destructive"], "required", ["--if-version <version>"]),
   scenario("dry run topic create", "用 dry-run 检查创建帖子请求体", "topic create", "preview", ["api-write"], "required", ["--dry-run"]),
   scenario("dry run reply create", "用 dry-run 检查回复请求体", "reply create", "preview", ["api-write"], "required", ["--dry-run"])
 ];
 
 const writeExecuteScenarios: Scenario[] = [
-  scenario("execute topic create after approval", "我确认了，发布这个新帖子", "workflow run", "execute", ["api-write"], "required", ["--resume <run-dir>", "--execute", "--yes", "--json"], ["--execute", "--yes"]),
-  scenario("execute topic update after approval", "我确认了，提交帖子编辑", "workflow run", "execute", ["api-write"], "required", ["--resume <run-dir>", "--execute", "--yes", "--json"], ["--execute", "--yes"]),
-  scenario("execute reply create after approval", "我确认了，发布这条回复", "workflow run", "execute", ["api-write"], "required", ["--resume <run-dir>", "--execute", "--yes", "--json"], ["--execute", "--yes"]),
-  scenario("execute reply update after approval", "我确认了，更新这条回复", "workflow run", "execute", ["api-write"], "required", ["--resume <run-dir>", "--execute", "--yes", "--json"], ["--execute", "--yes"]),
   scenario("execute favorite add", "帮我收藏帖子 30549", "favorite add", "execute", ["api-write"], "available", ["--json"]),
   scenario("execute favorite remove", "帮我取消收藏帖子 30549", "favorite remove", "execute", ["api-write"], "available", ["--json"]),
   scenario("execute subscription add", "帮我订阅帖子 30549", "subscription add", "execute", ["api-write"], "available", ["--json"]),
-  scenario("execute subscription remove", "帮我取消订阅帖子 30549", "subscription remove", "execute", ["api-write"], "available", ["--json"]),
-  scenario("execute topic delete confirmed", "确认删除这个帖子，标题完全匹配", "workflow run", "execute", ["api-write"], "required", ["--resume <run-dir>", "--execute", "--yes", "--json"], ["--execute", "--yes"]),
-  scenario("execute reply delete confirmed", "确认删除这条回复", "workflow run", "execute", ["api-write"], "required", ["--resume <run-dir>", "--execute", "--yes", "--json"], ["--execute", "--yes"])
+  scenario("execute subscription remove", "帮我取消订阅帖子 30549", "subscription remove", "execute", ["api-write"], "available", ["--json"])
 ];
 
 const authWriteScenarios: Scenario[] = [
@@ -279,7 +252,7 @@ const authWriteScenarios: Scenario[] = [
 const COMMON_NATURAL_LANGUAGE_SCENARIOS = [
   ...commonReadScenarios,
   ...draftAndReviewScenarios,
-  ...workflowScenarios,
+  ...confirmationScenarios,
   ...writePreviewScenarios,
   ...writeExecuteScenarios,
   ...authWriteScenarios
@@ -1154,19 +1127,38 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
         expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "reply-review", ok: true }));
       }
     },
-    ...apiWritePreviewScenarios(),
-    ...workflowExecutableScenarios()
+    {
+      name: "confirm executes the exact previewed operation",
+      userSays: "我确认刚才预览的回复，请使用操作编号发布。",
+      commandPath: "confirm",
+      prepare: async (context) => {
+        await context.program.parseAsync(["node", "apexcn", "reply", "create", "30549", "--content", "Confirmed reply", "--json"]);
+        context.operationId = JSON.parse(context.stdout.join("")).operationId;
+      },
+      argv: (context) => ["node", "apexcn", "confirm", context.operationId ?? "missing", "--yes", "--json"],
+      responseForUrl: (url, init) => {
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/topics/30549/replies");
+        expect(init?.method).toBe("POST");
+        return Response.json({ ok: true, requestId: "req-confirm" });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "write-result", status: "completed", requestId: "req-confirm" }));
+      }
+    },
+    ...apiWritePreviewScenarios()
   ];
 }
 
 function apiWritePreviewScenarios(): ExecutableNaturalLanguageScenario[] {
   return [
     writePreview("topic create", "预览发帖请求，不要发布。", ["node", "apexcn", "topic", "create", "--category-id", "4", "--title", "CLI title", "--content", "CLI body", "--preview", "--json"], "/api/v1/topics"),
-    writePreview("topic update", "预览编辑帖子标题和正文。", ["node", "apexcn", "topic", "update", "30549", "--title", "Updated title", "--content", "Updated body", "--preview", "--json"], "/api/v1/topics/30549"),
-    writePreview("topic delete", "删除帖子前先预览请求并确认精确标题。", ["node", "apexcn", "topic", "delete", "30549", "--yes", "--force", "--confirm-title", "CLI title", "--preview", "--json"], "/api/v1/topics/30549"),
+    writePreview("topic update", "预览编辑帖子标题和正文。", ["node", "apexcn", "topic", "update", "30549", "--if-version", "2", "--title", "Updated title", "--content", "Updated body", "--preview", "--json"], "/api/v1/topics/30549"),
+    writePreview("topic delete", "删除帖子前先预览请求并确认精确标题。", ["node", "apexcn", "topic", "delete", "30549", "--if-version", "2", "--confirm-title", "CLI title", "--preview", "--json"], "/api/v1/topics/30549"),
     writePreview("reply create", "预览给帖子 30549 的回复，不要发布。", ["node", "apexcn", "reply", "create", "30549", "--content", "Reply body", "--preview", "--json"], "/api/v1/topics/30549/replies"),
-    writePreview("reply update", "预览更新已有回复。", ["node", "apexcn", "reply", "update", "201480", "--content", "Reply updated", "--preview", "--json"], "/api/v1/replies/201480"),
-    writePreview("reply delete", "删除回复前先预览请求。", ["node", "apexcn", "reply", "delete", "201480", "--yes", "--force", "--preview", "--json"], "/api/v1/replies/201480"),
+    writePreview("reply update", "预览更新已有回复。", ["node", "apexcn", "reply", "update", "201480", "--if-version", "2", "--content", "Reply updated", "--preview", "--json"], "/api/v1/replies/201480"),
+    writePreview("reply delete", "删除回复前先预览请求。", ["node", "apexcn", "reply", "delete", "201480", "--if-version", "2", "--preview", "--json"], "/api/v1/replies/201480"),
     writePreview("favorite remove", "预览取消收藏帖子请求。", ["node", "apexcn", "favorite", "remove", "30549", "--preview", "--json"], "/api/v1/topics/30549/favorite"),
     writePreview("subscription add", "预览订阅帖子请求。", ["node", "apexcn", "subscription", "add", "30549", "--preview", "--json"], "/api/v1/topics/30549/subscription"),
     writePreview("subscription remove", "预览取消订阅帖子请求。", ["node", "apexcn", "subscription", "remove", "30549", "--preview", "--json"], "/api/v1/topics/30549/subscription")
@@ -1344,7 +1336,6 @@ describe("common natural-language agent scenarios", () => {
     }
     if (item.expectedEffects.includes("destructive")) {
       expect(command?.safety.preview).toBe("required");
-      expect(command?.safety.confirmation.length).toBeGreaterThan(0);
     }
     if (item.expectedEffects.includes("secret")) {
       expect(command?.safety.effects).toContain("auth");
