@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -601,6 +601,42 @@ describe("workflow commands", () => {
     expect(execute.stderr.join("")).toContain("hash mismatch");
     expect(fetch).not.toHaveBeenCalled();
     expect((await readJson(join(runDir, "run.json"))).nextAction).toContain("workflow approve");
+  });
+
+  test("workflow resume binds copied runs to artifacts inside the requested directory", async () => {
+    const runDir = await tempPath("artifact-binding-original");
+    const contentFile = join(dirname(runDir), "reply.md");
+    await writeFile(contentFile, "Original approved reply", "utf8");
+    const preview = await configuredWorkflowProgram(async () => Response.json({ error: "unexpected" }, { status: 500 }));
+    await preview.program.parseAsync([
+      "node", "apexcn", "workflow", "run",
+      "--goal", "reply-create",
+      "--topic-id", "42",
+      "--content-file", contentFile,
+      "--output-dir", runDir,
+      "--json"
+    ]);
+    expect(preview.fetch).not.toHaveBeenCalled();
+
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+
+    const copiedRunDir = join(dirname(runDir), "artifact-binding-copy");
+    await cp(runDir, copiedRunDir, { recursive: true });
+    const copiedPreviewPath = join(copiedRunDir, "preview.json");
+    const copiedPreview = await readJson(copiedPreviewPath);
+    ((copiedPreview.request as { body: { content: string } }).body).content = "Tampered copied reply";
+    await writeFile(copiedPreviewPath, `${JSON.stringify(copiedPreview, null, 2)}\n`, "utf8");
+
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const execute = workflowProgram({ configPath: "/tmp/apexcn-workflow-missing-config.json" });
+    await execute.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", copiedRunDir, "--execute", "--yes"]);
+
+    expect(execute.stderr.join("")).toContain("hash mismatch");
+    expect(fetch).not.toHaveBeenCalled();
+    expect((await readJson(join(runDir, "run.json"))).status).toBe("preview-ready");
+    expect((await readJson(join(copiedRunDir, "run.json"))).status).toBe("preview-ready");
   });
 
   test("workflow verify reports local evidence and writes report after approval", async () => {

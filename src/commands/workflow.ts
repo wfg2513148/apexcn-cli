@@ -1793,7 +1793,7 @@ async function loadWorkflowRun(runDir: string): Promise<{ runDir: string; state:
     }
     const state = data as WorkflowRunState;
     state.inputs ??= {};
-    state.artifacts = { ...runArtifacts(state.goal, runDir), ...state.artifacts };
+    state.artifacts = runArtifacts(state.goal, runDir);
     return { runDir, state };
   } catch (error) {
     if (isNodeError(error) && error.code === "ENOENT") {

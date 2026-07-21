@@ -50,12 +50,17 @@
           "id": "SERVER-REPLY-UPDATE-CONTRACT",
           "status": "server_completed",
           "summary": "OpenAPI 曾把 parentPostId 错误声明为回复更新字段，但服务端只允许创建时选择父回复"
+        },
+        {
+          "id": "CLI-WORKFLOW-ARTIFACT-BINDING",
+          "status": "fixed_in_candidate",
+          "summary": "复制 workflow 目录后，run.json 中的绝对 artifact 路径会把副本 resume 重定向到原已批准目录，现已强制绑定到明确传入的 run directory"
         }
       ],
       "candidate": {
-        "version": "1.0.1",
+        "version": "1.0.2",
         "artifact": "artifacts/apexcn-cli.tgz",
-        "status": "local_gates_passed_pending_independent_validation"
+        "status": "artifact_binding_fix_pending_independent_validation"
       },
       "serverCapabilityAuditRequired": true,
       "serverTask": {
