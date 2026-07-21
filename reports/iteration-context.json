@@ -1,15 +1,15 @@
 {
   "kind": "apexcn-iteration-context",
   "schemaVersion": 1,
-  "generatedAt": "2026-07-21T01:29:02.487Z",
+  "generatedAt": "2026-07-21T02:17:29.813Z",
   "release": {
-    "version": "0.80.5",
-    "tag": "v0.80.5",
-    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v0.80.5"
+    "version": "0.80.6",
+    "tag": "v0.80.6",
+    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v0.80.6"
   },
   "repository": {
     "branch": "main",
-    "commit": "38bd031a1c77396a011aafeb5ad56118dd81af41"
+    "commit": "ce00a19cdc8c73e442f9ca6e145d3057150c6c83"
   },
   "milestone": {
     "completedIterationFor": null,
@@ -17,35 +17,32 @@
     "resumeMilestoneStatus": "in_progress"
   },
   "enhancedCapabilities": [
-    "POSIX and PowerShell installers now keep custom install and bin paths contained and do not rewrite an apexcn launcher elsewhere on PATH.",
-    "Default one-click installs still refresh a recognized older apexcn-cli launcher so existing shells resolve the new persistent installation.",
-    "Lifecycle tests now use operation-specific isolated PATH values and cannot select a developer machine launcher.",
-    "Release v0.80.5 was installed from the public latest endpoint and both local launchers now resolve the persistent package and report version 0.80.5."
+    "The primary README now gives first-time APEX developers a plain-language path from product purpose to one-click installation, community context, API Key onboarding, and first use.",
+    "The API Key guide keeps real community screenshots and makes the short apexcn -apikey command the default setup path with clear placeholder and secret-handling guidance.",
+    "Twenty copy-ready natural-language prompts now cover common search, learning, drafting, publishing, reply, favorite, subscription, and diagnostic scenarios.",
+    "Release v0.80.6 was installed from the public latest endpoint and verified for checksum enforcement, version reporting, quoted and unquoted API Key setup, and 0600 config permissions."
   ],
   "unexpectedProblems": [
-    "The v0.80.4 lifecycle test inherited the host PATH and rewrote /usr/local/bin/apexcn to a temporary test package that was deleted after the test, causing dist/index.js failures in later agent workflows.",
-    "The first complete post-fix test run exposed a misplaced PowerShell source assertion in the shell source test; the assertion was moved and the full suite rerun."
+    "The first local asset checksum command ran from the repository root even though checksums.txt contains paths relative to artifacts, so the files were not found; rerunning inside artifacts passed all checks."
   ],
   "rootCauses": [
-    "The lifecycle test supplied custom install and bin roots but did not isolate PATH, so command -v apexcn selected the real host launcher.",
-    "The installer treated default one-click installs and explicitly customized test/lifecycle installs identically when updating an already resolved launcher."
+    "The release checksum manifest intentionally contains asset basenames, making its verification working-directory-sensitive."
   ],
   "preventionActions": [
-    "Only default install and bin paths may trigger shell-resolved launcher replacement; customized paths remain strictly contained.",
-    "A regression now preserves an external launcher byte-for-byte while installing successfully into custom paths.",
-    "Full test verification records the real launcher checksum before and after the suite; both hashes matched after this fix.",
-    "Every launcher-related patch release is reinstalled through the public latest one-line command and verified from both resolved and user-local launchers."
+    "Run shasum verification from the artifacts directory whenever validating the generated checksums.txt file.",
+    "Keep README onboarding contracts covered by documentation consistency and installer tests.",
+    "Continue public latest-endpoint installation smoke tests for releases that change installation or onboarding documentation."
   ],
   "nextMilestoneGoal": "Keep roadmap milestone 0.8 active and its remaining Windows lifecycle, fresh independent novice validation, and seven-day readonly soak work paused until the user explicitly resumes it.",
   "expectedResults": [
-    "Automated lifecycle qualification can no longer leave the user's apexcn command pointing at a deleted temporary directory.",
-    "Public one-click installation resolves apexcn through the persistent user installation and returns version 0.80.5.",
-    "No community API write, API Key generation, Windows lifecycle round, independent validation round, or soak run is performed by this patch."
+    "New APEX developers can understand apexcn-cli and complete the documented installation and API Key setup without reading developer internals.",
+    "The public latest release resolves to v0.80.6 with all required release and checksum assets.",
+    "No community API write, API Key generation, Windows lifecycle round, independent validation round, or soak run is performed by this documentation patch."
   ],
   "majorRisks": [
-    "Default installs intentionally retain the ability to refresh a recognized writable older launcher; ownership detection must remain narrow and covered by tests.",
-    "Real Windows lifecycle qualification remains paused, so the PowerShell change is covered by source and available local tests but is not claimed as completed Windows acceptance.",
-    "Roadmap 0.8 core acceptance criteria remain pending while the user-paused validation and soak gates are not resumed."
+    "Community navigation labels and screenshots may drift as the live APEX application evolves and should be rechecked during future onboarding refreshes.",
+    "Real Windows lifecycle qualification remains paused and is not claimed by this patch.",
+    "Roadmap 0.8 core acceptance criteria remain pending while independent validation and soak gates are paused."
   ],
   "activeIssues": [],
   "resume": {
