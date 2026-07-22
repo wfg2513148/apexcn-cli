@@ -16,7 +16,7 @@ export function renderRoadmap(roadmap, issues) {
     "",
     "## 产品定位",
     "",
-    "`apexcn-cli` 是 APEX 中文社区的本地 AI Agent 操作层、社区知识 CLI 和可审计内容工作流引擎。CLI 是主产品，MCP 是本地 stdio 薄适配层，真实写操作由 CLI workflow approval 管控。",
+    "`apexcn-cli` 是 APEX 中文社区的本地 AI Agent 操作层、社区知识 CLI 和可审计内容工作流引擎。CLI 是唯一执行入口，Skill 负责向 AI Agent 传递使用规范，真实写操作由 CLI workflow approval 管控。",
     "",
     `主要用户：${roadmap.productStrategy.primaryPersona}。`,
     "",
@@ -133,7 +133,6 @@ export function renderRoadmap(roadmap, issues) {
     "## 非目标",
     "",
     "- 不自动升级到 `2.0.0`。",
-    "- 不开放 MCP execute-write 或远端 HTTP MCP Server。",
     "- 不在自动化测试中执行生产社区写操作。",
     "- 不用 CLI 补丁掩盖 ORDS REST API 能力缺口。",
     "- 不把离线 RAG fixture 指标描述成真实在线答案质量。",
@@ -170,7 +169,7 @@ export function renderIssues(issues) {
 
 export function validateRoadmap({ roadmap, issues, agentsText }) {
   const problems = [];
-  const expectedStages = ["0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9"];
+  const expectedStages = ["0.2", "0.3", "0.4", "0.6", "0.7", "0.8", "0.9"];
   const expectedReleaseLines = expectedStages.map((stage) => `0.${stage.slice(2)}0.x`);
   const milestoneStatuses = new Set(["planned", "in_progress", "blocked", "completed"]);
   const capabilityStatuses = new Set(["not_started", "partial", "implemented", "validated"]);
@@ -298,7 +297,7 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
   check(roadmap.testingBindings?.server?.reasoningEffort === "high", "server reasoning must be high", problems);
   check(roadmap.testingBindings?.server?.apiKeyEnvironment === "dev@oci", "server API key environment must be dev@oci", problems);
   check(roadmap.testingBindings?.server?.apiKeyPolicy?.productionUseAllowed === false, "production API key use must be disabled", problems);
-  check(Array.isArray(roadmap.milestones) && roadmap.milestones.length === 8, "roadmap must contain eight milestones", problems);
+  check(Array.isArray(roadmap.milestones) && roadmap.milestones.length === 7, "roadmap must contain seven milestones", problems);
 
   const measurementProfileIds = new Set();
   for (const profile of roadmap.measurementProfiles ?? []) {

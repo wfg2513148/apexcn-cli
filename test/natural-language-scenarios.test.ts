@@ -172,9 +172,6 @@ const commonReadScenarios: Scenario[] = [
   scenario("collection query", "在本地知识合集里搜索 ORDS 401", "collection query", "read", ["read"], "none", ["--dir <dir>", "--top-k <n>", "--explain", "--json"]),
   scenario("collection stats", "查看本地知识合集索引统计信息", "collection stats", "read", ["read"], "none", ["--dir <dir>", "--json"]),
   scenario("collection verify", "验证这个本地知识合集是否完整可用", "collection verify", "read", ["read"], "none", ["--dir <dir>", "--json"]),
-  scenario("mcp tools", "列出 apexcn-cli 暴露给 AI Agent 的 MCP 工具", "mcp tools", "read", ["manifest"], "none", ["--json"]),
-  scenario("mcp inspect", "检查 apexcn-cli MCP 默认是否只读", "mcp inspect", "read", ["manifest"], "none", ["--json"]),
-  scenario("mcp serve", "以只读模式启动 apexcn-cli 本地 MCP 服务", "mcp serve", "read", ["manifest"], "none", ["--readonly"]),
   scenario("me verbose", "显示当前社区账号的详细信息", "me", "read", ["read"], "none", ["--verbose", "--json"])
 ];
 
@@ -249,13 +246,26 @@ const authWriteScenarios: Scenario[] = [
   scenario("logout current profile", "退出当前 apexcn-cli 登录状态", "auth logout", "execute", ["config-write", "auth"], "none")
 ];
 
+const workflowScenarios: Scenario[] = [
+  scenario("plan recoverable workflow", "规划一次先搜索再起草提问的流程，不要执行发布", "workflow plan", "read", ["read"], "none", ["--goal <goal>", "--json"]),
+  scenario("run workflow preview", "运行可恢复提问流程，只生成预览和本地证据", "workflow run", "preview", ["read", "api-write"], "required", ["--goal <goal>", "--json"]),
+  scenario("approve workflow preview", "记录我对 workflow 预览的批准", "workflow approve", "read", ["read"], "none", ["--run-dir <run-dir>", "--json"]),
+  scenario("initialize workflow policy", "生成一份 workflow 策略模板", "workflow policy init", "read", ["read"], "none", ["--output <file>", "--json"]),
+  scenario("verify workflow evidence", "验证 workflow 目录里的证据", "workflow verify", "read", ["read"], "none", ["--run-dir <run-dir>", "--json"]),
+  scenario("diff workflow approval", "对比 workflow 预览与批准绑定", "workflow diff", "read", ["read"], "none", ["--run-dir <run-dir>", "--json"]),
+  scenario("read workflow audit log", "查看 workflow 审计日志", "workflow audit-log", "read", ["read"], "none", ["--run-dir <run-dir>", "--format <format>"]),
+  scenario("export workflow evidence", "导出 workflow 证据包", "workflow export", "read", ["read"], "none", ["--run-dir <run-dir>", "--output <file>", "--json"]),
+  scenario("verify workflow bundle", "验证 workflow 证据包", "workflow verify-bundle", "read", ["read"], "none", ["--bundle <file>", "--json"])
+];
+
 const COMMON_NATURAL_LANGUAGE_SCENARIOS = [
   ...commonReadScenarios,
   ...draftAndReviewScenarios,
   ...confirmationScenarios,
   ...writePreviewScenarios,
   ...writeExecuteScenarios,
-  ...authWriteScenarios
+  ...authWriteScenarios,
+  ...workflowScenarios
 ];
 
 const EXECUTABLE_NATURAL_LANGUAGE_SCENARIOS: ExecutableNaturalLanguageScenario[] = [
@@ -419,10 +429,10 @@ const EXECUTABLE_NATURAL_LANGUAGE_SCENARIOS: ExecutableNaturalLanguageScenario[]
         return Response.json({
           items: [{
             id: 42,
-            title: "ORDS MCP",
+            title: "ORDS REST",
             createdDate: "2026-07-02T16:39:24",
             updatedDate: "2026-07-04T06:00:00",
-            originalUrl: "https://example.com/ords-mcp",
+            originalUrl: "https://example.com/ords-rest",
             url: "https://oracleapex.cn/t/42"
           }],
           page: { limit: 5, count: 1, hasMore: false },
@@ -439,10 +449,10 @@ const EXECUTABLE_NATURAL_LANGUAGE_SCENARIOS: ExecutableNaturalLanguageScenario[]
       expect(data.items).toEqual([
         expect.objectContaining({
           id: 42,
-          title: "ORDS MCP",
+          title: "ORDS REST",
           createdDate: "2026-07-02T16:39:24",
           updatedDate: "2026-07-04T06:00:00",
-          originalUrl: "https://example.com/ords-mcp"
+          originalUrl: "https://example.com/ords-rest"
         })
       ]);
     }
@@ -756,11 +766,14 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
       commandPath: "topic view",
       argv: ["node", "apexcn", "topic", "view", "30549", "--json"],
       responseForUrl: (url) => {
+        if (url.endsWith("/api/v1/me")) {
+          return Response.json({ user: { id: 1 }, requestId: "req-me" });
+        }
         expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/topics/30549");
-        return Response.json({ topic: { id: 30549, title: "REST API" }, requestId: "req-topic" });
+        return Response.json({ topic: { id: 30549, createdBy: 1, title: "REST API" }, requestId: "req-topic" });
       },
       assertFeedback: ({ stdout, stderr, fetch }) => {
-        expect(fetch).toHaveBeenCalledOnce();
+        expect(fetch).toHaveBeenCalledTimes(2);
         expect(stderr).toBe("");
         expect(JSON.parse(stdout).topic.id).toBe(30549);
       }
@@ -971,44 +984,6 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
       }
     },
     {
-      name: "mcp tools prints readonly manifest",
-      userSays: "列出 apexcn-cli 暴露给 AI Agent 的 MCP 工具。",
-      commandPath: "mcp tools",
-      configureAuth: false,
-      argv: ["node", "apexcn", "mcp", "tools", "--json"],
-      assertFeedback: ({ stdout, stderr, fetch }) => {
-        expect(fetch).not.toHaveBeenCalled();
-        expect(stderr).toBe("");
-        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "mcp-tools" }));
-      }
-    },
-    {
-      name: "mcp inspect prints policy",
-      userSays: "检查 apexcn-cli MCP 默认是否只读。",
-      commandPath: "mcp inspect",
-      configureAuth: false,
-      argv: ["node", "apexcn", "mcp", "inspect", "--json"],
-      assertFeedback: ({ stdout, stderr, fetch }) => {
-        expect(fetch).not.toHaveBeenCalled();
-        expect(stderr).toBe("");
-        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "mcp-inspect", policy: expect.objectContaining({ allowExecuteWrite: false }) }));
-      }
-    },
-    {
-      name: "mcp serve rejects execute-write",
-      userSays: "以只读模式启动 apexcn-cli 本地 MCP 服务，不允许真实写入。",
-      commandPath: "mcp serve",
-      configureAuth: false,
-      argv: ["node", "apexcn", "mcp", "serve", "--allow-execute-write"],
-      assertFeedback: ({ stdout, stderr, fetch, exitCode }) => {
-        expect(fetch).not.toHaveBeenCalled();
-        expect(stdout).toBe("");
-        expect(stderr).toContain("MCP execute-write is intentionally unavailable");
-        expect(stderr).toContain("apexcn workflow");
-        expect(exitCode).toBe(1);
-      }
-    },
-    {
       name: "draft question creates local draft",
       userSays: "我遇到 APEX 调 REST API 返回 401，先帮我起草提问，不要发布。",
       commandPath: "draft question",
@@ -1147,7 +1122,8 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
         expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "write-result", status: "completed", requestId: "req-confirm" }));
       }
     },
-    ...apiWritePreviewScenarios()
+    ...apiWritePreviewScenarios(),
+    ...workflowExecutableScenarios()
   ];
 }
 
@@ -1215,7 +1191,7 @@ function workflowExecutableScenarios(): ExecutableNaturalLanguageScenario[] {
         expect(fetch).not.toHaveBeenCalled();
         expect(stderr).toBe("");
         expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "workflow-policy-init" }));
-        expect(JSON.parse(await readFile(join(tmpDir, "apexcn-policy.json"), "utf8"))).toEqual(expect.objectContaining({ schemaVersion: 1, mcp: { allowExecute: false } }));
+        expect(JSON.parse(await readFile(join(tmpDir, "apexcn-policy.json"), "utf8"))).toEqual(expect.objectContaining({ schemaVersion: 1, defaults: expect.any(Object), commands: expect.any(Object) }));
       }
     },
     {
@@ -1375,13 +1351,24 @@ async function commandManifest(): Promise<{ commands: ManifestCommand[] }> {
 }
 
 function writePreview(commandPath: string, userSays: string, argv: string[], expectedPath: string): ExecutableNaturalLanguageScenario {
+  const ownershipGuarded = commandPath === "topic update" || commandPath === "topic delete";
   return {
     name: `${commandPath} preview does not call API`,
     userSays,
     commandPath,
     argv,
+    responseForUrl: ownershipGuarded ? (url) => {
+      if (url.endsWith("/api/v1/me")) {
+        return Response.json({ user: { id: 1 }, requestId: "req-me" });
+      }
+      return Response.json({ topic: { id: 30549, createdBy: 1 }, requestId: "req-topic-owner" });
+    } : undefined,
     assertFeedback: ({ stdout, stderr, fetch }) => {
-      expect(fetch).not.toHaveBeenCalled();
+      if (ownershipGuarded) {
+        expect(fetch).toHaveBeenCalledTimes(2);
+      } else {
+        expect(fetch).not.toHaveBeenCalled();
+      }
       expect(stderr).toBe("");
       expect(JSON.parse(stdout)).toEqual(expect.objectContaining({
         dryRun: true,
@@ -1425,19 +1412,21 @@ function personalCapabilityExecutableScenarios(): ExecutableNaturalLanguageScena
         }));
       }
     },
-    ...unavailable.map(([commandPath, command, path]) => ({
+    ...unavailable.map(([commandPath, command]) => ({
       name: `${commandPath} returns truthful unavailable`,
       userSays: `读取 ${command}；没有权威来源时明确返回 unavailable。`,
       commandPath,
       argv: ["node", "apexcn", "me", command, "--json"],
       responseForUrl: (url: string) => {
-        expect(url).toBe(`https://oracleapex.cn/ords/test${path}`);
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/capabilities");
         return Response.json({
-          kind: commandPath.replace("me ", ""),
-          available: false,
-          status: "UNAVAILABLE",
-          unavailableReason: "NOT_IMPLEMENTED",
-          requestId: `req-${command}`
+          kind: "capabilities",
+          capabilities: [{
+            id: command === "rules" ? "community-rules" : command === "privacy" ? "privacy-policy" : command,
+            available: false,
+            unavailableReason: "NOT_IMPLEMENTED"
+          }],
+          requestId: "req-capabilities"
         });
       },
       assertFeedback: ({ stdout, stderr, fetch }: CliFeedback) => {

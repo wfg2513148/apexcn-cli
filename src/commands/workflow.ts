@@ -186,7 +186,7 @@ type WorkflowVerificationIssue = {
 };
 
 export function createWorkflowCommand(options: WorkflowCommandOptions): Command {
-  const workflow = new Command("workflow");
+  const workflow = new Command("workflow").description("plan and run recoverable multi-step workflows");
 
   workflow
     .command("plan")
@@ -751,9 +751,6 @@ type WorkflowPolicy = {
     auditRetentionDays: number;
   };
   commands: Record<string, Record<string, unknown>>;
-  mcp: {
-    allowExecute: false;
-  };
 };
 
 function defaultWorkflowPolicy(): WorkflowPolicy {
@@ -772,9 +769,6 @@ function defaultWorkflowPolicy(): WorkflowPolicy {
       "reply.create": { allowed: true, minimumApprovers: 1, requireReview: true },
       "reply.update": { allowed: true, minimumApprovers: 1, requireReview: true },
       "reply.delete": { allowed: true, minimumApprovers: 2, requireExactTitle: false }
-    },
-    mcp: {
-      allowExecute: false
     }
   };
 }
@@ -784,9 +778,6 @@ async function verifyWorkflowPolicy(runDir: string, state: WorkflowRunState, rep
   const policy = await readJson(policyPath);
   if (!isWorkflowPolicy(policy)) {
     return { kind: "workflow-policy-verification", schemaVersion: 1, ok: false, policyPath, issues: [{ code: "invalid-policy", message: "Workflow policy schema is invalid.", path: policyPath }] };
-  }
-  if (policy.mcp.allowExecute !== false) {
-    issues.push({ code: "mcp-execute-enabled", message: "Policy must keep mcp.allowExecute=false.", path: policyPath });
   }
   const approval = await readOptionalJson(state.artifacts.approval);
   if (policy.defaults.requireApproval && !approval) {
@@ -841,9 +832,7 @@ function isWorkflowPolicy(value: unknown): value is WorkflowPolicy {
     && typeof value.defaults.approvalExpiresInMinutes === "number"
     && typeof value.defaults.auditRetentionDays === "number"
     && value.defaults.auditRetentionDays > 0
-    && isRecord(value.commands)
-    && isRecord(value.mcp)
-    && value.mcp.allowExecute === false;
+    && isRecord(value.commands);
 }
 
 function distinctSecondApprover(first: string | undefined, second: string | undefined): string | undefined {

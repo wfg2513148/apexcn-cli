@@ -26,5 +26,5 @@
 {"id":"export-import-001","expectedTags":["导入导出","静态文件"],"minimumReferences":1}
 {"id":"performance-001","expectedTags":["性能","排查"],"minimumReferences":1}
 {"id":"api-ords-release-001","expectedTags":["ORDS","API Contract"],"minimumReferences":1}
-{"id":"mcp-safety-001","expectedTags":["MCP","安全"],"minimumReferences":1}
 {"id":"workflow-approval-001","expectedTags":["workflow","安全"],"minimumReferences":1}
+{"id":"cli-confirmation-001","expectedTags":["CLI","安全"],"minimumReferences":1}

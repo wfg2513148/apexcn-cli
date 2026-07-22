@@ -110,6 +110,8 @@ For a human who explicitly chooses the simplest file-backed setup, `apexcn -apik
 
 ## Common Commands
 
+Numeric topic and reply ids below only demonstrate command syntax. Resolve current ids through search, list, or the authenticated account before using them.
+
 ```bash
 apexcn search "APEX" --page-size 5 --json
 apexcn auth audit --json

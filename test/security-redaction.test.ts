@@ -1,7 +1,5 @@
 import { describe, expect, test } from "vitest";
 import { redactSecretText, redactSecrets } from "../src/core/secret-redaction.js";
-import { callMcpTool } from "../src/mcp/tools.js";
-import { mcpPolicy } from "../src/mcp/tool-registry.js";
 
 describe("cross-surface secret redaction", () => {
   test("redacts common CLI and artifact secret text patterns", () => {
@@ -30,14 +28,6 @@ describe("cross-surface secret redaction", () => {
         { body: "token=abcdef1234567890" }
       ]
     });
-
-    expect(JSON.stringify(result)).not.toContain("abcdef1234567890");
-  });
-
-  test("MCP validation errors do not echo secret inputs", async () => {
-    const result = await callMcpTool("apexcn_topic_create_preview", {
-      title: "token=abcdef1234567890"
-    }, mcpPolicy(true));
 
     expect(JSON.stringify(result)).not.toContain("abcdef1234567890");
   });

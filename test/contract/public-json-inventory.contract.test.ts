@@ -11,7 +11,6 @@ const knownSchemaIds = new Set([
   "collection-query-v1",
   "command-manifest-v2",
   "doctor-snapshot-v1",
-  "mcp-tools-v1",
   "novice-guide-v1",
   "public-json-object-v1",
   "research-bundle-v1",

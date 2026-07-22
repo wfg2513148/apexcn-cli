@@ -69,7 +69,9 @@ export function createMeCommand(options: MeCommandOptions): Command {
           return;
         }
         await runMeApi(options, commandOptions, async (session) => {
-          const data = await requestJson(session.baseUrl, item.path, { token: session.token });
+          const data = item.name === "capabilities"
+            ? await requestJson(session.baseUrl, item.path, { token: session.token })
+            : await readCapabilityEndpoint(session, item.name, item.path);
           const output = item.name === "capabilities"
             ? capabilityOutput(data, commandOptions.requireCapability)
             : redactMeOutput(data);
@@ -116,6 +118,27 @@ export function createMeCommand(options: MeCommandOptions): Command {
   }
 
   return me;
+}
+
+async function readCapabilityEndpoint(
+  session: Session,
+  name: "notifications" | "inbox" | "rules" | "privacy",
+  path: string
+): Promise<unknown> {
+  const data = await requestJson(session.baseUrl, "/api/v1/capabilities", { token: session.token });
+  const capabilities = isRecord(data) && Array.isArray(data.capabilities) ? data.capabilities.filter(isRecord) : [];
+  const capabilityId = name === "rules" ? "community-rules" : name === "privacy" ? "privacy-policy" : name;
+  const capability = capabilities.find((item) => item.id === capabilityId);
+  if (capability?.available === false) {
+    return {
+      kind: capabilityId,
+      available: false,
+      status: "UNAVAILABLE",
+      unavailableReason: capability.unavailableReason,
+      requestId: isRecord(data) ? data.requestId : undefined
+    };
+  }
+  return requestJson(session.baseUrl, path, { token: session.token });
 }
 
 function commandOptionsFrom<T extends object>(command: Command, value: T | Command): T {

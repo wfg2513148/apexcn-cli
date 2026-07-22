@@ -106,7 +106,7 @@ function guideContent(
         step("reuse", "本地知识复用", "构建可验证、可离线查询的资料集合。", [
           "apexcn collection build --query \"ORDS 401\" --output-dir ./collection --json",
           "apexcn collection index --dir ./collection --json",
-          "apexcn collection query --dir ./collection \"认证失败\" --json"
+          "apexcn collection query --dir ./collection \"ORDS 401\" --json"
         ], ["collection verify 通过", "离线查询返回来源"]),
         step("contribute", "安全贡献内容", "先草拟、审查和预览，不绕过 workflow approval。", [
           "apexcn draft question --title \"标题\" --problem \"问题描述\" --json",

@@ -11,6 +11,12 @@ describe("CLI entrypoint detection", () => {
     expect(createProgram().helpInformation()).toContain("-apikey <token>");
   });
 
+  test("exposes workflow as a discoverable top-level command", () => {
+    const help = createProgram().helpInformation();
+    expect(help).toContain("workflow");
+    expect(help).toMatch(/plan and run recoverable multi-step\s+workflows/);
+  });
+
   test("prints the package version", async () => {
     const output: string[] = [];
     const program = createProgram({
@@ -21,7 +27,22 @@ describe("CLI entrypoint detection", () => {
 
     await expect(program.parseAsync(["node", "apexcn", "--version"])).rejects.toMatchObject({ code: "commander.version" });
 
-    expect(output.join("")).toBe("1.0.3\n");
+    expect(output.join("")).toBe("1.0.4\n");
+  });
+
+  test("rejects unknown top-level arguments instead of silently succeeding", async () => {
+    const stderr: string[] = [];
+    const program = createProgram({
+      stdout: () => undefined,
+      stderr: (text) => stderr.push(text)
+    });
+    program.exitOverride();
+
+    await expect(program.parseAsync(["node", "apexcn", "upgrade"])).rejects.toMatchObject({
+      code: "commander.excessArguments"
+    });
+
+    expect(stderr.join("")).toContain("too many arguments");
   });
 
   test("prints a machine-readable command manifest", async () => {
@@ -35,7 +56,7 @@ describe("CLI entrypoint detection", () => {
 
     const manifest = JSON.parse(output.join(""));
     expect(manifest.schemaVersion).toBe(1);
-    expect(manifest.version).toBe("1.0.3");
+    expect(manifest.version).toBe("1.0.4");
     expect(manifest.schema).toEqual({
       safetyEffects: ["read", "api-write", "destructive", "config-read", "config-write", "auth", "secret", "diagnostic", "manifest"],
       previewPolicies: ["required", "available", "none"],
@@ -74,6 +95,11 @@ describe("CLI entrypoint detection", () => {
         path: "commands",
         options: expect.arrayContaining(["--json"]),
         safety: expect.objectContaining({ effects: ["manifest"], preview: "none" })
+      }),
+      expect.objectContaining({
+        path: "workflow plan",
+        options: expect.arrayContaining(["--goal <goal>", "--json"]),
+        capability: "workflow"
       }),
       expect.objectContaining({
         path: "confirm",

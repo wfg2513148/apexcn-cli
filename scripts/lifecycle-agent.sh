@@ -15,6 +15,14 @@ bin_dir="${APEXCN_CLI_BIN_DIR:-$HOME/.local/bin}"
 backup_root="${APEXCN_CLI_BACKUP_ROOT:-$HOME/.apexcn/backups/apexcn-cli}"
 backup_path=""
 yes="${APEXCN_CLI_YES:-0}"
+source_root="$(cd "$script_dir/.." && pwd)"
+
+if [[ -z "${APEXCN_CLI_INSTALL_ROOT+x}" && -f "$source_root/.apexcn-install-root" ]]; then
+  IFS= read -r install_root < "$source_root/.apexcn-install-root"
+fi
+if [[ -z "${APEXCN_CLI_BIN_DIR+x}" && -f "$source_root/.apexcn-bin-dir" ]]; then
+  IFS= read -r bin_dir < "$source_root/.apexcn-bin-dir"
+fi
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -61,6 +69,24 @@ installed_version() {
   node -e 'const p=require(process.argv[1]); process.stdout.write(p.version)' "$root/package.json"
 }
 
+compare_versions() {
+  node -e '
+    const parse = (value) => {
+      const match = /^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/.exec(value);
+      if (!match) throw new Error(`Invalid semantic version: ${value}`);
+      return match.slice(1).map(Number);
+    };
+    const [left, right] = process.argv.slice(1).map(parse);
+    for (let index = 0; index < 3; index += 1) {
+      if (left[index] !== right[index]) {
+        process.stdout.write(left[index] < right[index] ? "-1" : "1");
+        process.exit(0);
+      }
+    }
+    process.stdout.write("0");
+  ' "$1" "$2"
+}
+
 write_launcher() {
   local root entrypoint
   root="$(cli_root)"
@@ -98,8 +124,15 @@ case "$operation" in
     ;;
   upgrade)
     cli_root >/dev/null || { printf 'No existing apexcn-cli installation at %s\n' "$install_root" >&2; exit 1; }
+    previous_version="$(installed_version)"
     backup_path="$(create_backup)"
     if APEXCN_CLI_INSTALL_ROOT="$install_root" APEXCN_CLI_BIN_DIR="$bin_dir" bash "$installer"; then
+      new_version="$(installed_version)"
+      if [[ "$(compare_versions "$new_version" "$previous_version")" == "-1" ]]; then
+        printf '[apexcn-cli] Refusing downgrade from %s to %s; restoring %s\n' "$previous_version" "$new_version" "$backup_path" >&2
+        restore_backup "$backup_path"
+        exit 1
+      fi
       printf '[apexcn-cli] Upgrade complete. Rollback backup: %s\n' "$backup_path"
     else
       printf '[apexcn-cli] Upgrade failed; restoring %s\n' "$backup_path" >&2

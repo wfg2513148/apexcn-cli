@@ -268,7 +268,10 @@ describe("me command", () => {
           clientCompatibility: expect.objectContaining({ ok: true, status: "compatible", negotiationMode: "legacy" })
         }));
       } else {
-        expect(output).toEqual(expected);
+        expect(output).toEqual({
+          ...(expected as Record<string, unknown>),
+          requestId: "req-capabilities"
+        });
       }
       if (command !== "capabilities") {
         expect(output.available).toBe(false);
@@ -280,6 +283,7 @@ describe("me command", () => {
     }
 
     expect(fetch).toHaveBeenCalledTimes(5);
+    expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).not.toContain("https://oracleapex.cn/ords/test/api/v1/inbox");
     expect(stderr.join("")).toBe("");
   });
 

@@ -74,4 +74,24 @@ apexcn doctor snapshot --output ./support-snapshot.json --json
 
 安装脚本必须使用 `checksums.txt` 对下载包执行 SHA-256 校验。校验缺失或失败时安装立即停止，不提供跳过选项。
 
-生命周期脚本支持安装、升级、回滚和卸载。升级前会创建版本化备份，失败时恢复；回滚和卸载需要明确确认。卸载只删除 CLI 安装目录和脚本创建的 launcher，保留认证配置。
+生命周期脚本是独立脚本，不是 `apexcn` 子命令，因此不会出现在 `apexcn --help` 或 `apexcn commands --json` 中。安装器会打印实际的 `Installed source`；自定义安装目录时，应以该路径替换下面的 `CLI_SOURCE`。安装器会在 source 内记录实际安装根目录和 launcher 目录，因此从自定义 `Installed source` 运行生命周期脚本时无需再次传入路径参数。
+
+macOS / Linux 默认安装可以这样升级、回滚或卸载：
+
+```bash
+CLI_SOURCE="$HOME/.apexcn/tools/apexcn-cli/package"
+bash "$CLI_SOURCE/scripts/lifecycle-agent.sh" upgrade
+bash "$CLI_SOURCE/scripts/lifecycle-agent.sh" rollback --backup "<升级输出的备份路径>" --yes
+bash "$CLI_SOURCE/scripts/lifecycle-agent.sh" uninstall --yes
+```
+
+Windows PowerShell 默认安装使用对应脚本：
+
+```powershell
+$CliSource = Join-Path $env:LOCALAPPDATA "apexcn\tools\apexcn-cli\package"
+& "$CliSource\scripts\lifecycle-agent.ps1" upgrade
+& "$CliSource\scripts\lifecycle-agent.ps1" rollback -Backup "<升级输出的备份路径>" -Yes
+& "$CliSource\scripts\lifecycle-agent.ps1" uninstall -Yes
+```
+
+升级前会创建版本化备份，失败时自动恢复；回滚和卸载需要明确确认。卸载只删除 CLI 安装目录和脚本创建的 launcher，保留认证配置。首次安装仍使用本节列出的公开安装脚本。

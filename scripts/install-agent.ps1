@@ -69,6 +69,8 @@ try {
   if (-not (Test-Path (Join-Path $CliRoot "package.json"))) { $CliRoot = Join-Path $InstallRoot "package" }
   if (-not (Test-Path (Join-Path $CliRoot "dist/index.js"))) { throw "Downloaded package is missing dist/index.js." }
   if (-not (Test-Path (Join-Path $CliRoot "node_modules/commander"))) { throw "Downloaded package is missing runtime dependencies." }
+  Set-Content -Encoding UTF8 (Join-Path $CliRoot ".apexcn-install-root") $InstallRoot
+  Set-Content -Encoding UTF8 (Join-Path $CliRoot ".apexcn-bin-dir") $BinDir
 
   New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
   $Launcher = Join-Path $BinDir "apexcn.cmd"
@@ -106,6 +108,11 @@ try {
   Write-Host ""
   Write-Host "Installed source:"
   Write-Host "  $CliRoot"
+  Write-Host ""
+  Write-Host "Manage this installation:"
+  Write-Host "  & `"$CliRoot\scripts\lifecycle-agent.ps1`" upgrade"
+  Write-Host "  & `"$CliRoot\scripts\lifecycle-agent.ps1`" rollback -Backup `"<backup-path>`" -Yes"
+  Write-Host "  & `"$CliRoot\scripts\lifecycle-agent.ps1`" uninstall -Yes"
   Write-Host ""
   Write-Host "Authentication is configured after installation:"
   Write-Host '  apexcn -apikey "YOUR_API_KEY"'

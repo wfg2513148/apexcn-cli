@@ -20,7 +20,6 @@ import {
 import { createDraftCommand } from "./commands/draft.js";
 import { createGuideCommand } from "./commands/guide.js";
 import { createMeCommand } from "./commands/me.js";
-import { createMcpCommand } from "./commands/mcp.js";
 import { createReviewCommand } from "./commands/review.js";
 import { createWorkflowCommand } from "./commands/workflow.js";
 import { DEFAULT_BASE_URL, setProfile } from "./config.js";
@@ -46,6 +45,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   let activeCliConfigPath: string | undefined;
   let activeJsonErrors = false;
   program.name("apexcn");
+  program.allowExcessArguments(false);
   program.version(CLI_VERSION);
   program.option("--config <path>", "config file path", parseConfigPath);
   program.option("-apikey <token>", "configure the API key for the default production profile");
@@ -88,9 +88,8 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   program.addCommand(createMeCommand(commandOptions));
   program.addCommand(createReviewCommand(commandOptions));
   program.addCommand(createConfirmCommand(commandOptions));
-  program.addCommand(createWorkflowCommand(commandOptions), { hidden: true });
+  program.addCommand(createWorkflowCommand(commandOptions));
   program.addCommand(createCollectionCommand(commandOptions));
-  program.addCommand(createMcpCommand(commandOptions));
   program.addCommand(createAdminCommand(commandOptions));
   program.addCommand(createCategoryCommand(commandOptions));
   program.addCommand(createStatsCommand(commandOptions));
@@ -144,7 +143,6 @@ type CommandManifest = {
     supportsJson?: boolean;
     supportsPreview?: boolean;
     supportsDryRun?: boolean;
-    mcpExposure?: string;
     jsonContract?: {
       successSchemaId: string;
       errorSchemaId: string;
@@ -231,7 +229,6 @@ function commandManifest(root: Command): CommandManifest {
         supportsJson: descriptor?.supportsJson,
         supportsPreview: descriptor?.supportsPreview,
         supportsDryRun: descriptor?.supportsDryRun,
-        mcpExposure: descriptor?.mcpExposure,
         jsonContract: descriptor?.jsonContract,
         examples: guidance.examples
       };
@@ -288,9 +285,6 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "me stats": "show aggregate activity statistics for the authenticated account",
   "me subscriptions": "list subscribed topics for the authenticated account",
   "me topics": "list topics authored by the authenticated account",
-  "mcp inspect": "inspect local MCP mode, transport, and exposed tools",
-  "mcp serve": "serve local stdio MCP tools",
-  "mcp tools": "print the MCP tool manifest",
   "reply create": "preview a reply before confirmation",
   "reply delete": "delete a reply after explicit confirmation",
   "reply update": "update an existing reply",
@@ -521,18 +515,6 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "me topics": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn me topics --page-size 10 --json", mode: "read" }]
-  },
-  "mcp inspect": {
-    safety: { effects: ["manifest"], preview: "none", confirmation: [] },
-    examples: [{ command: "apexcn mcp inspect --json", mode: "read" }]
-  },
-  "mcp serve": {
-    safety: { effects: ["manifest"], preview: "none", confirmation: [] },
-    examples: [{ command: "apexcn mcp serve --readonly", mode: "read" }]
-  },
-  "mcp tools": {
-    safety: { effects: ["manifest"], preview: "none", confirmation: [] },
-    examples: [{ command: "apexcn mcp tools --json", mode: "read" }]
   },
   "confirm": {
     safety: { effects: ["api-write"], preview: "none", confirmation: ["--yes"] },

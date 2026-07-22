@@ -46,7 +46,7 @@ describe("workflow policy, diff, and audit-log", () => {
     process.exitCode = undefined;
   });
 
-  test("policy init generates JSON with MCP execute disabled", async () => {
+  test("policy init generates a valid CLI workflow policy", async () => {
     const dir = await tempDir();
     const { program, stdout, stderr } = localProgram();
 
@@ -54,7 +54,7 @@ describe("workflow policy, diff, and audit-log", () => {
 
     expect(stderr.join("")).toBe("");
     expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({ kind: "workflow-policy-init" }));
-    expect(JSON.parse(await readFile(join(dir, "policy.json"), "utf8"))).toEqual(expect.objectContaining({ schemaVersion: 1, mcp: { allowExecute: false } }));
+    expect(JSON.parse(await readFile(join(dir, "policy.json"), "utf8"))).toEqual(expect.objectContaining({ schemaVersion: 1, defaults: expect.any(Object), commands: expect.any(Object) }));
   });
 
   test("policy init supports default output for JSON smoke usage", async () => {
@@ -69,7 +69,7 @@ describe("workflow policy, diff, and audit-log", () => {
     }
 
     expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({ output: "apexcn-policy.json" }));
-    expect(JSON.parse(await readFile(join(dir, "apexcn-policy.json"), "utf8"))).toEqual(expect.objectContaining({ mcp: { allowExecute: false } }));
+    expect(JSON.parse(await readFile(join(dir, "apexcn-policy.json"), "utf8"))).toEqual(expect.objectContaining({ defaults: expect.any(Object), commands: expect.any(Object) }));
   });
 
   test("verify --policy attaches policy result", async () => {

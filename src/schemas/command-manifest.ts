@@ -3,7 +3,6 @@ import { assertArray, assertNumber, assertRecord, assertString, isRecord } from 
 const CAPABILITIES = new Set(["read", "write", "local", "workflow", "auth", "diagnostic"]);
 const API_EFFECTS = new Set(["no-network", "api-read", "api-write", "destructive"]);
 const RISK_LEVELS = new Set(["low", "medium", "high", "destructive"]);
-const MCP_EXPOSURES = new Set(["none", "readonly", "preview-only", "blocked"]);
 
 export const COMMAND_MANIFEST_JSON_SCHEMA = {
   $schema: "http://json-schema.org/draft-07/schema#",
@@ -22,7 +21,7 @@ export const COMMAND_MANIFEST_JSON_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        required: ["path", "aliases", "description", "options", "safety", "examples", "id", "capability", "apiEffect", "riskLevel", "authRequired", "supportsJson", "supportsPreview", "supportsDryRun", "mcpExposure", "jsonContract"],
+        required: ["path", "aliases", "description", "options", "safety", "examples", "id", "capability", "apiEffect", "riskLevel", "authRequired", "supportsJson", "supportsPreview", "supportsDryRun", "jsonContract"],
         properties: {
           path: { type: "string" },
           aliases: { type: "array", items: { type: "string" } },
@@ -38,7 +37,6 @@ export const COMMAND_MANIFEST_JSON_SCHEMA = {
           supportsJson: { type: "boolean" },
           supportsPreview: { type: "boolean" },
           supportsDryRun: { type: "boolean" },
-          mcpExposure: { enum: [...MCP_EXPOSURES] },
           jsonContract: {
             anyOf: [
               {
@@ -87,7 +85,6 @@ function assertManifestCommand(value: unknown, label: string): void {
   assertEnum(value.capability, CAPABILITIES, `${label}.capability`);
   assertEnum(value.apiEffect, API_EFFECTS, `${label}.apiEffect`);
   assertEnum(value.riskLevel, RISK_LEVELS, `${label}.riskLevel`);
-  assertEnum(value.mcpExposure, MCP_EXPOSURES, `${label}.mcpExposure`);
   if (typeof value.authRequired !== "boolean") {
     throw new Error(`${label}.authRequired must be a boolean`);
   }

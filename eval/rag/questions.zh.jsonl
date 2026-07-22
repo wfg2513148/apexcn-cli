@@ -26,5 +26,5 @@
 {"id":"export-import-001","question":"APEX 应用导入到新环境后静态文件丢失怎么处理？","tags":["导入导出","静态文件"],"difficulty":"medium"}
 {"id":"performance-001","question":"APEX 页面加载慢时如何区分 SQL、网络和前端资源问题？","tags":["性能","排查"],"difficulty":"medium"}
 {"id":"api-ords-release-001","question":"ORDS REST API 行为变更后 CLI 应如何保持兼容？","tags":["ORDS","API Contract"],"difficulty":"medium"}
-{"id":"mcp-safety-001","question":"AI Agent 通过 MCP 操作社区内容时为什么默认应该只读？","tags":["MCP","安全"],"difficulty":"easy"}
 {"id":"workflow-approval-001","question":"发布社区帖子前使用 workflow approval 有什么安全价值？","tags":["workflow","安全"],"difficulty":"easy"}
+{"id":"cli-confirmation-001","question":"AI Agent 通过 CLI 修改社区内容前为什么应该先预览并等待用户确认？","tags":["CLI","安全"],"difficulty":"easy"}

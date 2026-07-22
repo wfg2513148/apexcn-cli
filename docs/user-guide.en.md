@@ -2,6 +2,8 @@
 
 This guide is for APEX developers who use apexcn-cli through an AI tool. You do not need to memorize terminal commands or flags. Describe the intended outcome, let the AI assistant operate the CLI, and require a preview and explicit confirmation before any publish, update, or delete action.
 
+Choose topic and reply ids from search results or content owned by the current account. The prompts below do not assume that a fixed id is valid online.
+
 Every content change uses the same two-step confirmation. The AI first shows the business content and receives a short operation id. After you confirm, it uses that id to execute the exact change you reviewed. You do not need to manage directories or intermediate files.
 
 ## 1. First Use
@@ -28,7 +30,7 @@ If it is already installed, say:
 
 ## 3. Read and Summarize a Topic
 
-> Open topic 30549 and summarize what it is about. Include key steps, important notes, and the real URL.
+> Select a topic from the previous search results and summarize what it is about. Include key steps, important notes, and the real URL.
 
 > Read this topic and tell me whether it helps with my current issue: I cannot get JSON back when calling a REST API from APEX.
 
@@ -70,47 +72,47 @@ For profile or machine migration:
 
 ## 8. Edit a Topic
 
-> Open my topic 30549 and make the title and body clearer. Show me the preview first; do not save it directly.
+> Select the target from my topics and make its title and body clearer. Show me the preview first; do not save it directly.
 
-> Update topic 30549 with the confirmed version and return the real topic URL.
+> Update that topic with the confirmed version and return the real topic URL.
 
 ## 9. Delete a Topic
 
-> Open topic 30549 and confirm it is the one I want to delete. Show me its title, author, category, and link first.
+> Select the target from my topics and confirm it is the one I want to delete. Show me its title, author, category, and link first.
 
-> I confirm deleting topic 30549. Please follow the safe deletion flow and tell me the result.
+> I confirm deleting the topic that was just previewed. Please follow the safe deletion flow and tell me the result.
 
 ## 10. Reply to a Topic
 
-> Draft a friendly reply to topic 30549 and add my solution. Show me the preview first; do not publish it directly.
+> Draft a friendly reply to the selected topic and add my solution. Show me the preview first; do not publish it directly.
 
-> Publish the confirmed reply to topic 30549 and send me the real topic URL.
+> Publish the confirmed reply to that topic and send me the real topic URL.
 
-> Reply to a specific reply under topic 30549 with my additional test result. Preview first, then publish after I confirm.
+> Reply to a specific reply under that topic with my additional test result. Preview first, then publish after I confirm.
 
-For this request, the AI first confirms that the selected reply belongs to topic 30549 and preserves its reply id in the preview so the publish cannot silently become a top-level reply.
+For this request, the AI first confirms that the selected reply belongs to the selected topic and preserves its reply id in the preview so the publish cannot silently become a top-level reply.
 
 ## 11. Edit and Delete Replies
 
-> Open my reply 201480 and polish it. Show me the updated version first; do not save it directly.
+> Select the target from my replies and polish it. Show me the updated version first; do not save it directly.
 
-> Update reply 201480 with the confirmed text.
+> Update the selected reply with the confirmed text.
 
-> Delete reply 201480. Before deleting, confirm that it is the reply I intended to remove.
+> Delete the selected reply. Before deleting, confirm that it is the reply I intended to remove.
 
 The AI should also verify that the reply belongs to the current account and that the server permits deletion, then create the operation id with the freshly read content version. If the version changes, it must create a new preview instead of reusing the old operation id.
 
 ## 12. Favorite and Unfavorite
 
-> Favorite topic 30549 and send me the topic link.
+> Favorite the selected topic and send me the topic link.
 
-> Remove topic 30549 from my favorites.
+> Remove the selected topic from my favorites.
 
 ## 13. Subscribe and Unsubscribe
 
-> Subscribe to topic 30549 so I can follow updates.
+> Subscribe to the selected topic so I can follow updates.
 
-> Unsubscribe from topic 30549.
+> Unsubscribe from the selected topic.
 
 ## 14. Turn Results into Notes
 

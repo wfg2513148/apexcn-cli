@@ -60,6 +60,20 @@ describe("curated novice guides", () => {
     expect(JSON.stringify(output.steps)).toContain("APEX 24.2 ORDS 24.4");
   });
 
+  test("uses the collection build query in the learning guide's offline query step", async () => {
+    const stdout: string[] = [];
+
+    await createProgram({
+      stdout: (text) => stdout.push(text),
+      stderr: () => undefined
+    }).parseAsync(["node", "apexcn", "guide", "learning", "--json"]);
+
+    const output = JSON.parse(stdout.join(""));
+    expect(JSON.stringify(output.steps)).toContain('collection build --query \\"ORDS 401\\"');
+    expect(JSON.stringify(output.steps)).toContain('collection query --dir ./collection \\"ORDS 401\\"');
+    expect(JSON.stringify(output.steps)).not.toContain('collection query --dir ./collection \\"认证失败\\"');
+  });
+
   test("prints a concise executable text checklist", async () => {
     const stdout: string[] = [];
 

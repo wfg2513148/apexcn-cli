@@ -8,7 +8,6 @@
       "0.2": "0.20.x",
       "0.3": "0.30.x",
       "0.4": "0.40.x",
-      "0.5": "0.50.x",
       "0.6": "0.60.x",
       "0.7": "0.70.x",
       "0.8": "0.80.x",
@@ -458,7 +457,7 @@
         {
           "id": "M020-AC-004",
           "gate": "core",
-          "description": "CLI、JSON、doctor、MCP、workflow、日志和 fixture 中无密钥泄露。",
+          "description": "CLI、JSON、doctor、workflow、日志和 fixture 中无密钥泄露。",
           "metric": "secretLeaks",
           "comparator": "eq",
           "target": 0,
@@ -535,7 +534,7 @@
         {
           "id": "M020-AC-009",
           "gate": "core",
-          "description": "command registry、JSON schema、capability matrix、MCP manifest 和用户文档漂移为零。",
+          "description": "command registry、JSON schema、capability matrix 和用户文档漂移为零。",
           "metric": "publicMetadataDrift",
           "comparator": "eq",
           "target": 0,
@@ -1321,321 +1320,6 @@
       ]
     },
     {
-      "id": "0.5",
-      "releaseLine": "0.50.x",
-      "title": "AI Agent 只读适配层",
-      "objective": "让 AI 客户端通过稳定、安全的本地 stdio 适配层复用 CLI 只读核心能力。",
-      "status": "blocked",
-      "activationGate": {
-        "status": "approved",
-        "previousMilestoneId": "0.4",
-        "confirmationRef": "user-delegated-fresh-m050-goal-2026-07-18"
-      },
-      "completionReview": {
-        "status": "approved",
-        "summaryEvidenceId": "M050-E-BLOCKED-HANDOFF",
-        "confirmationRef": "user-requested-skip-m050-b28-2026-07-18"
-      },
-      "capabilities": [
-        {
-          "id": "M050-CAP-POLICY",
-          "title": "MCP readonly 安全策略",
-          "userValue": "Agent 可读取社区能力，但不能产生或执行真实写请求。",
-          "scope": [
-            "readonly allowlist",
-            "execute-write disabled",
-            "exposure matrix"
-          ],
-          "nonGoals": [
-            "remote HTTP MCP",
-            "MCP execute-write"
-          ],
-          "dependencies": [],
-          "status": "validated",
-          "acceptanceCriterionIds": [
-            "M050-AC-002",
-            "M050-AC-003"
-          ],
-          "validatorScenarioIds": [
-            "M050-V-SAFETY"
-          ],
-          "evidenceIds": [
-            "M050-E-LOCAL",
-            "M050-E-R2"
-          ]
-        },
-        {
-          "id": "M050-CAP-CORE",
-          "title": "CLI/MCP 共用核心服务",
-          "userValue": "CLI 和 Agent 得到相同请求、安全和错误语义。",
-          "scope": [
-            "shared services",
-            "HTTP client",
-            "policy",
-            "redaction",
-            "schemas"
-          ],
-          "nonGoals": [
-            "big-bang CLI rewrite"
-          ],
-          "dependencies": [],
-          "status": "validated",
-          "acceptanceCriterionIds": [
-            "M050-AC-001"
-          ],
-          "validatorScenarioIds": [
-            "M050-V-TOOLS"
-          ],
-          "evidenceIds": [
-            "M050-E-LOCAL",
-            "M050-E-R2"
-          ]
-        },
-        {
-          "id": "M050-CAP-CLIENTS",
-          "title": "真实 MCP 客户端兼容",
-          "userValue": "用户知道哪些客户端版本经过真实连接验证。",
-          "scope": [
-            "VS Code Agent",
-            "dated evidence"
-          ],
-          "nonGoals": [
-            "Claude Desktop distribution",
-            "Cursor distribution",
-            "claiming untested clients are verified"
-          ],
-          "dependencies": [
-            "external:mcp-client-runners"
-          ],
-          "status": "partial",
-          "acceptanceCriterionIds": [
-            "M050-AC-004"
-          ],
-          "validatorScenarioIds": [
-            "M050-V-CLIENTS"
-          ],
-          "evidenceIds": [
-            "M050-E-R2"
-          ]
-        },
-        {
-          "id": "M050-CAP-PROTOCOL",
-          "title": "稳定 stdio 协议",
-          "userValue": "MCP 启动、发现、调用和错误在连续运行中保持稳定。",
-          "scope": [
-            "initialize",
-            "tools/list",
-            "tools/call",
-            "JSON-RPC errors",
-            "startup latency"
-          ],
-          "nonGoals": [
-            "network MCP transport"
-          ],
-          "dependencies": [],
-          "status": "validated",
-          "acceptanceCriterionIds": [
-            "M050-AC-005",
-            "M050-AC-006",
-            "M050-AC-007",
-            "M050-AC-008"
-          ],
-          "validatorScenarioIds": [
-            "M050-V-PROTOCOL",
-            "M050-V-AGENT"
-          ],
-          "evidenceIds": [
-            "M050-E-LOCAL",
-            "M050-E-R2"
-          ]
-        }
-      ],
-      "acceptanceCriteria": [
-        {
-          "id": "M050-AC-001",
-          "gate": "core",
-          "description": "计划暴露的 readonly 命令全部映射到共用 core 的 MCP 工具。",
-          "metric": "readonlySharedCoreCoverage",
-          "comparator": "eq",
-          "target": 100,
-          "unit": "percent",
-          "measurementMethod": "command and tool registry plus service dependency inspection",
-          "status": "pass",
-          "evidenceIds": [
-            "M050-E-R2"
-          ],
-          "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
-        },
-        {
-          "id": "M050-AC-002",
-          "gate": "core",
-          "description": "readonly 模式真实写请求为零。",
-          "metric": "mcpRealWriteRequests",
-          "comparator": "eq",
-          "target": 0,
-          "unit": "requests",
-          "measurementMethod": "readonly MCP network observation and call trace",
-          "status": "pass",
-          "evidenceIds": [
-            "M050-E-R2"
-          ],
-          "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
-        },
-        {
-          "id": "M050-AC-003",
-          "gate": "core",
-          "description": "command registry、shared core 与 MCP readonly exposure matrix 漂移为零。",
-          "metric": "readonlyExposureDrift",
-          "comparator": "eq",
-          "target": 0,
-          "unit": "findings",
-          "measurementMethod": "registry core service and MCP manifest consistency gate",
-          "status": "pass",
-          "evidenceIds": [
-            "M050-E-R2"
-          ],
-          "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
-        },
-        {
-          "id": "M050-AC-004",
-          "gate": "core",
-          "description": "正式分发的 VS Code Agent 有带版本和日期的真实 UI 验证证据。",
-          "metric": "verifiedMcpClients",
-          "comparator": "eq",
-          "target": 1,
-          "unit": "clients",
-          "measurementMethod": "real client compatibility records",
-          "status": "fail",
-          "evidenceIds": [
-            "M050-E-R2"
-          ],
-          "measurementProfileId": "PROFILE-REAL-MCP-CLIENT"
-        },
-        {
-          "id": "M050-AC-005",
-          "gate": "core",
-          "description": "连续 100 次 JSON-RPC 调用无协议失败。",
-          "metric": "jsonRpcProtocolFailures",
-          "comparator": "eq",
-          "target": 0,
-          "unit": "failures",
-          "measurementMethod": "100-call stdio soak",
-          "status": "pass",
-          "evidenceIds": [
-            "M050-E-R2"
-          ],
-          "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
-        },
-        {
-          "id": "M050-AC-006",
-          "gate": "core",
-          "description": "至少 40 个 Agent 自然语言任务首次成功率不低于 95%。",
-          "metric": "agentFirstAttemptSuccessRate",
-          "comparator": "gte",
-          "target": 95,
-          "unit": "percent",
-          "measurementMethod": "fixed validator report with at least 40 tasks",
-          "status": "pass",
-          "evidenceIds": [
-            "M050-E-R2"
-          ],
-          "measurementProfileId": "PROFILE-INDEPENDENT-NATURAL-LANGUAGE"
-        },
-        {
-          "id": "M050-AC-007",
-          "gate": "core",
-          "description": "MCP 启动 P95 不超过 2 秒。",
-          "metric": "mcpStartupP95",
-          "comparator": "lte",
-          "target": 2,
-          "unit": "seconds",
-          "measurementMethod": "recorded local startup benchmark",
-          "status": "pass",
-          "evidenceIds": [
-            "M050-E-R2"
-          ],
-          "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
-        },
-        {
-          "id": "M050-AC-008",
-          "gate": "core",
-          "description": "MCP 输出和错误中的密钥泄露为零。",
-          "metric": "mcpSecretLeaks",
-          "comparator": "eq",
-          "target": 0,
-          "unit": "findings",
-          "measurementMethod": "MCP response and error scan",
-          "status": "pass",
-          "evidenceIds": [
-            "M050-E-R2"
-          ],
-          "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
-        }
-      ],
-      "validatorScenarios": [
-        {
-          "id": "M050-V-TOOLS",
-          "description": "比较 CLI registry、core service 和 MCP tools 的映射。",
-          "mode": "contract"
-        },
-        {
-          "id": "M050-V-SAFETY",
-          "description": "验证 readonly allowlist、blocked write 和 disabled execute-write。",
-          "mode": "black_box"
-        },
-        {
-          "id": "M050-V-CLIENTS",
-          "description": "在正式分发的 VS Code Agent 中执行发现和只读调用。",
-          "mode": "manual_client"
-        },
-        {
-          "id": "M050-V-PROTOCOL",
-          "description": "执行 100 次 stdio JSON-RPC soak 和启动延迟测量。",
-          "mode": "black_box"
-        },
-        {
-          "id": "M050-V-AGENT",
-          "description": "完成至少 40 个自然语言 Agent 任务。",
-          "mode": "natural_language"
-        }
-      ],
-      "dependencies": [
-        "external:mcp-client-runners"
-      ],
-      "evidence": [
-        {
-          "id": "M050-E-LOCAL",
-          "kind": "repository",
-          "path": "test/mcp/mcp-stdio-smoke.test.ts",
-          "description": "0.50.0 RC2 local coverage for the exact 10-tool readonly allowlist, shared-core CLI/MCP behavior, strict schemas, JSON-RPC framing and errors, 100-call soak, startup latency, redaction, and permanent execute-write rejection.",
-          "commit": "3f34e7979283cf77ad5bda1093f64f5a28107e38"
-        },
-        {
-          "id": "M050-E-R2",
-          "kind": "independent_validator",
-          "path": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-m050-r2-20260718T034911/reports/milestone-0.5-validator-r2-20260718T034911.json",
-          "description": "Fresh novice task 019f719c-4f7e-7740-995b-88e26795e048 independently tested RC2 3f34e7979283cf77ad5bda1093f64f5a28107e38: B01-B27 passed, dynamic/adverse 48/48 passed, and product issues were zero. B28 and AC004 were not verified because the Mac was locked, so the overall verdict remained REJECT and milestone 0.5 remains blocked.",
-          "sha256": "86c48d3abcaaa6c2c65253d8a58a890a4ffff5b79db6b24771160e77113ba714"
-        },
-        {
-          "id": "M050-E-BLOCKED-HANDOFF",
-          "kind": "milestone_summary",
-          "path": "reports/m050-blocked-handoff-20260718.json",
-          "description": "User-authorized blocked handoff for B28/AC004. completionReview approval is an activation override for the next independent milestone task, not milestone acceptance: 0.5 is blocked, AC004 failed, the RC artifact is unreleased, and no v0.50.0 GitHub Release was published."
-        }
-      ],
-      "userOutcome": "AI 客户端能够发现并稳定完成社区只读任务，且不产生任何真实写请求。",
-      "stageNonGoals": [
-        "preview-only 写工具资格化",
-        "MCP execute-write",
-        "远端 HTTP MCP Server"
-      ],
-      "outcomeMetricIds": [
-        "M050-AC-004",
-        "M050-AC-006"
-      ]
-    },
-    {
       "id": "0.6",
       "releaseLine": "0.60.x",
       "title": "可审计内容操作",
@@ -1643,7 +1327,7 @@
       "status": "completed",
       "activationGate": {
         "status": "approved",
-        "previousMilestoneId": "0.5",
+        "previousMilestoneId": "0.4",
         "confirmationRef": "user-delegated-fresh-m060-goal-2026-07-18"
       },
       "completionReview": {
@@ -1726,7 +1410,7 @@
             "idempotence"
           ],
           "nonGoals": [
-            "MCP execute-write"
+            "direct write bypasses"
           ],
           "dependencies": [
             "environment:dev@oci-api-key",
@@ -1813,31 +1497,6 @@
           "evidenceIds": [
             "M060-E-SERVER",
             "M060-E-P14",
-            "M060-E-R32"
-          ]
-        },
-        {
-          "id": "M060-CAP-AGENT-PREVIEW",
-          "title": "Agent preview-only 写工具",
-          "userValue": "Agent 可生成受策略约束的写预览，但不能执行写操作。",
-          "scope": [
-            "preview-only MCP tools",
-            "willExecute=false",
-            "zero write request"
-          ],
-          "nonGoals": [
-            "MCP execute-write"
-          ],
-          "dependencies": [],
-          "status": "validated",
-          "acceptanceCriterionIds": [
-            "M060-AC-011"
-          ],
-          "validatorScenarioIds": [
-            "M060-V-AGENT-PREVIEW"
-          ],
-          "evidenceIds": [
-            "M060-E-MCP-PREVIEW",
             "M060-E-R32"
           ]
         }
@@ -1994,21 +1653,6 @@
             "M060-E-P14",
             "M060-E-R32"
           ]
-        },
-        {
-          "id": "M060-AC-011",
-          "gate": "core",
-          "description": "全部 preview-only MCP 工具返回 willExecute=false 且真实写请求为零。",
-          "metric": "mcpPreviewWriteBypasses",
-          "comparator": "eq",
-          "target": 0,
-          "unit": "bypasses",
-          "measurementMethod": "preview tool call and network trace",
-          "measurementProfileId": "PROFILE-WRITE-BACK-DUAL-EVIDENCE",
-          "status": "pass",
-          "evidenceIds": [
-            "M060-E-R32"
-          ]
         }
       ],
       "validatorScenarios": [
@@ -2036,11 +1680,6 @@
           "id": "M060-V-VISUAL",
           "description": "使用系统 Google Chrome 在 apexcn forums 既有 APEX 页面复核创建、编辑、删除后的标题、正文、格式、状态、权限和截图；不得以新页面或专用 HTML endpoint 替代。",
           "mode": "browser_visual"
-        },
-        {
-          "id": "M060-V-AGENT-PREVIEW",
-          "description": "验证 preview-only MCP 工具返回 willExecute=false 且不触发 API 写请求。",
-          "mode": "black_box"
         }
       ],
       "dependencies": [
@@ -2054,13 +1693,6 @@
           "kind": "repository",
           "path": "test/workflow.test.ts",
           "description": "Existing local workflow, policy, review, and preview safety tests.",
-          "commit": "330538c"
-        },
-        {
-          "id": "M060-E-MCP-PREVIEW",
-          "kind": "repository",
-          "path": "test/mcp/mcp-tools.test.ts",
-          "description": "Existing preview-only MCP policy and no-write tests.",
           "commit": "330538c"
         },
         {
@@ -2103,13 +1735,11 @@
       "userOutcome": "授权用户能够安全完成内容变更，并从最终页面确认写入结果；Agent 无法绕过 workflow。",
       "stageNonGoals": [
         "无人确认的生产写入",
-        "MCP execute-write",
         "远端托管写服务"
       ],
       "outcomeMetricIds": [
         "M060-AC-001",
-        "M060-AC-010",
-        "M060-AC-011"
+        "M060-AC-010"
       ]
     },
     {
@@ -2814,11 +2444,10 @@
         {
           "id": "M090-CAP-FREEZE",
           "title": "公开契约冻结",
-          "userValue": "CLI、JSON、MCP、workflow 和 API 兼容面具有明确稳定承诺。",
+          "userValue": "CLI、JSON、workflow 和 API 兼容面具有明确稳定承诺。",
           "scope": [
             "CLI freeze",
             "JSON freeze",
-            "MCP freeze",
             "workflow freeze",
             "API compatibility policy"
           ],
@@ -2919,7 +2548,6 @@
           "status": "not_started",
           "acceptanceCriterionIds": [
             "M090-AC-002",
-            "M090-AC-006",
             "M090-AC-007",
             "M090-AC-008",
             "M090-AC-009"
@@ -2997,19 +2625,6 @@
           "target": 100,
           "unit": "percent",
           "measurementMethod": "release asset verification",
-          "status": "pending",
-          "evidenceIds": [],
-          "measurementProfileId": "PROFILE-GA-QUALIFICATION"
-        },
-        {
-          "id": "M090-AC-006",
-          "gate": "core",
-          "description": "当前支持版本的三个 MCP 客户端全部重新验证。",
-          "metric": "revalidatedMcpClients",
-          "comparator": "eq",
-          "target": 3,
-          "unit": "clients",
-          "measurementMethod": "dated real-client compatibility run",
           "status": "pending",
           "evidenceIds": [],
           "measurementProfileId": "PROFILE-GA-QUALIFICATION"
@@ -3119,7 +2734,6 @@
       "userOutcome": "维护者能够基于冻结证据判断产品是否达到 GA，而不是继续补新功能。",
       "stageNonGoals": [
         "新增公开命令族",
-        "扩大 MCP 写权限",
         "引入未资格化的存储或传输层"
       ],
       "outcomeMetricIds": [
@@ -3133,7 +2747,7 @@
     "primaryPersona": "由终端或 AI Agent 协助、需要使用 APEX 中文社区知识与内容工作流的 Oracle APEX 开发者",
     "secondaryPersonas": [
       "依赖稳定 JSON 和 exit code 的脚本或 CI 使用者",
-      "通过本地 stdio MCP 使用社区能力的 AI Agent 集成者",
+      "通过 Skill 和结构化 JSON 使用 CLI 的 AI Agent 集成者",
       "需要策略、审计和生命周期治理的团队维护者"
     ],
     "topJobs": [
@@ -3162,20 +2776,19 @@
       },
       {
         "id": "JOB-AGENT",
-        "description": "让 AI Agent 通过受限的本地适配层复用 CLI 核心能力",
+        "description": "让 AI Agent 通过 Skill、结构化 JSON 和可审计 workflow 复用 CLI 核心能力",
         "primaryMilestones": [
-          "0.5",
-          "0.6"
+          "0.6",
+          "0.7"
         ]
       }
     ],
     "excludedPersonas": [
       "社区 Web 前端或后台管理系统的替代品",
-      "需要远端 HTTP MCP 托管平台的使用者",
       "要求无人确认自动发布或删除内容的使用者"
     ],
     "productBoundary": [
-      "CLI 是主产品，MCP 是本地 stdio 薄适配层",
+      "CLI 是唯一的产品执行入口，Skill 负责向 AI Agent 传递使用规范",
       "远端社区能力由 apexcn-forums ORDS REST API 提供",
       "真实写操作只通过 CLI workflow approval 执行",
       "不以客户端补丁掩盖服务端契约缺口"
@@ -3222,16 +2835,6 @@
         "记录 requestId、来源 URL、运行时间窗和客户端环境",
         "不得用离线 fixture 分数替代 live retrieval 指标",
         "限流、超时和不可回答样本必须进入分层结果"
-      ]
-    },
-    {
-      "id": "PROFILE-REAL-MCP-CLIENT",
-      "owner": "independent-validator",
-      "purpose": "真实 MCP 客户端兼容性",
-      "integrityRules": [
-        "记录客户端名称、版本、操作系统和验证日期",
-        "保存 initialize、tools/list、tools/call 和错误证据",
-        "未在真实 UI 验证的客户端不得标记 verified"
       ]
     },
     {
@@ -3292,7 +2895,7 @@
       "id": "GLOBAL-GATE-CONSISTENCY",
       "type": "automatic",
       "appliesTo": "all",
-      "requirement": "command registry、schema、capability matrix、MCP manifest 和用户文档漂移为零"
+      "requirement": "command registry、schema、capability matrix 和用户文档漂移为零"
     },
     {
       "id": "GLOBAL-GATE-LOCAL",
@@ -3369,21 +2972,6 @@
         "providerCommit": "954d5963015c828ecf575b92b8e8f1a5bf14d199",
         "fixturePath": "/Users/kwang/apexcn-forums/docs/api/apexcn-cli-v1.openapi.yaml",
         "liveSmokeArtifact": "/Users/kwang/apexcn-forums/output/m040-readiness/dev107-personal-community-final2-20260718T002243.json"
-      }
-    },
-    {
-      "id": "external:mcp-client-runners",
-      "owner": "external",
-      "milestoneIds": [
-        "0.5"
-      ],
-      "requiredAt": "completion",
-      "status": "unverified",
-      "resolutionThreadId": null,
-      "readinessEvidence": {
-        "availabilityArtifact": null,
-        "versionMatrix": null,
-        "smokeArtifact": null
       }
     },
     {
@@ -3547,7 +3135,7 @@
       ],
       "status": "mitigated",
       "blockingAt": "completion",
-      "description": "registry、matrix、schema、MCP manifest 与用户文档已由本地契约测试和独立 validator 证明无漂移",
+      "description": "registry、matrix、schema 与用户文档已由本地契约测试和独立 validator 证明无漂移",
       "resolutionEvidenceIds": [
         "M020-E-VALIDATOR"
       ]
@@ -3565,30 +3153,6 @@
         "M040-E-SERVER",
         "M040-E-VALIDATOR"
       ]
-    },
-    {
-      "id": "RISK-050-SHARED-CORE",
-      "milestoneId": "0.5",
-      "capabilityIds": [
-        "M050-CAP-CORE"
-      ],
-      "status": "mitigated",
-      "blockingAt": "completion",
-      "description": "R2 独立 validator 已验证 CLI registry、shared core 与 MCP readonly exposure matrix 的映射及 100% shared-core coverage",
-      "resolutionEvidenceIds": [
-        "M050-E-R2"
-      ]
-    },
-    {
-      "id": "RISK-050-CLIENTS",
-      "milestoneId": "0.5",
-      "capabilityIds": [
-        "M050-CAP-CLIENTS"
-      ],
-      "status": "open",
-      "blockingAt": "completion",
-      "description": "R2 因 Mac locked 无法完成正式分发 VS Code Agent 的独立 UI 发现与只读调用；B28/AC004 仍未验收",
-      "resolutionEvidenceIds": []
     },
     {
       "id": "RISK-060-WRITE-GOVERNANCE",

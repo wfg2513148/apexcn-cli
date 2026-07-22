@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname as pathDirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -11,21 +11,19 @@ const packageLock = readJson("package-lock.json");
 const readme = readText("README.md");
 const releaseWorkflow = readText(".github/workflows/release.yml");
 const ciWorkflow = readText(".github/workflows/ci.yml");
-const mcpCommand = readText("src/commands/mcp.ts");
 const commandRegistry = readText("src/core/command-registry.ts");
 const issues = readJson("issues.json");
 const problems = [];
 
 const readmeReleaseUrls = [...new Set([...readme.matchAll(/releases\/(?:download\/(v\d+\.\d+\.\d+)|latest\/download)\//g)].map((match) => match[1] ?? "latest"))];
 const packageLockVersion = packageLock.packages?.[""]?.version ?? packageLock.version;
-const descriptors = [...commandRegistry.matchAll(/descriptor\("([^"]+)",\s*\[[^\]]+\],\s*"[^"]+",\s*"([^"]+)",\s*"([^"]+)",\s*"([^"]+)",\s*(true|false),\s*"([^"]+)"/g)]
+const descriptors = [...commandRegistry.matchAll(/descriptor\("([^"]+)",\s*\[[^\]]+\],\s*"[^"]+",\s*"([^"]+)",\s*"([^"]+)",\s*"([^"]+)",\s*(true|false),/g)]
   .map((match) => ({
     id: match[1],
     capability: match[2],
     apiEffect: match[3],
     riskLevel: match[4],
-    authRequired: match[5] === "true",
-    mcpExposure: match[6]
+    authRequired: match[5] === "true"
   }));
 const releaseAssets = [
   "apexcn-cli.tgz",
@@ -38,7 +36,7 @@ const releaseAssets = [
 ];
 const schemaFiles = run("git", ["ls-files", "src/schemas/*.ts"])
   .split("\n")
-  .filter(Boolean)
+  .filter((path) => path && existsSync(join(repoRoot, path)))
   .sort();
 
 if (packageLockVersion !== packageJson.version) {
@@ -53,12 +51,6 @@ if (!releaseWorkflow.includes("artifacts/checksums.txt")) {
 if (!ciWorkflow.includes("npm run eval:rag")) {
   problems.push("CI does not run npm run eval:rag");
 }
-const mcpExecuteWriteDisabled = /MCP execute-write is (?:disabled|intentionally unavailable)/.test(mcpCommand)
-  && mcpCommand.includes("apexcn workflow");
-if (!mcpExecuteWriteDisabled) {
-  problems.push("MCP execute-write disabled message was not found");
-}
-
 const report = {
   kind: "apexcn-baseline-report",
   schemaVersion: 1,
@@ -73,18 +65,12 @@ const report = {
   readmeReleaseUrls,
   releaseWorkflowUploadsChecksums: releaseWorkflow.includes("artifacts/checksums.txt"),
   ciRunsRagEval: ciWorkflow.includes("npm run eval:rag"),
-  mcpExecuteWriteDisabled,
   issuesBacklogAccurate: Array.isArray(issues.issues),
   commands: {
     total: descriptors.length,
-    readonly: descriptors.filter((item) => item.mcpExposure === "readonly").length,
-    previewOnly: descriptors.filter((item) => item.mcpExposure === "preview-only").length,
+    read: descriptors.filter((item) => item.capability === "read").length,
+    write: descriptors.filter((item) => item.capability === "write").length,
     destructive: descriptors.filter((item) => item.apiEffect === "destructive" || item.riskLevel === "destructive").length
-  },
-  mcp: {
-    readonlyTools: descriptors.filter((item) => item.mcpExposure === "readonly").length,
-    previewTools: descriptors.filter((item) => item.mcpExposure === "preview-only").length,
-    executeWriteSupported: false
   },
   schemas: schemaFiles,
   releaseAssets,

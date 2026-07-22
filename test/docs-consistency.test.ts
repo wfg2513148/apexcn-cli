@@ -26,7 +26,6 @@ describe("documentation consistency", () => {
     const removedInternalDocs = [
       "docs/api-contract.md",
       "docs/capability-matrix.md",
-      "docs/mcp.md",
       "docs/migration-v0.30.md",
       "docs/migration-v0.40.md",
       "docs/quickstart.md",
@@ -104,6 +103,19 @@ describe("documentation consistency", () => {
     expect(docs).not.toContain("Beginner Guide");
   });
 
+  test("user-facing examples do not present stale fixed content ids as live", () => {
+    const readme = read("README.md");
+    const userGuides = [read("docs/user-guide.zh.md"), read("docs/user-guide.en.md")].join("\n");
+    const manuals = [read("docs/cli-manual.zh.md"), read("docs/cli-manual.en.md")].join("\n");
+
+    expect(readme).not.toContain("30549");
+    expect(userGuides).not.toContain("30549");
+    expect(userGuides).not.toContain("201480");
+    expect(readme).toContain("不要把示例编号当作当前线上内容");
+    expect(manuals).toContain("示例中的帖子和回复编号只用于说明命令格式");
+    expect(manuals).toContain("ids in examples only demonstrate command syntax");
+  });
+
   test("security documentation matches public release assets", () => {
     const security = read("docs/security-model.md");
     const workflow = read(".github/workflows/release.yml");
@@ -114,5 +126,15 @@ describe("documentation consistency", () => {
     for (const asset of ["apexcn-cli.tgz", "install-agent.sh", "install-agent.ps1", "checksums.txt", "apexcn-cli.tgz.sha256", "install-agent.sh.sha256", "install-agent.ps1.sha256"]) {
       expect(workflow).toContain(`artifacts/${asset}`);
     }
+  });
+
+  test("security documentation exposes standalone lifecycle scripts without implying CLI subcommands", () => {
+    const security = read("docs/security-model.md");
+
+    expect(security).toContain("生命周期脚本是独立脚本，不是 `apexcn` 子命令");
+    expect(security).toContain('bash "$CLI_SOURCE/scripts/lifecycle-agent.sh" upgrade');
+    expect(security).toContain('rollback --backup "<升级输出的备份路径>" --yes');
+    expect(security).toContain('uninstall --yes');
+    expect(security).toContain('lifecycle-agent.ps1" upgrade');
   });
 });

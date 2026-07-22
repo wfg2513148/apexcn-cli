@@ -1,6 +1,6 @@
 # apexcn-cli Terminal Manual
 
-This manual is for developers who use apexcn-cli directly in a terminal. Except for installation and authentication examples, commands assume that installation and account configuration are complete.
+This manual is for developers who use apexcn-cli directly in a terminal. Except for installation and authentication examples, commands assume that installation and account configuration are complete. Topic and reply ids in examples only demonstrate command syntax; obtain valid ids from search, list, or current-account output before running them.
 
 ## Global
 

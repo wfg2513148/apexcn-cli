@@ -80,21 +80,15 @@ describe("release version check", () => {
       packageLockVersion: packageVersion,
       releaseWorkflowUploadsChecksums: true,
       ciRunsRagEval: true,
-      mcpExecuteWriteDisabled: true,
       issuesBacklogAccurate: true,
       problems: [],
       commands: expect.objectContaining({
         total: expect.any(Number),
-        readonly: expect.any(Number),
-        previewOnly: expect.any(Number),
+        read: expect.any(Number),
+        write: expect.any(Number),
         destructive: expect.any(Number)
       }),
-      mcp: expect.objectContaining({
-        readonlyTools: expect.any(Number),
-        previewTools: expect.any(Number),
-        executeWriteSupported: false
-      }),
-      schemas: expect.arrayContaining(["src/schemas/mcp.ts", "src/schemas/workflow.ts"]),
+      schemas: expect.arrayContaining(["src/schemas/workflow.ts"]),
       releaseAssets: expect.arrayContaining(["apexcn-cli.tgz", "checksums.txt", "install-agent.ps1.sha256"])
     }));
     expect(report.readmeReleaseUrls).toEqual(["latest"]);

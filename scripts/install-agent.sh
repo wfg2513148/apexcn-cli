@@ -65,6 +65,8 @@ cli_root="$install_root"
 [[ -f "$cli_root/package.json" ]] || die "Downloaded package is missing package.json."
 [[ -f "$cli_root/dist/index.js" ]] || die "Downloaded package is missing dist/index.js."
 [[ -d "$cli_root/node_modules/commander" ]] || die "Downloaded package is missing runtime dependencies."
+printf '%s\n' "$install_root" > "$cli_root/.apexcn-install-root"
+printf '%s\n' "$bin_dir" > "$cli_root/.apexcn-bin-dir"
 cli_entrypoint="$cli_root/dist/index.js"
 chmod +x "$cli_entrypoint"
 
@@ -104,6 +106,10 @@ printf '\n'
 printf 'apexcn-cli installation complete.\n\n'
 printf 'Launcher:\n  %s\n\n' "$launcher"
 printf 'Installed source:\n  %s\n\n' "$cli_root"
+printf 'Manage this installation:\n'
+printf '  bash "%s/scripts/lifecycle-agent.sh" upgrade\n' "$cli_root"
+printf '  bash "%s/scripts/lifecycle-agent.sh" rollback --backup "<backup-path>" --yes\n' "$cli_root"
+printf '  bash "%s/scripts/lifecycle-agent.sh" uninstall --yes\n\n' "$cli_root"
 printf 'Authentication is configured after installation:\n'
 printf '  apexcn -apikey "YOUR_API_KEY"\n'
 printf '  apexcn me --json\n'

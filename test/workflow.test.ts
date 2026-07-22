@@ -199,7 +199,7 @@ describe("workflow commands", () => {
     expect(plan.safetySummary.requiresConfirmation).toBe(true);
   });
 
-  test("workflow plan covers audited CRUD goals without enabling MCP execution", async () => {
+  test("workflow plan covers audited CRUD goals", async () => {
     const { program, stdout, stderr } = workflowProgram();
 
     await program.parseAsync([

@@ -441,7 +441,8 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
         return;
       }
       await runApi(options, commandOptions, async (session) => {
-        const data = await viewTopic(createApiClient(session), id);
+        const me = await requestJson(session.baseUrl, "/api/v1/me", { token: session.token });
+        const data = bindTopicOwnership(await viewTopic(createApiClient(session), id), me);
         const topic = topicFromData(data);
         printData(options, withReadProvenance(data, "topic-detail", topic ? [topic] : []), outputFormat(commandOptions), formatTopicText);
       });
@@ -506,6 +507,9 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
     .action(async (id: number, commandOptions: JsonOption & DryRunOption & TopicWriteOptions & { categoryId?: number; ifVersion?: number }) => {
       if (!commandOptions.dryRun && !requireWriteVersion(options, commandOptions)) return;
       await runApi(options, commandOptions, async (session) => {
+        if (!commandOptions.dryRun) {
+          await requireOwnedTopic(session, id);
+        }
         const request = {
           method: "POST",
           path: `/api/v1/topics/${id}`,
@@ -547,6 +551,9 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
       }
       if (!commandOptions.dryRun && !requireWriteVersion(options, commandOptions)) return;
       await runApi(options, commandOptions, async (session) => {
+        if (!commandOptions.dryRun) {
+          await requireOwnedTopic(session, id);
+        }
         const request = {
           method: "DELETE",
           path: `/api/v1/topics/${id}`,
@@ -760,6 +767,9 @@ type ReplyWriteOptions = {
 class CliValidationError extends Error {
 }
 
+class CliSafetyError extends Error {
+}
+
 async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOption, callback: (session: Session) => Promise<void>): Promise<void> {
   let session: Session | undefined;
   try {
@@ -786,6 +796,11 @@ async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOpt
     }
     if (error instanceof CliValidationError) {
       printError(options, { type: "validation", message: error.message, exitCode: 1 }, undefined, commandOptions.json);
+      process.exitCode = 1;
+      return;
+    }
+    if (error instanceof CliSafetyError) {
+      printError(options, { type: "safety", message: error.message, exitCode: 1 }, undefined, commandOptions.json);
       process.exitCode = 1;
       return;
     }
@@ -1434,6 +1449,50 @@ function topicFromData(data: unknown): Record<string, unknown> | undefined {
     return data.topic;
   }
   return data;
+}
+
+function accountId(data: unknown): string | undefined {
+  if (!isRecord(data)) {
+    return undefined;
+  }
+  const user = isRecord(data.user) ? data.user : data;
+  const value = user.id ?? user.userId ?? user.user_id;
+  const id = fieldText(value).trim();
+  return id || undefined;
+}
+
+function topicAuthorId(data: unknown): string | undefined {
+  const topic = topicFromData(data);
+  const id = topic ? fieldText(topic.createdBy ?? topic.createdById ?? topic.authorId).trim() : "";
+  return id || undefined;
+}
+
+function bindTopicOwnership(data: unknown, me: unknown): unknown {
+  if (!isRecord(data)) {
+    return data;
+  }
+  const topic = topicFromData(data);
+  if (!topic) {
+    return data;
+  }
+  const currentUserId = accountId(me);
+  const authorId = topicAuthorId(data);
+  const ownedByCurrentUser = currentUserId !== undefined && authorId !== undefined && currentUserId === authorId;
+  const boundTopic = { ...topic, canEdit: ownedByCurrentUser, canDelete: ownedByCurrentUser };
+  return isRecord(data.topic) ? { ...data, topic: boundTopic } : boundTopic;
+}
+
+async function requireOwnedTopic(session: Session, topicId: number): Promise<void> {
+  const me = await requestJson(session.baseUrl, "/api/v1/me", { token: session.token });
+  const data = await viewTopic(createApiClient(session), topicId);
+  const currentUserId = accountId(me);
+  const authorId = topicAuthorId(data);
+  if (!currentUserId || !authorId) {
+    throw new CliSafetyError(`Unable to verify ownership for topic ${topicId}; no preview was created.`);
+  }
+  if (currentUserId !== authorId) {
+    throw new CliSafetyError(`Topic ${topicId} belongs to another account; update and delete previews are refused.`);
+  }
 }
 
 function sourcesFromData(data: Record<string, unknown>): Array<Record<string, unknown>> {

@@ -41,16 +41,32 @@ describe("cross-platform lifecycle assets", () => {
     const checksums = join(root, "checksums.txt");
     const digest = createHash("sha256").update(readFileSync(archive)).digest("hex");
     writeFileSync(checksums, `${digest}  apexcn-cli.tgz\n`);
+    const olderPackageRoot = join(root, "older-package");
+    const olderArchive = join(root, "apexcn-cli-older.tgz");
+    const olderChecksums = join(root, "older-checksums.txt");
+    mkdirSync(olderPackageRoot);
+    execFileSync("tar", ["-xzf", archive, "-C", olderPackageRoot]);
+    const olderPackageJsonPath = join(olderPackageRoot, "package", "package.json");
+    const olderPackageJson = JSON.parse(readFileSync(olderPackageJsonPath, "utf8")) as { version: string };
+    olderPackageJson.version = "1.0.3";
+    writeFileSync(olderPackageJsonPath, `${JSON.stringify(olderPackageJson, null, 2)}\n`);
+    execFileSync("tar", ["-czf", olderArchive, "-C", olderPackageRoot, "package"]);
+    const olderDigest = createHash("sha256").update(readFileSync(olderArchive)).digest("hex");
+    writeFileSync(olderChecksums, `${olderDigest}  apexcn-cli.tgz\n`);
 
     const common = {
       cwd: repoRoot,
       encoding: "utf8" as const
     };
-    const environmentFor = (activeBinDir: string) => ({
+    const environmentFor = (
+      activeBinDir: string,
+      packageArtifact = archive,
+      checksumsArtifact = checksums
+    ) => ({
       ...process.env,
       HOME: home,
-      APEXCN_CLI_PACKAGE_URL: `file://${archive}`,
-      APEXCN_CLI_CHECKSUMS_URL: `file://${checksums}`,
+      APEXCN_CLI_PACKAGE_URL: `file://${packageArtifact}`,
+      APEXCN_CLI_CHECKSUMS_URL: `file://${checksumsArtifact}`,
       PATH: `${activeBinDir}${delimiter}${process.env.PATH ?? ""}`
     });
     const installed = spawnSync("bash", [
@@ -63,6 +79,47 @@ describe("cross-platform lifecycle assets", () => {
     expect((JSON.parse(readFileSync(join(freshInstallRoot, "package", "package.json"), "utf8")) as { version: string }).version)
       .toBe(version);
     expect(lstatSync(join(freshBinDir, "apexcn")).isSymbolicLink()).toBe(true);
+    expect(execFileSync(join(freshBinDir, "apexcn"), ["--version"], {
+      env: environmentFor(freshBinDir),
+      encoding: "utf8"
+    })).toBe(`${version}\n`);
+
+    const customBackupRoot = join(root, "fresh-backups");
+    const customUpgrade = spawnSync("bash", [
+      join(freshInstallRoot, "package", "scripts", "lifecycle-agent.sh"),
+      "upgrade",
+      "--backup-root", customBackupRoot
+    ], { ...common, env: environmentFor(freshBinDir) });
+    expect(customUpgrade.status, customUpgrade.stderr).toBe(0);
+    expect(customUpgrade.stdout).toContain("Upgrade complete");
+    expect(lstatSync(join(freshBinDir, "apexcn")).isSymbolicLink()).toBe(true);
+
+    const downgradeBackupRoot = join(root, "downgrade-backups");
+    const rejectedDowngrade = spawnSync("bash", [
+      join(freshInstallRoot, "package", "scripts", "lifecycle-agent.sh"),
+      "upgrade",
+      "--backup-root", downgradeBackupRoot
+    ], {
+      ...common,
+      env: environmentFor(freshBinDir, olderArchive, olderChecksums)
+    });
+    expect(rejectedDowngrade.status).toBe(1);
+    expect(rejectedDowngrade.stderr).toContain(`Refusing downgrade from ${version} to 1.0.3`);
+    expect(execFileSync(join(freshBinDir, "apexcn"), ["--version"], {
+      env: environmentFor(freshBinDir),
+      encoding: "utf8"
+    })).toBe(`${version}\n`);
+
+    const downgradeBackups = readdirSync(downgradeBackupRoot);
+    expect(downgradeBackups).toHaveLength(1);
+    const customRollback = spawnSync("bash", [
+      join(freshInstallRoot, "package", "scripts", "lifecycle-agent.sh"),
+      "rollback",
+      "--backup", join(downgradeBackupRoot, downgradeBackups[0]),
+      "--yes"
+    ], { ...common, env: environmentFor(freshBinDir) });
+    expect(customRollback.status, customRollback.stderr).toBe(0);
+    expect(customRollback.stdout).toContain(`Rollback complete: ${version}`);
     expect(execFileSync(join(freshBinDir, "apexcn"), ["--version"], {
       env: environmentFor(freshBinDir),
       encoding: "utf8"
@@ -121,5 +178,7 @@ describe("cross-platform lifecycle assets", () => {
     expect(script).toContain('Rollback requires -Yes.');
     expect(script).toContain('Uninstall requires -Yes.');
     expect(script).toContain("Auth configuration was preserved");
+    expect(script).toContain(".apexcn-install-root");
+    expect(script).toContain(".apexcn-bin-dir");
   });
 });

@@ -36,6 +36,19 @@ async function configuredProgram(fetchImpl: typeof fetch, inputOptions: { readSt
   return { program, stdout, stderr, fetch: vi.mocked(fetch) };
 }
 
+function withOwnedTopic(fetchImpl: typeof fetch, topicId = 42, userId = 1, authorId = userId): typeof fetch {
+  return async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/api/v1/me")) {
+      return Response.json({ user: { id: userId }, requestId: "req-me" });
+    }
+    if (url.endsWith(`/api/v1/topics/${topicId}`) && !init?.method) {
+      return Response.json({ topic: { id: topicId, createdBy: authorId }, requestId: "req-topic-owner" });
+    }
+    return fetchImpl(input, init);
+  };
+}
+
 function exitOverrideTree(command: Command): void {
   command.exitOverride((error) => {
     throw error;
@@ -143,9 +156,6 @@ const neverApiDryRunCommands = [
   "me stats",
   "me subscriptions",
   "me topics",
-  "mcp inspect",
-  "mcp serve",
-  "mcp tools",
   "category list",
   "research",
   "review reply",
@@ -1536,7 +1546,7 @@ describe("content commands", () => {
     }
   });
 
-  test("topic and reply writes create a confirmation operation without calling the API", async () => {
+  test("topic and reply writes create a confirmation operation without calling a write API", async () => {
     const cases = [
       ["topic", "create", "--category-id", "2", "--title", "CLI title", "--content", "CLI body"],
       ["topic", "update", "42", "--if-version", "1", "--content", "Updated body"],
@@ -1547,11 +1557,16 @@ describe("content commands", () => {
     ];
 
     for (const args of cases) {
-      const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ ok: true }));
+      const { program, stdout, stderr, fetch } = await configuredProgram(withOwnedTopic(async () => Response.json({ ok: true })));
 
       await program.parseAsync(["node", "apexcn", ...args]);
 
-      expect(fetch).not.toHaveBeenCalled();
+      if (args[0] === "topic" && (args[1] === "update" || args[1] === "delete")) {
+        expect(fetch).toHaveBeenCalledTimes(2);
+        expect(fetch.mock.calls.every(([, request]) => !request?.method)).toBe(true);
+      } else {
+        expect(fetch).not.toHaveBeenCalled();
+      }
       expect(stdout.join("")).toMatch(/Operation: op_[a-f0-9]{16}/);
       expect(stdout.join("")).toContain("Confirm: apexcn confirm");
       expect(stderr.join("")).toBe("");
@@ -1592,6 +1607,53 @@ describe("content commands", () => {
       "requestId: req-topic",
       ""
     ].join("\n"));
+  });
+
+  test("topic ownership is bound to the authenticated account before update or delete preview", async () => {
+    for (const args of [
+      ["topic", "update", "42", "--if-version", "1", "--title", "Blocked", "--preview", "--json"],
+      ["topic", "delete", "42", "--if-version", "1", "--confirm-title", "Other topic", "--preview", "--json"]
+    ]) {
+      const { program, stdout, stderr, fetch } = await configuredProgram(
+        withOwnedTopic(async () => Response.json({ ok: true }), 42, 1, 50)
+      );
+
+      await program.parseAsync(["node", "apexcn", ...args]);
+
+      expect(stdout.join("")).toBe("");
+      expect(JSON.parse(stderr.join(""))).toEqual({
+        ok: false,
+        error: {
+          type: "safety",
+          message: "Topic 42 belongs to another account; update and delete previews are refused.",
+          exitCode: 1
+        }
+      });
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("topic view fails closed on server edit flags for a different author", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      if (String(input).endsWith("/api/v1/me")) {
+        return Response.json({ user: { id: 1 }, requestId: "req-me" });
+      }
+      return Response.json({
+        topic: { id: 42, createdBy: 50, canEdit: true, canDelete: true, title: "Other topic" },
+        requestId: "req-topic"
+      });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--json"]);
+
+    expect(JSON.parse(stdout.join("")).topic).toEqual(expect.objectContaining({
+      createdBy: 50,
+      canEdit: false,
+      canDelete: false
+    }));
   });
 
   test("topic write commands can print dry-run plans without calling the API", async () => {
@@ -1853,7 +1915,7 @@ describe("content commands", () => {
       .mockResolvedValueOnce("topic update stdin body")
       .mockResolvedValueOnce("reply update stdin body");
     const { program, stdout, fetch } = await configuredProgram(
-      async () => Response.json(responses.shift()),
+      withOwnedTopic(async () => Response.json(responses.shift())),
       { readStdin, isStdinTTY: () => true }
     );
 
@@ -1863,7 +1925,7 @@ describe("content commands", () => {
     await program.parseAsync(["node", "apexcn", "post", "edit", "100", "--if-version", "1", "--content-file", "-", "--preview"]);
 
     expect(readStdin).toHaveBeenCalledTimes(4);
-    expect(fetch).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(2);
     const bodies = stdout.join("").trim().split("\n").map((line) => JSON.parse(line).body);
     expect(bodies[0]).toEqual(expect.objectContaining({ categoryId: 2, title: "CLI title", content: "topic stdin body" }));
     expect(bodies[1]).toEqual(expect.objectContaining({ content: "reply stdin body" }));
@@ -1897,13 +1959,13 @@ describe("content commands", () => {
 
   test("topic update content-file dash can send zero-length content", async () => {
     const { program, stdout, fetch } = await configuredProgram(
-      async () => Response.json({ ok: true }),
+      withOwnedTopic(async () => Response.json({ ok: true })),
       { readStdin: async () => "", isStdinTTY: () => true }
     );
 
     await program.parseAsync(["node", "apexcn", "topic", "update", "42", "--if-version", "1", "--content-file", "-", "--preview"]);
 
-    expect(fetch).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(2);
     expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
       method: "POST",
       path: "/api/v1/topics/42",
@@ -1916,14 +1978,14 @@ describe("content commands", () => {
       throw new Error("unexpected stdin read");
     });
     const { program, stdout, fetch } = await configuredProgram(
-      async () => Response.json({ ok: true }),
+      withOwnedTopic(async () => Response.json({ ok: true })),
       { readStdin, isStdinTTY: () => false }
     );
 
     await program.parseAsync(["node", "apexcn", "thread", "edit", "42", "--if-version", "1", "--title", "Updated title", "--preview", "--json"]);
 
     expect(readStdin).not.toHaveBeenCalled();
-    expect(fetch).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(2);
     expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
       kind: "write-preview",
       path: "/api/v1/topics/42",

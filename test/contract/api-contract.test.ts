@@ -5,7 +5,6 @@ import { assertAskResponse } from "../../src/schemas/ask.js";
 import { assertCollectionQueryResult } from "../../src/schemas/collection.js";
 import { assertDoctorSnapshot } from "../../src/schemas/doctor.js";
 import { assertApexcnErrorBody } from "../../src/schemas/error.js";
-import { assertMcpToolsManifest } from "../../src/schemas/mcp.js";
 import { assertResearchBundle } from "../../src/schemas/research.js";
 import { assertSearchResponse } from "../../src/schemas/search.js";
 import { assertTopicResponse } from "../../src/schemas/topic.js";
@@ -68,7 +67,6 @@ describe("API response contracts", () => {
     expect(() => assertDoctorSnapshot(fixture("doctor-snapshot.ok.json"))).not.toThrow();
     expect(() => assertWorkflowPlan(fixture("workflow-plan.ok.json"))).not.toThrow();
     expect(() => assertCollectionQueryResult(fixture("collection-query.ok.json"))).not.toThrow();
-    expect(() => assertMcpToolsManifest(fixture("mcp-tools.ok.json"))).not.toThrow();
     expect(() => assertApexcnErrorBody(fixture("error.http-401.json"))).not.toThrow();
   });
 
@@ -81,6 +79,5 @@ describe("API response contracts", () => {
 
   test("contract validators reject missing stable fields", () => {
     expect(() => assertCollectionQueryResult({ kind: "collection-query-result", schemaVersion: 1, engine: "tfidf", query: "x", results: [] })).toThrow();
-    expect(() => assertMcpToolsManifest({ kind: "mcp-tools", schemaVersion: 1, policy: { allowExecuteWrite: true }, tools: [] })).toThrow();
   });
 });
