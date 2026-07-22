@@ -1165,7 +1165,8 @@ function formatTopicSummaryRow(item: Record<string, unknown>): string {
     fieldText(item.usefulReplyCount),
     fieldText(item.viewCount),
     topicFlagsText(item),
-    fieldText(item.canonicalUrl ?? item.threadUrl ?? item.url)
+    fieldText(item.canonicalUrl ?? item.threadUrl ?? item.url),
+    fieldText(item.originalUrl)
   ].join("\t");
 }
 
@@ -1409,9 +1410,10 @@ function formatAskText(data: unknown): string {
   const sourceLines = sources.map((source, index) => {
     const title = fieldText(source.title ?? source.topicTitle ?? source.topicId ?? `source ${index + 1}`);
     const url = fieldText(source.url ?? source.threadUrl);
+    const originalUrl = fieldText(source.originalUrl);
     const score = fieldText(source.score);
     const snippet = fieldText(source.snippet ?? source.content);
-    const details = [url, score ? `score ${score}` : "", snippet].filter(Boolean).join(" | ");
+    const details = [url, originalUrl ? `original ${originalUrl}` : "", score ? `score ${score}` : "", snippet].filter(Boolean).join(" | ");
     return details ? `${index + 1}. ${title} - ${details}` : `${index + 1}. ${title}`;
   });
   return lines([

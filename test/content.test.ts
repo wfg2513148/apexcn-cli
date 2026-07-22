@@ -567,7 +567,7 @@ describe("content commands", () => {
   test("search supports explicit output formats", async () => {
     const payload = {
       items: [
-        { id: 42, title: "APEX topic", url: "https://oracleapex.cn/t/42" },
+        { id: 42, title: "APEX topic", url: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual", originalUrl: "https://example.com/apex-topic" },
         { id: 43, title: "ORDS topic" }
       ],
       page: { limit: 2 },
@@ -580,7 +580,7 @@ describe("content commands", () => {
       provenance: {
         requestIds: ["req-search"],
         sources: [
-          { id: 42, title: "APEX topic", url: "https://oracleapex.cn/t/42" },
+          { id: 42, title: "APEX topic", url: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual", originalUrl: "https://example.com/apex-topic" },
           { id: 43, title: "ORDS topic" }
         ]
       }
@@ -591,8 +591,8 @@ describe("content commands", () => {
       {
         argv: ["node", "apexcn", "search", "APEX", "--format", "text"],
         expected: [
-          ["42", "APEX topic", "", "", "", "", "", "", "", "", "", "https://oracleapex.cn/t/42"].join("\t"),
-          ["43", "ORDS topic", "", "", "", "", "", "", "", "", "", ""].join("\t"),
+          ["42", "APEX topic", "", "", "", "", "", "", "", "", "", "https://oracleapex.cn/ords/test/api/v1/topics/42/visual", "https://example.com/apex-topic"].join("\t"),
+          ["43", "ORDS topic", "", "", "", "", "", "", "", "", "", "", ""].join("\t"),
           ""
         ].join("\n")
       },
@@ -629,7 +629,7 @@ describe("content commands", () => {
       },
       {
         payload: { items: [{ id: 42, title: "APEX\ttopic\none", url: "https://oracleapex.cn/t/42\nref" }] },
-        expected: `${["42", "APEX topic one", "", "", "", "", "", "", "", "", "", "https://oracleapex.cn/t/42 ref"].join("\t")}\n`
+        expected: `${["42", "APEX topic one", "", "", "", "", "", "", "", "", "", "https://oracleapex.cn/t/42 ref", ""].join("\t")}\n`
       }
     ];
 
@@ -801,7 +801,7 @@ describe("content commands", () => {
       "https://oracleapex.cn/ords/test/api/v1/search?keyword=%25&pageSize=20&categoryId=4&cursor=cursor-1&fromDate=2026-07-01&toDate=2026-07-04",
       expect.any(Object)
     );
-    expect(stdout.join("")).toBe(`${["42", "Recent topic", "", "", "2026-07-03T08:00:00", "", "", "", "", "", "", "https://oracleapex.cn/t/42"].join("\t")}\n`);
+    expect(stdout.join("")).toBe(`${["42", "Recent topic", "", "", "2026-07-03T08:00:00", "", "", "", "", "", "", "https://oracleapex.cn/t/42", ""].join("\t")}\n`);
   });
 
   test("research searches and fetches topic details as a bundle", async () => {
@@ -1272,7 +1272,7 @@ describe("content commands", () => {
       expect.any(Object)
     );
     expect(stderr.join("")).toBe("");
-    expect(stdout.join("")).toContain("42\tFiltered topic\tAPEX\tAuthor\t2026-07-05\texample.com\tAPEX,ORDS\t3\t1\t99\tfeatured,pinned,locked\thttps://oracleapex.cn/t/42\n");
+    expect(stdout.join("")).toContain("42\tFiltered topic\tAPEX\tAuthor\t2026-07-05\texample.com\tAPEX,ORDS\t3\t1\t99\tfeatured,pinned,locked\thttps://oracleapex.cn/t/42\t\n");
   });
 
   test("topic list calls topics endpoint with v0.4 filters", async () => {
@@ -2097,7 +2097,7 @@ describe("content commands", () => {
       Response.json({
         answer: "APEX 可以用 REST Data Source。",
         sources: [
-          { title: "REST\tData", url: "https://oracleapex.cn/t/42", score: 0.88, snippet: "第一行\n第二行" },
+          { title: "REST\tData", url: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual", originalUrl: "https://example.com/rest-data", score: 0.88, snippet: "第一行\n第二行" },
           { topicId: 43 }
         ],
         requestId: "req-ask"
@@ -2114,7 +2114,7 @@ describe("content commands", () => {
       "Answer:",
       "APEX 可以用 REST Data Source。",
       "Sources:",
-      "1. REST Data - https://oracleapex.cn/t/42 | score 0.88 | 第一行 第二行",
+      "1. REST Data - https://oracleapex.cn/ords/test/api/v1/topics/42/visual | original https://example.com/rest-data | score 0.88 | 第一行 第二行",
       "2. 43",
       "requestId: req-ask",
       ""

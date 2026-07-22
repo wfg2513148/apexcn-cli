@@ -357,7 +357,8 @@ function formatTopicListText(data: unknown): string {
     fieldText(item.canDelete),
     fieldText(item.createdDate),
     fieldText(item.updatedDate),
-    fieldText(item.url ?? item.threadUrl)
+    fieldText(item.url ?? item.threadUrl),
+    fieldText(item.originalUrl)
   ].join("\t")).join("\n");
 }
 
@@ -374,7 +375,8 @@ function formatReplyListText(data: unknown): string {
       fieldText(topic.title ?? item.topicTitle),
       fieldText(item.createdDate),
       fieldText(item.updatedDate),
-      fieldText(item.url ?? item.replyUrl ?? topic.url ?? topic.threadUrl)
+      fieldText(item.replyUrl ?? item.url ?? topic.url ?? topic.threadUrl),
+      fieldText(item.originalUrl ?? topic.originalUrl)
     ].join("\t");
   }).join("\n");
 }
@@ -386,7 +388,8 @@ function formatTopicRelationListText(data: unknown): string {
     fieldText(item.relationCreatedDate),
     fieldText(item.updatedDate),
     fieldText(item.unavailableReason),
-    fieldText(item.url ?? item.threadUrl)
+    fieldText(item.url ?? item.threadUrl),
+    fieldText(item.originalUrl)
   ].join("\t")).join("\n");
 }
 

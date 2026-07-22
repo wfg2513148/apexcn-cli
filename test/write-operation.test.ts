@@ -11,7 +11,14 @@ afterEach(() => {
 
 describe("business write confirmation", () => {
   test("reply preview returns an operation id and confirmation executes the exact request once", async () => {
-    const context = await testContext();
+    const context = await testContext([Response.json({
+      id: 90,
+      replyId: 90,
+      topicId: 42,
+      url: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90",
+      replyUrl: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90",
+      requestId: "req-write"
+    })]);
     await context.program.parseAsync(["node", "apexcn", "reply", "create", "42", "--parent-post-id", "90", "--content", "Nested reply", "--json"]);
 
     expect(context.fetch).not.toHaveBeenCalled();
@@ -38,7 +45,11 @@ describe("business write confirmation", () => {
       kind: "write-result",
       operationId: preview.operationId,
       status: "completed",
-      requestId: "req-write"
+      requestId: "req-write",
+      result: expect.objectContaining({
+        url: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90",
+        replyUrl: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90"
+      })
     }));
 
     context.stdout.length = 0;

@@ -99,7 +99,9 @@ For a human who explicitly chooses the simplest file-backed setup, `apexcn -apik
 - Do not rely on interactive prompts. Supply required non-interactive flags explicitly.
 - Before deleting a topic, run `apexcn topic view <thread_id> --json`, then preview with the exact `--confirm-title` and current `--if-version`.
 - Before deleting a reply, use `apexcn me replies --json` to confirm `replyId`, `topicId`, `version`, `canDelete`, and URL. Preview with the same reply id and `--if-version`; execute only the operation id returned by that preview.
-- When reporting search results, topic summaries, or inspected content to a user, include each topic's real URL from `url` or `threadUrl`; include `originalUrl` too when present.
+- When reporting CLI/API-generated search results, topic summaries, or inspected content, use the returned `canonicalUrl`, `threadUrl`, or `url` as the community link; prefer `replyUrl` for a published reply. Never rebuild or edit these URLs.
+- When a CLI/API-generated result includes `originalUrl`, label `originalUrl` separately as the original source. Omit that label when the field is absent.
+- Do not open, validate, or score URLs embedded in user-authored prompts, drafts, topic bodies, or reply bodies. This exclusion does not apply to CLI/API-generated URL metadata fields.
 - Preserve `provenance.requestIds` and `provenance.sources` from search, topic, ask, and research outputs in downstream evidence.
 - Do not infer an exact total from search results. If `page.hasMore` is true, report a lower bound such as "at least N results" and suggest narrowing by category or date.
 - Treat `401` as auth/token failure, `403` as permission/config denial, `409` as state conflict, and `429` as rate limiting. If stderr includes `retryAfterSeconds`, wait or report that exact retry window instead of retrying immediately.
