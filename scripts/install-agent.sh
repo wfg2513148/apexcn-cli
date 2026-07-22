@@ -65,11 +65,12 @@ cli_root="$install_root"
 [[ -f "$cli_root/package.json" ]] || die "Downloaded package is missing package.json."
 [[ -f "$cli_root/dist/index.js" ]] || die "Downloaded package is missing dist/index.js."
 [[ -d "$cli_root/node_modules/commander" ]] || die "Downloaded package is missing runtime dependencies."
+cli_entrypoint="$cli_root/dist/index.js"
+chmod +x "$cli_entrypoint"
 
 mkdir -p "$bin_dir"
 launcher="$bin_dir/apexcn"
-printf '#!/usr/bin/env bash\nexec node "%s/dist/index.js" "$@"\n' "$cli_root" >"$launcher"
-chmod +x "$launcher"
+ln -sfn "$cli_entrypoint" "$launcher"
 
 for skill_root in "$HOME/.agents/skills" "$HOME/.codex/skills" "$HOME/.config/opencode/skills"; do
   skill_target="$skill_root/apexcn-cli"
@@ -83,9 +84,14 @@ if [[ "$install_root" == "$default_install_root" && "$bin_dir" == "$default_bin_
   resolved="$(command -v apexcn 2>/dev/null || true)"
 fi
 if [[ -n "$resolved" && "$resolved" != "$launcher" ]]; then
-  if [[ -f "$resolved" ]] && grep -q 'dist/index.js' "$resolved" && [[ -w "$(dirname "$resolved")" ]]; then
-    cp "$launcher" "$resolved"
-    chmod +x "$resolved"
+  managed_resolved=false
+  if [[ -L "$resolved" && "$(readlink "$resolved")" == "$cli_entrypoint" ]]; then
+    managed_resolved=true
+  elif [[ -f "$resolved" ]] && grep -q 'dist/index.js' "$resolved"; then
+    managed_resolved=true
+  fi
+  if [[ "$managed_resolved" == "true" && -w "$(dirname "$resolved")" ]]; then
+    ln -sfn "$cli_entrypoint" "$resolved"
     log "Updated shell-resolved launcher: $resolved"
   else
     printf '[apexcn-cli] Add %s to PATH before older apexcn launchers.\n' "$bin_dir" >&2

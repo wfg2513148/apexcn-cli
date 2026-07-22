@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { cpSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, lstatSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { describe, expect, test } from "vitest";
@@ -32,7 +32,8 @@ describe("cross-platform lifecycle assets", () => {
     mkdirSync(join(installRoot, "dist"), { recursive: true });
     mkdirSync(home, { recursive: true });
     writeFileSync(join(installRoot, "package.json"), '{"name":"apexcn-cli","version":"0.60.0","type":"module"}\n');
-    writeFileSync(join(installRoot, "dist", "index.js"), 'console.log("0.60.0");\n');
+    writeFileSync(join(installRoot, "dist", "index.js"), '#!/usr/bin/env node\nconsole.log("0.60.0");\n');
+    chmodSync(join(installRoot, "dist", "index.js"), 0o755);
     const version = (JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as { version: string }).version;
     execNpm(["pack", "--pack-destination", root]);
     const archive = join(root, "apexcn-cli.tgz");
@@ -61,6 +62,11 @@ describe("cross-platform lifecycle assets", () => {
     expect(installed.status, installed.stderr).toBe(0);
     expect((JSON.parse(readFileSync(join(freshInstallRoot, "package", "package.json"), "utf8")) as { version: string }).version)
       .toBe(version);
+    expect(lstatSync(join(freshBinDir, "apexcn")).isSymbolicLink()).toBe(true);
+    expect(execFileSync(join(freshBinDir, "apexcn"), ["--version"], {
+      env: environmentFor(freshBinDir),
+      encoding: "utf8"
+    })).toBe(`${version}\n`);
 
     const upgraded = spawnSync("bash", [
       "scripts/lifecycle-agent.sh",
@@ -88,6 +94,11 @@ describe("cross-platform lifecycle assets", () => {
     ], { ...common, env: environmentFor(binDir) });
     expect(rolledBack.status, rolledBack.stderr).toBe(0);
     expect(rolledBack.stdout).toContain("Rollback complete: 0.60.0");
+    expect(lstatSync(join(binDir, "apexcn")).isSymbolicLink()).toBe(true);
+    expect(execFileSync(join(binDir, "apexcn"), ["--version"], {
+      env: environmentFor(binDir),
+      encoding: "utf8"
+    })).toBe("0.60.0\n");
 
     const uninstalled = spawnSync("bash", [
       "scripts/lifecycle-agent.sh",
@@ -98,6 +109,7 @@ describe("cross-platform lifecycle assets", () => {
     ], { ...common, env: environmentFor(binDir) });
     expect(uninstalled.status, uninstalled.stderr).toBe(0);
     expect(uninstalled.stdout).toContain("Auth configuration was preserved");
+    expect(existsSync(join(binDir, "apexcn"))).toBe(false);
   }, 60_000);
 
   test("PowerShell lifecycle has the same guarded operations and recovery path", () => {

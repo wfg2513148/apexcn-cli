@@ -62,14 +62,13 @@ installed_version() {
 }
 
 write_launcher() {
-  local root
+  local root entrypoint
   root="$(cli_root)"
+  entrypoint="$root/dist/index.js"
+  [[ -f "$entrypoint" ]] || { printf 'Installed apexcn-cli is missing dist/index.js.\n' >&2; exit 1; }
+  chmod +x "$entrypoint"
   mkdir -p "$bin_dir"
-  cat >"$bin_dir/apexcn" <<EOF
-#!/usr/bin/env bash
-exec node "$root/dist/index.js" "\$@"
-EOF
-  chmod +x "$bin_dir/apexcn"
+  ln -sfn "$entrypoint" "$bin_dir/apexcn"
 }
 
 create_backup() {
@@ -95,12 +94,12 @@ restore_backup() {
 
 case "$operation" in
   install)
-    APEXCN_CLI_INSTALL_ROOT="$install_root" APEXCN_CLI_BIN_DIR="$bin_dir" exec "$installer"
+    APEXCN_CLI_INSTALL_ROOT="$install_root" APEXCN_CLI_BIN_DIR="$bin_dir" exec bash "$installer"
     ;;
   upgrade)
     cli_root >/dev/null || { printf 'No existing apexcn-cli installation at %s\n' "$install_root" >&2; exit 1; }
     backup_path="$(create_backup)"
-    if APEXCN_CLI_INSTALL_ROOT="$install_root" APEXCN_CLI_BIN_DIR="$bin_dir" "$installer"; then
+    if APEXCN_CLI_INSTALL_ROOT="$install_root" APEXCN_CLI_BIN_DIR="$bin_dir" bash "$installer"; then
       printf '[apexcn-cli] Upgrade complete. Rollback backup: %s\n' "$backup_path"
     else
       printf '[apexcn-cli] Upgrade failed; restoring %s\n' "$backup_path" >&2
@@ -117,7 +116,10 @@ case "$operation" in
   uninstall)
     [[ "$yes" == "1" ]] || { printf 'Uninstall requires --yes.\n' >&2; exit 1; }
     launcher="$bin_dir/apexcn"
-    if [[ -f "$launcher" ]] && grep -q 'dist/index.js' "$launcher"; then
+    root="$(cli_root 2>/dev/null || true)"
+    if [[ -L "$launcher" && -n "$root" && "$(readlink "$launcher")" == "$root/dist/index.js" ]]; then
+      rm -f "$launcher"
+    elif [[ -f "$launcher" ]] && grep -q 'dist/index.js' "$launcher"; then
       rm -f "$launcher"
     fi
     rm -rf "$install_root"

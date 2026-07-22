@@ -93,6 +93,7 @@ describe("zero-argument one-click installers", () => {
     expect(script).toContain("Checksum verification failed");
     expect(script).toContain("Verified package checksum");
     expect(script).toContain("releases/latest/download/apexcn-cli.tgz");
+    expect(script).toContain('ln -sfn "$cli_entrypoint" "$launcher"');
     expect(script).not.toContain("APEXCN_API_KEY");
     for (const option of [
       "--yes",
@@ -126,7 +127,7 @@ describe("zero-argument one-click installers", () => {
     expect(script).not.toContain("[switch]");
   });
 
-  posixTest("shell installer installs the release package and skills without consuming auth", () => {
+  posixTest("piped shell installer installs a directly executable launcher without consuming auth", () => {
     const root = mkdtempSync(join(tmpdir(), "apexcn-zero-install-"));
     const packagePaths = preparePackage(root);
     const env = installEnvironment(root, packagePaths, {
@@ -134,10 +135,11 @@ describe("zero-argument one-click installers", () => {
     });
 
     try {
-      const result = spawnSync("bash", ["scripts/install-agent.sh"], {
+      const result = spawnSync("bash", [], {
         cwd: repoRoot,
         env,
-        encoding: "utf8"
+        encoding: "utf8",
+        input: readRepoFile("scripts/install-agent.sh")
       });
 
       expect(result.status, result.stderr).toBe(0);
@@ -147,7 +149,7 @@ describe("zero-argument one-click installers", () => {
       expect(execFileSync(join(root, "bin", "apexcn"), ["--version"], {
         env,
         encoding: "utf8"
-      })).toBe("1.0.2\n");
+      })).toBe("1.0.3\n");
       expect(existsSync(join(root, "home", ".apexcn", "config.json"))).toBe(false);
       expect(existsSync(join(root, "home", ".agents", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
       expect(existsSync(join(root, "home", ".codex", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
@@ -211,7 +213,7 @@ exit 0
 
       expect(result.status, result.stderr).toBe(0);
       expect(result.stdout).toContain("Updated shell-resolved launcher");
-      expect(execFileSync(shadow, ["--version"], { env, encoding: "utf8" })).toBe("1.0.2\n");
+      expect(execFileSync(shadow, ["--version"], { env, encoding: "utf8" })).toBe("1.0.3\n");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -244,7 +246,7 @@ printf 'external launcher\\n'
       expect(result.stdout).not.toContain("Updated shell-resolved launcher");
       expect(readFileSync(externalLauncher, "utf8")).toBe(originalLauncher);
       expect(execFileSync(join(root, "bin", "apexcn"), ["--version"], { env, encoding: "utf8" }))
-        .toBe("1.0.2\n");
+        .toBe("1.0.3\n");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -277,7 +279,7 @@ printf 'external launcher\\n'
       expect(execFileSync(process.execPath, [
         join(root, "install", "package", "dist", "index.js"),
         "--version"
-      ], { env, encoding: "utf8" })).toBe("1.0.2\n");
+      ], { env, encoding: "utf8" })).toBe("1.0.3\n");
       expect(existsSync(join(root, "home", ".apexcn", "config.json"))).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
