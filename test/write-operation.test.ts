@@ -10,6 +10,152 @@ afterEach(() => {
 });
 
 describe("business write confirmation", () => {
+  test("correct-answer preview confirms only after the server advertises the exact capability endpoint", async () => {
+    const context = await testContext([
+      Response.json(replyActionCapabilities()),
+      Response.json({
+        id: 90,
+        replyId: 90,
+        topicId: 42,
+        isUseful: true,
+        changed: true,
+        version: 3,
+        requestId: "req-answer"
+      })
+    ]);
+
+    await context.program.parseAsync([
+      "node",
+      "apexcn",
+      "reply",
+      "mark-answer",
+      "42",
+      "90",
+      "--if-version",
+      "2",
+      "--json"
+    ]);
+
+    expect(context.fetch).not.toHaveBeenCalled();
+    const preview = JSON.parse(context.stdout.join(""));
+    expect(preview).toEqual(expect.objectContaining({
+      action: "reply.mark-answer",
+      request: expect.objectContaining({
+        method: "POST",
+        path: "/api/v1/topics/42/replies/90/correct-answer",
+        body: expect.objectContaining({
+          ifVersion: 2,
+          operationKey: expect.any(String),
+          payloadHash: expect.any(String)
+        })
+      })
+    }));
+
+    context.stdout.length = 0;
+    await context.program.parseAsync(["node", "apexcn", "confirm", preview.operationId, "--yes", "--json"]);
+
+    expect(context.fetch).toHaveBeenCalledTimes(2);
+    expect(String(context.fetch.mock.calls[0]?.[0])).toBe("https://example.test/ords/api/api/v1/capabilities");
+    expect(String(context.fetch.mock.calls[1]?.[0])).toBe("https://example.test/ords/api/api/v1/topics/42/replies/90/correct-answer");
+    expect((context.fetch.mock.calls[1]?.[1] as RequestInit).method).toBe("POST");
+    expect(JSON.parse(String((context.fetch.mock.calls[1]?.[1] as RequestInit).body))).toEqual(preview.request.body);
+    expect(JSON.parse(context.stdout.join(""))).toEqual(expect.objectContaining({
+      status: "completed",
+      requestId: "req-answer"
+    }));
+  });
+
+  test("reply favorite preview confirms through the reply endpoint and preserves topic favorite behavior", async () => {
+    const context = await testContext([
+      Response.json(replyActionCapabilities()),
+      Response.json({
+        targetType: "POST",
+        targetId: 90,
+        replyId: 90,
+        topicId: 42,
+        isFavorited: true,
+        changed: true,
+        requestId: "req-reply-favorite"
+      })
+    ]);
+
+    await context.program.parseAsync([
+      "node",
+      "apexcn",
+      "favorite",
+      "add",
+      "90",
+      "--target",
+      "reply",
+      "--json"
+    ]);
+
+    expect(context.fetch).not.toHaveBeenCalled();
+    const preview = JSON.parse(context.stdout.join(""));
+    expect(preview).toEqual(expect.objectContaining({
+      action: "favorite.reply.add",
+      request: expect.objectContaining({
+        method: "POST",
+        path: "/api/v1/replies/90/favorite",
+        body: expect.objectContaining({
+          operationKey: expect.any(String),
+          payloadHash: expect.any(String)
+        })
+      })
+    }));
+
+    context.stdout.length = 0;
+    await context.program.parseAsync(["node", "apexcn", "confirm", preview.operationId, "--yes", "--json"]);
+
+    expect(context.fetch).toHaveBeenCalledTimes(2);
+    expect(String(context.fetch.mock.calls[1]?.[0])).toBe("https://example.test/ords/api/api/v1/replies/90/favorite");
+    expect((context.fetch.mock.calls[1]?.[1] as RequestInit).method).toBe("POST");
+    expect(JSON.parse(context.stdout.join(""))).toEqual(expect.objectContaining({
+      status: "completed",
+      requestId: "req-reply-favorite"
+    }));
+  });
+
+  test("new reply actions fail closed before the write when capability or endpoint evidence is missing", async () => {
+    for (const capabilities of [
+      {
+        ...replyActionCapabilities(),
+        capabilities: []
+      },
+      {
+        ...replyActionCapabilities(),
+        capabilities: [{
+          id: "thread-detail-reply-actions",
+          available: true,
+          endpoints: ["/replies/{replyId}/favorite"]
+        }]
+      }
+    ]) {
+      const context = await testContext([Response.json(capabilities)]);
+      await context.program.parseAsync([
+        "node",
+        "apexcn",
+        "reply",
+        "mark-answer",
+        "42",
+        "90",
+        "--if-version",
+        "2",
+        "--json"
+      ]);
+      const preview = JSON.parse(context.stdout.join(""));
+
+      context.stdout.length = 0;
+      await context.program.parseAsync(["node", "apexcn", "confirm", preview.operationId, "--yes", "--json"]);
+
+      expect(context.fetch).toHaveBeenCalledOnce();
+      expect(context.stderr.join("")).toContain("thread-detail-reply-actions");
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+      vi.unstubAllGlobals();
+    }
+  });
+
   test("reply preview returns an operation id and confirmation executes the exact request once", async () => {
     const context = await testContext([Response.json({
       id: 90,
@@ -146,4 +292,26 @@ function programFor(configPath: string, fetch: ReturnType<typeof vi.fn>) {
   const stderr: string[] = [];
   const program = createProgram({ configPath, stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
   return { program, stdout, stderr };
+}
+
+function replyActionCapabilities() {
+  return {
+    kind: "capabilities",
+    contractVersion: "0.8.3-candidate",
+    supportedContractVersions: [
+      "0.8.3-candidate",
+      "0.8.0-candidate",
+      "0.7.0-candidate",
+      "0.6.0-candidate"
+    ],
+    capabilities: [{
+      id: "thread-detail-reply-actions",
+      available: true,
+      endpoints: [
+        "/topics/{topicId}/replies/{replyId}/correct-answer",
+        "/replies/{replyId}/favorite"
+      ]
+    }],
+    requestId: "req-capabilities"
+  };
 }

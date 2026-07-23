@@ -4,7 +4,121 @@
   "updatedAt": "2026-07-23",
   "activeOnly": true,
   "issues": [],
-  "enhancementRequests": [],
+  "enhancementRequests": [
+    {
+      "id": "ENH-THREAD-DETAIL-PARITY-002",
+      "status": "in_progress",
+      "reportedAt": "2026-07-23",
+      "reportedBy": "user",
+      "observedCliVersion": "1.0.6",
+      "title": "补齐话题详情页必要的正确答案与回复收藏能力",
+      "currentBehavior": [
+        "页面允许有权限的登录用户将回复标记为正确答案或取消标记，但 CLI 没有对应命令",
+        "页面允许登录用户收藏单条回复，但 CLI 只能收藏话题，个人收藏视图也无法完整找回回复收藏"
+      ],
+      "requiredOutcomes": [
+        "CLI 支持对指定回复显式标记和取消正确答案，并在预览、确认和服务端权限校验后执行",
+        "话题详情读取结果返回正确答案状态以及当前用户是否有权变更该状态",
+        "CLI 支持收藏和取消收藏指定回复，个人收藏、个人看板及个人范围搜索能识别回复收藏",
+        "服务端能力清单明确宣传新增端点，客户端在能力缺失时 fail closed",
+        "普通用户越权、错误话题归属、已删除回复、重复执行和状态冲突均返回稳定错误且不产生错误写入"
+      ],
+      "relatedAuditFindings": [
+        {
+          "id": "CLI-REPLY-CORRECT-ANSWER",
+          "status": "completed",
+          "summary": "页面存在标记/取消正确答案动作，公开 CLI 命令和 ORDS capability 均未提供"
+        },
+        {
+          "id": "CLI-REPLY-FAVORITE",
+          "status": "completed",
+          "summary": "页面支持 POST 类型收藏，ORDS 和 CLI 只公开 THREAD 类型收藏"
+        },
+        {
+          "id": "CLI-THREAD-DETAIL-ALREADY-COVERED",
+          "status": "no_change_required",
+          "summary": "话题编辑、快速回复、回复已有回复、本人回复编辑删除、话题收藏和订阅已有 CLI 能力"
+        },
+        {
+          "id": "CLI-PAGE-NAVIGATION-NON_COMMAND",
+          "status": "out_of_scope",
+          "summary": "跳到答案、展开历史回复和标签跳转属于页面导航展示，不需要新增写命令"
+        },
+        {
+          "id": "CLI-MODERATOR-FLAGS",
+          "status": "deferred_not_user_page_action",
+          "summary": "置顶、精选和锁定在详情页仅为状态展示，不属于本轮普通登录用户能力"
+        }
+      ],
+      "candidate": {
+        "version": "1.0.7",
+        "artifact": "artifacts/apexcn-cli.tgz",
+        "immutableArtifact": "reports/goal3/goal3-v107-r1-20260723T1828+0800/candidate/apexcn-cli-1.0.7.tgz",
+        "sha256": "52309766563d6c93dd79a136073b95283531d188fdc46832d2e139a4a3d2cfee",
+        "sourceBaseCommit": "7415092e9d9309313ce435f72619a433611b00cd",
+        "status": "independently_validated"
+      },
+      "serverCapabilityAuditRequired": true,
+      "serverTask": {
+        "threadId": "019f8ef4-4174-7303-b5be-bb1e2b44c735",
+        "predecessorThreadId": "019f8ed2-b533-79f1-ba57-e41ee6147746",
+        "repository": "/Users/kwang/apexcn-forums",
+        "status": "completed",
+        "commit": "95f52908e9ca83cf7ff96d377453416cdf695719",
+        "contractVersion": "0.8.3-candidate",
+        "capability": "thread-detail-reply-actions",
+        "devEvidence": "output/enh-thread-detail-parity/enh-thread-detail-parity-20260723101832-16861/dev-evidence.json",
+        "cleanup": "topics=0 users=0 keys=0 idempotency=0",
+        "visualFix": {
+          "commit": "bd184a393cb75c55dfaf1dfa8266964a714505c9",
+          "pushStatus": "origin/main",
+          "devEvidence": "output/enh-thread-detail-parity/enh-thread-detail-parity-20260723115714-6848/dev-evidence.json",
+          "devVisualHttpStatus": 200,
+          "devContainsCorrectAnswer": true,
+          "devContainsFavoriteState": false,
+          "cleanup": "topics=0 users=0 keys=0 idempotency=0",
+          "testGate": "passed",
+          "testEvidence": "/Users/kwang/apexcn-forums/output/visual-answer-release-20260723T121319Z/test",
+          "productionStatus": "deployed_and_verified_by_independent_validator",
+          "exceptionRequired": "only_if_existing_test_path_is_proven_unusable"
+        },
+        "productionDeployment": {
+          "status": "completed",
+          "packageBody": "VALID",
+          "compileErrors": 0,
+          "handlers": 4,
+          "anonymousRequestId": "req_5745c857b4352344e063020012ac5b0e",
+          "capabilitiesRequestId": "req_5745cc3d2e6f1e67e063020012acdf87",
+          "communityWrites": 0
+        }
+      },
+      "independentValidation": {
+        "threadId": "019f8efe-24dc-75d1-9cf7-03b7df45868a",
+        "assignment": "V107-R6-THREAD-DETAIL-PARITY-REAL-CHROME",
+        "run": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-v107-r6-20260723T204201+0800",
+        "report": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-v107-r6-20260723T204201+0800/final-report.json",
+        "scores": {
+          "baseline": "10/10",
+          "dynamic": "10/10",
+          "cleanup": "100%",
+          "blocking": 0
+        },
+        "browserSurface": "system-google-chrome",
+        "inAppBrowserWaivedByUser": true,
+        "screenshot": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-v107-r6-20260723T204201+0800/browser/d08-thread-detail.png",
+        "screenshotSha256": "e4636ae953ce540b1c09939487ae3ea1fa958fe7f375dcc96dcc487a9d4e4bea",
+        "domSha256": "a83b9a6a77370e94dd8d3ac0087bd83c9abf7109bd1eb006bf1102ca5f90ed6c",
+        "issues": [],
+        "cleanup": "scoped residue zero; topic view returned 404; Chrome profile removed"
+      },
+      "executionOrder": [
+        "apexcn-forums-if-server-change-required",
+        "apexcn-cli",
+        "apexcn-cli-test"
+      ],
+      "promotionToActiveIssue": "only-after-fresh-independent-validator-finding"
+    }
+  ],
   "developmentExtensionProtocol": {
     "schemaVersion": 1,
     "scope": "all-future-cli-capability-extensions",

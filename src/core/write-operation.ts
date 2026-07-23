@@ -3,6 +3,7 @@ import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { defaultConfigPath } from "../config.js";
 import { HttpError, NetworkError, requestJson, TimeoutError } from "../http.js";
+import { assessCapabilityCompatibility } from "./capability-compatibility.js";
 
 export type WriteOperationSession = {
   profile: string;
@@ -132,6 +133,7 @@ export async function confirmWriteOperation(input: {
   if (operation.status === "failed" || operation.status === "expired") {
     throw new Error(`Operation ${operation.operationId} cannot be confirmed; create a new preview.`);
   }
+  await requireAdvertisedWriteCapability(input.session, operation);
   if (!operation.approval) {
     operation.approval = {
       approvedAt: now.toISOString(),
@@ -188,6 +190,46 @@ export async function confirmWriteOperation(input: {
     await writeOperation(input.configPath, operation);
     throw error;
   }
+}
+
+async function requireAdvertisedWriteCapability(
+  session: WriteOperationSession,
+  operation: WriteOperation
+): Promise<void> {
+  const endpoint = replyActionEndpoint(operation.action);
+  if (!endpoint) {
+    return;
+  }
+  const capabilities = await requestJson(session.baseUrl, "/api/v1/capabilities", {
+    token: session.token
+  });
+  const compatibility = assessCapabilityCompatibility(capabilities, ["thread-detail-reply-actions"]);
+  if (!compatibility.ok) {
+    throw new Error(
+      `Cannot confirm ${operation.action}: server capability thread-detail-reply-actions is unavailable or incompatible.`
+    );
+  }
+  const entries = isRecord(capabilities) && Array.isArray(capabilities.capabilities)
+    ? capabilities.capabilities.filter(isRecord)
+    : [];
+  const capability = entries.find((entry) => entry.id === "thread-detail-reply-actions");
+  if (capability?.available !== true
+      || !Array.isArray(capability.endpoints)
+      || !capability.endpoints.includes(endpoint)) {
+    throw new Error(
+      `Cannot confirm ${operation.action}: server capability thread-detail-reply-actions does not advertise ${endpoint}.`
+    );
+  }
+}
+
+function replyActionEndpoint(action: string): string | undefined {
+  if (action === "reply.mark-answer" || action === "reply.unmark-answer") {
+    return "/topics/{topicId}/replies/{replyId}/correct-answer";
+  }
+  if (action === "favorite.reply.add" || action === "favorite.reply.remove") {
+    return "/replies/{replyId}/favorite";
+  }
+  return undefined;
 }
 
 function withWriteIntegrity(operationId: string, request: WriteOperationRequest): WriteOperationRequest {

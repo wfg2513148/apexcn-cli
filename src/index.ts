@@ -104,6 +104,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   configureCommandOutput(program, io, () => activeJsonErrors);
   const parseAsync = program.parseAsync.bind(program);
   program.parseAsync = async (argv, parseOptions) => {
+    resetTransientCommandOptions(program);
     activeCliConfigPath = configPathFromArgv(argv, parseOptions);
     activeJsonErrors = jsonErrorsFromArgv(argv, parseOptions);
     try {
@@ -116,6 +117,13 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
     }
   };
   return program;
+}
+
+function resetTransientCommandOptions(program: Command): void {
+  const favorite = program.commands.find((command) => command.name() === "favorite");
+  for (const action of favorite?.commands ?? []) {
+    action.setOptionValue("target", undefined);
+  }
 }
 
 type CommandManifest = {
@@ -272,12 +280,12 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "draft import": "import a local migration bundle into the active profile",
   "draft delete": "delete a saved draft owned by the active profile",
   "guide": "show a curated learning, compatibility, deployment, security, or performance task guide",
-  "favorite add": "favorite a community topic",
-  "favorite remove": "remove a topic from favorites",
+  "favorite add": "favorite a community topic or preview favoriting a reply",
+  "favorite remove": "remove a topic or reply from favorites",
   "me": "show the authenticated community account",
   "me capabilities": "discover personal-workbench server capabilities",
   "me dashboard": "show created, replied, favorite, and subscribed personal content",
-  "me favorites": "list favorite topics for the authenticated account",
+  "me favorites": "list favorite topics and replies for the authenticated account",
   "me inbox": "read the authenticated account inbox when available",
   "me notifications": "read authenticated account notifications when available",
   "me privacy": "read the authoritative privacy policy when available",
@@ -289,6 +297,8 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "me topics": "list topics authored by the authenticated account",
   "reply create": "preview a reply before confirmation",
   "reply delete": "delete a reply after explicit confirmation",
+  "reply mark-answer": "mark a reply as a correct answer after explicit confirmation",
+  "reply unmark-answer": "remove the correct-answer mark after explicit confirmation",
   "reply update": "update an existing reply",
   "research": "build a research bundle from search results and topic content",
   "review reply": "review a local reply draft before API preview or publish",
@@ -464,14 +474,16 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     safety: { effects: ["api-write"], preview: "available", confirmation: [] },
     examples: [
       { command: "apexcn favorite add 30549 --preview", mode: "preview" },
-      { command: "apexcn favorite add 30549 --json", mode: "execute" }
+      { command: "apexcn favorite add 30549 --json", mode: "execute" },
+      { command: "apexcn favorite add 201480 --target reply --preview --json", mode: "preview", note: "Reply favorites require apexcn confirm." }
     ]
   },
   "favorite remove": {
     safety: { effects: ["api-write"], preview: "available", confirmation: [] },
     examples: [
       { command: "apexcn favorite remove 30549 --preview", mode: "preview" },
-      { command: "apexcn favorite remove 30549 --json", mode: "execute" }
+      { command: "apexcn favorite remove 30549 --json", mode: "execute" },
+      { command: "apexcn favorite remove 201480 --target reply --preview --json", mode: "preview", note: "Reply favorites require apexcn confirm." }
     ]
   },
   "me": {
@@ -543,6 +555,18 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     safety: { effects: ["api-write", "destructive"], preview: "required", confirmation: [] },
     examples: [
       { command: "apexcn reply delete 67890 --if-version 2 --preview", mode: "preview" }
+    ]
+  },
+  "reply mark-answer": {
+    safety: { effects: ["api-write"], preview: "required", confirmation: [] },
+    examples: [
+      { command: "apexcn reply mark-answer 30549 67890 --if-version 2 --preview --json", mode: "preview" }
+    ]
+  },
+  "reply unmark-answer": {
+    safety: { effects: ["api-write"], preview: "required", confirmation: [] },
+    examples: [
+      { command: "apexcn reply unmark-answer 30549 67890 --if-version 3 --preview --json", mode: "preview" }
     ]
   },
   "reply update": {

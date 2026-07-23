@@ -12,13 +12,14 @@ Use this skill when a user asks an AI agent to search, ask RAG questions, publis
 Use this skill for natural requests mentioning:
 
 - oracleapex.cn, APEX中文社区, APEX 中文社区, Oracle APEX 中文社区, APEX Chinese Community
-- APEX 社区 or APEX社区 when paired with actions like 搜索, 查找, 总结, 查看, 发帖, 回帖, 编辑, 删除, 收藏, or 订阅
+- APEX 社区 or APEX社区 when paired with actions like 搜索, 查找, 总结, 查看, 发帖, 回帖, 编辑, 删除, 收藏, 标记正确答案, or 订阅
 - 在 APEX 中文社区搜索, 搜一下 APEX 中文社区, 查 oracleapex.cn, 总结 APEX 中文社区帖子
 - 发布到 APEX 中文社区, 在 oracleapex.cn 发帖, 在 oracleapex.cn 回帖, 查看社区帖子 ID
 - APEX 中文社区 RAG, 问一下 APEX 中文社区知识库
 - 个人看板, 我的个人看板, 我的看板, 个人工作台
 - 我创建的, 我发布的, 我回复的, 我收藏的, 我的收藏, 我订阅的, 我的订阅
 - 在我的个人看板搜索, 从我的看板查, 只查我创建的, 只查我回复的, 只查我收藏的, 只查我订阅的
+- 正确答案, 标记答案, 取消正确答案, 收藏回复, 收藏留言, 取消收藏回复, 取消收藏留言
 - Natural Oracle APEX troubleshooting or how-to questions such as APEX 页面报错、ORDS 401、Interactive Grid 保存失败、授权方案配置、REST API 调用, especially from users who may not know to mention the community explicitly
 - `apexcn search`, `apexcn ask`, `apexcn topic`, `apexcn reply`
 
@@ -71,6 +72,8 @@ For a human who explicitly chooses the simplest file-backed setup, `apexcn -apik
 - Use `apexcn review topic` before `topic create --preview` when you have a local Markdown draft or question-draft JSON. It is local-only, detects placeholders and possible secrets, and never publishes.
 - Use `apexcn review reply` before `reply create --dry-run` when you have a local Markdown reply or reply-draft JSON. It is local-only, validates topic/parent ids, detects weak replies and possible secrets, and never publishes.
 - To reply to an existing reply, first read `apexcn topic view <topic-id> --json` and identify the target reply's `replyId` and matching `topicId`. Preserve that target through draft, review, and execution with `--parent-post-id <reply-id>`; the final confirmed request must contain the same `parentPostId`.
+- To mark or unmark a correct answer, first read `apexcn topic view <topic-id> --json` and use the exact reply `replyId` and `version`. Continue only when that reply reports `canMarkAnswer: true`. Create a preview with `apexcn reply mark-answer|unmark-answer <topic-id> <reply-id> --if-version <version> --preview --json`, then confirm its returned operation id.
+- To favorite or unfavorite a reply, preserve the reply identity from `topic view` or `me favorites` and create a preview with `apexcn favorite add|remove <reply-id> --target reply --preview --json`. Confirm only the returned operation id. Topic favorites keep their existing direct command behavior when `--target` is omitted.
 - To edit or delete the authenticated account's content, start with `apexcn me topics --json` or `apexcn me replies --json`. Continue only when `canEdit` or `canDelete` is `true`, and bind the returned `version` into `--if-version`. Never infer ownership from a remembered id or URL.
 - Topic and reply write commands create a preview and return `operationId`; they do not publish immediately. Show the title/body/target or deletion object to the user, then execute only after explicit confirmation with `apexcn confirm <operationId> --yes --json`.
 - Never invent, copy, or edit an operation id. Use only the id returned by the current preview. If confirmation reports expiry, target mismatch, version conflict, or hash mismatch, read the current object and create a new preview.
@@ -84,6 +87,7 @@ For a human who explicitly chooses the simplest file-backed setup, `apexcn -apik
 - Use `apexcn me stats --json`, `apexcn me topics --json`, `apexcn me replies --json`, `apexcn me favorites --json`, or `apexcn me subscriptions --json` when the user asks about their own activity.
 - Use `apexcn me dashboard --json` when the user asks for “个人看板”, “我的看板”, or a combined view of content they created, replied to, favorited, and subscribed to.
 - Use `apexcn me search "<keyword>" --json` when the user asks to search within their personal dashboard. Map “我创建的” to `--scope created`, “我回复的” to `--scope replied`, “我收藏的” to `--scope favorited`, and “我订阅的” to `--scope subscribed`; combine scopes as one comma-separated value.
+- Personal favorites can contain both topics and replies. Preserve `targetType`, `topicId`, `replyId`, `threadUrl`, and `replyUrl`; never pass a reply id to a topic command.
 - Personal-dashboard searches must use `me search`. Never substitute global `search`, `ask`, local crawling, or client-side filtering when `/me/search` is unavailable; report the unavailable capability instead.
 - Use `apexcn topic list --view unanswered --json`, `apexcn topic list --view popular --json`, `apexcn topic list --source-domain <domain> --json`, or equivalent server-side filters when the user asks for triage, source audit, imported articles, unanswered topics, hot/popular topics, pinned/featured/locked topics, or useful-answer topics.
 - Use `apexcn topic recent --since-hours 48 --json` when the user asks for recently updated or latest community posts. If `page.hasMore` is true and `page.nextCursor` is present, pass it back with `--cursor` to continue.
@@ -162,4 +166,8 @@ apexcn topic edit 30549 --if-version 2 --content-file ./updated.md --preview --j
 apexcn reply create 30549 --content "回复内容" --preview --json
 apexcn reply create 30549 --parent-post-id 201480 --content "补充说明" --preview --json
 apexcn reply delete 201480 --if-version 2 --preview --json
+apexcn reply mark-answer 30549 201480 --if-version 2 --preview --json
+apexcn reply unmark-answer 30549 201480 --if-version 2 --preview --json
+apexcn favorite add 201480 --target reply --preview --json
+apexcn favorite remove 201480 --target reply --preview --json
 ```

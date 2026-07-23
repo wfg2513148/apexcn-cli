@@ -112,13 +112,25 @@ The AI should also verify that the reply belongs to the current account and that
 
 > Remove the selected topic from my favorites.
 
-## 13. Subscribe and Unsubscribe
+> Favorite the selected reply. Let me verify the reply and preview before execution.
+
+A reply favorite preserves both its topic and reply identity, so it can be found again through favorites, the personal dashboard, or personal-scope search.
+
+## 13. Mark and Unmark a Correct Answer
+
+> Mark the selected reply as a correct answer. Verify its id, current version, and my permission before creating the preview.
+
+> Remove the correct-answer mark from this reply.
+
+The AI first reads the topic detail and continues only when the server explicitly grants permission, using the freshly read reply version in the operation preview.
+
+## 14. Subscribe and Unsubscribe
 
 > Subscribe to the selected topic so I can follow updates.
 
 > Unsubscribe from the selected topic.
 
-## 14. Turn Results into Notes
+## 15. Turn Results into Notes
 
 > Search for “APEX REST API” posts and turn the first 5 results into study notes. For each result include: who it is for, main idea, actionable steps, real URL, and original URL.
 

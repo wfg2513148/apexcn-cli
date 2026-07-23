@@ -109,7 +109,7 @@
       "interface": "installed-public-apexcn",
       "writeBackVisualVerification": {
         "required": true,
-        "browser": "codex-in-app-browser",
+        "browser": "real-chrome",
         "perspective": "end-user",
         "requireVisualRecognition": true,
         "backendEvidenceStillRequired": true,
@@ -211,6 +211,8 @@
       "threadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
       "replacementThreadId": "019f7d08-d733-74a2-9178-3a87d60b22be",
       "replacementReason": "The original fixed task is absent from the local session store; the replacement task was externally verified for cwd, model, and reasoning effort before use.",
+      "activeTaskThreadId": "019f8ee1-f015-7d30-9c5e-98f25d4ace96",
+      "activeTaskReason": "The predecessor visual-fix task reached its execution window after completing DEV and Test HTTP evidence; this fresh user-visible task owns only the remaining real-Chrome Test-to-Prod release validation.",
       "model": "gpt-5.6-terra",
       "reasoningEffort": "high",
       "apiKeyEnvironment": "dev@oci",
@@ -2853,7 +2855,7 @@
       "owner": "independent-validator",
       "purpose": "隔离写操作的后端与用户页面双层验收",
       "integrityRules": [
-        "同一对象 ID 同时具备 API 或数据库证据与 Codex in-app browser 截图",
+        "同一对象 ID 同时具备 API 或数据库证据与真实 Chrome 截图",
         "检查创建、编辑、删除后的最终页面状态和权限可见性",
         "复用既有专用测试账号，不逐轮创建",
         "任一证据层失败则整个场景失败",

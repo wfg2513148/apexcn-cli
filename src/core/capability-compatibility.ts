@@ -1,6 +1,7 @@
 import { isRecord } from "../output.js";
 
 export const SUPPORTED_API_CONTRACT_VERSIONS = [
+  "0.8.3-candidate",
   "0.8.0-candidate",
   "0.7.0-candidate",
   "0.6.0-candidate"
@@ -34,7 +35,7 @@ export function assessCapabilityCompatibility(
   }
   if (!SUPPORTED_API_CONTRACT_VERSIONS.includes(contractVersion as typeof SUPPORTED_API_CONTRACT_VERSIONS[number])) {
     return result(false, "unsupported", contractVersion, requiredCapabilities, [
-      { code: "unsupported-contract-version", message: `API contract ${contractVersion} is outside the supported 0.8/0.7/0.6 window.` }
+      { code: "unsupported-contract-version", message: `API contract ${contractVersion} is outside the supported 0.8.3/0.8/0.7/0.6 window.` }
     ]);
   }
   if (typeof value.requestId !== "string" || value.requestId.trim().length === 0) {

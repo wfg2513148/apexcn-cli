@@ -278,7 +278,7 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
   check(roundProtocol?.longitudinalComparison?.dynamicSuiteReportedSeparately === true, "dynamic validator results must be reported separately", problems);
   const visualVerification = roadmap.testingBindings?.validator?.writeBackVisualVerification;
   check(visualVerification?.required === true, "write-back visual verification must be required", problems);
-  check(visualVerification?.browser === "codex-in-app-browser", "write-back validation must use the Codex in-app browser", problems);
+  check(visualVerification?.browser === "real-chrome", "write-back validation must use real Chrome", problems);
   check(visualVerification?.perspective === "end-user", "write-back validation must use the end-user perspective", problems);
   check(visualVerification?.requireVisualRecognition === true, "write-back validation must require visual recognition", problems);
   check(visualVerification?.backendEvidenceStillRequired === true, "write-back validation must retain backend evidence", problems);
@@ -330,7 +330,8 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
     if (dependency.owner === "server") {
       const allowedServerThreadIds = new Set([
         roadmap.testingBindings.server.threadId,
-        roadmap.testingBindings.server.replacementThreadId
+        roadmap.testingBindings.server.replacementThreadId,
+        roadmap.testingBindings.server.activeTaskThreadId
       ]);
       check(allowedServerThreadIds.has(dependency.resolutionThreadId), `server dependency ${dependency.id} must route to a registered server thread`, problems);
     }
@@ -536,7 +537,8 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
     if (issue.owner === "server" || issue.owner === "cross_repo") {
       const allowedServerThreadIds = new Set([
         roadmap.testingBindings.server.threadId,
-        roadmap.testingBindings.server.replacementThreadId
+        roadmap.testingBindings.server.replacementThreadId,
+        roadmap.testingBindings.server.activeTaskThreadId
       ]);
       check(allowedServerThreadIds.has(issue.serverThreadId), `server routing drift for ${issue.id}`, problems);
     }
@@ -560,7 +562,7 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
   check(agentsText.includes("fresh independent novice task thread") && agentsText.includes("dynamically assigns"), "AGENTS.md must require fresh dynamically scoped validator threads", problems);
   check(agentsText.includes("user-visible Codex Desktop task") && agentsText.includes("Hidden subagents do not satisfy"), "AGENTS.md must require a visible validator task in the validator project", problems);
   check(agentsText.includes("issues.json") && agentsText.includes("actual validator findings only"), "AGENTS.md must restrict issues.json to validator findings", problems);
-  check(agentsText.includes("Codex in-app browser") && agentsText.includes("database-only"), "AGENTS.md must require visual write-back validation", problems);
+  check(agentsText.includes("real Chrome") && agentsText.includes("database-only"), "AGENTS.md must require visual write-back validation", problems);
   check(agentsText.includes("existing dedicated test account"), "AGENTS.md must require test account reuse", problems);
   check(agentsText.includes("CLI Capability Extension Protocol") && agentsText.includes("issues.json.enhancementRequests"), "AGENTS.md must define the CLI capability extension protocol", problems);
   check(agentsText.includes("/Users/kwang/apexcn-forums") && agentsText.includes("server-capability audit"), "AGENTS.md must route server extensions to apexcn-forums", problems);

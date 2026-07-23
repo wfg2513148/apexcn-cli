@@ -37,7 +37,7 @@ apexcn auth audit --json
 ## 写操作风险等级
 
 - `medium`：收藏和订阅的添加或取消；
-- `high`：话题和回复的创建或修改；
+- `high`：话题和回复的创建或修改，以及正确答案标记的变更；
 - `destructive`：话题和回复的删除。
 
 涉及 `high` 或 `destructive` 操作时，应先检查预览，再由用户明确确认。

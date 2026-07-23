@@ -669,35 +669,96 @@ export function createReplyCommand(options: ApiCommandOptions): Command {
       });
     });
 
+  for (const action of ["mark-answer", "unmark-answer"] as const) {
+    reply
+      .command(action)
+      .argument("<topic-id>", "topic id", parsePositiveInteger)
+      .argument("<reply-id>", "reply id", parsePositiveInteger)
+      .option("--if-version <version>", "current reply version", parsePositiveInteger)
+      .option("--json", "pretty-print JSON")
+      .option("--dry-run", "print the API request without sending it")
+      .option("--preview", "preview the API request without sending it")
+      .action(async (
+        topicId: number,
+        replyId: number,
+        commandOptions: JsonOption & DryRunOption & { ifVersion?: number }
+      ) => {
+        if (!commandOptions.dryRun && !requireWriteVersion(options, commandOptions)) return;
+        await runApi(options, commandOptions, async (session) => {
+          const request = {
+            method: action === "mark-answer" ? "POST" : "DELETE",
+            path: `/api/v1/topics/${topicId}/replies/${replyId}/correct-answer`,
+            body: compactBody({ ifVersion: commandOptions.ifVersion })
+          };
+          if (commandOptions.dryRun) {
+            printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
+            return;
+          }
+          await printWritePreview(options, commandOptions, session, {
+            action: `reply.${action}`,
+            summary: `${action === "mark-answer" ? "Mark" : "Unmark"} reply ${replyId} as the correct answer in topic ${topicId}`,
+            request
+          });
+        });
+      });
+  }
+
   return reply;
 }
 
 export function createRelationCommand(name: "favorite" | "subscription", options: ApiCommandOptions): Command {
   const command = new Command(name);
   for (const action of ["add", "remove"] as const) {
-    command
+    const actionCommand = command
       .command(action)
-      .argument("<topic-id>", "topic id", parsePositiveInteger)
+      .argument("<target-id>", name === "favorite" ? "topic or reply id" : "topic id", parsePositiveInteger)
       .option("--json", "pretty-print JSON")
       .option("--dry-run", "print the API request without sending it")
-      .option("--preview", "preview the API request without sending it")
-      .action(async (topicId: number, commandOptions: JsonOption & DryRunOption) => {
-        await runApi(options, commandOptions, async (session) => {
+      .option("--preview", "preview the API request without sending it");
+    if (name === "favorite") {
+      actionCommand.addOption(
+        new Option("--target <type>", "favorite target: topic or reply")
+          .argParser(parseRelationTarget)
+      );
+    }
+    actionCommand.action(async (
+      targetId: number,
+      commandOptions: JsonOption & DryRunOption & { target?: RelationTarget }
+    ) => {
+      await runApi(options, commandOptions, async (session) => {
+        const target = commandOptions.target ?? "topic";
+        if (name === "favorite" && target === "reply") {
           const request = {
-            path: `/api/v1/topics/${topicId}/${name}`,
-            method: action === "add" ? "POST" : "DELETE"
+            path: `/api/v1/replies/${targetId}/favorite`,
+            method: action === "add" ? "POST" : "DELETE",
+            body: {}
           };
-          if (isRequestPreview(commandOptions)) {
+          if (commandOptions.dryRun) {
             printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
             return;
           }
-          const data = await requestJson(session.baseUrl, request.path, {
-            token: session.token,
-            method: request.method
+          await printWritePreview(options, commandOptions, session, {
+            action: `favorite.reply.${action}`,
+            summary: `${action === "add" ? "Favorite" : "Unfavorite"} reply ${targetId}`,
+            request
           });
-          printData(options, data, commandOptions.json);
+          return;
+        }
+        const request = {
+          path: `/api/v1/topics/${targetId}/${name}`,
+          method: action === "add" ? "POST" : "DELETE"
+        };
+        if (isRequestPreview(commandOptions)) {
+          printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
+          return;
+        }
+        const data = await requestJson(session.baseUrl, request.path, {
+          token: session.token,
+          method: request.method
         });
+        printData(options, data, commandOptions.json);
       });
+    });
   }
   return command;
 }
@@ -763,6 +824,8 @@ type ReplyWriteOptions = {
   contentFile?: string;
   parentPostId?: number;
 };
+
+type RelationTarget = "topic" | "reply";
 
 class CliValidationError extends Error {
 }
@@ -1379,6 +1442,19 @@ function formatTopicText(data: unknown): string {
   if (!topic) {
     return "";
   }
+  const replyLines = topicRepliesFromData(data).flatMap((reply) => [
+    `- replyId: ${fieldText(reply.replyId ?? reply.id ?? reply.postId)}`,
+    indentedLine("parentPostId", reply.parentPostId),
+    indentedLine("version", reply.version),
+    indentedLine("author", reply.createdByName ?? reply.authorName ?? reply.createdBy),
+    indentedLine("correctAnswer", reply.isUseful),
+    indentedLine("favorited", reply.isFavorited),
+    indentedLine("canMarkAnswer", reply.canMarkAnswer),
+    indentedLine("markedBy", reply.markedByName ?? reply.markedBy),
+    indentedLine("markedDate", reply.markedDate),
+    indentedLine("replyUrl", reply.replyUrl ?? reply.url),
+    indentedLine("content", reply.content ?? reply.body)
+  ].filter((value): value is string => Boolean(value)));
   return lines([
     line("id", topic.id),
     line("Title", topic.title),
@@ -1394,8 +1470,21 @@ function formatTopicText(data: unknown): string {
     line("Views", topic.viewCount),
     line("Flags", topicFlagsText(topic)),
     blockLine("Content", topic.content ?? topic.body ?? topic.summary ?? topic.excerpt),
+    replyLines.length > 0 ? "Replies:" : undefined,
+    ...replyLines,
     line("requestId", isRecord(data) ? data.requestId : undefined)
   ]);
+}
+
+function topicRepliesFromData(data: unknown): Record<string, unknown>[] {
+  return isRecord(data) && Array.isArray(data.replies)
+    ? data.replies.filter(isRecord)
+    : [];
+}
+
+function indentedLine(label: string, value: unknown): string | undefined {
+  const text = fieldText(value);
+  return text ? `  ${label}: ${text}` : undefined;
 }
 
 function formatAskText(data: unknown): string {
@@ -1984,6 +2073,13 @@ function parsePositiveInteger(value: string): number {
     throw new InvalidArgumentError(`Expected a positive integer: ${value}`);
   }
   return parsed;
+}
+
+function parseRelationTarget(value: string): RelationTarget {
+  if (value === "topic" || value === "reply") {
+    return value;
+  }
+  throw new InvalidArgumentError("Expected --target to be topic or reply");
 }
 
 function parseSearchPageSize(value: string): number {

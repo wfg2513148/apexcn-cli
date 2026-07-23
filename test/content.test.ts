@@ -101,10 +101,14 @@ const apiDryRunCommands = [
   "reply update",
   "reply edit",
   "reply delete",
+  "reply mark-answer",
+  "reply unmark-answer",
   "post create",
   "post update",
   "post edit",
   "post delete",
+  "post mark-answer",
+  "post unmark-answer",
   "favorite add",
   "favorite remove",
   "subscription add",
@@ -1525,6 +1529,8 @@ describe("content commands", () => {
       ["node", "apexcn", "reply", "create", "0", "--content", "CLI body"],
       ["node", "apexcn", "reply", "update", "abc", "--content", "CLI body"],
       ["node", "apexcn", "reply", "delete", "0"],
+      ["node", "apexcn", "reply", "mark-answer", "42", "0"],
+      ["node", "apexcn", "reply", "unmark-answer", "abc", "100"],
       ["node", "apexcn", "favorite", "add", "abc"],
       ["node", "apexcn", "subscription", "remove", "0"]
     ];
@@ -1555,7 +1561,10 @@ describe("content commands", () => {
       ["topic", "delete", "42", "--if-version", "1", "--confirm-title", "CLI title"],
       ["reply", "create", "42", "--content", "Reply body"],
       ["reply", "update", "100", "--if-version", "1", "--content", "Reply updated"],
-      ["reply", "delete", "100", "--if-version", "1"]
+      ["reply", "delete", "100", "--if-version", "1"],
+      ["reply", "mark-answer", "42", "100", "--if-version", "1"],
+      ["reply", "unmark-answer", "42", "100", "--if-version", "1"],
+      ["favorite", "add", "100", "--target", "reply"]
     ];
 
     for (const args of cases) {
@@ -1609,6 +1618,44 @@ describe("content commands", () => {
       "requestId: req-topic",
       ""
     ].join("\n"));
+  });
+
+  test("topic view text includes reply answer, favorite, permission, version, and stable URL metadata", async () => {
+    const { program, stdout } = await configuredProgram(async () =>
+      Response.json({
+        topic: {
+          id: 42,
+          title: "Answerable topic",
+          threadUrl: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual"
+        },
+        replies: [{
+          replyId: 90,
+          parentPostId: 80,
+          version: 3,
+          createdByName: "回复者",
+          content: "答案正文",
+          isUseful: true,
+          isFavorited: true,
+          canMarkAnswer: false,
+          markedByName: "话题作者",
+          markedDate: "2026-07-23T10:00:00Z",
+          replyUrl: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90"
+        }],
+        requestId: "req-topic-replies"
+      })
+    );
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--format", "text"]);
+
+    expect(stdout.join("")).toContain("Replies:\n");
+    expect(stdout.join("")).toContain("- replyId: 90\n");
+    expect(stdout.join("")).toContain("  version: 3\n");
+    expect(stdout.join("")).toContain("  correctAnswer: true\n");
+    expect(stdout.join("")).toContain("  favorited: true\n");
+    expect(stdout.join("")).toContain("  canMarkAnswer: false\n");
+    expect(stdout.join("")).toContain("  markedBy: 话题作者\n");
+    expect(stdout.join("")).toContain("  replyUrl: https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90\n");
+    expect(stdout.join("")).toContain("  content: 答案正文\n");
   });
 
   test("topic ownership is bound to the authenticated account before update or delete preview", async () => {
@@ -2509,6 +2556,9 @@ describe("content commands", () => {
     await program.parseAsync(["node", "apexcn", "reply", "create", "42", "--content", "Reply body", "--dry-run"]);
     await program.parseAsync(["node", "apexcn", "post", "edit", "100", "--content", "Reply updated", "--dry-run"]);
     await program.parseAsync(["node", "apexcn", "reply", "delete", "100", "--yes", "--force", "--dry-run"]);
+    await program.parseAsync(["node", "apexcn", "reply", "mark-answer", "42", "100", "--dry-run"]);
+    await program.parseAsync(["node", "apexcn", "reply", "unmark-answer", "42", "100", "--dry-run"]);
+    await program.parseAsync(["node", "apexcn", "favorite", "add", "100", "--target", "reply", "--dry-run"]);
     await program.parseAsync(["node", "apexcn", "favorite", "add", "42", "--dry-run"]);
     await program.parseAsync(["node", "apexcn", "subscription", "remove", "42", "--dry-run"]);
 
@@ -2548,6 +2598,36 @@ describe("content commands", () => {
         method: "DELETE",
         path: "/api/v1/replies/100",
         body: { confirmId: 100 }
+      },
+      {
+        dryRun: true,
+        preview: false,
+        mode: "dry-run",
+        profile: "test@oci",
+        baseUrl: "https://oracleapex.cn/ords/test",
+        method: "POST",
+        path: "/api/v1/topics/42/replies/100/correct-answer",
+        body: {}
+      },
+      {
+        dryRun: true,
+        preview: false,
+        mode: "dry-run",
+        profile: "test@oci",
+        baseUrl: "https://oracleapex.cn/ords/test",
+        method: "DELETE",
+        path: "/api/v1/topics/42/replies/100/correct-answer",
+        body: {}
+      },
+      {
+        dryRun: true,
+        preview: false,
+        mode: "dry-run",
+        profile: "test@oci",
+        baseUrl: "https://oracleapex.cn/ords/test",
+        method: "POST",
+        path: "/api/v1/replies/100/favorite",
+        body: {}
       },
       {
         dryRun: true,

@@ -171,7 +171,7 @@ export function createMeCommand(options: MeCommandOptions): Command {
   for (const item of [
     { name: "topics", path: "/api/v1/me/topics", formatter: formatTopicListText, description: "list current user authored topics" },
     { name: "replies", path: "/api/v1/me/replies", formatter: formatReplyListText, description: "list current user replies" },
-    { name: "favorites", path: "/api/v1/me/favorites", formatter: formatTopicRelationListText, description: "list current user favorite topics" },
+    { name: "favorites", path: "/api/v1/me/favorites", formatter: formatFavoriteRelationListText, description: "list current user favorite topics and replies" },
     { name: "subscriptions", path: "/api/v1/me/subscriptions", formatter: formatTopicRelationListText, description: "list current user subscribed topics" }
   ] as const) {
     me
@@ -389,6 +389,8 @@ function formatMeStatsText(data: unknown): string {
     line("authoredFeaturedTopicCount", data.authoredFeaturedTopicCount),
     line("authoredReplyCount", data.authoredReplyCount),
     line("favoriteCount", data.favoriteCount),
+    line("favoriteTopicCount", data.favoriteTopicCount),
+    line("favoriteReplyCount", data.favoriteReplyCount),
     line("subscriptionCount", data.subscriptionCount),
     line("requestId", data.requestId)
   ].filter((value): value is string => Boolean(value)).join("\n");
@@ -409,6 +411,8 @@ function formatMeDashboardText(data: unknown): string {
     line("authoredTopicCount", stats.authoredTopicCount ?? stats.topicCount),
     line("authoredReplyCount", stats.authoredReplyCount ?? stats.replyCount),
     line("favoriteCount", stats.favoriteCount),
+    line("favoriteTopicCount", stats.favoriteTopicCount),
+    line("favoriteReplyCount", stats.favoriteReplyCount),
     line("subscriptionCount", stats.subscriptionCount),
     ...sections.flatMap(([label, value]) => [
       `${label}:`,
@@ -422,23 +426,50 @@ function formatDashboardItems(data: unknown): string[] {
     const topic = isRecord(item.topic) ? item.topic : {};
     const communityUrl = fieldText(item.replyUrl ?? item.url ?? item.threadUrl ?? item.canonicalUrl ?? item.visualUrl ?? topic.url ?? topic.threadUrl ?? topic.canonicalUrl ?? topic.visualUrl);
     const originalUrl = fieldText(item.originalUrl ?? topic.originalUrl);
+    const identity = [
+      fieldText(item.targetType),
+      fieldText(item.targetId),
+      fieldText(item.topicId ?? topic.id ?? topic.topicId),
+      fieldText(item.replyId)
+    ].filter(Boolean).join(" ");
     return [
       `- ${fieldText(item.title ?? item.topicTitle ?? topic.title)}`,
+      identity ? `  target: ${identity}` : "",
       communityUrl ? `  communityUrl: ${communityUrl}` : "",
+      item.replyUrl ? `  replyUrl: ${fieldText(item.replyUrl)}` : "",
+      item.threadUrl ? `  threadUrl: ${fieldText(item.threadUrl)}` : "",
       originalUrl ? `  originalUrl: ${originalUrl}` : ""
     ].filter(Boolean);
   });
 }
 
 function formatPersonalSearchText(data: unknown): string {
-  return itemsFromData(data).flatMap((item) => [
-    line("title", item.title),
-    line("matchedScopes", Array.isArray(item.matchedScopes) ? item.matchedScopes.join(",") : item.matchedScopes),
-    line("updatedDate", item.updatedDate),
-    line("communityUrl", item.url ?? item.threadUrl ?? item.canonicalUrl ?? item.visualUrl),
-    line("originalUrl", item.originalUrl),
-    ""
-  ].filter((value): value is string => value !== undefined)).join("\n").trimEnd();
+  return itemsFromData(data).flatMap((item) => {
+    const favoriteTargets = Array.isArray(item.favoriteTargets)
+      ? item.favoriteTargets.filter(isRecord)
+      : [];
+    return [
+      line("title", item.title),
+      line("matchedScopes", Array.isArray(item.matchedScopes) ? item.matchedScopes.join(",") : item.matchedScopes),
+      line("updatedDate", item.updatedDate),
+      line("communityUrl", item.url ?? item.threadUrl ?? item.canonicalUrl ?? item.visualUrl),
+      line("originalUrl", item.originalUrl),
+      ...favoriteTargets.flatMap((target) => [
+        line(
+          "favoriteTarget",
+          [
+            fieldText(target.targetType),
+            fieldText(target.targetId),
+            fieldText(target.topicId) ? `topic=${fieldText(target.topicId)}` : "",
+            fieldText(target.replyId) ? `reply=${fieldText(target.replyId)}` : ""
+          ].filter(Boolean).join(" ")
+        ),
+        line("replyUrl", target.replyUrl),
+        line("threadUrl", target.threadUrl)
+      ]),
+      ""
+    ].filter((value): value is string => value !== undefined);
+  }).join("\n").trimEnd();
 }
 
 function formatCapabilitiesText(data: unknown): string {
@@ -521,6 +552,26 @@ function formatTopicRelationListText(data: unknown): string {
     fieldText(item.updatedDate),
     fieldText(item.unavailableReason),
     fieldText(item.url ?? item.threadUrl),
+    fieldText(item.originalUrl)
+  ].join("\t")).join("\n");
+}
+
+function formatFavoriteRelationListText(data: unknown): string {
+  const items = itemsFromData(data);
+  if (items.every((item) => item.targetType === undefined && item.replyId === undefined)) {
+    return formatTopicRelationListText(data);
+  }
+  return items.map((item) => [
+    fieldText(item.targetType ?? "THREAD"),
+    fieldText(item.targetId ?? item.replyId ?? item.topicId ?? item.id),
+    fieldText(item.topicId ?? item.id),
+    fieldText(item.replyId),
+    fieldText(item.title ?? item.topicTitle),
+    fieldText(item.relationCreatedDate),
+    fieldText(item.updatedDate),
+    fieldText(item.unavailableReason),
+    fieldText(item.replyUrl ?? item.url),
+    fieldText(item.threadUrl ?? item.url),
     fieldText(item.originalUrl)
   ].join("\t")).join("\n");
 }

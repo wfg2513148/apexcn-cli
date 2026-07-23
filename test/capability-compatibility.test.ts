@@ -18,14 +18,14 @@ function inventory(contractVersion: string, current = false) {
 }
 
 describe("API capability compatibility window", () => {
-  test("accepts current and two previous contracts", () => {
+  test("accepts current and three previous contracts", () => {
     const results = SUPPORTED_API_CONTRACT_VERSIONS.map((version, index) =>
       assessCapabilityCompatibility(inventory(version, index === 0))
     );
 
-    expect(results).toHaveLength(3);
+    expect(results).toHaveLength(4);
     expect(results.every((result) => result.ok && result.status === "compatible")).toBe(true);
-    expect(results.map((result) => result.negotiationMode)).toEqual(["versioned", "legacy", "legacy"]);
+    expect(results.map((result) => result.negotiationMode)).toEqual(["versioned", "legacy", "legacy", "legacy"]);
   });
 
   test("rejects future, too-old, malformed, and missing required capabilities", () => {

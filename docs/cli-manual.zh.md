@@ -502,6 +502,15 @@ apexcn confirm <operation-id> --yes --json
 
 如果执行返回 `409 VERSION_CONFLICT`，重新读取当前版本并生成新的预览；不要修改或复用旧操作编号。
 
+标记或取消正确答案前，从 `topic view --json` 读取目标回复的 `replyId`、`version` 和 `canMarkAnswer`。只有 `canMarkAnswer` 为 `true` 才继续：
+
+```bash
+apexcn topic view 30549 --json
+apexcn reply mark-answer 30549 201480 --if-version 2 --preview --json
+apexcn confirm <operation-id> --yes --json
+apexcn reply unmark-answer 30549 201480 --if-version 3 --preview --json
+```
+
 ## favorite
 
 收藏帖子：
@@ -515,6 +524,16 @@ apexcn favorite add 30549 --json
 ```bash
 apexcn favorite remove 30549 --json
 ```
+
+收藏或取消收藏回复必须显式传 `--target reply`，并通过预览和确认执行：
+
+```bash
+apexcn favorite add 201480 --target reply --preview --json
+apexcn confirm <operation-id> --yes --json
+apexcn favorite remove 201480 --target reply --preview --json
+```
+
+`me favorites`、`me dashboard` 和 `me search --scope favorited` 会保留回复收藏的 `targetType`、`topicId`、`replyId`、`threadUrl` 和 `replyUrl`。
 
 ## subscription
 
@@ -587,4 +606,4 @@ apexcn confirm <operation-id> --yes --json
 
 ## API 写操作 dry-run 分类
 
-一键安装脚本不接收参数，也没有 dry-run。CLI API `--preview` 用于创建带操作编号的社区写入预览，`--dry-run` 只打印请求但不保存待确认操作。预览只覆盖 `topic create/update/edit/delete`、`reply create/update/edit/delete`、`favorite add/remove`、`subscription add/remove`，别名 `thread` 和 `post` 继承同样分类。`ask` 虽然使用 POST，但属于只读问答，不纳入写操作预览。创建话题必须显式传 `--category-id`；编辑和删除必须使用刚读取的 `--if-version`；删除话题还必须传精确的 `--confirm-title`。
+一键安装脚本不接收参数，也没有 dry-run。CLI API `--preview` 用于创建带操作编号的社区写入预览，`--dry-run` 只打印请求但不保存待确认操作。预览覆盖 `topic create/update/edit/delete`、`reply create/update/edit/delete/mark-answer/unmark-answer`、回复目标的 `favorite add/remove` 和 `subscription add/remove`；话题收藏保持直接执行，也可显式预览。别名 `thread` 和 `post` 继承同样分类。`ask` 虽然使用 POST，但属于只读问答，不纳入写操作预览。创建话题必须显式传 `--category-id`；编辑、删除和正确答案操作必须使用刚读取的 `--if-version`；删除话题还必须传精确的 `--confirm-title`。

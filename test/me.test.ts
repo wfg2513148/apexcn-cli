@@ -195,6 +195,8 @@ describe("me command", () => {
           authoredFeaturedTopicCount: 1,
           authoredReplyCount: 5,
           favoriteCount: 2,
+          favoriteTopicCount: 1,
+          favoriteReplyCount: 1,
           subscriptionCount: 4,
           requestId: "req-stats"
         })
@@ -212,6 +214,8 @@ describe("me command", () => {
 
     expect(fetch).toHaveBeenLastCalledWith("https://oracleapex.cn/ords/test/api/v1/me/stats", expect.any(Object));
     expect(stdout.join("")).toContain("authoredTopicCount: 3\n");
+    expect(stdout.join("")).toContain("favoriteTopicCount: 1\n");
+    expect(stdout.join("")).toContain("favoriteReplyCount: 1\n");
     expect(stdout.join("")).toContain("subscriptionCount: 4\n");
     expect(stderr.join("")).toBe("");
   });
@@ -224,7 +228,19 @@ describe("me command", () => {
       "/api/v1/me/stats": { kind: "me-stats", authoredTopicCount: 1, authoredReplyCount: 1, favoriteCount: 1, subscriptionCount: 1 },
       "/api/v1/me/topics?pageSize=2": { kind: "me-topics", items: [{ id: 11, title: "Created", url: "https://oracleapex.cn/ords/test/api/v1/topics/11/visual" }] },
       "/api/v1/me/replies?pageSize=2": { kind: "me-replies", items: [{ id: 21, topicId: 12, topic: { title: "Replied" }, replyUrl: "https://oracleapex.cn/ords/test/api/v1/topics/12/visual#post_21" }] },
-      "/api/v1/me/favorites?pageSize=2": { kind: "me-favorites", items: [{ topicId: 13, title: "Favorited", url: "https://oracleapex.cn/ords/test/api/v1/topics/13/visual", originalUrl: "https://example.com/source-13" }] },
+      "/api/v1/me/favorites?pageSize=2": {
+        kind: "me-favorites",
+        items: [{
+          targetType: "POST",
+          targetId: 31,
+          topicId: 13,
+          replyId: 31,
+          title: "Favorited reply",
+          replyUrl: "https://oracleapex.cn/ords/test/api/v1/topics/13/visual#post_31",
+          threadUrl: "https://oracleapex.cn/ords/test/api/v1/topics/13/visual",
+          originalUrl: "https://example.com/source-13"
+        }]
+      },
       "/api/v1/me/subscriptions?pageSize=2": { kind: "me-subscriptions", items: [{ topicId: 14, title: "Subscribed", url: "https://oracleapex.cn/ords/test/api/v1/topics/14/visual" }] }
     };
     vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request) => {
@@ -254,6 +270,38 @@ describe("me command", () => {
     expect(stderr.join("")).toBe("");
   });
 
+  test("personal favorites text preserves reply identity and both stable reply and thread URLs", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      kind: "me-favorites",
+      items: [{
+        targetType: "POST",
+        targetId: 31,
+        topicId: 13,
+        replyId: 31,
+        title: "Favorited reply",
+        relationCreatedDate: "2026-07-23T10:00:00Z",
+        replyUrl: "https://oracleapex.cn/ords/test/api/v1/topics/13/visual#post_31",
+        threadUrl: "https://oracleapex.cn/ords/test/api/v1/topics/13/visual"
+      }],
+      requestId: "req-favorites"
+    })));
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: () => undefined
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz", "--base-url", "https://oracleapex.cn/ords/test"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me", "favorites", "--format", "text"]);
+
+    expect(stdout.join("")).toContain("POST\t31\t13\t31\tFavorited reply");
+    expect(stdout.join("")).toContain("https://oracleapex.cn/ords/test/api/v1/topics/13/visual#post_31");
+    expect(stdout.join("")).toContain("https://oracleapex.cn/ords/test/api/v1/topics/13/visual");
+  });
+
   test("searches only the personal dashboard after capability preflight", async () => {
     const configPath = await tempConfigPath();
     const stdout: string[] = [];
@@ -277,7 +325,15 @@ describe("me command", () => {
             title: "Personal APEX result",
             matchedScopes: ["created", "favorited"],
             url: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual",
-            originalUrl: "https://example.com/source-42"
+            originalUrl: "https://example.com/source-42",
+            favoriteTargets: [{
+              targetType: "POST",
+              targetId: 90,
+              topicId: 42,
+              replyId: 90,
+              replyUrl: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90",
+              threadUrl: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual"
+            }]
           }],
           page: { pageSize: 2, count: 1, hasMore: false, nextCursor: null },
           filters: { keyword: "APEX", scope: "created,favorited" },
@@ -304,6 +360,8 @@ describe("me command", () => {
     expect(stdout.join("")).toContain("communityUrl: https://oracleapex.cn/ords/test/api/v1/topics/42/visual\n");
     expect(stdout.join("")).toContain("originalUrl: https://example.com/source-42\n");
     expect(stdout.join("")).toContain("matchedScopes: created,favorited\n");
+    expect(stdout.join("")).toContain("favoriteTarget: POST 90 topic=42 reply=90\n");
+    expect(stdout.join("")).toContain("replyUrl: https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90\n");
     expect(stderr.join("")).toBe("");
   });
 

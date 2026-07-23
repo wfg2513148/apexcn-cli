@@ -171,7 +171,7 @@ describe("roadmap contract", () => {
     }));
     expect(roadmap.testingBindings.validator.writeBackVisualVerification).toEqual({
       required: true,
-      browser: "codex-in-app-browser",
+      browser: "real-chrome",
       perspective: "end-user",
       requireVisualRecognition: true,
       backendEvidenceStillRequired: true,
