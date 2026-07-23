@@ -1,51 +1,10 @@
 {
   "schemaVersion": 1,
   "product": "apexcn-cli",
-  "updatedAt": "2026-07-22",
+  "updatedAt": "2026-07-23",
   "activeOnly": true,
   "issues": [],
-  "enhancementRequests": [
-    {
-      "id": "ENH-ACCESSIBLE-TOPIC-LINKS-001",
-      "status": "in_progress",
-      "reportedAt": "2026-07-22",
-      "reportedBy": "user",
-      "observedCliVersion": "1.0.4",
-      "title": "CLI 生成的帖子链接长期可访问并同时显示原文链接",
-      "currentBehavior": [
-        "CLI 回写的社区帖子链接使用带 APEX session-state-protection checksum 的 f?p URL，历史消息中的链接可能因 checksum 失效而无法打开",
-        "回复发布成功后 CLI 生成的“查看回复”链接存在相同的 checksum 失效问题，无法可靠打开刚发布的回复",
-        "自然语言结果虽然能取得 originalUrl，但未稳定地向用户同时显示社区帖子链接和原文链接"
-      ],
-      "requiredOutcomes": [
-        "CLI 生成的社区帖子链接在全新浏览器会话中可直接打开正确帖子且不依赖短期会话 checksum",
-        "CLI 在回复发布等操作结果中生成的“查看回复”链接可在全新浏览器会话中打开正确主题，并定位或明确呈现对应回复",
-        "当 originalUrl 存在时，同一条结果明确同时显示社区帖子链接和原文链接；不存在时不生成占位链接",
-        "链接可访问性检查只覆盖 CLI 或服务端生成的链接，不检查用户自行编写的提示、草稿、回复或回写正文中的链接"
-      ],
-      "serverCapabilityAuditRequired": true,
-      "serverCapabilityAudit": {
-        "status": "gap_confirmed",
-        "finding": "当前 topic 与 reply 操作结果 URL 均依赖带 checksum 的 f?p 链接；新生成链接当前可能可打开，但长期访问依赖 checksum，且 /t/<topicId> 稳定路由实测为 404"
-      },
-      "serverTask": {
-        "threadId": "019f88fe-afa6-76b2-ba2b-e1e11e56bcd0",
-        "repository": "/Users/kwang/apexcn-forums",
-        "status": "completed",
-        "commit": "634d3b1",
-        "releaseNotesCommit": "50c581b",
-        "productionAppVersion": "2.78",
-        "devValidation": "api_e2e_passed_zero_residue_browser_runtime_blocked",
-        "productionValidation": "stable_topic_and_reply_urls_passed_anonymous_http_and_metadata_checks_zero_residue_browser_navigation_passed_visual_dom_screenshot_deferred_to_validator"
-      },
-      "executionOrder": [
-        "apexcn-forums-if-server-change-required",
-        "apexcn-cli",
-        "apexcn-cli-test"
-      ],
-      "promotionToActiveIssue": "only-after-fresh-independent-validator-finding"
-    }
-  ],
+  "enhancementRequests": [],
   "developmentExtensionProtocol": {
     "schemaVersion": 1,
     "scope": "all-future-cli-capability-extensions",
