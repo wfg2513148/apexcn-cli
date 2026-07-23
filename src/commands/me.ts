@@ -48,6 +48,91 @@ export function createMeCommand(options: MeCommandOptions): Command {
       });
     });
 
+  me
+    .command("dashboard")
+    .description("show the current user's personal dashboard")
+    .option("--page-size <n>", "items per personal section, 1-50", parsePageSize, 5)
+    .option("--json", "pretty-print JSON")
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async function(this: Command, rawOptions: FormatOption & { pageSize: number } | Command) {
+      const commandOptions = commandOptionsFrom<FormatOption & { pageSize: number }>(this, rawOptions);
+      if (!validateFormatOptions(options, commandOptions)) {
+        return;
+      }
+      await runMeApi(options, commandOptions, async (session) => {
+        const query = { pageSize: commandOptions.pageSize };
+        const [stats, created, replied, favorited, subscribed] = await Promise.all([
+          requestJson(session.baseUrl, "/api/v1/me/stats", { token: session.token }),
+          requestJson(session.baseUrl, "/api/v1/me/topics", { token: session.token, query }),
+          requestJson(session.baseUrl, "/api/v1/me/replies", { token: session.token, query }),
+          requestJson(session.baseUrl, "/api/v1/me/favorites", { token: session.token, query }),
+          requestJson(session.baseUrl, "/api/v1/me/subscriptions", { token: session.token, query })
+        ]);
+        printData(options, redactMeOutput({
+          kind: "me-dashboard",
+          pageSize: commandOptions.pageSize,
+          stats,
+          created,
+          replied,
+          favorited,
+          subscribed
+        }), outputFormat(commandOptions), formatMeDashboardText);
+      });
+    });
+
+  me
+    .command("search")
+    .description("search only within the current user's personal dashboard")
+    .argument("<keyword>", "title or topic-body keyword", parsePersonalKeyword)
+    .option("--scope <scopes>", "comma-separated: created,replied,favorited,subscribed", parsePersonalScopes)
+    .option("--page-size <n>", "page size, 1-50", parsePageSize)
+    .option("--cursor <cursor>", "opaque cursor returned by the previous page", parseNonBlankCursor)
+    .option("--json", "pretty-print JSON")
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async function(
+      this: Command,
+      keyword: string,
+      rawOptions: FormatOption & { scope?: string; pageSize?: number; cursor?: string } | Command
+    ) {
+      const commandOptions = commandOptionsFrom<FormatOption & { scope?: string; pageSize?: number; cursor?: string }>(this, rawOptions);
+      if (!validateFormatOptions(options, commandOptions)) {
+        return;
+      }
+      await runMeApi(options, commandOptions, async (session) => {
+        const capabilities = await requestJson(session.baseUrl, "/api/v1/capabilities", { token: session.token });
+        const compatibility = assessCapabilityCompatibility(capabilities, ["personal-community"]);
+        const entries = isRecord(capabilities) && Array.isArray(capabilities.capabilities)
+          ? capabilities.capabilities.filter(isRecord)
+          : [];
+        const personalCommunity = entries.find((item) => item.id === "personal-community");
+        const endpointAdvertised = personalCommunity?.available === true
+          && Array.isArray(personalCommunity.endpoints)
+          && personalCommunity.endpoints.includes("/me/search");
+        if (!compatibility.ok || !endpointAdvertised) {
+          printData(options, {
+            kind: "me-search",
+            available: false,
+            status: "UNAVAILABLE",
+            unavailableReason: compatibility.ok ? "CAPABILITY_NOT_ADVERTISED" : "CAPABILITY_INCOMPATIBLE",
+            clientCompatibility: compatibility,
+            requestId: isRecord(capabilities) ? capabilities.requestId : undefined
+          }, outputFormat(commandOptions), formatUnavailableCapabilityText);
+          process.exitCode = 1;
+          return;
+        }
+        const data = await requestJson(session.baseUrl, "/api/v1/me/search", {
+          token: session.token,
+          query: {
+            keyword,
+            scope: commandOptions.scope,
+            pageSize: commandOptions.pageSize,
+            cursor: commandOptions.cursor
+          }
+        });
+        printData(options, redactMeOutput(data), outputFormat(commandOptions), formatPersonalSearchText);
+      });
+    });
+
   for (const item of [
     { name: "capabilities", path: "/api/v1/capabilities", formatter: formatCapabilitiesText, description: "discover server personal-workbench capabilities" },
     { name: "notifications", path: "/api/v1/notifications", formatter: formatUnavailableCapabilityText, description: "read current user notifications when available" },
@@ -309,6 +394,53 @@ function formatMeStatsText(data: unknown): string {
   ].filter((value): value is string => Boolean(value)).join("\n");
 }
 
+function formatMeDashboardText(data: unknown): string {
+  if (!isRecord(data)) {
+    return "";
+  }
+  const stats = isRecord(data.stats) ? data.stats : {};
+  const sections = [
+    ["created", data.created],
+    ["replied", data.replied],
+    ["favorited", data.favorited],
+    ["subscribed", data.subscribed]
+  ] as const;
+  return [
+    line("authoredTopicCount", stats.authoredTopicCount ?? stats.topicCount),
+    line("authoredReplyCount", stats.authoredReplyCount ?? stats.replyCount),
+    line("favoriteCount", stats.favoriteCount),
+    line("subscriptionCount", stats.subscriptionCount),
+    ...sections.flatMap(([label, value]) => [
+      `${label}:`,
+      ...formatDashboardItems(value)
+    ])
+  ].filter((value): value is string => Boolean(value)).join("\n");
+}
+
+function formatDashboardItems(data: unknown): string[] {
+  return itemsFromData(data).flatMap((item) => {
+    const topic = isRecord(item.topic) ? item.topic : {};
+    const communityUrl = fieldText(item.replyUrl ?? item.url ?? item.threadUrl ?? item.canonicalUrl ?? item.visualUrl ?? topic.url ?? topic.threadUrl ?? topic.canonicalUrl ?? topic.visualUrl);
+    const originalUrl = fieldText(item.originalUrl ?? topic.originalUrl);
+    return [
+      `- ${fieldText(item.title ?? item.topicTitle ?? topic.title)}`,
+      communityUrl ? `  communityUrl: ${communityUrl}` : "",
+      originalUrl ? `  originalUrl: ${originalUrl}` : ""
+    ].filter(Boolean);
+  });
+}
+
+function formatPersonalSearchText(data: unknown): string {
+  return itemsFromData(data).flatMap((item) => [
+    line("title", item.title),
+    line("matchedScopes", Array.isArray(item.matchedScopes) ? item.matchedScopes.join(",") : item.matchedScopes),
+    line("updatedDate", item.updatedDate),
+    line("communityUrl", item.url ?? item.threadUrl ?? item.canonicalUrl ?? item.visualUrl),
+    line("originalUrl", item.originalUrl),
+    ""
+  ].filter((value): value is string => value !== undefined)).join("\n").trimEnd();
+}
+
 function formatCapabilitiesText(data: unknown): string {
   if (!isRecord(data) || !Array.isArray(data.capabilities)) {
     return "";
@@ -427,4 +559,25 @@ function parseNonBlankCursor(value: string): string {
     throw new InvalidArgumentError("Expected a non-empty cursor");
   }
   return value;
+}
+
+function parsePersonalKeyword(value: string): string {
+  const keyword = value.trim();
+  if (!keyword) {
+    throw new InvalidArgumentError("Expected a non-empty personal-dashboard keyword");
+  }
+  if (keyword.length > 1000) {
+    throw new InvalidArgumentError("Expected personal-dashboard keyword to contain at most 1000 characters");
+  }
+  return keyword;
+}
+
+const PERSONAL_SCOPES = new Set(["created", "replied", "favorited", "subscribed"]);
+
+function parsePersonalScopes(value: string): string {
+  const scopes = [...new Set(value.split(",").map((scope) => scope.trim().toLowerCase()).filter(Boolean))];
+  if (scopes.length === 0 || scopes.some((scope) => !PERSONAL_SCOPES.has(scope))) {
+    throw new InvalidArgumentError("Expected --scope to contain only created,replied,favorited,subscribed");
+  }
+  return scopes.join(",");
 }

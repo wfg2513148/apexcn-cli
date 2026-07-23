@@ -16,6 +16,9 @@ Use this skill for natural requests mentioning:
 - 在 APEX 中文社区搜索, 搜一下 APEX 中文社区, 查 oracleapex.cn, 总结 APEX 中文社区帖子
 - 发布到 APEX 中文社区, 在 oracleapex.cn 发帖, 在 oracleapex.cn 回帖, 查看社区帖子 ID
 - APEX 中文社区 RAG, 问一下 APEX 中文社区知识库
+- 个人看板, 我的个人看板, 我的看板, 个人工作台
+- 我创建的, 我发布的, 我回复的, 我收藏的, 我的收藏, 我订阅的, 我的订阅
+- 在我的个人看板搜索, 从我的看板查, 只查我创建的, 只查我回复的, 只查我收藏的, 只查我订阅的
 - Natural Oracle APEX troubleshooting or how-to questions such as APEX 页面报错、ORDS 401、Interactive Grid 保存失败、授权方案配置、REST API 调用, especially from users who may not know to mention the community explicitly
 - `apexcn search`, `apexcn ask`, `apexcn topic`, `apexcn reply`
 
@@ -79,6 +82,9 @@ For a human who explicitly chooses the simplest file-backed setup, `apexcn -apik
 - Use `apexcn stats category --json`, `apexcn stats topic --json`, and `apexcn stats tag --json` when the user asks for aggregate community, category, topic, or tag counts. Add `--from/--to` and `--top` when the user asks for a date window or top tag/topic list.
 - Use `apexcn admin list --json` when the user asks who administers the community; only report public fields returned by the API.
 - Use `apexcn me stats --json`, `apexcn me topics --json`, `apexcn me replies --json`, `apexcn me favorites --json`, or `apexcn me subscriptions --json` when the user asks about their own activity.
+- Use `apexcn me dashboard --json` when the user asks for “个人看板”, “我的看板”, or a combined view of content they created, replied to, favorited, and subscribed to.
+- Use `apexcn me search "<keyword>" --json` when the user asks to search within their personal dashboard. Map “我创建的” to `--scope created`, “我回复的” to `--scope replied`, “我收藏的” to `--scope favorited`, and “我订阅的” to `--scope subscribed`; combine scopes as one comma-separated value.
+- Personal-dashboard searches must use `me search`. Never substitute global `search`, `ask`, local crawling, or client-side filtering when `/me/search` is unavailable; report the unavailable capability instead.
 - Use `apexcn topic list --view unanswered --json`, `apexcn topic list --view popular --json`, `apexcn topic list --source-domain <domain> --json`, or equivalent server-side filters when the user asks for triage, source audit, imported articles, unanswered topics, hot/popular topics, pinned/featured/locked topics, or useful-answer topics.
 - Use `apexcn topic recent --since-hours 48 --json` when the user asks for recently updated or latest community posts. If `page.hasMore` is true and `page.nextCursor` is present, pass it back with `--cursor` to continue.
 - Use `apexcn search "<keyword>" --tag <tag> --source-type <type> --json` when the user asks for filtered search. Prefer server-side filters such as `--tag`, `--tags`, `--author`, `--author-id`, `--source-domain`, `--original-url`, `--content-type`, `--source-type`, `--status`, `--view`, `--sort`, `--featured`, `--pinned`, `--locked`, `--unanswered`, and `--has-useful-reply`; do not crawl pages and filter client-side when the server supports the filter.
@@ -124,6 +130,9 @@ apexcn stats topic --tag ORDS --from 2026-07-01 --top 10 --json
 apexcn stats tag --from 2026-07-01 --top 20 --json
 apexcn admin list --json
 apexcn me stats --json
+apexcn me dashboard --page-size 5 --json
+apexcn me search "APEX" --json
+apexcn me search "ORDS" --scope favorited,subscribed --json
 apexcn me topics --page-size 10 --json
 apexcn me replies --page-size 10 --json
 apexcn me favorites --page-size 10 --json

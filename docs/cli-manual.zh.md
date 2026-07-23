@@ -158,6 +158,9 @@ apexcn admin list --format text
 
 ```bash
 apexcn me stats --json
+apexcn me dashboard --page-size 5 --json
+apexcn me search "ORDS" --json
+apexcn me search "APEX" --scope created,favorited --cursor "<page.nextCursor>" --json
 apexcn me capabilities --json
 apexcn me capabilities --require-capability personal-community favorite-topic-export --json
 apexcn me notifications --json
@@ -170,7 +173,9 @@ apexcn me favorites --format text
 apexcn me subscriptions --json
 ```
 
-`me` 默认递归脱敏 email、手机号、IP、地址和 secret-like 字段；只有显式 `me --include-private` 才显示服务端返回的私有账号字段。`me topics`、`me replies`、`me favorites` 和 `me subscriptions` 优先使用服务端返回的 opaque `page.nextCursor` 继续分页；兼容旧服务端时仍可使用 `offset/page.nextOffset`，但 `--cursor` 与 `--offset` 不能同时使用。
+`me dashboard` 一次显示“我创建的、我回复的、我收藏的、我订阅的”四个分区。`me search` 只搜索这些个人关系内的话题标题或正文；`--scope` 可使用 `created`、`replied`、`favorited`、`subscribed`，不会回退到整个社区搜索。服务端未声明 `/me/search` 时命令会 fail closed。
+
+`me` 默认递归脱敏 email、手机号、IP、地址和 secret-like 字段；只有显式 `me --include-private` 才显示服务端返回的私有账号字段。个人列表与 `me search` 优先使用服务端返回的 opaque `page.nextCursor` 继续分页；兼容旧服务端时，四个独立列表仍可使用 `offset/page.nextOffset`，但 `--cursor` 与 `--offset` 不能同时使用。
 
 `me capabilities` 读取服务端 `contractVersion` 与能力矩阵，并增加 `clientCompatibility`。客户端只接受已声明的 0.8、0.7、0.6 candidate 契约窗口；格式错误、超出支持窗口或内容不完整的契约都会 fail closed。`--require-capability <ids...>` 会在任一必需能力不可用时以非零状态退出。`me notifications`、`me inbox`、`me rules` 和 `me privacy` 只转发权威只读契约；能力缺失时保留服务端的 `available: false`、`status: "UNAVAILABLE"`、`unavailableReason` 和 `requestId`，不会生成空消息、规则或政策冒充真实数据。
 

@@ -147,12 +147,14 @@ const neverApiDryRunCommands = [
   "guide",
   "me",
   "me capabilities",
+  "me dashboard",
   "me favorites",
   "me inbox",
   "me notifications",
   "me privacy",
   "me replies",
   "me rules",
+  "me search",
   "me stats",
   "me subscriptions",
   "me topics",
@@ -1321,7 +1323,7 @@ describe("content commands", () => {
 
   test("format option is exposed only on read commands with text output", () => {
     const program = createProgram();
-    const formatCommands = ["doctor", "doctor snapshot", "draft list", "draft reply", "draft question", "draft restore", "guide", "review reply", "review topic", "workflow audit-log", "workflow plan", "admin list", "me", "me capabilities", "me favorites", "me inbox", "me notifications", "me privacy", "me replies", "me rules", "me stats", "me subscriptions", "me topics", "category list", "search", "stats category", "stats tag", "stats topic", "research", "topic list", "topic recent", "topic view", "thread list", "thread recent", "thread view", "ask"];
+    const formatCommands = ["doctor", "doctor snapshot", "draft list", "draft reply", "draft question", "draft restore", "guide", "review reply", "review topic", "workflow audit-log", "workflow plan", "admin list", "me", "me capabilities", "me dashboard", "me favorites", "me inbox", "me notifications", "me privacy", "me replies", "me rules", "me search", "me stats", "me subscriptions", "me topics", "category list", "search", "stats category", "stats tag", "stats topic", "research", "topic list", "topic recent", "topic view", "thread list", "thread recent", "thread view", "ask"];
 
     for (const path of leafCommandPaths(program)) {
       if (formatCommands.includes(path)) {

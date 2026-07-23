@@ -276,12 +276,14 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "favorite remove": "remove a topic from favorites",
   "me": "show the authenticated community account",
   "me capabilities": "discover personal-workbench server capabilities",
+  "me dashboard": "show created, replied, favorite, and subscribed personal content",
   "me favorites": "list favorite topics for the authenticated account",
   "me inbox": "read the authenticated account inbox when available",
   "me notifications": "read authenticated account notifications when available",
   "me privacy": "read the authoritative privacy policy when available",
   "me replies": "list replies by the authenticated account",
   "me rules": "read authoritative community rules when available",
+  "me search": "search only within the authenticated account's personal dashboard",
   "me stats": "show aggregate activity statistics for the authenticated account",
   "me subscriptions": "list subscribed topics for the authenticated account",
   "me topics": "list topics authored by the authenticated account",
@@ -480,6 +482,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn me capabilities --json", mode: "read" }]
   },
+  "me dashboard": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn me dashboard --page-size 5 --json", mode: "read" }]
+  },
   "me favorites": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn me favorites --page-size 10 --json", mode: "read" }]
@@ -503,6 +509,13 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "me rules": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn me rules --json", mode: "read" }]
+  },
+  "me search": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [
+      { command: 'apexcn me search "APEX" --json', mode: "read" },
+      { command: 'apexcn me search "ORDS" --scope favorited,subscribed --json', mode: "read" }
+    ]
   },
   "me stats": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },

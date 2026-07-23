@@ -110,6 +110,8 @@ const commonReadScenarios: Scenario[] = [
   scenario("admin list", "查看 APEX 中文社区管理员公开列表", "admin list", "read", ["read"], "none", ["--json"]),
   scenario("my stats", "统计我在社区发了多少帖子、回复、收藏和订阅", "me stats", "read", ["read"], "none", ["--json"]),
   scenario("personal capabilities", "检查个人工作台哪些服务端能力真实可用", "me capabilities", "read", ["read"], "none", ["--json"]),
+  scenario("personal dashboard", "打开我的个人看板，显示我创建的、回复的、收藏的和订阅的内容", "me dashboard", "read", ["read"], "none", ["--page-size <n>", "--json"]),
+  scenario("personal dashboard search", "只在我的个人看板里搜索 ORDS，不要搜索整个社区", "me search", "read", ["read"], "none", ["--scope <scopes>", "--page-size <n>", "--json"]),
   scenario("my notifications", "查看我的站内通知；如果服务端没有能力就明确告诉我 unavailable", "me notifications", "read", ["read"], "none", ["--json"]),
   scenario("my inbox", "查看我的社区收件箱；不要编造消息", "me inbox", "read", ["read"], "none", ["--json"]),
   scenario("community rules capability", "读取社区规则；没有权威来源时返回 unavailable", "me rules", "read", ["read"], "none", ["--json"]),
@@ -698,6 +700,64 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
         expect(fetch).toHaveBeenCalledOnce();
         expect(stderr).toBe("");
         expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "me-stats", topicCount: 3 }));
+      }
+    },
+    {
+      name: "me dashboard reads all personal sections",
+      userSays: "打开我的个人看板，显示我创建的、回复的、收藏的和订阅的内容。",
+      commandPath: "me dashboard",
+      argv: ["node", "apexcn", "me", "dashboard", "--page-size", "2", "--json"],
+      responseForUrl: (url) => {
+        const responses: Record<string, unknown> = {
+          "https://oracleapex.cn/ords/test/api/v1/me/stats": { kind: "me-stats", topicCount: 1 },
+          "https://oracleapex.cn/ords/test/api/v1/me/topics?pageSize=2": { kind: "me-topics", items: [{ id: 11, title: "Created" }] },
+          "https://oracleapex.cn/ords/test/api/v1/me/replies?pageSize=2": { kind: "me-replies", items: [{ id: 21, topicId: 12 }] },
+          "https://oracleapex.cn/ords/test/api/v1/me/favorites?pageSize=2": { kind: "me-favorites", items: [{ topicId: 13, title: "Favorited" }] },
+          "https://oracleapex.cn/ords/test/api/v1/me/subscriptions?pageSize=2": { kind: "me-subscriptions", items: [{ topicId: 14, title: "Subscribed" }] }
+        };
+        expect(responses[url]).toBeDefined();
+        return Response.json(responses[url]);
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledTimes(5);
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({
+          kind: "me-dashboard",
+          created: expect.objectContaining({ kind: "me-topics" }),
+          replied: expect.objectContaining({ kind: "me-replies" }),
+          favorited: expect.objectContaining({ kind: "me-favorites" }),
+          subscribed: expect.objectContaining({ kind: "me-subscriptions" })
+        }));
+      }
+    },
+    {
+      name: "me search stays within personal dashboard scope",
+      userSays: "只在我的个人看板里搜索 ORDS，不要搜索整个社区。",
+      commandPath: "me search",
+      argv: ["node", "apexcn", "me", "search", "ORDS", "--scope", "favorited,subscribed", "--json"],
+      responseForUrl: (url) => {
+        if (url.endsWith("/api/v1/capabilities")) {
+          return Response.json({
+            kind: "capabilities",
+            contractVersion: "0.8.0-candidate",
+            supportedContractVersions: ["0.8.0-candidate", "0.7.0-candidate", "0.6.0-candidate"],
+            capabilities: [{ id: "personal-community", available: true, endpoints: ["/me/search"] }],
+            requestId: "req-capabilities"
+          });
+        }
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/me/search?keyword=ORDS&scope=favorited%2Csubscribed");
+        return Response.json({
+          kind: "me-search",
+          items: [{ id: 42, title: "Personal ORDS", matchedScopes: ["favorited"], url: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual" }],
+          page: { count: 1, hasMore: false },
+          requestId: "req-me-search"
+        });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledTimes(2);
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "me-search" }));
+        expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url)).some((url) => url.includes("/api/v1/search"))).toBe(false);
       }
     },
     {

@@ -216,6 +216,131 @@ describe("me command", () => {
     expect(stderr.join("")).toBe("");
   });
 
+  test("shows a personal dashboard with all four personal content sections", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const responses: Record<string, unknown> = {
+      "/api/v1/me/stats": { kind: "me-stats", authoredTopicCount: 1, authoredReplyCount: 1, favoriteCount: 1, subscriptionCount: 1 },
+      "/api/v1/me/topics?pageSize=2": { kind: "me-topics", items: [{ id: 11, title: "Created", url: "https://oracleapex.cn/ords/test/api/v1/topics/11/visual" }] },
+      "/api/v1/me/replies?pageSize=2": { kind: "me-replies", items: [{ id: 21, topicId: 12, topic: { title: "Replied" }, replyUrl: "https://oracleapex.cn/ords/test/api/v1/topics/12/visual#post_21" }] },
+      "/api/v1/me/favorites?pageSize=2": { kind: "me-favorites", items: [{ topicId: 13, title: "Favorited", url: "https://oracleapex.cn/ords/test/api/v1/topics/13/visual", originalUrl: "https://example.com/source-13" }] },
+      "/api/v1/me/subscriptions?pageSize=2": { kind: "me-subscriptions", items: [{ topicId: 14, title: "Subscribed", url: "https://oracleapex.cn/ords/test/api/v1/topics/14/visual" }] }
+    };
+    vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request) => {
+      const key = String(url).replace("https://oracleapex.cn/ords/test", "");
+      return Response.json(responses[key] ?? { error: { message: `unexpected ${key}` } }, { status: responses[key] ? 200 : 500 });
+    }));
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz", "--base-url", "https://oracleapex.cn/ords/test"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me", "dashboard", "--page-size", "2", "--json"]);
+
+    expect(JSON.parse(stdout.join(""))).toEqual({
+      kind: "me-dashboard",
+      pageSize: 2,
+      stats: responses["/api/v1/me/stats"],
+      created: responses["/api/v1/me/topics?pageSize=2"],
+      replied: responses["/api/v1/me/replies?pageSize=2"],
+      favorited: responses["/api/v1/me/favorites?pageSize=2"],
+      subscribed: responses["/api/v1/me/subscriptions?pageSize=2"]
+    });
+    expect(fetch).toHaveBeenCalledTimes(5);
+    expect(stderr.join("")).toBe("");
+  });
+
+  test("searches only the personal dashboard after capability preflight", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const value = String(url);
+      if (value.endsWith("/api/v1/capabilities")) {
+        return Response.json({
+          kind: "capabilities",
+          contractVersion: "0.8.0-candidate",
+          supportedContractVersions: ["0.8.0-candidate", "0.7.0-candidate", "0.6.0-candidate"],
+          capabilities: [{ id: "personal-community", available: true, endpoints: ["/me", "/me/search"] }],
+          requestId: "req-capabilities"
+        });
+      }
+      if (value.endsWith("/api/v1/me/search?keyword=APEX&scope=created%2Cfavorited&pageSize=2&cursor=next.cursor")) {
+        return Response.json({
+          kind: "me-search",
+          items: [{
+            id: 42,
+            title: "Personal APEX result",
+            matchedScopes: ["created", "favorited"],
+            url: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual",
+            originalUrl: "https://example.com/source-42"
+          }],
+          page: { pageSize: 2, count: 1, hasMore: false, nextCursor: null },
+          filters: { keyword: "APEX", scope: "created,favorited" },
+          requestId: "req-personal-search"
+        });
+      }
+      return Response.json({ error: { message: `unexpected ${value}` } }, { status: 500 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz", "--base-url", "https://oracleapex.cn/ords/test"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me", "search", "APEX", "--scope", "created,favorited", "--page-size", "2", "--cursor", "next.cursor", "--format", "text"]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).not.toEqual(expect.arrayContaining([
+      expect.stringContaining("/api/v1/search")
+    ]));
+    expect(stdout.join("")).toContain("communityUrl: https://oracleapex.cn/ords/test/api/v1/topics/42/visual\n");
+    expect(stdout.join("")).toContain("originalUrl: https://example.com/source-42\n");
+    expect(stdout.join("")).toContain("matchedScopes: created,favorited\n");
+    expect(stderr.join("")).toBe("");
+  });
+
+  test("fails closed when personal dashboard search is not advertised", async () => {
+    const configPath = await tempConfigPath();
+    const stdout: string[] = [];
+    const fetchMock = vi.fn(async () => Response.json({
+      kind: "capabilities",
+      contractVersion: "0.8.0-candidate",
+      supportedContractVersions: ["0.8.0-candidate", "0.7.0-candidate", "0.6.0-candidate"],
+      capabilities: [{ id: "personal-community", available: true, endpoints: ["/me", "/me/topics"] }],
+      requestId: "req-capabilities"
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: () => undefined
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz", "--base-url", "https://oracleapex.cn/ords/test"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "me", "search", "APEX", "--json"]);
+
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
+      kind: "me-search",
+      available: false,
+      status: "UNAVAILABLE",
+      unavailableReason: "CAPABILITY_NOT_ADVERTISED"
+    }));
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).not.toEqual(expect.arrayContaining([
+      expect.stringContaining("/api/v1/search")
+    ]));
+    expect(process.exitCode).toBe(1);
+  });
+
   test("discovers capabilities and preserves truthful unavailable responses", async () => {
     const configPath = await tempConfigPath();
     const stdout: string[] = [];

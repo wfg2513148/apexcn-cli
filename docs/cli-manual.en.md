@@ -156,6 +156,9 @@ Read aggregate statistics and activity lists for the current account:
 
 ```bash
 apexcn me stats --json
+apexcn me dashboard --page-size 5 --json
+apexcn me search "ORDS" --json
+apexcn me search "APEX" --scope created,favorited --cursor "<page.nextCursor>" --json
 apexcn me capabilities --json
 apexcn me capabilities --require-capability personal-community favorite-topic-export --json
 apexcn me notifications --json
@@ -168,7 +171,9 @@ apexcn me favorites --format text
 apexcn me subscriptions --json
 ```
 
-`me` recursively redacts email, phone, IP, address, and secret-like fields by default. Only explicit `me --include-private` prints private account fields returned by the server. `me topics`, `me replies`, `me favorites`, and `me subscriptions` should continue with the server's opaque `page.nextCursor`. Numeric `offset/page.nextOffset` remains available for older servers, but `--cursor` and `--offset` cannot be combined.
+`me dashboard` shows created, replied, favorited, and subscribed sections together. `me search` searches topic titles and bodies only inside those personal relations; `--scope` accepts `created`, `replied`, `favorited`, and `subscribed`. It never falls back to global community search, and fails closed when the server does not advertise `/me/search`.
+
+`me` recursively redacts email, phone, IP, address, and secret-like fields by default. Only explicit `me --include-private` prints private account fields returned by the server. Personal lists and `me search` should continue with the server's opaque `page.nextCursor`. Numeric `offset/page.nextOffset` remains available for older list endpoints, but `--cursor` and `--offset` cannot be combined.
 
 `me capabilities` reads the server `contractVersion` and capability inventory, then adds `clientCompatibility`. The client accepts only the declared 0.8, 0.7, and 0.6 candidate contract window; malformed, incomplete, newer, or older contracts fail closed. `--require-capability <ids...>` also exits nonzero when any requested capability is unavailable. `me notifications`, `me inbox`, `me rules`, and `me privacy` only relay authoritative readonly contracts. When a capability is missing, the CLI preserves `available: false`, `status: "UNAVAILABLE"`, `unavailableReason`, and `requestId`; it never fabricates empty messages, rules, or policy content.
 

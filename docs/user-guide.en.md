@@ -40,6 +40,10 @@ If it is already installed, say:
 
 > List the community categories I can post to and explain what each category is best for.
 
+> Open my personal dashboard and show what I created, replied to, favorited, and subscribed to.
+
+> Search for ORDS only inside my personal dashboard, not across the whole community. To limit the scope, say “search my favorites for ORDS.”
+
 ## 5. Ask Questions Against Community Content
 
 To inspect personal-workbench support, say:
