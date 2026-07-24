@@ -18,6 +18,17 @@ function Write-Step([string]$Message) {
   Write-Host "[apexcn-cli] $Message"
 }
 
+function Get-Sha256([string]$Path) {
+  $stream = [IO.File]::OpenRead($Path)
+  $sha = [Security.Cryptography.SHA256]::Create()
+  try {
+    return ([BitConverter]::ToString($sha.ComputeHash($stream))).Replace("-", "").ToLowerInvariant()
+  } finally {
+    $sha.Dispose()
+    $stream.Dispose()
+  }
+}
+
 function Receive-File([string]$Url, [string]$Target) {
   if ($Url.StartsWith("file://")) {
     Copy-Item ([uri]$Url).LocalPath $Target
@@ -58,7 +69,7 @@ try {
     throw "checksums.txt has no valid apexcn-cli.tgz checksum."
   }
   $Expected = $Matches[1].ToLowerInvariant()
-  $Actual = (Get-FileHash -Algorithm SHA256 $Archive).Hash.ToLowerInvariant()
+  $Actual = Get-Sha256 $Archive
   if ($Actual -ne $Expected) { throw "Checksum verification failed for apexcn-cli.tgz." }
   Write-Step "Verified package checksum."
 
