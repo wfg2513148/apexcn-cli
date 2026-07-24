@@ -2146,16 +2146,16 @@
       "releaseLine": "0.80.x",
       "title": "AI Agent 契约、检索与 Windows 资格化",
       "objective": "让本地 AI 通过稳定 JSON 契约高效检索和操作 APEX 中文社区，并在不改变 App 100 现有 RAG 的前提下获得独立证据链和真实 Windows 支持。",
-      "status": "in_progress",
+      "status": "completed",
       "activationGate": {
         "status": "approved",
         "previousMilestoneId": "0.7",
         "confirmationRef": "v0.70.0-release-verified-2026-07-20"
       },
       "completionReview": {
-        "status": "not_due",
-        "summaryEvidenceId": null,
-        "confirmationRef": null
+        "status": "approved",
+        "summaryEvidenceId": "M080-E-RELEASE",
+        "confirmationRef": "v1.0.8-release-verified-2026-07-24"
       },
       "capabilities": [
         {
@@ -2476,6 +2476,13 @@
           "assignmentRef": "run-v108-r1-20260724T121620+0800",
           "commit": "40bab8d7a486645033ea258520a02aa5619525d3",
           "sha256": "50f08080fc9abb61a68f5a9826a50f5c2992adbb002b6f31be89d0fc4fe052fd"
+        },
+        {
+          "id": "M080-E-RELEASE",
+          "kind": "release",
+          "path": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.0.8",
+          "description": "Verified public v1.0.8 release with ten uploaded assets, immutable package SHA-256 524a818cc44ec520274cc5700d4caca80a8373d7cea0248f90b42f8c5a2726fa, live RAG evidence and both Windows lifecycle reports.",
+          "commit": "a6c687c835dee977c48c9f90553eec43bfc03127"
         }
       ],
       "userOutcome": "用户通过本地 AI 获得稳定、可引用的 APEX 中文社区知识和安全操作能力，并能在真实 Windows 环境可靠使用 CLI。",
