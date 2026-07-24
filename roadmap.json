@@ -2173,7 +2173,7 @@
             "为形状相同的命令复制等价 Schema"
           ],
           "dependencies": [],
-          "status": "partial",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M080-AC-001",
             "M080-AC-002"
@@ -2182,7 +2182,8 @@
             "M080-V-SCHEMAS"
           ],
           "evidenceIds": [
-            "M080-E-LOCAL"
+            "M080-E-LOCAL",
+            "M080-E-VALIDATOR"
           ]
         },
         {
@@ -2199,7 +2200,7 @@
             "新增本地 collection 能力"
           ],
           "dependencies": [],
-          "status": "partial",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M080-AC-003"
           ],
@@ -2207,7 +2208,8 @@
             "M080-V-FAVORITES"
           ],
           "evidenceIds": [
-            "M080-E-LOCAL"
+            "M080-E-LOCAL",
+            "M080-E-VALIDATOR"
           ]
         },
         {
@@ -2226,7 +2228,7 @@
             "本地向量库或 collection"
           ],
           "dependencies": [],
-          "status": "partial",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M080-AC-004",
             "M080-AC-005",
@@ -2237,7 +2239,9 @@
             "M080-V-RAG-ISOLATION"
           ],
           "evidenceIds": [
-            "M080-E-LOCAL"
+            "M080-E-LOCAL",
+            "M080-E-RAG-LIVE",
+            "M080-E-VALIDATOR"
           ]
         },
         {
@@ -2257,7 +2261,7 @@
           "dependencies": [
             "external:supported-platform-runners"
           ],
-          "status": "partial",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M080-AC-007",
             "M080-AC-008"
@@ -2266,7 +2270,9 @@
             "M080-V-WINDOWS"
           ],
           "evidenceIds": [
-            "M080-E-LOCAL"
+            "M080-E-LOCAL",
+            "M080-E-WINDOWS",
+            "M080-E-VALIDATOR"
           ]
         }
       ],
@@ -2280,8 +2286,11 @@
           "target": 100,
           "unit": "percent",
           "measurementMethod": "command manifest and schema registry inventory",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M080-E-LOCAL",
+            "M080-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -2293,8 +2302,11 @@
           "target": 100,
           "unit": "percent",
           "measurementMethod": "schema fixture matrix and compatibility diff",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M080-E-LOCAL",
+            "M080-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -2306,8 +2318,11 @@
           "target": 100,
           "unit": "percent",
           "measurementMethod": "THREAD and POST favorite contract matrix",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M080-E-LOCAL",
+            "M080-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -2319,8 +2334,12 @@
           "target": 0,
           "unit": "calls",
           "measurementMethod": "network endpoint isolation contract test",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M080-E-LOCAL",
+            "M080-E-RAG-LIVE",
+            "M080-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -2332,8 +2351,10 @@
           "target": 90,
           "unit": "percent",
           "measurementMethod": "frozen retrieval oracle and correct-answer fixtures",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M080-E-RAG-LIVE"
+          ],
           "measurementProfileId": "PROFILE-LIVE-READONLY"
         },
         {
@@ -2345,8 +2366,11 @@
           "target": 100,
           "unit": "percent",
           "measurementMethod": "evidence bundle contract and novice natural-language suite",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M080-E-RAG-LIVE",
+            "M080-E-VALIDATOR"
+          ],
           "measurementProfileId": "PROFILE-INDEPENDENT-NATURAL-LANGUAGE"
         },
         {
@@ -2358,8 +2382,10 @@
           "target": 2,
           "unit": "shells",
           "measurementMethod": "GitHub-hosted Windows candidate installer matrix",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M080-E-WINDOWS"
+          ],
           "measurementProfileId": "PROFILE-GA-QUALIFICATION"
         },
         {
@@ -2372,8 +2398,10 @@
           "unit": "stages",
           "measurementMethod": "candidate lifecycle integration test",
           "measurementProfileId": "PROFILE-GA-QUALIFICATION",
-          "status": "pending",
-          "evidenceIds": []
+          "status": "pass",
+          "evidenceIds": [
+            "M080-E-WINDOWS"
+          ]
         }
       ],
       "validatorScenarios": [
@@ -2411,8 +2439,43 @@
           "id": "M080-E-LOCAL",
           "kind": "repository",
           "path": "test/contract/public-json-inventory.contract.test.ts",
-          "description": "Current command inventory, JSON contracts, favorites, RAG and installer test baseline.",
-          "commit": "10fd17650e2448b43b7931cd948856bb86bd936b"
+          "description": "Frozen 1.0.8 implementation and 697-test local gate covering concrete public JSON Schemas, favorite identity boundaries, RAG endpoint isolation, retrieval evidence, package checks and Windows lifecycle logic.",
+          "commit": "40bab8d7a486645033ea258520a02aa5619525d3"
+        },
+        {
+          "id": "M080-E-RAG-LIVE",
+          "kind": "live_readonly_evaluation",
+          "path": "https://github.com/wfg2513148/apexcn-cli/releases/download/v1.0.8/apexcn-agent-rag-live-r4.json",
+          "description": "Frozen 28-case oracle on oracleapex.cn: Top-5 topic recall 100%, marked-correct-answer hit 100%, citation integrity 100%, unanswerable behavior 100%, and zero App 100 /api/v1/ask calls.",
+          "commit": "40bab8d7a486645033ea258520a02aa5619525d3",
+          "sha256": "3916497a7842e87953fff16a0664125cbecdf13661cba00185fe732b98533d9f"
+        },
+        {
+          "id": "M080-E-WINDOWS",
+          "kind": "platform_qualification",
+          "path": "https://github.com/wfg2513148/apexcn-cli/actions/runs/30066253366",
+          "description": "GitHub-hosted Windows Server 2022 passed both Windows PowerShell 5.1.20348.4294 and PowerShell 7.6.3 across install, upgrade, failed-upgrade recovery, rollback and uninstall with authentication configuration preserved.",
+          "commit": "40bab8d7a486645033ea258520a02aa5619525d3",
+          "artifacts": [
+            {
+              "path": "https://github.com/wfg2513148/apexcn-cli/releases/download/v1.0.8/windows-powershell-5-1-lifecycle.json",
+              "sha256": "2f0589b983ccdc99d8ab3e8538f0bff7213184cdc214a53886fe75356e121aff"
+            },
+            {
+              "path": "https://github.com/wfg2513148/apexcn-cli/releases/download/v1.0.8/powershell-7-lifecycle.json",
+              "sha256": "abf101c939a31e65f87ce39dad875ee5d775a9b8ee2da3320881569e6ad9e93c"
+            }
+          ]
+        },
+        {
+          "id": "M080-E-VALIDATOR",
+          "kind": "independent_validator",
+          "path": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-v108-r1-20260724T121620+0800/evidence/verification.json",
+          "description": "Fresh visible Luna/high novice black-box task passed every applicable public CLI scenario against the immutable 1.0.8 package; 53 retained JSON files parsed with zero failures, issues.json was empty, and isolated installation cleanup passed. The live account had no reply favorite, so that data branch remained explicitly unexercised while the deterministic THREAD/POST contract matrix passed locally.",
+          "threadId": "019f9258-8930-7551-90a7-400d96e238f3",
+          "assignmentRef": "run-v108-r1-20260724T121620+0800",
+          "commit": "40bab8d7a486645033ea258520a02aa5619525d3",
+          "sha256": "50f08080fc9abb61a68f5a9826a50f5c2992adbb002b6f31be89d0fc4fe052fd"
         }
       ],
       "userOutcome": "用户通过本地 AI 获得稳定、可引用的 APEX 中文社区知识和安全操作能力，并能在真实 Windows 环境可靠使用 CLI。",
@@ -3061,12 +3124,15 @@
         "0.8"
       ],
       "requiredAt": "completion",
-      "status": "unverified",
+      "status": "ready",
       "resolutionThreadId": null,
       "readinessEvidence": {
-        "availabilityArtifact": null,
-        "versionMatrix": null,
-        "smokeArtifact": null
+        "availabilityArtifact": "https://github.com/wfg2513148/apexcn-cli/actions/runs/30066253366",
+        "versionMatrix": "windows-2022: Windows PowerShell 5.1.20348.4294 and PowerShell 7.6.3",
+        "smokeArtifact": "https://github.com/wfg2513148/apexcn-cli/releases/download/v1.0.8/windows-powershell-5-1-lifecycle.json",
+        "smokeArtifactSha256": "2f0589b983ccdc99d8ab3e8538f0bff7213184cdc214a53886fe75356e121aff",
+        "powerShell7Artifact": "https://github.com/wfg2513148/apexcn-cli/releases/download/v1.0.8/powershell-7-lifecycle.json",
+        "powerShell7ArtifactSha256": "abf101c939a31e65f87ce39dad875ee5d775a9b8ee2da3320881569e6ad9e93c"
       }
     },
     {
@@ -3163,10 +3229,12 @@
       "capabilityIds": [
         "M080-CAP-WINDOWS"
       ],
-      "status": "open",
+      "status": "mitigated",
       "blockingAt": "completion",
-      "description": "跨平台升级、回滚和卸载 runner 尚未证明可用",
-      "resolutionEvidenceIds": []
+      "description": "Windows Server 2022 已在 Windows PowerShell 5.1 和 PowerShell 7 中完成安装、升级、失败恢复、回滚和卸载五阶段资格验证，并证明认证配置保留。",
+      "resolutionEvidenceIds": [
+        "M080-E-WINDOWS"
+      ]
     },
     {
       "id": "RISK-080-JSON-CONTRACT-DRIFT",
@@ -3174,10 +3242,13 @@
       "capabilityIds": [
         "M080-CAP-JSON-CONTRACTS"
       ],
-      "status": "open",
+      "status": "mitigated",
       "blockingAt": "completion",
-      "description": "公开 JSON 命令仍存在通用对象契约，必须以可导出具体 Schema 和兼容性门禁归零。",
-      "resolutionEvidenceIds": []
+      "description": "全部公开 JSON 命令已映射到具体、可导出、版本化 Schema，通用对象契约使用数归零，并由 fixture、漂移门禁和独立黑盒导出复验。",
+      "resolutionEvidenceIds": [
+        "M080-E-LOCAL",
+        "M080-E-VALIDATOR"
+      ]
     },
     {
       "id": "RISK-080-APP100-RAG-ISOLATION",
@@ -3185,10 +3256,14 @@
       "capabilityIds": [
         "M080-CAP-AI-RAG"
       ],
-      "status": "open",
+      "status": "mitigated",
       "blockingAt": "completion",
-      "description": "新本地 AI 检索链必须证明只消费现有只读端点且不会调用、修改或替代 App 100 的 /api/v1/ask。",
-      "resolutionEvidenceIds": []
+      "description": "新检索链仅调用现有 search/topic detail 只读端点，冻结 28 题实测和独立黑盒均确认 App 100 /api/v1/ask 调用数为零；既有 ask 命令保持独立可用。",
+      "resolutionEvidenceIds": [
+        "M080-E-LOCAL",
+        "M080-E-RAG-LIVE",
+        "M080-E-VALIDATOR"
+      ]
     },
     {
       "id": "RISK-090-FREEZE",
