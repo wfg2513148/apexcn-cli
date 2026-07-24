@@ -39,7 +39,8 @@ function Receive-File([string]$Url, [string]$Target) {
 try {
   $node = Get-Command node -ErrorAction SilentlyContinue
   if (-not $node) { throw "Node.js 20 or newer is required." }
-  $nodeMajor = & node -e 'process.stdout.write(process.versions.node.split(".")[0])'
+  $nodeVersion = (& node --version).Trim()
+  $nodeMajor = $nodeVersion.TrimStart("v").Split(".")[0]
   if ([int]$nodeMajor -lt 20) { throw "Node.js 20 or newer is required." }
 
   New-Item -ItemType Directory -Force -Path $TempDir | Out-Null

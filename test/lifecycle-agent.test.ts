@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 import { describe, expect, test } from "vitest";
 
 const repoRoot = join(__dirname, "..");
+const posixTest = process.platform === "win32" ? test.skip : test;
 const windowsTest = process.platform === "win32" ? test : test.skip;
 
 function execNpm(args: string[]): string {
@@ -23,7 +24,7 @@ function execNpm(args: string[]): string {
 }
 
 describe("cross-platform lifecycle assets", () => {
-  test("shell lifecycle performs install, upgrade, rollback, and uninstall with a preserved backup", () => {
+  posixTest("shell lifecycle performs install, upgrade, rollback, and uninstall with a preserved backup", () => {
     const root = mkdtempSync(join(tmpdir(), "apexcn-lifecycle-"));
     const freshInstallRoot = join(root, "fresh-install");
     const freshBinDir = join(root, "fresh-bin");

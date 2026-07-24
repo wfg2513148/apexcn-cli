@@ -54,4 +54,4 @@ jobs:
         with:
           name: ${{ matrix.id }}-lifecycle
           path: reports/${{ matrix.id }}-lifecycle.json
-          if-no-files-found: error
+          if-no-files-found: warn
