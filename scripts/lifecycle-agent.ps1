@@ -36,24 +36,18 @@ function Get-InstalledVersion {
 }
 
 function Compare-Version([string]$Left, [string]$Right) {
-  $compareScript = @'
-const parse = (value) => {
-  const match = /^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/.exec(value);
-  if (!match) throw new Error(`Invalid semantic version: ${value}`);
-  return match.slice(1).map(Number);
-};
-const [left, right] = process.argv.slice(1).map(parse);
-for (let index = 0; index < 3; index += 1) {
-  if (left[index] !== right[index]) {
-    process.stdout.write(left[index] < right[index] ? "-1" : "1");
-    process.exit(0);
+  $pattern = '^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$'
+  if ($Left -notmatch $pattern) { throw "Invalid semantic version: $Left" }
+  $leftParts = @([int]$Matches[1], [int]$Matches[2], [int]$Matches[3])
+
+  if ($Right -notmatch $pattern) { throw "Invalid semantic version: $Right" }
+  $rightParts = @([int]$Matches[1], [int]$Matches[2], [int]$Matches[3])
+
+  for ($index = 0; $index -lt 3; $index += 1) {
+    if ($leftParts[$index] -lt $rightParts[$index]) { return -1 }
+    if ($leftParts[$index] -gt $rightParts[$index]) { return 1 }
   }
-}
-process.stdout.write("0");
-'@
-  $result = & node -e $compareScript $Left $Right
-  if ($LASTEXITCODE -ne 0) { throw "Unable to compare lifecycle versions." }
-  return [int]$result
+  return 0
 }
 
 function Write-Launcher {
