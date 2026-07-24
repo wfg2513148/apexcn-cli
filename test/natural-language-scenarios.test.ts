@@ -152,7 +152,11 @@ const commonReadScenarios: Scenario[] = [
   scenario("research by category", "只研究进阶技巧板块里的性能优化资料", "research", "read", ["read"], "none", ["--category-id <id>", "--json"]),
   scenario("research by date", "研究 6 月份发布或更新的 APEXLang 内容", "research", "read", ["read"], "none", ["--from-date <date>", "--to-date <date>", "--json"]),
   scenario("research text output", "把 REST API 研究结果输出成文本", "research", "read", ["read"], "none", ["--format <format>"]),
+  scenario("retrieve local AI evidence", "根据社区证据回答 ORDS 401，并给每个结论附证据编号", "rag retrieve", "read", ["read"], "none", ["--top-k <n>", "--json"]),
   scenario("commands manifest", "告诉我 apexcn-cli 当前支持哪些命令和安全分类", "commands", "read", ["manifest"], "none", ["--json"]),
+  scenario("list public schemas", "列出本地 AI 可以使用的全部 JSON Schema", "schema list", "read", ["read"], "none", ["--json"]),
+  scenario("show one public schema", "查看 rag retrieve 的具体 JSON Schema", "schema show", "read", ["read"], "none", ["--json"]),
+  scenario("export public schemas", "把全部公开 JSON Schema 导出给另一个本地工具", "schema bundle", "read", ["read"], "none", ["--output <path>", "--json"]),
   scenario("guide learning path", "给我一条从零开始学习使用 APEX 中文社区资料的路径", "guide", "read", ["read"], "none", ["--json"]),
   scenario("guide version compatibility", "帮我核对 APEX 24.2 和 ORDS 24.4 的兼容性检查步骤", "guide", "read", ["read"], "none", ["--apex-version <version>", "--ords-version <version>", "--json"]),
   scenario("guide deployment checklist", "给我一份 APEX 应用部署前后的检查清单", "guide", "read", ["read"], "none", ["--format <format>"]),
@@ -556,6 +560,81 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
         expect(fetch).not.toHaveBeenCalled();
         expect(stderr).toBe("");
         expect(JSON.parse(stdout).commands.length).toBeGreaterThanOrEqual(38);
+      }
+    },
+    {
+      name: "schema list is locally discoverable",
+      userSays: "列出本地 AI 可以使用的全部 JSON Schema。",
+      commandPath: "schema list",
+      configureAuth: false,
+      argv: ["node", "apexcn", "schema", "list", "--json"],
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({
+          kind: "schema-list",
+          schemas: expect.arrayContaining([expect.objectContaining({ id: "rag-retrieve-response-v1" })])
+        }));
+      }
+    },
+    {
+      name: "schema show returns a versioned contract",
+      userSays: "查看 rag retrieve 的具体 JSON Schema。",
+      commandPath: "schema show",
+      configureAuth: false,
+      argv: ["node", "apexcn", "schema", "show", "rag-retrieve-response-v1", "--json"],
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({
+          "x-apexcn-schema-version": 1,
+          "x-apexcn-command-ids": ["rag.retrieve"]
+        }));
+      }
+    },
+    {
+      name: "schema bundle writes the complete contract set",
+      userSays: "把全部公开 JSON Schema 导出给另一个本地工具。",
+      commandPath: "schema bundle",
+      configureAuth: false,
+      argv: (context) => ["node", "apexcn", "schema", "bundle", "--output", join(context.tmpDir, "schemas.json"), "--json"],
+      assertFeedback: async ({ stdout, stderr, fetch, tmpDir }) => {
+        expect(fetch).not.toHaveBeenCalled();
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "schema-bundle-written" }));
+        expect(JSON.parse(await readFile(join(tmpDir, "schemas.json"), "utf8"))).toEqual(expect.objectContaining({
+          kind: "schema-bundle",
+          schemas: expect.any(Object)
+        }));
+      }
+    },
+    {
+      name: "rag retrieval returns local AI evidence without app RAG",
+      userSays: "根据社区证据回答 ORDS 401，并给每个结论附证据编号。",
+      commandPath: "rag retrieve",
+      argv: ["node", "apexcn", "rag", "retrieve", "ORDS 401 怎么排查？", "--query", "ORDS", "--top-k", "1", "--json"],
+      responseForUrl: (url) => {
+        if (url.endsWith("/api/v1/search?keyword=ORDS&pageSize=1")) {
+          return Response.json({ items: [{ id: 42 }], requestId: "req-rag-search" });
+        }
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/topics/42");
+        return Response.json({
+          topic: { id: 42, title: "ORDS 401", content: "问题正文", threadUrl: "https://oracleapex.cn/t/42" },
+          replies: [{ replyId: 90, content: "检查 OAuth role。", isUseful: true, replyUrl: "https://oracleapex.cn/t/42#post_90" }],
+          requestId: "req-rag-topic"
+        });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledTimes(2);
+        expect(fetch.mock.calls.map(([input]) => String(input))).not.toEqual(
+          expect.arrayContaining([expect.stringContaining("/api/v1/ask")])
+        );
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({
+          kind: "rag-evidence-bundle",
+          answerability: expect.objectContaining({ status: "answerable" }),
+          evidence: expect.arrayContaining([expect.objectContaining({ evidenceId: "S2", type: "correct-answer" })])
+        }));
       }
     },
     {

@@ -690,10 +690,26 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
   const files: Array<Record<string, unknown>> = [];
   const seenIds = new Set<number>();
   const errors: Array<Record<string, unknown>> = [];
+  let excludedReplyCount = 0;
   for (const { item, requestId } of items) {
-    const id = topicIdFromItem(item);
+    const targetType = favoriteTargetType(item);
+    if (targetType === "POST") {
+      excludedReplyCount += 1;
+      errors.push({
+        targetType,
+        topicId: positiveIdFromKeys(item, ["topicId", "threadId"]),
+        replyId: positiveIdFromKeys(item, ["replyId", "postId", "targetId", "id"]),
+        unavailableReason: "REPLY_FAVORITE_EXCLUDED"
+      });
+      continue;
+    }
+    const id = positiveIdFromKeys(item, ["topicId", "threadId", "targetId", "id"]);
     if (id === undefined || item.unavailableReason) {
-      errors.push({ topicId: id, unavailableReason: item.unavailableReason ?? "INVALID_FAVORITE_EXPORT_ITEM" });
+      errors.push({
+        targetType: targetType ?? "THREAD",
+        topicId: id,
+        unavailableReason: item.unavailableReason ?? "INVALID_FAVORITE_EXPORT_ITEM"
+      });
       continue;
     }
     if (seenIds.has(id)) {
@@ -740,8 +756,16 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
     schemaVersion: 2,
     createdAt: new Date().toISOString(),
     contentHash: collectionContentHash(topics.map((topic) => ({ id: Number(topic.id), canonicalHash: fieldText(topic.canonicalHash) }))),
-    source: { profile: session.profile, baseUrl: session.baseUrl, queries: [], topicIds: topics.map((topic) => topic.id), favoriteExport: true },
+    source: {
+      profile: session.profile,
+      baseUrl: session.baseUrl,
+      queries: [],
+      topicIds: topics.map((topic) => topic.id),
+      favoriteExport: true,
+      favoriteTargetPolicy: "topics-only"
+    },
     topicCount: topics.length,
+    excludedReplyCount,
     topics,
     errors,
     files: { index: indexFile, topics: files }
@@ -753,6 +777,7 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
     schemaVersion: 1,
     outputDir: options.outputDir,
     topicCount: topics.length,
+    excludedReplyCount,
     unavailableCount: errors.length,
     pageCount,
     contentHash: collection.contentHash
@@ -1439,6 +1464,30 @@ function sha256Hex(content: Buffer): string {
 
 function topicIdFromItem(item: Record<string, unknown>): number | undefined {
   for (const key of ["id", "topicId", "threadId", "targetId"]) {
+    const value = item[key];
+    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+      return value;
+    }
+    if (typeof value === "string" && /^\d+$/.test(value)) {
+      return Number(value);
+    }
+  }
+  return undefined;
+}
+
+function favoriteTargetType(item: Record<string, unknown>): "THREAD" | "POST" | undefined {
+  const value = fieldText(item.targetType ?? item.objectType ?? item.favoriteType).trim().toUpperCase();
+  if (value === "POST" || value === "REPLY") {
+    return "POST";
+  }
+  if (value === "THREAD" || value === "TOPIC") {
+    return "THREAD";
+  }
+  return positiveIdFromKeys(item, ["replyId", "postId"]) === undefined ? undefined : "POST";
+}
+
+function positiveIdFromKeys(item: Record<string, unknown>, keys: string[]): number | undefined {
+  for (const key of keys) {
     const value = item[key];
     if (typeof value === "number" && Number.isInteger(value) && value > 0) {
       return value;

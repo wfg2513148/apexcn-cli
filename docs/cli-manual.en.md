@@ -16,6 +16,8 @@ Use `--json` in scripts and AI-assisted tasks. Use root `--config <path>` or `AP
 
 When an AI agent needs available commands, aliases, purposes, safety metadata, safe examples, and options, prefer `apexcn commands --json` instead of parsing `--help` text. The current structured manifest contract is `schemaVersion === 1`; if it is missing or unsupported, do not consume structured `safety` or `examples`, and upgrade the CLI or ask the user before continuing. In the manifest, `schema` lists available enum values, `safety.effects` describes command effects, `safety.preview` describes whether preview is available or required, `safety.confirmation` lists explicit confirmation flags, and `examples[].mode` separates read, preview, and execute examples. Additive `manifestVersion === 2` metadata includes `jsonContract`; JSON-capable commands point to their success schema, stable error schema, and contract test, while unsupported commands return `null`.
 
+Every public JSON command has a command-specific, versioned success Schema. Discover them with `apexcn schema list --json`, inspect one with `apexcn schema show <schema-id> --json`, or export the full contract set with `apexcn schema bundle --output schemas.json --json`. All commands share the `apexcn-error-v1` error Schema.
+
 For unstable networks, set `APEXCN_HTTP_TIMEOUT_MS` to provide a default timeout for community API requests. `doctor --timeout-ms` overrides this default. Blank or non-positive values are ignored.
 
 When scripts need parseable failures, prefer passing `--json` to the command. JSON-capable commands write Commander argument parsing, validation, config, network, and API errors as one-line JSON to stderr. You can also set `APEXCN_ERROR_FORMAT=json` to force structured errors; default output remains human-readable text.
@@ -276,7 +278,7 @@ apexcn collection import --bundle favorites.bundle.json --output-dir restored --
 apexcn collection restore --bundle favorites.bundle.json --dir favorites --json
 ```
 
-`collection favorites` traverses the server's authenticated readonly cursor and preserves full content, URL, topic ID, relation time, update time, and provenance. Bundle import requires an empty directory; restore overwrites only managed bundle files and leaves unrelated files untouched.
+`collection favorites` traverses the server's authenticated readonly cursor and writes only topic favorites into the offline collection while preserving full content, URL, topic ID, relation time, update time, and provenance. Reply favorites are reported as `REPLY_FAVORITE_EXCLUDED` with their topic/reply identity and are never reinterpreted as topic IDs. Bundle import requires an empty directory; restore overwrites only managed bundle files and leaves unrelated files untouched.
 
 Offline automation plans call no network and cannot send community writes:
 
@@ -547,9 +549,20 @@ Unsubscribe:
 apexcn subscription remove 30549 --json
 ```
 
+## rag retrieve
+
+Retrieve citable community evidence for a local AI without generating an answer in the CLI or server:
+
+```bash
+apexcn rag retrieve "How should I diagnose an ORDS 401 in APEX?" --top-k 5 --json
+apexcn rag retrieve "Why does this happen?" --context "The prior question was an ORDS 401 from APEX" --query ORDS --query OAuth --json
+```
+
+This command calls only the existing readonly `/api/v1/search` and `/api/v1/topics/{topicId}` endpoints. It returns topic, reply, correct-answer, stable community URL, optional original URL, `evidenceId`, `answerability`, and request-id provenance. It never calls or falls back to `/api/v1/ask`. The local AI owns synthesis, must cite evidence IDs for material claims, must refuse an `unanswerable` result, and must state limitations for a `partial` result.
+
 ## ask
 
-Ask against community content:
+Use the existing App 100 server-side community knowledge-answer function. This compatibility path is independent from `rag retrieve`:
 
 ```bash
 apexcn ask "How do I call a REST API from Oracle APEX?" --json

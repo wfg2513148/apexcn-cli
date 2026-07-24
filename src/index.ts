@@ -10,6 +10,7 @@ import {
   createAskCommand,
   createCategoryCommand,
   createConfirmCommand,
+  createRagCommand,
   createRelationCommand,
   createReplyCommand,
   createResearchCommand,
@@ -21,6 +22,7 @@ import { createDraftCommand } from "./commands/draft.js";
 import { createGuideCommand } from "./commands/guide.js";
 import { createMeCommand } from "./commands/me.js";
 import { createReviewCommand } from "./commands/review.js";
+import { createSchemaCommand } from "./commands/schema.js";
 import { createWorkflowCommand } from "./commands/workflow.js";
 import { DEFAULT_BASE_URL, setProfile } from "./config.js";
 import { descriptorForPath } from "./core/command-registry.js";
@@ -90,11 +92,13 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   program.addCommand(createConfirmCommand(commandOptions));
   program.addCommand(createWorkflowCommand(commandOptions));
   program.addCommand(createCollectionCommand(commandOptions));
+  program.addCommand(createSchemaCommand(io));
   program.addCommand(createAdminCommand(commandOptions));
   program.addCommand(createCategoryCommand(commandOptions));
   program.addCommand(createStatsCommand(commandOptions));
   program.addCommand(createSearchCommand(commandOptions));
   program.addCommand(createResearchCommand(commandOptions));
+  program.addCommand(createRagCommand(commandOptions));
   program.addCommand(createTopicCommand(commandOptions));
   program.addCommand(createReplyCommand(commandOptions));
   program.addCommand(createRelationCommand("favorite", commandOptions));
@@ -124,6 +128,9 @@ function resetTransientCommandOptions(program: Command): void {
   for (const action of favorite?.commands ?? []) {
     action.setOptionValue("target", undefined);
   }
+  const rag = program.commands.find((command) => command.name() === "rag");
+  const retrieve = rag?.commands.find((command) => command.name() === "retrieve");
+  retrieve?.setOptionValue("query", []);
 }
 
 type CommandManifest = {
@@ -260,7 +267,7 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "collection automation plan": "create a deterministic offline readonly automation plan",
   "collection automation run": "run an offline readonly automation plan with duplicate suppression",
   "collection export": "export a deterministic portable collection bundle",
-  "collection favorites": "build a local collection from authenticated favorite topics",
+  "collection favorites": "build a local topic collection and report reply favorites as explicitly excluded",
   "collection import": "import a verified collection bundle into an empty directory",
   "collection index": "build a local search index for a collection",
   "collection query": "query a local collection search index",
@@ -300,9 +307,13 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "reply mark-answer": "mark a reply as a correct answer after explicit confirmation",
   "reply unmark-answer": "remove the correct-answer mark after explicit confirmation",
   "reply update": "update an existing reply",
+  "rag retrieve": "retrieve citable community evidence for a local AI without calling the app RAG endpoint",
   "research": "build a research bundle from search results and topic content",
   "review reply": "review a local reply draft before API preview or publish",
   "review topic": "review a local topic draft before API preview or publish",
+  "schema bundle": "export all public JSON Schemas as one versioned bundle",
+  "schema list": "list public JSON Schemas",
+  "schema show": "show one public JSON Schema",
   "search": "search community topics",
   "stats category": "show per-category topic, reply, and featured-topic counts",
   "stats tag": "show exact tag usage counts",
@@ -338,6 +349,10 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
       { command: 'apexcn ask "最近 ORDS API 有哪些更新？" --tag ORDS --from 2026-07-01 --top-k 5 --json', mode: "read" }
     ]
   },
+  "rag retrieve": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: 'apexcn rag retrieve "APEX 中 ORDS 401 怎么排查？" --top-k 5 --json', mode: "read" }]
+  },
   "auth audit": {
     safety: { effects: ["config-read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn auth audit --json", mode: "read" }]
@@ -369,6 +384,18 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "category list": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn category list --json", mode: "read" }]
+  },
+  "schema list": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn schema list --json", mode: "read" }]
+  },
+  "schema show": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn schema show search-response-v1 --json", mode: "read" }]
+  },
+  "schema bundle": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn schema bundle --output ./apexcn-schemas.json --json", mode: "read" }]
   },
   "collection build": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },

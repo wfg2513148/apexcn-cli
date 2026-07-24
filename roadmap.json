@@ -2144,8 +2144,8 @@
     {
       "id": "0.8",
       "releaseLine": "0.80.x",
-      "title": "组织治理与生命周期资格化",
-      "objective": "让团队在支持的平台上治理策略、凭据、兼容性、审计、支持和生命周期操作。",
+      "title": "AI Agent 契约、检索与 Windows 资格化",
+      "objective": "让本地 AI 通过稳定 JSON 契约高效检索和操作 APEX 中文社区，并在不改变 App 100 现有 RAG 的前提下获得独立证据链和真实 Windows 支持。",
       "status": "in_progress",
       "activationGate": {
         "status": "approved",
@@ -2159,17 +2159,18 @@
       },
       "capabilities": [
         {
-          "id": "M080-CAP-POLICY",
-          "title": "策略与防篡改审计",
-          "userValue": "团队能统一允许、拒绝、审批并验证内容操作。",
+          "id": "M080-CAP-JSON-CONTRACTS",
+          "title": "公开 JSON Schema Registry",
+          "userValue": "本地 AI、脚本和 CI 能发现、导出并可靠消费每个公开命令的版本化 JSON 契约。",
           "scope": [
-            "policy packs",
-            "approval levels",
-            "retention",
-            "tamper evidence"
+            "command-specific success schemas",
+            "shared stable error schema",
+            "schema list show and bundle export",
+            "schema compatibility gate"
           ],
           "nonGoals": [
-            "central hosted control plane"
+            "直接透传不稳定 ORDS 响应",
+            "为形状相同的命令复制等价 Schema"
           ],
           "dependencies": [],
           "status": "partial",
@@ -2178,90 +2179,91 @@
             "M080-AC-002"
           ],
           "validatorScenarioIds": [
-            "M080-V-POLICY"
+            "M080-V-SCHEMAS"
           ],
           "evidenceIds": [
             "M080-E-LOCAL"
           ]
         },
         {
-          "id": "M080-CAP-COMPAT",
-          "title": "服务端能力协商",
-          "userValue": "CLI 能识别兼容 API 能力并准确报告缺口。",
+          "id": "M080-CAP-FAVORITES",
+          "title": "统一收藏身份语义",
+          "userValue": "本地 AI 能稳定区分话题收藏和回复收藏，旧合集命令不会误用回复 ID。",
           "scope": [
-            "capability negotiation",
-            "API compatibility matrix",
-            "current plus two previous contracts"
+            "THREAD and POST favorite union",
+            "personal dashboard identity preservation",
+            "topic-only legacy collection boundary"
           ],
           "nonGoals": [
-            "silent compatibility shims for missing APIs"
-          ],
-          "dependencies": [
-            "server:versioned-capability-contracts"
-          ],
-          "status": "not_started",
-          "acceptanceCriterionIds": [
-            "M080-AC-003",
-            "M080-AC-006"
-          ],
-          "validatorScenarioIds": [
-            "M080-V-COMPAT",
-            "M080-V-ROUTING"
-          ],
-          "evidenceIds": []
-        },
-        {
-          "id": "M080-CAP-LIFECYCLE",
-          "title": "凭据与跨平台生命周期",
-          "userValue": "安装、升级、回滚、卸载和支持诊断在支持的平台上一致可控。",
-          "scope": [
-            "credential strategy",
-            "support bundles",
-            "observability",
-            "install upgrade rollback uninstall"
-          ],
-          "nonGoals": [
-            "mandatory native dependency without fallback"
-          ],
-          "dependencies": [
-            "external:supported-platform-runners",
-            "external:platform-credential-stores"
-          ],
-          "status": "partial",
-          "acceptanceCriterionIds": [
-            "M080-AC-004",
-            "M080-AC-005",
-            "M080-AC-007",
-            "M080-AC-008"
-          ],
-          "validatorScenarioIds": [
-            "M080-V-PLATFORMS",
-            "M080-V-SOAK"
-          ],
-          "evidenceIds": [
-            "M080-E-LOCAL"
-          ]
-        },
-        {
-          "id": "M080-CAP-ROUTING",
-          "title": "跨仓库根因路由",
-          "userValue": "ORDS API 缺口先在服务端修复，CLI 不再用不可靠补丁掩盖。",
-          "scope": [
-            "owner classification",
-            "server thread routing",
-            "API contract evidence",
-            "end-to-end revalidation"
-          ],
-          "nonGoals": [
-            "CLI-only masking of server defects"
+            "回复离线文档",
+            "新增本地 collection 能力"
           ],
           "dependencies": [],
           "status": "partial",
           "acceptanceCriterionIds": [
+            "M080-AC-003"
+          ],
+          "validatorScenarioIds": [
+            "M080-V-FAVORITES"
+          ],
+          "evidenceIds": [
+            "M080-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M080-CAP-AI-RAG",
+          "title": "本地 AI 原生 RAG 证据链",
+          "userValue": "本地 AI 能从社区获得可引用、可判定是否可回答的证据包并自行生成回答。",
+          "scope": [
+            "rag retrieve command",
+            "multi-query readonly retrieval",
+            "topic and useful reply evidence",
+            "answerability and provenance"
+          ],
+          "nonGoals": [
+            "修改 App 100 现有 /api/v1/ask",
+            "服务端或 CLI 内置大模型生成",
+            "本地向量库或 collection"
+          ],
+          "dependencies": [],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M080-AC-004",
+            "M080-AC-005",
             "M080-AC-006"
           ],
           "validatorScenarioIds": [
-            "M080-V-ROUTING"
+            "M080-V-RAG",
+            "M080-V-RAG-ISOLATION"
+          ],
+          "evidenceIds": [
+            "M080-E-LOCAL"
+          ]
+        },
+        {
+          "id": "M080-CAP-WINDOWS",
+          "title": "真实 Windows 生命周期资格化",
+          "userValue": "Windows 用户能在受支持 PowerShell 环境可靠安装、升级、失败恢复、回滚和卸载。",
+          "scope": [
+            "Windows Server 2022 runner",
+            "Windows PowerShell 5.1 and PowerShell 7",
+            "candidate package lifecycle",
+            "release-preflight evidence"
+          ],
+          "nonGoals": [
+            "用 macOS pwsh 或 Wine 代替 Windows 验收",
+            "在发布提交上启动 GitHub Actions"
+          ],
+          "dependencies": [
+            "external:supported-platform-runners"
+          ],
+          "status": "partial",
+          "acceptanceCriterionIds": [
+            "M080-AC-007",
+            "M080-AC-008"
+          ],
+          "validatorScenarioIds": [
+            "M080-V-WINDOWS"
           ],
           "evidenceIds": [
             "M080-E-LOCAL"
@@ -2272,12 +2274,12 @@
         {
           "id": "M080-AC-001",
           "gate": "core",
-          "description": "策略 allow/deny 矩阵判断准确率 100%。",
-          "metric": "policyDecisionAccuracy",
+          "description": "全部公开 JSON 命令映射到可导出的具体成功响应 Schema，通用对象契约使用数为零。",
+          "metric": "publicJsonCommandsWithConcreteExportableSchemas",
           "comparator": "eq",
           "target": 100,
           "unit": "percent",
-          "measurementMethod": "versioned policy matrix",
+          "measurementMethod": "command manifest and schema registry inventory",
           "status": "pending",
           "evidenceIds": [],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
@@ -2285,12 +2287,12 @@
         {
           "id": "M080-AC-002",
           "gate": "core",
-          "description": "必需审计事件完整率和篡改检出率均为 100%。",
-          "metric": "auditCompletenessAndTamperDetection",
+          "description": "每个注册 Schema 的成功、空结果和错误类型 fixture 全部通过，并拒绝未声明的破坏性版本漂移。",
+          "metric": "schemaFixtureAndCompatibilityPassRate",
           "comparator": "eq",
           "target": 100,
           "unit": "percent",
-          "measurementMethod": "audit event matrix and tamper injection",
+          "measurementMethod": "schema fixture matrix and compatibility diff",
           "status": "pending",
           "evidenceIds": [],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
@@ -2298,12 +2300,12 @@
         {
           "id": "M080-AC-003",
           "gate": "core",
-          "description": "当前及前两个受支持 API 契约全部通过兼容测试。",
-          "metric": "supportedApiContractVersionsPassed",
+          "description": "话题和回复收藏身份判定准确率为 100%，旧 collection favorites 对回复收藏误分类数为零。",
+          "metric": "favoriteTargetIdentityAccuracy",
           "comparator": "eq",
-          "target": 3,
-          "unit": "versions",
-          "measurementMethod": "server and CLI compatibility suite",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "THREAD and POST favorite contract matrix",
           "status": "pending",
           "evidenceIds": [],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
@@ -2311,51 +2313,51 @@
         {
           "id": "M080-AC-004",
           "gate": "core",
-          "description": "支持的 macOS、Linux、Windows 环境全部通过安装、升级、回滚和卸载。",
-          "metric": "platformLifecycleSuitesPassed",
+          "description": "rag retrieve 的全部网络请求只命中现有 search 和 topic detail 只读端点，/api/v1/ask 调用数为零。",
+          "metric": "ragRetrieveForbiddenAskEndpointCalls",
           "comparator": "eq",
-          "target": 3,
-          "unit": "platforms",
-          "measurementMethod": "platform runner lifecycle suites",
+          "target": 0,
+          "unit": "calls",
+          "measurementMethod": "network endpoint isolation contract test",
           "status": "pending",
           "evidenceIds": [],
-          "measurementProfileId": "PROFILE-GA-QUALIFICATION"
+          "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
           "id": "M080-AC-005",
           "gate": "core",
-          "description": "10,000 个脱敏和 secret fuzz 样本泄露为零。",
-          "metric": "redactionFuzzLeaks",
-          "comparator": "eq",
-          "target": 0,
-          "unit": "findings",
-          "measurementMethod": "10000-case deterministic fuzz corpus",
+          "description": "冻结社区问题集的 Top-5 相关来源召回率不低于 90%，存在正确答案时正确答案证据命中率不低于 95%。",
+          "metric": "ragEvidenceRecallAndCorrectAnswerHitRate",
+          "comparator": "gte",
+          "target": 90,
+          "unit": "percent",
+          "measurementMethod": "frozen retrieval oracle and correct-answer fixtures",
           "status": "pending",
           "evidenceIds": [],
-          "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
+          "measurementProfileId": "PROFILE-LIVE-READONLY"
         },
         {
           "id": "M080-AC-006",
           "gate": "core",
-          "description": "种子化 CLI/server/cross_repo/test_environment/external 问题归属和路由准确率 100%。",
-          "metric": "issueRoutingAccuracy",
+          "description": "RAG 证据 ID、community URL、original URL 和不可回答判定完整率为 100%，未知引用为零。",
+          "metric": "ragEvidenceCitationIntegrity",
           "comparator": "eq",
           "target": 100,
           "unit": "percent",
-          "measurementMethod": "seeded ownership and routing matrix",
+          "measurementMethod": "evidence bundle contract and novice natural-language suite",
           "status": "pending",
           "evidenceIds": [],
-          "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
+          "measurementProfileId": "PROFILE-INDEPENDENT-NATURAL-LANGUAGE"
         },
         {
           "id": "M080-AC-007",
           "gate": "core",
-          "description": "7 天只读 soak 成功率至少 99.5%，失败均有可执行诊断。",
-          "metric": "sevenDayReadonlySuccessRate",
-          "comparator": "gte",
-          "target": 99.5,
-          "unit": "percent",
-          "measurementMethod": "seven-day recorded soak",
+          "description": "Windows Server 2022 上 Windows PowerShell 5.1 与 PowerShell 7 的候选包安装测试全部通过。",
+          "metric": "windowsShellInstallerSuitesPassed",
+          "comparator": "eq",
+          "target": 2,
+          "unit": "shells",
+          "measurementMethod": "GitHub-hosted Windows candidate installer matrix",
           "status": "pending",
           "evidenceIds": [],
           "measurementProfileId": "PROFILE-GA-QUALIFICATION"
@@ -2363,67 +2365,69 @@
         {
           "id": "M080-AC-008",
           "gate": "core",
-          "description": "全部受支持 credential store 及不可用 fallback 场景通过且不泄露 token。",
-          "metric": "credentialStoreFallbackCoverage",
+          "description": "真实 Windows runner 的安装、升级、失败恢复、回滚和卸载五阶段全部通过且认证配置保留。",
+          "metric": "windowsLifecycleStagesPassed",
           "comparator": "eq",
-          "target": 100,
-          "unit": "percent",
-          "measurementMethod": "credential backend and fallback matrix",
-          "measurementProfileId": "PROFILE-CONTRACT-SECURITY",
+          "target": 5,
+          "unit": "stages",
+          "measurementMethod": "candidate lifecycle integration test",
+          "measurementProfileId": "PROFILE-GA-QUALIFICATION",
           "status": "pending",
           "evidenceIds": []
         }
       ],
       "validatorScenarios": [
         {
-          "id": "M080-V-POLICY",
-          "description": "执行策略决策矩阵、审计完整性和篡改注入。",
-          "mode": "black_box"
-        },
-        {
-          "id": "M080-V-COMPAT",
-          "description": "验证当前和前两个 API 契约版本。",
+          "id": "M080-V-SCHEMAS",
+          "description": "从命令清单发现并导出全部公开 JSON Schema，验证成功、空结果、错误和版本漂移。",
           "mode": "contract"
         },
         {
-          "id": "M080-V-PLATFORMS",
-          "description": "在支持平台执行安装、升级、回滚和卸载。",
-          "mode": "platform"
-        },
-        {
-          "id": "M080-V-ROUTING",
-          "description": "分类种子问题并验证固定服务端线程闭环。",
+          "id": "M080-V-FAVORITES",
+          "description": "验证话题和回复收藏在个人数据面的身份一致性，并确认旧合集不会误分类回复。",
           "mode": "black_box"
         },
         {
-          "id": "M080-V-SOAK",
-          "description": "运行 7 天只读 soak 并分析全部失败。",
-          "mode": "soak"
+          "id": "M080-V-RAG",
+          "description": "由本地 AI 触发 rag retrieve，验证多查询、正确答案、证据 URL、不可回答和引用完整性。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M080-V-RAG-ISOLATION",
+          "description": "证明新检索链只访问只读 search/topic 端点，既有 ask 命令仍使用原端点且 App 100 无任何变更。",
+          "mode": "contract"
+        },
+        {
+          "id": "M080-V-WINDOWS",
+          "description": "在真实 Windows runner 和两种 PowerShell 中执行候选包安装及完整生命周期。",
+          "mode": "platform"
         }
       ],
       "dependencies": [
-        "server:versioned-capability-contracts",
         "external:supported-platform-runners"
       ],
       "evidence": [
         {
           "id": "M080-E-LOCAL",
           "kind": "repository",
-          "path": "test/security-redaction.test.ts",
-          "description": "Existing local policy, redaction, credential, release, and installer tests.",
-          "commit": "6bd185d"
+          "path": "test/contract/public-json-inventory.contract.test.ts",
+          "description": "Current command inventory, JSON contracts, favorites, RAG and installer test baseline.",
+          "commit": "10fd17650e2448b43b7931cd948856bb86bd936b"
         }
       ],
-      "userOutcome": "团队能够治理策略、凭据、兼容性、审计和支持平台生命周期，而不引入新的产品主线。",
+      "userOutcome": "用户通过本地 AI 获得稳定、可引用的 APEX 中文社区知识和安全操作能力，并能在真实 Windows 环境可靠使用 CLI。",
       "stageNonGoals": [
-        "新增独立用户功能族",
-        "强制 native keychain 依赖",
-        "远端策略控制平面"
+        "修改 App 100 页面或现有 RAG 知识问答实现",
+        "credential store 扩展",
+        "团队 workflow plan 扩展",
+        "本地 collection 扩展",
+        "MCP 或模型供应商绑定"
       ],
       "outcomeMetricIds": [
-        "M080-AC-002",
+        "M080-AC-001",
         "M080-AC-004",
-        "M080-AC-007"
+        "M080-AC-006",
+        "M080-AC-008"
       ]
     },
     {
@@ -3051,38 +3055,7 @@
       }
     },
     {
-      "id": "server:versioned-capability-contracts",
-      "owner": "server",
-      "milestoneIds": [
-        "0.8"
-      ],
-      "requiredAt": "completion",
-      "status": "unverified",
-      "resolutionThreadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
-      "readinessEvidence": {
-        "apiContractVersion": null,
-        "providerCommit": null,
-        "fixturePath": null,
-        "liveSmokeArtifact": null
-      }
-    },
-    {
       "id": "external:supported-platform-runners",
-      "owner": "external",
-      "milestoneIds": [
-        "0.8"
-      ],
-      "requiredAt": "completion",
-      "status": "unverified",
-      "resolutionThreadId": null,
-      "readinessEvidence": {
-        "availabilityArtifact": null,
-        "versionMatrix": null,
-        "smokeArtifact": null
-      }
-    },
-    {
-      "id": "external:platform-credential-stores",
       "owner": "external",
       "milestoneIds": [
         "0.8"
@@ -3185,25 +3158,36 @@
       ]
     },
     {
-      "id": "RISK-080-CREDENTIALS",
-      "milestoneId": "0.8",
-      "capabilityIds": [
-        "M080-CAP-LIFECYCLE"
-      ],
-      "status": "open",
-      "blockingAt": "completion",
-      "description": "可选 credential store 与 fallback 策略尚未资格化",
-      "resolutionEvidenceIds": []
-    },
-    {
       "id": "RISK-080-PLATFORMS",
       "milestoneId": "0.8",
       "capabilityIds": [
-        "M080-CAP-LIFECYCLE"
+        "M080-CAP-WINDOWS"
       ],
       "status": "open",
       "blockingAt": "completion",
       "description": "跨平台升级、回滚和卸载 runner 尚未证明可用",
+      "resolutionEvidenceIds": []
+    },
+    {
+      "id": "RISK-080-JSON-CONTRACT-DRIFT",
+      "milestoneId": "0.8",
+      "capabilityIds": [
+        "M080-CAP-JSON-CONTRACTS"
+      ],
+      "status": "open",
+      "blockingAt": "completion",
+      "description": "公开 JSON 命令仍存在通用对象契约，必须以可导出具体 Schema 和兼容性门禁归零。",
+      "resolutionEvidenceIds": []
+    },
+    {
+      "id": "RISK-080-APP100-RAG-ISOLATION",
+      "milestoneId": "0.8",
+      "capabilityIds": [
+        "M080-CAP-AI-RAG"
+      ],
+      "status": "open",
+      "blockingAt": "completion",
+      "description": "新本地 AI 检索链必须证明只消费现有只读端点且不会调用、修改或替代 App 100 的 /api/v1/ask。",
       "resolutionEvidenceIds": []
     },
     {

@@ -1,11 +1,13 @@
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmodSync, cpSync, existsSync, lstatSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, lstatSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { delimiter, join } from "node:path";
+import { delimiter, dirname, isAbsolute, join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, test } from "vitest";
 
 const repoRoot = join(__dirname, "..");
+const windowsTest = process.platform === "win32" ? test : test.skip;
 
 function execNpm(args: string[]): string {
   if (process.env.npm_execpath) {
@@ -181,4 +183,194 @@ describe("cross-platform lifecycle assets", () => {
     expect(script).toContain(".apexcn-install-root");
     expect(script).toContain(".apexcn-bin-dir");
   });
+
+  windowsTest("PowerShell performs install, upgrade, failed-upgrade recovery, rollback, and uninstall", () => {
+    const powershell = process.env.APEXCN_TEST_POWERSHELL ?? "pwsh.exe";
+    const shellProbe = spawnSync(powershell, ["-NoProfile", "-Command", "$PSVersionTable.PSVersion.ToString()"], {
+      encoding: "utf8"
+    });
+    expect(shellProbe.status, shellProbe.stderr).toBe(0);
+
+    const root = mkdtempSync(join(tmpdir(), "apexcn-windows-lifecycle-"));
+    const installRoot = join(root, "install");
+    const binDir = join(root, "bin");
+    const backupRoot = join(root, "backups");
+    const home = join(root, "home");
+    const localAppData = join(root, "local");
+    const configPath = join(home, ".apexcn", "config.json");
+    const configText = '{"profiles":{"preserved":{"baseUrl":"https://example.invalid","token":"not-a-real-token"}}}\n';
+    mkdirSync(dirname(configPath), { recursive: true });
+    writeFileSync(configPath, configText);
+
+    try {
+      const artifacts = prepareWindowsLifecyclePackages(root);
+      const env = {
+        ...process.env,
+        HOME: home,
+        USERPROFILE: home,
+        LOCALAPPDATA: localAppData,
+        APEXCN_CLI_INSTALL_ROOT: installRoot,
+        APEXCN_CLI_BIN_DIR: binDir,
+        APEXCN_CLI_BACKUP_ROOT: backupRoot,
+        PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`
+      };
+      const lifecycle = join(repoRoot, "scripts", "lifecycle-agent.ps1");
+      const install = runPowerShell(powershell, lifecycle, [
+        "install",
+        "-InstallRoot", installRoot,
+        "-BinDir", binDir,
+        "-PackageUrl", pathToFileURL(artifacts.olderArchive).href,
+        "-ChecksumsUrl", pathToFileURL(artifacts.olderChecksums).href
+      ], env);
+      expect(install.status, `${install.stdout}\n${install.stderr}`).toBe(0);
+      expect(installedPackageVersion(installRoot)).toBe(artifacts.olderVersion);
+      expect(existsSync(join(binDir, "apexcn.cmd"))).toBe(true);
+      expect(readFileSync(configPath, "utf8")).toBe(configText);
+
+      const installedLifecycle = join(installRoot, "package", "scripts", "lifecycle-agent.ps1");
+      const upgrade = runPowerShell(powershell, installedLifecycle, [
+        "upgrade",
+        "-BackupRoot", backupRoot,
+        "-PackageUrl", pathToFileURL(artifacts.currentArchive).href,
+        "-ChecksumsUrl", pathToFileURL(artifacts.currentChecksums).href
+      ], env);
+      expect(upgrade.status, `${upgrade.stdout}\n${upgrade.stderr}`).toBe(0);
+      expect(upgrade.stdout).toContain("Upgrade complete");
+      expect(installedPackageVersion(installRoot)).toBe(artifacts.currentVersion);
+      expect(readFileSync(configPath, "utf8")).toBe(configText);
+
+      const failedUpgrade = runPowerShell(powershell, installedLifecycle, [
+        "upgrade",
+        "-BackupRoot", backupRoot,
+        "-PackageUrl", pathToFileURL(artifacts.currentArchive).href,
+        "-ChecksumsUrl", pathToFileURL(artifacts.invalidChecksums).href
+      ], env);
+      expect(failedUpgrade.status).not.toBe(0);
+      expect(`${failedUpgrade.stdout}\n${failedUpgrade.stderr}`).toContain("Checksum verification failed");
+      expect(installedPackageVersion(installRoot)).toBe(artifacts.currentVersion);
+      expect(existsSync(join(binDir, "apexcn.cmd"))).toBe(true);
+      expect(readFileSync(configPath, "utf8")).toBe(configText);
+
+      const rollbackBackup = readdirSync(backupRoot)
+        .map((name) => join(backupRoot, name))
+        .find((path) => installedPackageVersion(path) === artifacts.olderVersion);
+      expect(rollbackBackup).toBeDefined();
+      const rollback = runPowerShell(powershell, installedLifecycle, [
+        "rollback",
+        "-Backup", rollbackBackup as string,
+        "-Yes"
+      ], env);
+      expect(rollback.status, `${rollback.stdout}\n${rollback.stderr}`).toBe(0);
+      expect(rollback.stdout).toContain(`Rollback complete: ${artifacts.olderVersion}`);
+      expect(installedPackageVersion(installRoot)).toBe(artifacts.olderVersion);
+      expect(readFileSync(configPath, "utf8")).toBe(configText);
+
+      const restoredLifecycle = join(installRoot, "package", "scripts", "lifecycle-agent.ps1");
+      const uninstall = runPowerShell(powershell, restoredLifecycle, ["uninstall", "-Yes"], env);
+      expect(uninstall.status, `${uninstall.stdout}\n${uninstall.stderr}`).toBe(0);
+      expect(uninstall.stdout).toContain("Auth configuration was preserved");
+      expect(existsSync(installRoot)).toBe(false);
+      expect(existsSync(join(binDir, "apexcn.cmd"))).toBe(false);
+      expect(readFileSync(configPath, "utf8")).toBe(configText);
+
+      writeWindowsLifecycleReport({
+        shell: powershell,
+        shellVersion: shellProbe.stdout.trim(),
+        currentVersion: artifacts.currentVersion,
+        stages: ["install", "upgrade", "failed-upgrade-recovery", "rollback", "uninstall"],
+        authConfigurationPreserved: true
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 240_000);
 });
+
+function prepareWindowsLifecyclePackages(root: string): {
+  currentVersion: string;
+  olderVersion: string;
+  currentArchive: string;
+  currentChecksums: string;
+  olderArchive: string;
+  olderChecksums: string;
+  invalidChecksums: string;
+} {
+  const currentVersion = (JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as { version: string }).version;
+  const [major, minor, patch] = currentVersion.split(".").map(Number);
+  const olderVersion = patch > 0 ? `${major}.${minor}.${patch - 1}` : `${major}.${Math.max(0, minor - 1)}.0`;
+  execNpm(["pack", "--pack-destination", root]);
+  const currentArchive = join(root, "apexcn-cli-current.tgz");
+  cpSync(join(root, `apexcn-cli-${currentVersion}.tgz`), currentArchive);
+  const currentChecksums = checksumFile(root, "current-checksums.txt", currentArchive);
+
+  const olderRoot = join(root, "older");
+  mkdirSync(olderRoot);
+  execFileSync("tar", ["-xzf", currentArchive, "-C", olderRoot]);
+  const olderPackagePath = join(olderRoot, "package", "package.json");
+  const olderPackage = JSON.parse(readFileSync(olderPackagePath, "utf8")) as { version: string };
+  olderPackage.version = olderVersion;
+  writeFileSync(olderPackagePath, `${JSON.stringify(olderPackage, null, 2)}\n`);
+  const olderArchive = join(root, "apexcn-cli-older.tgz");
+  execFileSync("tar", ["-czf", olderArchive, "-C", olderRoot, "package"]);
+  const olderChecksums = checksumFile(root, "older-checksums.txt", olderArchive);
+  const invalidChecksums = join(root, "invalid-checksums.txt");
+  writeFileSync(invalidChecksums, `${"0".repeat(64)}  apexcn-cli.tgz\n`);
+  return {
+    currentVersion,
+    olderVersion,
+    currentArchive,
+    currentChecksums,
+    olderArchive,
+    olderChecksums,
+    invalidChecksums
+  };
+}
+
+function checksumFile(root: string, name: string, archive: string): string {
+  const path = join(root, name);
+  const digest = createHash("sha256").update(readFileSync(archive)).digest("hex");
+  writeFileSync(path, `${digest}  apexcn-cli.tgz\n`);
+  return path;
+}
+
+function runPowerShell(
+  executable: string,
+  script: string,
+  args: string[],
+  env: NodeJS.ProcessEnv
+): ReturnType<typeof spawnSync> {
+  return spawnSync(executable, [
+    "-NoProfile",
+    "-ExecutionPolicy", "Bypass",
+    "-File", script,
+    ...args
+  ], {
+    cwd: repoRoot,
+    env,
+    encoding: "utf8",
+    timeout: 120_000
+  });
+}
+
+function installedPackageVersion(installRoot: string): string {
+  const packagePath = existsSync(join(installRoot, "package.json"))
+    ? join(installRoot, "package.json")
+    : join(installRoot, "package", "package.json");
+  return (JSON.parse(readFileSync(packagePath, "utf8")) as { version: string }).version;
+}
+
+function writeWindowsLifecycleReport(report: Record<string, unknown>): void {
+  const configuredPath = process.env.APEXCN_WINDOWS_REPORT_PATH;
+  if (!configuredPath) {
+    return;
+  }
+  const output = isAbsolute(configuredPath) ? configuredPath : join(repoRoot, configuredPath);
+  mkdirSync(dirname(output), { recursive: true });
+  writeFileSync(output, `${JSON.stringify({
+    kind: "windows-lifecycle-qualification",
+    schemaVersion: 1,
+    runner: "windows-2022",
+    ...report,
+    ok: true
+  }, null, 2)}\n`);
+}

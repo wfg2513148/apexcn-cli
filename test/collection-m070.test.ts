@@ -224,6 +224,66 @@ describe("roadmap 0.7 collection assets", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test("favorites import keeps its topic-only boundary and never treats a reply id as a topic id", async () => {
+    const outputDir = await tempPath("favorite-target-boundary");
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/v1/me/favorites/export?pageSize=50")) {
+        return Response.json({
+          requestId: "favorites-targets",
+          items: [
+            {
+              targetType: "THREAD",
+              targetId: 11,
+              topicId: 11,
+              title: "Favorite topic",
+              content: "Topic body",
+              threadUrl: "https://oracleapex.cn/t/11"
+            },
+            {
+              id: 999,
+              targetType: "POST",
+              targetId: 90,
+              topicId: 11,
+              replyId: 90,
+              title: "Favorite reply",
+              content: "Reply body",
+              threadUrl: "https://oracleapex.cn/t/11",
+              replyUrl: "https://oracleapex.cn/t/11#post_90"
+            }
+          ],
+          page: { hasMore: false, nextCursor: null }
+        });
+      }
+      return Response.json({ error: { message: `unexpected ${url}` } }, { status: 500 });
+    });
+
+    await program.parseAsync([
+      "node", "apexcn", "collection", "favorites",
+      "--output-dir", outputDir,
+      "--json"
+    ]);
+
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
+      kind: "collection-favorites",
+      topicCount: 1,
+      excludedReplyCount: 1,
+      unavailableCount: 1
+    }));
+    const collection = await readJson(join(outputDir, "collection.json"));
+    expect(collection.topics.map((topic: { id: number }) => topic.id)).toEqual([11]);
+    expect(collection.errors).toContainEqual(expect.objectContaining({
+      targetType: "POST",
+      topicId: 11,
+      replyId: 90,
+      unavailableReason: "REPLY_FAVORITE_EXCLUDED"
+    }));
+    expect(collection.topics).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 90 }),
+      expect.objectContaining({ id: 999 })
+    ]));
+  });
+
   test("bundle verification rejects tampering and unsafe duplicate paths", async () => {
     const bundlePath = await tempPath("tampered-bundle.json");
     const importDir = await tempPath("tampered-import");

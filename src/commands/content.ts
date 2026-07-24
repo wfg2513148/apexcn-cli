@@ -96,6 +96,16 @@ type AskFilterOptions = {
   tag?: string;
 };
 
+type RagRetrieveOptions = FormatOption & {
+  query?: string[];
+  topK?: number;
+  context?: string;
+  categoryId?: number;
+  fromDate?: string;
+  toDate?: string;
+  tag?: string;
+};
+
 export function createConfirmCommand(options: ApiCommandOptions): Command {
   return new Command("confirm")
     .description("confirm and execute a previously previewed community change")
@@ -385,6 +395,63 @@ export function createResearchCommand(options: ApiCommandOptions): Command {
         printData(options, data, outputFormat(commandOptions), formatResearchText);
       });
     });
+}
+
+export function createRagCommand(options: ApiCommandOptions): Command {
+  const rag = new Command("rag").description("retrieve citable community evidence for a local AI");
+  rag
+    .command("retrieve")
+    .description("retrieve evidence without calling the app RAG answer endpoint")
+    .argument("<question>")
+    .option("--query <text>", "retrieval query; repeatable", collectRagQuery, [])
+    .option("--top-k <n>", "maximum unique topics to fetch, 1-10", parseResearchLimit)
+    .option("--context <text>", "explicit context for a follow-up question", parseNonBlankText)
+    .option("--category-id <id>", "category id", parsePositiveInteger)
+    .option("--from-date <date>", "inclusive updated-from date, YYYY-MM-DD", parseSearchDate)
+    .option("--to-date <date>", "inclusive updated-to date, YYYY-MM-DD", parseSearchDate)
+    .option("--tag <tag>", "exact tag filter", parseNonBlankText)
+    .option("--json", "pretty-print JSON")
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async (question: string, commandOptions: RagRetrieveOptions) => {
+      if (!validateFormatOptions(options, commandOptions)) {
+        return;
+      }
+      if (!question.trim()) {
+        printError(options, {
+          type: "validation",
+          code: "INVALID_ARGUMENT",
+          message: "RAG question must not be blank.",
+          exitCode: 1
+        }, undefined, commandOptions.json);
+        process.exitCode = 1;
+        return;
+      }
+      if (!validateSearchDateRange(options, commandOptions.fromDate, commandOptions.toDate, commandOptions)) {
+        return;
+      }
+      await runApi(options, commandOptions, async (session) => {
+        const topK = commandOptions.topK ?? 5;
+        const explicitQueries = (commandOptions.query ?? []).map((query) => query.trim()).filter(Boolean);
+        const retrievalInput = commandOptions.context
+          ? `${commandOptions.context.trim()} ${question.trim()}`
+          : question.trim();
+        const queries = explicitQueries.length > 0
+          ? Array.from(new Set(explicitQueries))
+          : researchQueryCandidates(retrievalInput);
+        const result = await retrieveRagEvidence(session, {
+          question,
+          queries,
+          topK,
+          context: commandOptions.context,
+          categoryId: commandOptions.categoryId,
+          fromDate: commandOptions.fromDate,
+          toDate: commandOptions.toDate,
+          tag: commandOptions.tag
+        });
+        printData(options, result, outputFormat(commandOptions), formatRagEvidenceText);
+      });
+    });
+  return rag;
 }
 
 export function createTopicCommand(options: ApiCommandOptions): Command {
@@ -1261,6 +1328,193 @@ function formatResearchText(data: unknown): string {
   ]);
 }
 
+function formatRagEvidenceText(data: unknown): string {
+  if (!isRecord(data)) {
+    return "";
+  }
+  const answerability = isRecord(data.answerability) ? data.answerability : {};
+  const evidence = Array.isArray(data.evidence) ? data.evidence.filter(isRecord) : [];
+  return lines([
+    line("Question", data.question),
+    line("Answerability", answerability.status),
+    `Evidence: ${evidence.length}`,
+    ...evidence.map((item) => lines([
+      `${fieldText(item.evidenceId)} [${fieldText(item.type)}] ${fieldText(item.title)}`,
+      line("Community URL", item.communityUrl),
+      line("Original URL", item.originalUrl),
+      blockLine("Content", item.content)
+    ]))
+  ]);
+}
+
+async function retrieveRagEvidence(
+  session: Session,
+  input: {
+    question: string;
+    queries: string[];
+    topK: number;
+    context?: string;
+    categoryId?: number;
+    fromDate?: string;
+    toDate?: string;
+    tag?: string;
+  }
+): Promise<Record<string, unknown>> {
+  const client = createApiClient(session);
+  const topicMatches = new Map<number, Set<string>>();
+  const requestIds = new Set<string>();
+  const searchAttempts: Array<Record<string, unknown>> = [];
+  for (const query of input.queries) {
+    const search = await searchTopics(client, query, {
+      pageSize: input.topK,
+      categoryId: input.categoryId,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+      tag: input.tag
+    });
+    if (isRecord(search) && typeof search.requestId === "string" && search.requestId.trim()) {
+      requestIds.add(search.requestId);
+    }
+    const items = itemsFromData(search).slice(0, input.topK);
+    searchAttempts.push(compactBody({
+      query,
+      resultCount: items.length,
+      requestId: isRecord(search) ? search.requestId : undefined
+    }));
+    for (const item of items) {
+      const topicId = topicIdFromSearchItem(item);
+      if (topicId === undefined) {
+        continue;
+      }
+      const matches = topicMatches.get(topicId) ?? new Set<string>();
+      matches.add(query);
+      topicMatches.set(topicId, matches);
+    }
+  }
+
+  const evidence: Array<Record<string, unknown>> = [];
+  const retrievalErrors: Array<Record<string, unknown>> = [];
+  for (const topicId of [...topicMatches.keys()].slice(0, input.topK)) {
+    try {
+      const detail = await viewTopic(client, topicId);
+      if (isRecord(detail) && typeof detail.requestId === "string" && detail.requestId.trim()) {
+        requestIds.add(detail.requestId);
+      }
+      appendTopicEvidence(evidence, detail, topicId, [...(topicMatches.get(topicId) ?? [])], session.baseUrl);
+    } catch (error) {
+      retrievalErrors.push(researchTopicError(error, topicId, retrievalErrors.length, session));
+    }
+  }
+
+  evidence.forEach((item, index) => {
+    item.evidenceId = `S${index + 1}`;
+  });
+  const correctAnswerCount = evidence.filter((item) => item.type === "correct-answer").length;
+  const status = correctAnswerCount > 0
+    ? "answerable"
+    : evidence.length > 0 ? "partial" : "unanswerable";
+  const reasons = status === "answerable"
+    ? ["CORRECT_ANSWER_FOUND"]
+    : status === "partial"
+      ? ["COMMUNITY_EVIDENCE_FOUND_WITHOUT_CORRECT_ANSWER"]
+      : ["NO_COMMUNITY_EVIDENCE"];
+  return {
+    kind: "rag-evidence-bundle",
+    schemaVersion: 1,
+    question: input.question,
+    context: input.context,
+    queries: input.queries,
+    filters: compactBody({
+      topK: input.topK,
+      categoryId: input.categoryId,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+      tag: input.tag
+    }),
+    answerability: {
+      status,
+      reasons
+    },
+    evidence,
+    searchAttempts,
+    retrievalErrors,
+    synthesisPolicy: {
+      owner: "local-ai",
+      requireEvidenceIds: true,
+      refuseUnsupportedClaims: true
+    },
+    provenance: {
+      strategy: "community-search-and-topic-detail",
+      endpoints: ["/api/v1/search", "/api/v1/topics/{topicId}"],
+      appRagEndpointCalled: false,
+      requestIds: [...requestIds],
+      sources: evidence.map((item) => compactBody({
+        evidenceId: item.evidenceId,
+        topicId: item.topicId,
+        replyId: item.replyId,
+        communityUrl: item.communityUrl,
+        originalUrl: item.originalUrl
+      }))
+    }
+  };
+}
+
+function appendTopicEvidence(
+  evidence: Array<Record<string, unknown>>,
+  detail: unknown,
+  fallbackTopicId: number,
+  matchedQueries: string[],
+  baseUrl: string
+): void {
+  const topic = topicFromData(detail) ?? {};
+  const topicId = topicIdFromSearchItem(topic) ?? fallbackTopicId;
+  const title = fieldText(topic.title ?? topic.topicTitle ?? `Topic ${topicId}`);
+  const communityUrl = firstAbsoluteUrl(topic.canonicalUrl, topic.threadUrl, topic.url)
+    ?? `${baseUrl.replace(/\/+$/, "")}/api/v1/topics/${topicId}/visual`;
+  const originalUrl = fieldText(topic.originalUrl);
+  evidence.push(compactBody({
+    type: "topic",
+    topicId,
+    title,
+    content: blockText(topic.content ?? topic.body ?? topic.summary ?? topic.excerpt),
+    communityUrl,
+    originalUrl: originalUrl || undefined,
+    updatedAt: topic.updatedDate ?? topic.updatedAt,
+    matchedQueries
+  }));
+
+  const replies = topicRepliesFromData(detail)
+    .map((reply, sourceIndex) => ({ reply, sourceIndex }))
+    .sort((left, right) => Number(right.reply.isUseful === true) - Number(left.reply.isUseful === true))
+    .slice(0, 3);
+  for (const { reply, sourceIndex } of replies) {
+    const replyId = positiveId(reply.replyId ?? reply.id ?? reply.postId);
+    const replyUrl = fieldText(reply.replyUrl ?? reply.url)
+      || (communityUrl && replyId ? `${communityUrl}#post_${replyId}` : communityUrl);
+    evidence.push(compactBody({
+      type: reply.isUseful === true ? "correct-answer" : "reply",
+      topicId,
+      replyId,
+      title: `${title} — ${reply.isUseful === true ? "正确答案" : `回复 ${sourceIndex + 1}`}`,
+      content: blockText(reply.content ?? reply.body),
+      communityUrl: replyUrl,
+      originalUrl: originalUrl || undefined,
+      updatedAt: reply.updatedDate ?? reply.updatedAt,
+      matchedQueries
+    }));
+  }
+}
+
+function positiveId(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+    return value;
+  }
+  if (typeof value === "string" && /^\d+$/.test(value)) {
+    return Number(value);
+  }
+  return undefined;
+}
+
 function searchOutput(data: unknown, originalKeyword: string, normalizedKeyword: string): unknown {
   if (!isRecord(data)) {
     return data;
@@ -2104,6 +2358,10 @@ function parseResearchLimit(value: string): number {
     throw new InvalidArgumentError("Expected --limit to be between 1 and 10");
   }
   return parsed;
+}
+
+function collectRagQuery(value: string, previous: string[]): string[] {
+  return [...previous, parseNonBlankText(value)];
 }
 
 function parseNonNegativeInteger(value: string): number {

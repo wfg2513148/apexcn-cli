@@ -223,8 +223,10 @@ describe("release version check", () => {
   test("CI runs Windows installer coverage", () => {
     const workflow = readRepoFile(".github/workflows/ci.yml");
 
-    expect(workflow).toContain("windows-latest");
-    expect(workflow).toContain("test/install-agent.test.ts test/release-version.test.ts");
+    expect(workflow).toContain("windows-2022");
+    expect(workflow).toContain("powershell.exe");
+    expect(workflow).toContain("pwsh.exe");
+    expect(workflow).toContain("test/install-agent.test.ts test/lifecycle-agent.test.ts test/release-version.test.ts");
   });
 
   test("CI runs release checks after the full test suite", () => {

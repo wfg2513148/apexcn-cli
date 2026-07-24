@@ -1,3 +1,5 @@
+import { schemaIdForCommand } from "../schemas/schema-ids.js";
+
 export type CommandCapability = "read" | "write" | "local" | "workflow" | "auth" | "diagnostic";
 export type CommandApiEffect = "no-network" | "api-read" | "api-write" | "destructive";
 export type CommandRiskLevel = "low" | "medium" | "high" | "destructive";
@@ -43,7 +45,7 @@ export const COMMAND_DESCRIPTORS: CommandDescriptor[] = [
   descriptor("collection.automation.plan", ["collection", "automation", "plan"], "Create an offline readonly automation plan", "local", "no-network", "low", false, 'apexcn collection automation plan --dir ./collection --query "ORDS auth" --output plan.json --json'),
   descriptor("collection.automation.run", ["collection", "automation", "run"], "Run an offline readonly automation plan", "local", "no-network", "low", false, "apexcn collection automation run --plan plan.json --output result.json --json"),
   descriptor("collection.export", ["collection", "export"], "Export a deterministic collection bundle", "local", "no-network", "low", false, "apexcn collection export --dir ./collection --output bundle.json --json"),
-  descriptor("collection.favorites", ["collection", "favorites"], "Build a collection from favorite topics", "read", "api-read", "medium", true, "apexcn collection favorites --output-dir ./favorites --json"),
+  descriptor("collection.favorites", ["collection", "favorites"], "Build a topic collection while explicitly excluding reply favorites", "read", "api-read", "medium", true, "apexcn collection favorites --output-dir ./favorites --json"),
   descriptor("collection.import", ["collection", "import"], "Import a verified collection bundle", "local", "no-network", "medium", false, "apexcn collection import --bundle bundle.json --output-dir ./restored --json"),
   descriptor("collection.index", ["collection", "index"], "Build a local collection search index", "local", "no-network", "low", false, "apexcn collection index --dir ./collection --json"),
   descriptor("collection.query", ["collection", "query"], "Query a local collection index", "local", "no-network", "low", false, 'apexcn collection query --dir ./collection "ORDS 401" --json'),
@@ -85,8 +87,12 @@ export const COMMAND_DESCRIPTORS: CommandDescriptor[] = [
   descriptor("reply.unmark-answer", ["reply", "unmark-answer"], "Preview removing the correct-answer mark from a reply", "write", "api-write", "high", true, "apexcn reply unmark-answer 1 2 --if-version 1 --preview", true, true),
   descriptor("reply.update", ["reply", "update"], "Preview reply update and return a confirmation id", "write", "api-write", "high", true, "apexcn reply update 2 --if-version 1 --content 更新 --preview", true, true),
   descriptor("research", ["research"], "Build a research bundle", "read", "api-read", "medium", true, 'apexcn research "REST API" --json'),
+  descriptor("rag.retrieve", ["rag", "retrieve"], "Retrieve citable community evidence for a local AI", "read", "api-read", "low", true, 'apexcn rag retrieve "ORDS 401" --top-k 5 --json'),
   descriptor("review.reply", ["review", "reply"], "Review local reply draft", "local", "no-network", "low", false, "apexcn review reply --topic-id 1 --content-file reply.md --json"),
   descriptor("review.topic", ["review", "topic"], "Review local topic draft", "local", "no-network", "low", false, "apexcn review topic --title 标题 --content-file post.md --json"),
+  descriptor("schema.bundle", ["schema", "bundle"], "Export all public JSON Schemas", "local", "no-network", "low", false, "apexcn schema bundle --output schemas.json --json"),
+  descriptor("schema.list", ["schema", "list"], "List public JSON Schemas", "local", "no-network", "low", false, "apexcn schema list --json"),
+  descriptor("schema.show", ["schema", "show"], "Show one public JSON Schema", "local", "no-network", "low", false, "apexcn schema show search-response-v1 --json"),
   descriptor("search", ["search"], "Search community topics", "read", "api-read", "low", true, 'apexcn search "APEX" --json'),
   descriptor("stats.category", ["stats", "category"], "Read category stats", "read", "api-read", "low", true, "apexcn stats category --json"),
   descriptor("stats.tag", ["stats", "tag"], "Read tag stats", "read", "api-read", "low", true, "apexcn stats tag --json"),
@@ -145,16 +151,7 @@ function descriptor(
 
 function jsonContractFor(id: string): JsonContractDescriptor {
   const testFile = contractTestFile(id);
-  if (id === "commands") return contract("command-manifest-v2", testFile);
-  if (id === "ask") return contract("ask-response-v1", testFile);
-  if (id === "research") return contract("research-bundle-v1", testFile);
-  if (id === "search") return contract("search-response-v1", testFile);
-  if (id === "topic.view") return contract("topic-response-v1", testFile);
-  if (id === "doctor.snapshot") return contract("doctor-snapshot-v1", testFile);
-  if (id === "guide") return contract("novice-guide-v1", testFile);
-  if (id === "workflow.plan") return contract("workflow-plan-v1", testFile);
-  if (id === "collection.query") return contract("collection-query-v1", testFile);
-  return contract("public-json-object-v1", testFile);
+  return contract(schemaIdForCommand(id), testFile);
 }
 
 function contract(successSchemaId: string, testFile: string): JsonContractDescriptor {
@@ -169,7 +166,9 @@ function contractTestFile(id: string): string {
   if (id.startsWith("draft.")) return "test/draft.test.ts";
   if (id === "guide") return "test/guide.test.ts";
   if (id === "me" || id.startsWith("me.")) return "test/me.test.ts";
+  if (id === "rag.retrieve") return "test/rag.test.ts";
   if (id.startsWith("review.")) return "test/review.test.ts";
+  if (id.startsWith("schema.")) return "test/schema-registry.test.ts";
   if (id.startsWith("workflow.")) return "test/workflow.test.ts";
   return "test/content.test.ts";
 }

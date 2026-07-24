@@ -31,8 +31,10 @@ function checkCiWorkflow() {
     "npm run check:release",
     "npm run eval:rag",
     "actions/upload-artifact@v4",
-    "windows-latest",
-    "test/install-agent.test.ts test/release-version.test.ts"
+    "windows-2022",
+    "powershell.exe",
+    "pwsh.exe",
+    "test/install-agent.test.ts test/lifecycle-agent.test.ts test/release-version.test.ts"
   ]);
   checkOrder(path, text, "npm test", "npm run check:release");
 }

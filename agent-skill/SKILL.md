@@ -21,7 +21,7 @@ Use this skill for natural requests mentioning:
 - 在我的个人看板搜索, 从我的看板查, 只查我创建的, 只查我回复的, 只查我收藏的, 只查我订阅的
 - 正确答案, 标记答案, 取消正确答案, 收藏回复, 收藏留言, 取消收藏回复, 取消收藏留言
 - Natural Oracle APEX troubleshooting or how-to questions such as APEX 页面报错、ORDS 401、Interactive Grid 保存失败、授权方案配置、REST API 调用, especially from users who may not know to mention the community explicitly
-- `apexcn search`, `apexcn ask`, `apexcn topic`, `apexcn reply`
+- `apexcn search`, `apexcn rag retrieve`, `apexcn ask`, `apexcn topic`, `apexcn reply`
 
 Do not use this skill for:
 
@@ -63,9 +63,10 @@ For a human who explicitly chooses the simplest file-backed setup, `apexcn -apik
 ## Agent Rules
 
 - Pass `--json` for machine-readability by default. Exception: use `apexcn draft question --format text` when generating Markdown content for `topic create --content-file`.
-- For natural Oracle APEX troubleshooting/how-to questions, use `apexcn ask "<question>" --top-k 3 --json` to retrieve community-grounded references even when the user does not explicitly say "APEX 中文社区". If the answer is weak or unanswerable, report that limitation instead of inventing an answer.
+- For natural Oracle APEX troubleshooting/how-to questions, use `apexcn rag retrieve "<question>" --top-k 5 --json` even when the user does not explicitly say "APEX 中文社区". The command retrieves community evidence; the local AI owns synthesis and must cite `evidenceId` values for material claims.
+- `rag retrieve` must remain isolated from the existing App 100 RAG path: it uses only community search and topic-detail reads and must never fall back to `apexcn ask`. Use `apexcn ask` only when the user explicitly requests the community's existing server-side knowledge-answer function or when diagnosing that endpoint.
 - Use `apexcn guide learning|compatibility|deployment|security|performance --json` when a new user asks for a curated task path instead of a list of search results. Treat these local guides as checklists, not Oracle support statements; compatibility and deployment conclusions still require official documentation and target-environment verification.
-- Maintain conversation context in the agent. When the user asks a short follow-up such as "那第一步呢？", "具体怎么做？", "为什么？", or "这个报错怎么排？", pass the previous question/topic and key constraints with `--context "<previous question/topic and constraints>"`; do not call `apexcn ask` with only the short follow-up.
+- Maintain conversation context in the agent. When the user asks a short follow-up such as "那第一步呢？", "具体怎么做？", "为什么？", or "这个报错怎么排？", pass the previous question/topic and key constraints to `rag retrieve` with `--context "<previous question/topic and constraints>"`; do not retrieve using only the short follow-up.
 - If there is no reliable previous context for a short follow-up, ask the user for the missing topic or surface the CLI `needsContext` fallback. Do not silently answer the short follow-up as an unrelated standalone question.
 - `apexcn draft question` is local-only and does not require auth preflight when you are only drafting content; run auth checks before API reads or writes.
 - Use `apexcn draft reply --format text` to prepare a local Markdown reply before `reply create --content-file`.
@@ -88,6 +89,7 @@ For a human who explicitly chooses the simplest file-backed setup, `apexcn -apik
 - Use `apexcn me dashboard --json` when the user asks for “个人看板”, “我的看板”, or a combined view of content they created, replied to, favorited, and subscribed to.
 - Use `apexcn me search "<keyword>" --json` when the user asks to search within their personal dashboard. Map “我创建的” to `--scope created`, “我回复的” to `--scope replied`, “我收藏的” to `--scope favorited`, and “我订阅的” to `--scope subscribed`; combine scopes as one comma-separated value.
 - Personal favorites can contain both topics and replies. Preserve `targetType`, `topicId`, `replyId`, `threadUrl`, and `replyUrl`; never pass a reply id to a topic command.
+- `apexcn collection favorites` is topic-only compatibility behavior. It reports reply favorites as `REPLY_FAVORITE_EXCLUDED`; do not reinterpret those reply ids as topic ids or claim that reply favorites were added to the offline collection.
 - Personal-dashboard searches must use `me search`. Never substitute global `search`, `ask`, local crawling, or client-side filtering when `/me/search` is unavailable; report the unavailable capability instead.
 - Use `apexcn topic list --view unanswered --json`, `apexcn topic list --view popular --json`, `apexcn topic list --source-domain <domain> --json`, or equivalent server-side filters when the user asks for triage, source audit, imported articles, unanswered topics, hot/popular topics, pinned/featured/locked topics, or useful-answer topics.
 - Use `apexcn topic recent --since-hours 48 --json` when the user asks for recently updated or latest community posts. If `page.hasMore` is true and `page.nextCursor` is present, pass it back with `--cursor` to continue.
@@ -96,6 +98,7 @@ For a human who explicitly chooses the simplest file-backed setup, `apexcn -apik
 - Use `apexcn research "<natural-language query>" --limit 5 --json` when the user needs a citable bundle rather than a result list. If the original phrase is too narrow, inspect `query.attemptedKeywords`, `query.selectedKeyword`, and `searchAttempts`; cite only URLs in `provenance.sources`.
 - Use filtered ask flags `--category-id`, `--from/--to`, and `--tag` only when the user wants scoped reference retrieval. Treat filtered ask output as scoped references with `confidence`, `limitations`, and `filters`, not as full RAG generation unless the server contract changes.
 - Use `apexcn commands --json` to inspect available commands, purposes, safety metadata, examples, and options instead of parsing help text.
+- For a JSON-capable command, read `jsonContract.successSchemaId` from `apexcn commands --json`, then use `apexcn schema show <schema-id> --json` before generating a strict parser. Use `apexcn schema bundle --output <file> --json` when a tool needs the complete versioned contract set.
 - Use `apexcn auth audit --json` before API writes when you need a local-only check for missing active profile, invalid base URLs, missing tokens, duplicate base URLs, or insecure HTTP profiles.
 - Use `apexcn doctor snapshot --output <file> --json` before sharing diagnostics with a user or support channel. It is local-only, writes a user-only sanitized file, and reports config/env/agent-skill state without exposing full tokens or API key values.
 - Use `apexcn me capabilities --require-capability <ids...> --json` before an action that depends on specific server APIs. Do not continue when `clientCompatibility.ok` is false.
@@ -113,6 +116,7 @@ For a human who explicitly chooses the simplest file-backed setup, `apexcn -apik
 - When a CLI/API-generated result includes `originalUrl`, label `originalUrl` separately as the original source. Omit that label when the field is absent.
 - Do not open, validate, or score URLs embedded in user-authored prompts, drafts, topic bodies, or reply bodies. This exclusion does not apply to CLI/API-generated URL metadata fields.
 - Preserve `provenance.requestIds` and `provenance.sources` from search, topic, ask, and research outputs in downstream evidence.
+- For `rag retrieve`, preserve `answerability`, every cited `evidenceId`, `communityUrl`, optional `originalUrl`, and `provenance.requestIds`. If `answerability.status` is `unanswerable`, do not manufacture an answer; if it is `partial`, state the evidence limitation.
 - Do not infer an exact total from search results. If `page.hasMore` is true, report a lower bound such as "at least N results" and suggest narrowing by category or date.
 - Treat `401` as auth/token failure, `403` as permission/config denial, `409` as state conflict, and `429` as rate limiting. If stderr includes `retryAfterSeconds`, wait or report that exact retry window instead of retrying immediately.
 - Preserve stderr and `requestId` in logs for troubleshooting.
@@ -145,6 +149,7 @@ apexcn search "ORDS" --tags APEX,ORDS --has-useful-reply --source-type external 
 apexcn topic list --view unanswered --page-size 20 --json
 apexcn topic list --source-domain example.com --sort updated --json
 apexcn topic recent --since-hours 48 --page-size 10 --json
+apexcn rag retrieve "APEX 中 ORDS 401 怎么排查？" --top-k 5 --json
 apexcn research "REST API" --limit 3 --json
 apexcn guide learning --json
 apexcn guide compatibility --apex-version 24.2 --ords-version 24.4 --json
@@ -156,6 +161,8 @@ apexcn draft reply --topic-id 30549 --answer "回复建议" --format text
 apexcn review topic --title "标题" --content-file ./question.md --category-id 4 --json
 apexcn review reply --topic-id 30549 --content-file ./reply.md --json
 apexcn commands --json
+apexcn schema list --json
+apexcn schema show rag-retrieve-response-v1 --json
 apexcn ask "Oracle APEX 如何调用 REST API？" --top-k 3 --json
 apexcn ask "最近 ORDS API 有哪些更新？" --tag ORDS --from 2026-07-01 --to 2026-07-05 --top-k 5 --json
 apexcn topic view 30549 --json

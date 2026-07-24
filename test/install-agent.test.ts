@@ -12,6 +12,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, test } from "vitest";
 
 const repoRoot = join(__dirname, "..");
@@ -57,8 +58,8 @@ function installEnvironment(
   return {
     ...process.env,
     HOME: home,
-    APEXCN_CLI_PACKAGE_URL: `file://${packagePaths.archive}`,
-    APEXCN_CLI_CHECKSUMS_URL: `file://${packagePaths.checksums}`,
+    APEXCN_CLI_PACKAGE_URL: pathToFileURL(packagePaths.archive).href,
+    APEXCN_CLI_CHECKSUMS_URL: pathToFileURL(packagePaths.checksums).href,
     APEXCN_CLI_INSTALL_ROOT: join(root, "install"),
     APEXCN_CLI_BIN_DIR: bin,
     PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
@@ -76,8 +77,8 @@ function defaultInstallEnvironment(
   return {
     ...process.env,
     HOME: home,
-    APEXCN_CLI_PACKAGE_URL: `file://${packagePaths.archive}`,
-    APEXCN_CLI_CHECKSUMS_URL: `file://${packagePaths.checksums}`,
+    APEXCN_CLI_PACKAGE_URL: pathToFileURL(packagePaths.archive).href,
+    APEXCN_CLI_CHECKSUMS_URL: pathToFileURL(packagePaths.checksums).href,
     ...extra
   };
 }
@@ -151,7 +152,7 @@ describe("zero-argument one-click installers", () => {
       expect(execFileSync(join(root, "bin", "apexcn"), ["--version"], {
         env,
         encoding: "utf8"
-      })).toBe("1.0.7\n");
+      })).toBe("1.0.8\n");
       expect(existsSync(join(root, "home", ".apexcn", "config.json"))).toBe(false);
       expect(existsSync(join(root, "home", ".agents", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
       expect(existsSync(join(root, "home", ".codex", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
@@ -215,7 +216,7 @@ exit 0
 
       expect(result.status, result.stderr).toBe(0);
       expect(result.stdout).toContain("Updated shell-resolved launcher");
-      expect(execFileSync(shadow, ["--version"], { env, encoding: "utf8" })).toBe("1.0.7\n");
+      expect(execFileSync(shadow, ["--version"], { env, encoding: "utf8" })).toBe("1.0.8\n");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -248,15 +249,15 @@ printf 'external launcher\\n'
       expect(result.stdout).not.toContain("Updated shell-resolved launcher");
       expect(readFileSync(externalLauncher, "utf8")).toBe(originalLauncher);
       expect(execFileSync(join(root, "bin", "apexcn"), ["--version"], { env, encoding: "utf8" }))
-        .toBe("1.0.7\n");
+        .toBe("1.0.8\n");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   }, 30_000);
 
   test("PowerShell installer can install the same package when pwsh is available", () => {
-    const pwsh = process.env.PWSH_BIN ?? "pwsh";
-    if (spawnSync(pwsh, ["-NoProfile", "-Command", "$PSVersionTable.PSVersion.ToString()"]).status !== 0) {
+    const powershell = process.env.APEXCN_TEST_POWERSHELL ?? process.env.PWSH_BIN ?? "pwsh";
+    if (spawnSync(powershell, ["-NoProfile", "-Command", "$PSVersionTable.PSVersion.ToString()"]).status !== 0) {
       return;
     }
     const root = mkdtempSync(join(tmpdir(), "apexcn-zero-pwsh-"));
@@ -268,7 +269,7 @@ printf 'external launcher\\n'
     };
 
     try {
-      const result = spawnSync(pwsh, [
+      const result = spawnSync(powershell, [
         "-NoProfile",
         "-ExecutionPolicy",
         "Bypass",
@@ -281,7 +282,7 @@ printf 'external launcher\\n'
       expect(execFileSync(process.execPath, [
         join(root, "install", "package", "dist", "index.js"),
         "--version"
-      ], { env, encoding: "utf8" })).toBe("1.0.5\n");
+      ], { env, encoding: "utf8" })).toBe(`${(JSON.parse(readRepoFile("package.json")) as { version: string }).version}\n`);
       expect(existsSync(join(root, "home", ".apexcn", "config.json"))).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });

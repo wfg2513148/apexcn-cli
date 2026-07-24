@@ -206,11 +206,14 @@ function checkCiWorkflow() {
   if (testIndex !== -1 && releaseCheckIndex !== -1 && releaseCheckIndex < testIndex) {
     failures.push(`${path}: npm run check:release must run after npm test`);
   }
-  if (!text.includes("windows-latest")) {
-    failures.push(`${path}: missing windows-latest installer coverage`);
+  if (!text.includes("windows-2022")) {
+    failures.push(`${path}: missing Windows Server 2022 installer coverage`);
   }
-  if (!text.includes("test/install-agent.test.ts test/release-version.test.ts")) {
-    failures.push(`${path}: missing focused Windows installer/release tests`);
+  if (!text.includes("powershell.exe") || !text.includes("pwsh.exe")) {
+    failures.push(`${path}: missing Windows PowerShell 5.1 and PowerShell 7 coverage`);
+  }
+  if (!text.includes("test/install-agent.test.ts test/lifecycle-agent.test.ts test/release-version.test.ts")) {
+    failures.push(`${path}: missing focused Windows installer/lifecycle/release tests`);
   }
 }
 

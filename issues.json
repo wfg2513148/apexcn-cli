@@ -1,10 +1,99 @@
 {
   "schemaVersion": 1,
   "product": "apexcn-cli",
-  "updatedAt": "2026-07-23",
+  "updatedAt": "2026-07-24",
   "activeOnly": true,
   "issues": [],
-  "enhancementRequests": [],
+  "enhancementRequests": [
+    {
+      "id": "ENH-080-PUBLIC-JSON-SCHEMAS",
+      "status": "in_progress",
+      "title": "为全部公开 JSON 命令提供具体、可导出、可版本化的 Schema",
+      "currentBehavior": [
+        "多数公开 JSON 命令仍共享 public-json-object-v1 通用对象契约",
+        "commands --json-schema 只能导出命令清单 Schema"
+      ],
+      "requiredOutcomes": [
+        "每个公开 JSON 命令映射到已注册的具体成功响应 Schema",
+        "Schema 可列出、单独导出和整体打包",
+        "破坏性 Schema 变化必须创建新版本并由兼容性测试阻止静默漂移"
+      ],
+      "serverCapabilityAuditRequired": true,
+      "serverCapabilityAuditResult": "CLI 输出契约独立于 ORDS 原始响应，不需要服务端变更",
+      "executionOrder": [
+        "apexcn-forums-if-server-change-required",
+        "apexcn-cli",
+        "apexcn-cli-test"
+      ],
+      "promotionToActiveIssue": "only-after-fresh-independent-validator-finding"
+    },
+    {
+      "id": "ENH-080-FAVORITE-SEMANTICS",
+      "status": "in_progress",
+      "title": "统一话题和回复收藏身份并收紧旧本地合集语义",
+      "currentBehavior": [
+        "个人收藏已包含话题和回复",
+        "collection favorites 仍可能从模糊 id 推断话题身份"
+      ],
+      "requiredOutcomes": [
+        "个人收藏、个人看板和个人范围搜索使用同一 THREAD 或 POST 联合结构",
+        "collection favorites 明确仅处理话题收藏且不会把回复 ID 当作话题 ID",
+        "本地 collection 保持兼容维护状态，不扩展回复离线文档或索引"
+      ],
+      "serverCapabilityAuditRequired": true,
+      "serverCapabilityAuditResult": "现有个人收藏和 favorite-topic-export 能力足够，不需要服务端变更",
+      "executionOrder": [
+        "apexcn-forums-if-server-change-required",
+        "apexcn-cli",
+        "apexcn-cli-test"
+      ],
+      "promotionToActiveIssue": "only-after-fresh-independent-validator-finding"
+    },
+    {
+      "id": "ENH-080-AI-NATIVE-RAG",
+      "status": "in_progress",
+      "title": "为本地 AI 提供独立的社区 RAG 证据检索链",
+      "currentBehavior": [
+        "ask 依赖 App 100 现有 /api/v1/ask 服务端生成链路",
+        "research 能整理来源但尚未形成适合本地 AI 的稳定证据包"
+      ],
+      "requiredOutcomes": [
+        "新增只读 rag retrieve 命令输出稳定证据包并由本地 AI 负责最终生成",
+        "新链路只调用现有 search 和 topic detail 端点且绝不调用 /api/v1/ask",
+        "现有 ask 命令、App 100 页面和服务端 RAG 知识问答行为保持不变"
+      ],
+      "serverCapabilityAuditRequired": true,
+      "serverCapabilityAuditResult": "第一阶段复用现有只读搜索和话题详情接口，不需要服务端或 App 100 变更",
+      "executionOrder": [
+        "apexcn-forums-if-server-change-required",
+        "apexcn-cli",
+        "apexcn-cli-test"
+      ],
+      "promotionToActiveIssue": "only-after-fresh-independent-validator-finding"
+    },
+    {
+      "id": "ENH-080-WINDOWS-QUALIFICATION",
+      "status": "in_progress",
+      "title": "使用真实 Windows runner 验证安装和完整生命周期",
+      "currentBehavior": [
+        "现有 windows-latest job 只运行部分安装与版本测试",
+        "PowerShell 生命周期测试主要是静态文本检查"
+      ],
+      "requiredOutcomes": [
+        "真实 Windows runner 执行安装、升级、失败恢复、回滚和卸载",
+        "Windows PowerShell 5.1 与 PowerShell 7 都运行候选包门禁",
+        "发布闭环继续使用 skip ci，Windows 资格化绑定发布前冻结候选 commit"
+      ],
+      "serverCapabilityAuditRequired": true,
+      "serverCapabilityAuditResult": "纯客户端平台资格化，不需要服务端变更",
+      "executionOrder": [
+        "apexcn-forums-if-server-change-required",
+        "apexcn-cli",
+        "apexcn-cli-test"
+      ],
+      "promotionToActiveIssue": "only-after-fresh-independent-validator-finding"
+    }
+  ],
   "developmentExtensionProtocol": {
     "schemaVersion": 1,
     "scope": "all-future-cli-capability-extensions",

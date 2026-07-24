@@ -6,6 +6,8 @@ export * from "./doctor.js";
 export * from "./error.js";
 export * from "./guide.js";
 export * from "./research.js";
+export * from "./registry.js";
+export * from "./schema-ids.js";
 export * from "./search.js";
 export * from "./topic.js";
 export * from "./workflow.js";

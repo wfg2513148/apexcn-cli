@@ -65,7 +65,7 @@ function Write-Launcher {
 
 function New-Backup {
   $version = Get-InstalledVersion
-  $stamp = (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssZ")
+  $stamp = (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssfffZ")
   $target = Join-Path $BackupRoot "$version-$stamp"
   New-Item -ItemType Directory -Force -Path $BackupRoot | Out-Null
   Copy-Item -Recurse -Force $InstallRoot $target
@@ -91,7 +91,8 @@ function Invoke-Installer {
   $env:APEXCN_CLI_BIN_DIR = $BinDir
   if ($PackageUrl) { $env:APEXCN_CLI_PACKAGE_URL = $PackageUrl }
   if ($ChecksumsUrl) { $env:APEXCN_CLI_CHECKSUMS_URL = $ChecksumsUrl }
-  & $installer
+  $hostExecutable = (Get-Process -Id $PID).Path
+  & $hostExecutable -NoProfile -ExecutionPolicy Bypass -File $installer
   if ($LASTEXITCODE -ne 0) { throw "Installer failed with exit code $LASTEXITCODE" }
 }
 

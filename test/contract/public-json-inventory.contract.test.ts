@@ -3,21 +3,9 @@ import { join } from "node:path";
 import type { Command } from "commander";
 import { afterEach, describe, expect, test } from "vitest";
 import { createProgram } from "../../src/index.js";
+import { listPublicSchemas } from "../../src/schemas/registry.js";
 
 const repoRoot = join(__dirname, "..", "..");
-const knownSchemaIds = new Set([
-  "apexcn-error-v1",
-  "ask-response-v1",
-  "collection-query-v1",
-  "command-manifest-v2",
-  "doctor-snapshot-v1",
-  "novice-guide-v1",
-  "public-json-object-v1",
-  "research-bundle-v1",
-  "search-response-v1",
-  "topic-response-v1",
-  "workflow-plan-v1"
-]);
 
 describe("public JSON contract inventory", () => {
   afterEach(() => {
@@ -27,6 +15,7 @@ describe("public JSON contract inventory", () => {
   test("maps every declared JSON command to a known schema and real contract test", async () => {
     const manifest = await commandManifest();
     const jsonCommands = manifest.commands.filter((command) => command.supportsJson);
+    const knownSuccessSchemaIds = new Set(listPublicSchemas().map((schema) => schema.id));
 
     expect(jsonCommands.length).toBeGreaterThan(50);
     for (const command of manifest.commands) {
@@ -42,8 +31,8 @@ describe("public JSON contract inventory", () => {
         errorSchemaId: "apexcn-error-v1",
         testFile: expect.any(String)
       });
-      expect(knownSchemaIds.has(command.jsonContract.successSchemaId), command.path).toBe(true);
-      expect(knownSchemaIds.has(command.jsonContract.errorSchemaId), command.path).toBe(true);
+      expect(knownSuccessSchemaIds.has(command.jsonContract.successSchemaId), command.path).toBe(true);
+      expect(command.jsonContract.errorSchemaId, command.path).toBe("apexcn-error-v1");
       expect(existsSync(join(repoRoot, command.jsonContract.testFile)), command.path).toBe(true);
     }
   });
