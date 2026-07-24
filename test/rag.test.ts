@@ -148,6 +148,95 @@ describe("local-AI RAG evidence retrieval", () => {
     );
   });
 
+  test("falls back to the original question only when explicit queries return no topics", async () => {
+    const { program, stdout, fetch } = await configuredProgram(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/v1/search?keyword=watermark&pageSize=5")) {
+        return Response.json({ items: [], requestId: "req-empty" });
+      }
+      if (url.includes("/api/v1/search?keyword=") && url.includes("%E5%85%A8%E5%B1%80%E6%B0%B4%E5%8D%B0")) {
+        return Response.json({
+          items: [{ id: 51, title: "APEX 全局水印" }],
+          requestId: "req-fallback"
+        });
+      }
+      if (url.endsWith("/api/v1/topics/51")) {
+        return Response.json({
+          topic: {
+            id: 51,
+            title: "APEX 全局水印",
+            content: "在页面模板中统一加载水印。",
+            threadUrl: "https://oracleapex.cn/ords/test/api/v1/topics/51/visual"
+          },
+          replies: [],
+          requestId: "req-topic"
+        });
+      }
+      return Response.json({ error: { message: `unexpected ${url}` } }, { status: 500 });
+    });
+
+    await program.parseAsync([
+      "node", "apexcn", "rag", "retrieve", "如何在 APEX 中设置全局水印？",
+      "--query", "watermark",
+      "--json"
+    ]);
+
+    const output = JSON.parse(stdout.join(""));
+    expect(output.queries).toEqual(["watermark", "如何在 APEX 中设置全局水印？"]);
+    expect(output.evidence).toEqual(expect.arrayContaining([
+      expect.objectContaining({ topicId: 51 })
+    ]));
+    expect(fetch.mock.calls.map(([input]) => String(input))).not.toEqual(
+      expect.arrayContaining([expect.stringContaining("/api/v1/ask")])
+    );
+  });
+
+  test("retries the explicit query once when both explicit and question searches are empty", async () => {
+    let explicitCalls = 0;
+    const { program, stdout, fetch } = await configuredProgram(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/v1/search?keyword=watermark&pageSize=5")) {
+        explicitCalls += 1;
+        return Response.json({
+          items: explicitCalls === 2 ? [{ id: 52, title: "APEX 水印" }] : [],
+          requestId: `req-explicit-${explicitCalls}`
+        });
+      }
+      if (url.includes("/api/v1/search?keyword=")) {
+        return Response.json({ items: [], requestId: "req-question-empty" });
+      }
+      if (url.endsWith("/api/v1/topics/52")) {
+        return Response.json({
+          topic: {
+            id: 52,
+            title: "APEX 水印",
+            content: "水印实现。",
+            threadUrl: "https://oracleapex.cn/ords/test/api/v1/topics/52/visual"
+          },
+          replies: [],
+          requestId: "req-topic"
+        });
+      }
+      return Response.json({ error: { message: `unexpected ${url}` } }, { status: 500 });
+    });
+
+    await program.parseAsync([
+      "node", "apexcn", "rag", "retrieve", "如何设置 APEX 全局水印？",
+      "--query", "watermark",
+      "--json"
+    ]);
+
+    const output = JSON.parse(stdout.join(""));
+    expect(explicitCalls).toBe(2);
+    expect(output.searchAttempts).toHaveLength(3);
+    expect(output.evidence).toEqual(expect.arrayContaining([
+      expect.objectContaining({ topicId: 52 })
+    ]));
+    expect(fetch.mock.calls.map(([input]) => String(input))).not.toEqual(
+      expect.arrayContaining([expect.stringContaining("/api/v1/ask")])
+    );
+  });
+
   test("keeps the existing ask command on the App 100 RAG endpoint", async () => {
     const { program, stdout, fetch } = await configuredProgram(async (input, init) => {
       const url = String(input);

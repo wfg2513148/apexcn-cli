@@ -1364,7 +1364,9 @@ async function retrieveRagEvidence(
   const topicMatches = new Map<number, Set<string>>();
   const requestIds = new Set<string>();
   const searchAttempts: Array<Record<string, unknown>> = [];
-  for (const query of input.queries) {
+  const attemptedQueries: string[] = [];
+  const runSearch = async (query: string): Promise<void> => {
+    attemptedQueries.push(query);
     const search = await searchTopics(client, query, {
       pageSize: input.topK,
       categoryId: input.categoryId,
@@ -1390,6 +1392,25 @@ async function retrieveRagEvidence(
       matches.add(query);
       topicMatches.set(topicId, matches);
     }
+  };
+  for (const query of input.queries) {
+    await runSearch(query);
+  }
+  if (topicMatches.size === 0) {
+    const fallbackInput = [input.context, input.question].filter(Boolean).join(" ");
+    for (const query of researchQueryCandidates(fallbackInput)) {
+      if (attemptedQueries.includes(query)) {
+        continue;
+      }
+      await runSearch(query);
+      if (topicMatches.size > 0) {
+        break;
+      }
+    }
+  }
+  if (topicMatches.size === 0 && input.queries.length > 0) {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    await runSearch(input.queries[0]);
   }
 
   const evidence: Array<Record<string, unknown>> = [];
@@ -1423,7 +1444,7 @@ async function retrieveRagEvidence(
     schemaVersion: 1,
     question: input.question,
     context: input.context,
-    queries: input.queries,
+    queries: Array.from(new Set(attemptedQueries)),
     filters: compactBody({
       topK: input.topK,
       categoryId: input.categoryId,

@@ -24,6 +24,7 @@
     "check:workflows": "node scripts/check-workflows.mjs",
     "context:compact": "node scripts/compact-iteration-context.mjs",
     "eval:rag": "node scripts/eval-rag.mjs --report",
+    "eval:agent-rag": "node scripts/eval-agent-rag.mjs",
     "eval:retrieval": "node scripts/eval-retrieval.mjs --report",
     "soak:readonly": "node scripts/soak-readonly.mjs",
     "test": "vitest run",

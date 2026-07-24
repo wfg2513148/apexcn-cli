@@ -1,0 +1,28 @@
+{"id":"ARAG-Q001","question":"如何使用 APEX 和 WebSockets 创建实时仪表盘？","queries":["APEX WebSockets 实时仪表盘"],"expectedTopicIds":[30749],"originalUrlRequired":true}
+{"id":"ARAG-Q002","question":"如何把 Excel 数据转换成 Oracle APEX 集合而不安装插件？","queries":["Excel Oracle APEX 集合 无需插件"],"expectedTopicIds":[30669],"originalUrlRequired":true}
+{"id":"ARAG-Q003","question":"在 Oracle APEX 中验证 LDAP 目录用户时应注意什么？","queries":["Oracle APEX LDAP 目录用户"],"expectedTopicIds":[30548],"originalUrlRequired":true}
+{"id":"ARAG-Q004","question":"如何在 Oracle APEX 中使用 RAG 构建生成式 AI 聊天机器人？","queries":["Oracle APEX RAG 生成式 AI 聊天机器人"],"expectedTopicIds":[26987],"originalUrlRequired":true}
+{"id":"ARAG-Q005","question":"Oracle APEX 与 EBS 集成时有哪些实用步骤？","queries":["Oracle APEX EBS 集成"],"expectedTopicIds":[27250],"originalUrlRequired":true}
+{"id":"ARAG-Q006","question":"APEX 26.1 中有哪些能提高工作效率的小功能？","queries":["APEX 26.1 工作 更轻松 小功能"],"expectedTopicIds":[30547],"originalUrlRequired":true}
+{"id":"ARAG-Q007","question":"重塑现有 APEX 应用时可以从哪些方面入手？","queries":["重塑 APEX 应用"],"expectedTopicIds":[30752],"originalUrlRequired":true}
+{"id":"ARAG-Q008","question":"如何记录 APEX AI 代理的请求与响应？","queries":["APEX AI 代理 请求 响应 日志"],"expectedTopicIds":[30359],"originalUrlRequired":true}
+{"id":"ARAG-Q009","question":"APEX 26.1 的 Describe Tables 功能有什么用途？","queries":["APEX 26.1 Describe Tables"],"expectedTopicIds":[30932],"originalUrlRequired":true}
+{"id":"ARAG-Q010","question":"APEXlang 提供了什么能力？","queries":["APEXlang"],"expectedTopicIds":[30587],"originalUrlRequired":true}
+{"id":"ARAG-Q011","question":"如何在 APEX 中使用 Flexbox 构建 WhatsApp 风格对话流？","queries":["APEX Flexbox WhatsApp 对话流"],"expectedTopicIds":[28107],"originalUrlRequired":true}
+{"id":"ARAG-Q012","question":"2026 年 4 月 Oracle APEX 的现状有哪些变化？","queries":["APEX 2026 4月 现状"],"expectedTopicIds":[27548],"originalUrlRequired":true}
+{"id":"ARAG-Q013","question":"如何在 Oracle APEX 中实现无缝内联文件查看？","queries":["Oracle APEX 无缝 内联 文件 查看器"],"expectedTopicIds":[27367],"originalUrlRequired":true}
+{"id":"ARAG-Q014","question":"如何在 APEX 动态动作 JavaScript 表达式中使用 IIFE？","queries":["APEX 动态动作 JavaScript IIFE"],"expectedTopicIds":[27389],"originalUrlRequired":true}
+{"id":"ARAG-Q015","question":"如何借助 AI 把电子表格迁移为企业级 APEX 系统？","queries":["电子表格 企业级 APEX 系统 AI"],"expectedTopicIds":[27547],"originalUrlRequired":true}
+{"id":"ARAG-Q016","question":"如何在 Oracle APEX 导航栏创建通知菜单？","queries":["Oracle APEX 导航栏 通知菜单"],"expectedTopicIds":[27307],"originalUrlRequired":true}
+{"id":"ARAG-Q017","question":"Oracle APEX 搜索如何加速应用导航？","queries":["Oracle APEX 搜索 应用导航"],"expectedTopicIds":[27407],"originalUrlRequired":true}
+{"id":"ARAG-Q018","question":"如何为 AI 时代配置 APEX 开发环境？","queries":["AI 时代 APEX 开发环境 配置"],"expectedTopicIds":[27408],"originalUrlRequired":true}
+{"id":"ARAG-Q019","question":"如何使用 Oracle APEX 自动化改进工作流程？","queries":["Oracle APEX 自动化 工作流程"],"expectedTopicIds":[27347],"originalUrlRequired":true}
+{"id":"ARAG-Q020","question":"Oracle APEX 创建页面时内部会发生什么？","queries":["Oracle APEX 创建 页面 内部"],"expectedTopicIds":[27289],"originalUrlRequired":true}
+{"id":"ARAG-A001","question":"如何使用 APEX 工作流实现多级费用审批？","queries":["APEX 工作流 多级 费用 审批"],"expectedTopicIds":[24657],"expectedCorrectAnswerReplyIds":[201140],"originalUrlRequired":false}
+{"id":"ARAG-A002","question":"APEX 5 的统计圆饼图如何把特定值标记成红色？","queries":["apex5 统计 圆饼图 红色"],"expectedTopicIds":[26768],"expectedCorrectAnswerReplyIds":[201037],"originalUrlRequired":false}
+{"id":"ARAG-A003","question":"多级主从表显示异常时应该怎样处理？","queries":["多级 主从表 显示 异常"],"expectedTopicIds":[23759],"expectedCorrectAnswerReplyIds":[200956],"originalUrlRequired":false}
+{"id":"ARAG-A004","question":"如何在 Markdown 编辑器中直接粘贴图片？","queries":["Markdown 编辑器 粘贴 图片"],"expectedTopicIds":[23758],"expectedCorrectAnswerReplyIds":[200947],"originalUrlRequired":false}
+{"id":"ARAG-A005","question":"如何在同一个 APEX 工作区建立统一的全局水印？","queries":["APEX 同一工作区 全局 水印"],"expectedTopicIds":[23751],"expectedCorrectAnswerReplyIds":[200939],"originalUrlRequired":false}
+{"id":"ARAG-U001","question":"APEX 如何配置火星上的量子香蕉数据库？","queries":["zxqv9917 APEX 火星 量子香蕉数据库"],"expectedTopicIds":[],"expectedAnswerability":"unanswerable","originalUrlRequired":false}
+{"id":"ARAG-U002","question":"APEX 如何调用不存在的 QWERTY-NO-SUCH-PACKAGE-7788？","queries":["QWERTY-NO-SUCH-PACKAGE-7788 APEX"],"expectedTopicIds":[],"expectedAnswerability":"unanswerable","originalUrlRequired":false}
+{"id":"ARAG-U003","question":"APEX 中如何启用 fictitious_feature_9f8e7d6c？","queries":["fictitious_feature_9f8e7d6c APEX"],"expectedTopicIds":[],"expectedAnswerability":"unanswerable","originalUrlRequired":false}
