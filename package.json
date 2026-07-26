@@ -1,6 +1,6 @@
 {
   "name": "apexcn-cli",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "type": "module",
   "bin": {
     "apexcn": "./dist/index.js"
@@ -9,6 +9,16 @@
     "agent-skill/",
     "dist/",
     "docs/",
+    "eval/qualification/tasks.v2.jsonl",
+    "qualification/ga/README.md",
+    "qualification/ga/fixtures-v1.json",
+    "qualification/ga/harness-manifest-v1.json",
+    "qualification/ga/public-surface-v2.json",
+    "qualification/ga/qualification-contract-v2.json",
+    "qualification/ga/support-matrix-v2.json",
+    "qualification/ga/task-plan-v1.jsonl",
+    "scripts/ga-qualification-recorder.mjs",
+    "scripts/ga-qualification-score.mjs",
     "scripts/install-agent.ps1",
     "scripts/install-agent.sh",
     "scripts/lifecycle-agent.ps1",
@@ -20,6 +30,7 @@
     "baseline": "node scripts/baseline-report.mjs",
     "build": "tsc -p tsconfig.json",
     "check:ga-readiness": "node scripts/check-ga-readiness.mjs",
+    "check:ga-harness": "node scripts/generate-ga-qualification-harness.mjs --check",
     "check:release": "node scripts/check-release-version.mjs && node scripts/check-release-artifacts.mjs && node scripts/check-workflows.mjs && node scripts/check-source-layout.mjs && node scripts/check-roadmap.mjs && node scripts/check-ga-readiness.mjs",
     "check:roadmap": "node scripts/check-roadmap.mjs",
     "check:source-layout": "node scripts/check-source-layout.mjs",

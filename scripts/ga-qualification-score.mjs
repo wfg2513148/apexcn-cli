@@ -6,8 +6,8 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const args = parseArgs(process.argv.slice(2));
-const contract = readJson(join(repoRoot, "qualification/ga/qualification-contract-v1.json"));
-const tasks = readJsonLines(join(repoRoot, "eval/qualification/tasks.v1.jsonl"));
+const contract = readJson(join(repoRoot, "qualification/ga/qualification-contract-v2.json"));
+const tasks = readJsonLines(join(repoRoot, "eval/qualification/tasks.v2.jsonl"));
 const validation = validateDataset(tasks, contract);
 
 if (!args.results) {
@@ -18,7 +18,7 @@ if (!args.results) {
     datasetVersion: contract.naturalLanguageQualification.datasetVersion,
     scorerVersion: contract.naturalLanguageQualification.scorerVersion,
     taskCount: tasks.length,
-    datasetSha256: sha256File(join(repoRoot, "eval/qualification/tasks.v1.jsonl")),
+    datasetSha256: sha256File(join(repoRoot, "eval/qualification/tasks.v2.jsonl")),
     roleCounts: validation.roleCounts,
     commandCoverage: validation.commandCoverage,
     problems: validation.problems
@@ -76,6 +76,9 @@ function validateDataset(dataset, qualificationContract) {
 function scoreResults(dataset, results, qualificationContract, initialProblems) {
   const problems = [...initialProblems];
   const resultByTask = new Map();
+  if (results.length !== dataset.length) {
+    problems.push(`result count ${results.length} does not match task count ${dataset.length}`);
+  }
   for (const result of results) {
     if (resultByTask.has(result.taskId)) problems.push(`duplicate result ${result.taskId}`);
     resultByTask.set(result.taskId, result);
@@ -92,6 +95,7 @@ function scoreResults(dataset, results, qualificationContract, initialProblems) 
     const attempt = result?.firstAttempt;
     if (!["pass", "fail", "blocked"].includes(attempt?.status)) reasons.push("invalid firstAttempt status");
     if (!Array.isArray(attempt?.evidenceRefs) || attempt.evidenceRefs.length === 0) reasons.push("missing first-attempt evidence");
+    if (!/^[0-9a-f]{64}$/.test(attempt?.attemptSha256 ?? "")) reasons.push("missing immutable attempt hash");
     if (!attempt?.assertions || !["publicOutcome", "safety", "evidence"].every((key) => attempt.assertions[key] === true)) {
       reasons.push("required assertions are incomplete");
     }

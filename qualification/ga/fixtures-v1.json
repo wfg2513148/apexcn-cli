@@ -1,0 +1,106 @@
+{
+  "kind": "apexcn-ga-qualification-fixtures",
+  "schemaVersion": 1,
+  "fixtureVersion": "M090-GA-FIXTURES-1",
+  "secretPolicy": {
+    "secretValuesAllowed": false,
+    "credentialFilesMayBeReadByValidatorModel": false,
+    "credentialValuesMayBePrintedOrHashed": false,
+    "approvedCredentialUse": "The recorder may pass an approved DEV config path to the candidate without reading its contents."
+  },
+  "isolation": {
+    "runRootBinding": "RUN_ROOT",
+    "candidateBinding": "APEXCN_BIN",
+    "syntheticConfigRelativePath": "config/synthetic.json",
+    "outputRelativePath": "output",
+    "evidenceRelativePath": "evidence",
+    "realHomeMutationAllowed": false,
+    "productionWriteAllowed": false
+  },
+  "syntheticAuth": {
+    "profile": "qualifier-synthetic",
+    "baseUrl": "https://qualification.invalid/ords/api",
+    "tokenEnvironmentVariable": "APEXCN_QUALIFICATION_SYNTHETIC_TOKEN",
+    "tokenValueGeneratedByRecorder": true,
+    "tokenValueVisibleToValidatorModel": false
+  },
+  "runtimeBindings": [
+    {
+      "name": "RUN_ROOT",
+      "required": true,
+      "source": "validator-created isolated absolute directory",
+      "secret": false
+    },
+    {
+      "name": "APEXCN_BIN",
+      "required": true,
+      "source": "absolute launcher path from the frozen candidate install",
+      "secret": false
+    },
+    {
+      "name": "DEV_CONFIG_PATH",
+      "requiredFor": [
+        "approved-readonly-api",
+        "isolated-dev-write"
+      ],
+      "source": "pre-authorized dedicated DEV test-account configuration",
+      "secret": false,
+      "contentsReadableByValidatorModel": false
+    },
+    {
+      "name": "PUBLIC_TOPIC_ID",
+      "requiredFor": [
+        "approved-readonly-api"
+      ],
+      "source": "current DEV/API read-only discovery",
+      "secret": false
+    },
+    {
+      "name": "OWNED_TOPIC_ID",
+      "requiredFor": [
+        "isolated-dev-write"
+      ],
+      "source": "topic created by this qualification run or an approved reusable DEV fixture",
+      "secret": false
+    },
+    {
+      "name": "OWNED_REPLY_ID",
+      "requiredFor": [
+        "isolated-dev-write"
+      ],
+      "source": "reply created by this qualification run",
+      "secret": false
+    },
+    {
+      "name": "OTHER_OWNER_REPLY_ID",
+      "requiredFor": [
+        "isolated-dev-write"
+      ],
+      "source": "approved DEV permission-denial fixture owned by another account",
+      "secret": false
+    }
+  ],
+  "chromeEvidence": {
+    "browser": "real Chrome",
+    "inAppBrowserAllowed": false,
+    "requiredChecks": [
+      "rendered title",
+      "rendered body",
+      "formatting",
+      "visibility or status",
+      "end-user accessibility",
+      "generated URL opens without session-state checksum failure"
+    ],
+    "userAuthoredLinksExcluded": true
+  },
+  "cleanup": {
+    "onlyRunCreatedObjects": true,
+    "requiredResidualCounts": {
+      "topics": 0,
+      "replies": 0,
+      "idempotencyRows": 0,
+      "auditRows": 0,
+      "localIsolationRoots": 0
+    }
+  }
+}

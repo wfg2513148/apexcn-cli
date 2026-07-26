@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { cpSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -126,6 +127,16 @@ function verifyArtifacts() {
     "package/dist/core/runtime-session.js",
     "package/dist/core/workflow-plan.js",
     "package/node_modules/commander/package.json",
+    "package/eval/qualification/tasks.v2.jsonl",
+    "package/qualification/ga/README.md",
+    "package/qualification/ga/fixtures-v1.json",
+    "package/qualification/ga/harness-manifest-v1.json",
+    "package/qualification/ga/public-surface-v2.json",
+    "package/qualification/ga/qualification-contract-v2.json",
+    "package/qualification/ga/support-matrix-v2.json",
+    "package/qualification/ga/task-plan-v1.jsonl",
+    "package/scripts/ga-qualification-recorder.mjs",
+    "package/scripts/ga-qualification-score.mjs",
     "package/scripts/install-agent.sh",
     "package/scripts/install-agent.ps1",
     "package/scripts/lifecycle-agent.sh",
@@ -139,6 +150,9 @@ function verifyArtifacts() {
   }
 
   const forbiddenPrefixes = ["package/.git/", "package/.github/", "package/artifacts/", "package/coverage/", "package/eval/", "package/reports/", "package/src/", "package/test/"];
+  const allowedQualificationFiles = new Set([
+    "package/eval/qualification/tasks.v2.jsonl"
+  ]);
   const forbiddenFiles = [
     "package/issues.json",
     "package/roadmap.json",
@@ -149,7 +163,7 @@ function verifyArtifacts() {
     "package/vitest.config.ts"
   ];
   for (const entry of entries) {
-    if (forbiddenPrefixes.some((prefix) => entry.startsWith(prefix))) {
+    if (forbiddenPrefixes.some((prefix) => entry.startsWith(prefix)) && !allowedQualificationFiles.has(entry)) {
       throw new Error(`release package contains forbidden path ${entry}`);
     }
     if (forbiddenFiles.includes(entry)) {
@@ -167,12 +181,38 @@ function verifyArtifacts() {
   if (packageJson.version !== expectedVersion) {
     throw new Error(`release package version: expected ${expectedVersion}, got ${String(packageJson.version)}`);
   }
+  verifyPackagedQualificationHarness(entries, archivePath, expectedVersion);
 
   execFileSync("node", ["scripts/verify-release-supply-chain.mjs", artifactsDir], {
     cwd: repoRoot,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   });
+}
+
+function verifyPackagedQualificationHarness(entries, archivePath, expectedVersion) {
+  const manifestEntry = "package/qualification/ga/harness-manifest-v1.json";
+  const manifest = JSON.parse(execFileSync("tar", ["-xOzf", archivePath, manifestEntry], {
+    cwd: repoRoot,
+    encoding: "utf8"
+  }));
+  if (manifest.targetVersion !== expectedVersion || manifest.taskPlan?.taskCount !== 200) {
+    throw new Error("release package qualification harness target or denominator is invalid");
+  }
+  if (manifest.lifecyclePlan?.expectedCells !== 36
+    || manifest.lifecyclePlan?.waivers?.length !== 0) {
+    throw new Error("release package qualification lifecycle plan is incomplete or waived");
+  }
+  for (const asset of Object.values(manifest.assetDigests ?? {})) {
+    const entry = `package/${asset.path}`;
+    if (!entries.has(entry)) throw new Error(`release package qualification asset missing ${entry}`);
+    const content = execFileSync("tar", ["-xOzf", archivePath, entry], {
+      cwd: repoRoot,
+      encoding: null
+    });
+    const digest = createHash("sha256").update(content).digest("hex");
+    if (digest !== asset.sha256) throw new Error(`release package qualification asset digest mismatch ${entry}`);
+  }
 }
 
 function readJson(path) {

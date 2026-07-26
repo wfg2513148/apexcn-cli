@@ -1,0 +1,984 @@
+{
+  "kind": "apexcn-ga-qualification-harness",
+  "schemaVersion": 1,
+  "harnessVersion": "M090-GA-HARNESS-1",
+  "targetVersion": "1.0.10",
+  "datasetVersion": "M090-GA-TASKS-2",
+  "scorerVersion": "M090-GA-SCORER-2",
+  "fixtureVersion": "M090-GA-FIXTURES-1",
+  "taskPlan": {
+    "path": "qualification/ga/task-plan-v1.jsonl",
+    "sha256": "5d3912ce8e34cc46268b52c3c4024ef411ad2d2981b01b9585a4e5e1ed18d5ce",
+    "taskCount": 200,
+    "firstTaskId": "M090-Q-001",
+    "lastTaskId": "M090-Q-200",
+    "duplicateAttemptsAllowed": false,
+    "startedWithoutCompletedEvidenceMayBeRetried": false
+  },
+  "phases": [
+    {
+      "id": "P00-bind",
+      "title": "Bind candidate, manifest, public inputs, environment, and recorder before product use.",
+      "stopPoint": "No candidate task may start until all declared digests and the isolated candidate version match.",
+      "taskIds": [],
+      "taskCount": 0
+    },
+    {
+      "id": "P10-public-cli",
+      "title": "Execute the frozen natural-language public CLI surface tasks.",
+      "stopPoint": "Any started attempt without a completed evidence row invalidates the 200-task success-rate claim.",
+      "taskIds": [
+        "M090-Q-001",
+        "M090-Q-002",
+        "M090-Q-003",
+        "M090-Q-004",
+        "M090-Q-005",
+        "M090-Q-006",
+        "M090-Q-007",
+        "M090-Q-008",
+        "M090-Q-009",
+        "M090-Q-010",
+        "M090-Q-011",
+        "M090-Q-012",
+        "M090-Q-013",
+        "M090-Q-014",
+        "M090-Q-015",
+        "M090-Q-016",
+        "M090-Q-017",
+        "M090-Q-018",
+        "M090-Q-019",
+        "M090-Q-020",
+        "M090-Q-021",
+        "M090-Q-022",
+        "M090-Q-023",
+        "M090-Q-024",
+        "M090-Q-025",
+        "M090-Q-026",
+        "M090-Q-027",
+        "M090-Q-028",
+        "M090-Q-029",
+        "M090-Q-030",
+        "M090-Q-031",
+        "M090-Q-032",
+        "M090-Q-033",
+        "M090-Q-034",
+        "M090-Q-035",
+        "M090-Q-036",
+        "M090-Q-037",
+        "M090-Q-038",
+        "M090-Q-039",
+        "M090-Q-040",
+        "M090-Q-041",
+        "M090-Q-042",
+        "M090-Q-043",
+        "M090-Q-044",
+        "M090-Q-045",
+        "M090-Q-046",
+        "M090-Q-047",
+        "M090-Q-048",
+        "M090-Q-049",
+        "M090-Q-050",
+        "M090-Q-051",
+        "M090-Q-052",
+        "M090-Q-053",
+        "M090-Q-054",
+        "M090-Q-055",
+        "M090-Q-056",
+        "M090-Q-057",
+        "M090-Q-058",
+        "M090-Q-059",
+        "M090-Q-060",
+        "M090-Q-061",
+        "M090-Q-062",
+        "M090-Q-063",
+        "M090-Q-064",
+        "M090-Q-065",
+        "M090-Q-066",
+        "M090-Q-067",
+        "M090-Q-068",
+        "M090-Q-069",
+        "M090-Q-070",
+        "M090-Q-071",
+        "M090-Q-072",
+        "M090-Q-073",
+        "M090-Q-074",
+        "M090-Q-075",
+        "M090-Q-076",
+        "M090-Q-077",
+        "M090-Q-078",
+        "M090-Q-079",
+        "M090-Q-080",
+        "M090-Q-081",
+        "M090-Q-082",
+        "M090-Q-083",
+        "M090-Q-084",
+        "M090-Q-085",
+        "M090-Q-086",
+        "M090-Q-087",
+        "M090-Q-088",
+        "M090-Q-089",
+        "M090-Q-090",
+        "M090-Q-091",
+        "M090-Q-092",
+        "M090-Q-093",
+        "M090-Q-094",
+        "M090-Q-095",
+        "M090-Q-096",
+        "M090-Q-097",
+        "M090-Q-098",
+        "M090-Q-099",
+        "M090-Q-100",
+        "M090-Q-101",
+        "M090-Q-102",
+        "M090-Q-103",
+        "M090-Q-104",
+        "M090-Q-105",
+        "M090-Q-106",
+        "M090-Q-107",
+        "M090-Q-108",
+        "M090-Q-109",
+        "M090-Q-110",
+        "M090-Q-111",
+        "M090-Q-112",
+        "M090-Q-113",
+        "M090-Q-114",
+        "M090-Q-115",
+        "M090-Q-116",
+        "M090-Q-117",
+        "M090-Q-118",
+        "M090-Q-119",
+        "M090-Q-120",
+        "M090-Q-121",
+        "M090-Q-122",
+        "M090-Q-123",
+        "M090-Q-124",
+        "M090-Q-125",
+        "M090-Q-126",
+        "M090-Q-127",
+        "M090-Q-128",
+        "M090-Q-129",
+        "M090-Q-130",
+        "M090-Q-131",
+        "M090-Q-132",
+        "M090-Q-133",
+        "M090-Q-134",
+        "M090-Q-135",
+        "M090-Q-136",
+        "M090-Q-137",
+        "M090-Q-138",
+        "M090-Q-139",
+        "M090-Q-140",
+        "M090-Q-141",
+        "M090-Q-142",
+        "M090-Q-143",
+        "M090-Q-144",
+        "M090-Q-145",
+        "M090-Q-146",
+        "M090-Q-147",
+        "M090-Q-148",
+        "M090-Q-149",
+        "M090-Q-150",
+        "M090-Q-151",
+        "M090-Q-152",
+        "M090-Q-153",
+        "M090-Q-154",
+        "M090-Q-155",
+        "M090-Q-156",
+        "M090-Q-157",
+        "M090-Q-158",
+        "M090-Q-159",
+        "M090-Q-160",
+        "M090-Q-161",
+        "M090-Q-162",
+        "M090-Q-163",
+        "M090-Q-164",
+        "M090-Q-165"
+      ],
+      "taskCount": 165
+    },
+    {
+      "id": "P20-adverse-and-lifecycle",
+      "title": "Execute bounded adverse behavior and the supported-source lifecycle plan.",
+      "stopPoint": "Unexecuted platform cells remain not passed and cannot be converted into waivers.",
+      "taskIds": [
+        "M090-Q-167",
+        "M090-Q-168",
+        "M090-Q-169",
+        "M090-Q-170",
+        "M090-Q-172",
+        "M090-Q-173",
+        "M090-Q-174",
+        "M090-Q-175",
+        "M090-Q-176",
+        "M090-Q-177",
+        "M090-Q-178",
+        "M090-Q-179",
+        "M090-Q-181",
+        "M090-Q-182",
+        "M090-Q-183",
+        "M090-Q-184",
+        "M090-Q-185",
+        "M090-Q-186",
+        "M090-Q-187",
+        "M090-Q-188",
+        "M090-Q-191",
+        "M090-Q-195"
+      ],
+      "taskCount": 22
+    },
+    {
+      "id": "P30-dev-api-chrome",
+      "title": "Execute approved DEV writes, permission denials, API proof, and real Chrome checks.",
+      "stopPoint": "Stop before cleanup if created object identity or ownership is ambiguous.",
+      "taskIds": [
+        "M090-Q-192",
+        "M090-Q-193",
+        "M090-Q-194"
+      ],
+      "taskCount": 3
+    },
+    {
+      "id": "P40-security-boundaries",
+      "title": "Execute the frozen independent security boundary scenarios.",
+      "stopPoint": "Any critical or high product finding blocks qualification acceptance.",
+      "taskIds": [
+        "M090-Q-166",
+        "M090-Q-171",
+        "M090-Q-180",
+        "M090-Q-189",
+        "M090-Q-190",
+        "M090-Q-196",
+        "M090-Q-197",
+        "M090-Q-198",
+        "M090-Q-199"
+      ],
+      "taskCount": 9
+    },
+    {
+      "id": "P50-cleanup-score",
+      "title": "Clean only run-created state, prove zero residuals, and score the complete denominator.",
+      "stopPoint": "No acceptance claim is allowed unless all 200 attempts and assessments are present.",
+      "taskIds": [
+        "M090-Q-200"
+      ],
+      "taskCount": 1
+    }
+  ],
+  "lifecyclePlan": {
+    "matrixVersion": "M090-UPGRADE-2",
+    "expectedCells": 36,
+    "applicableMacOsLinuxCells": 18,
+    "windowsCellsRequired": 18,
+    "waivers": [],
+    "cells": [
+      {
+        "cellId": "1.0.0-macos-arm64",
+        "sourceVersion": "1.0.0",
+        "sourceTag": "v1.0.0",
+        "sourcePackageSha256": "5dbf98417754894102e06ed87726e0b11b52c76152495fb0f67414fa1baf48bc",
+        "platformId": "macos-arm64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.0-linux-x64",
+        "sourceVersion": "1.0.0",
+        "sourceTag": "v1.0.0",
+        "sourcePackageSha256": "5dbf98417754894102e06ed87726e0b11b52c76152495fb0f67414fa1baf48bc",
+        "platformId": "linux-x64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.0-windows-2022-powershell-5.1",
+        "sourceVersion": "1.0.0",
+        "sourceTag": "v1.0.0",
+        "sourcePackageSha256": "5dbf98417754894102e06ed87726e0b11b52c76152495fb0f67414fa1baf48bc",
+        "platformId": "windows-2022-powershell-5.1",
+        "shells": [
+          "Windows PowerShell 5.1"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      },
+      {
+        "cellId": "1.0.0-windows-2022-powershell-7",
+        "sourceVersion": "1.0.0",
+        "sourceTag": "v1.0.0",
+        "sourcePackageSha256": "5dbf98417754894102e06ed87726e0b11b52c76152495fb0f67414fa1baf48bc",
+        "platformId": "windows-2022-powershell-7",
+        "shells": [
+          "PowerShell 7"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      },
+      {
+        "cellId": "1.0.2-macos-arm64",
+        "sourceVersion": "1.0.2",
+        "sourceTag": "v1.0.2",
+        "sourcePackageSha256": "0c73f6d9fe4880be8c9d34ead105d462e746db492e102a0928fba1c951417766",
+        "platformId": "macos-arm64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.2-linux-x64",
+        "sourceVersion": "1.0.2",
+        "sourceTag": "v1.0.2",
+        "sourcePackageSha256": "0c73f6d9fe4880be8c9d34ead105d462e746db492e102a0928fba1c951417766",
+        "platformId": "linux-x64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.2-windows-2022-powershell-5.1",
+        "sourceVersion": "1.0.2",
+        "sourceTag": "v1.0.2",
+        "sourcePackageSha256": "0c73f6d9fe4880be8c9d34ead105d462e746db492e102a0928fba1c951417766",
+        "platformId": "windows-2022-powershell-5.1",
+        "shells": [
+          "Windows PowerShell 5.1"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      },
+      {
+        "cellId": "1.0.2-windows-2022-powershell-7",
+        "sourceVersion": "1.0.2",
+        "sourceTag": "v1.0.2",
+        "sourcePackageSha256": "0c73f6d9fe4880be8c9d34ead105d462e746db492e102a0928fba1c951417766",
+        "platformId": "windows-2022-powershell-7",
+        "shells": [
+          "PowerShell 7"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      },
+      {
+        "cellId": "1.0.3-macos-arm64",
+        "sourceVersion": "1.0.3",
+        "sourceTag": "v1.0.3",
+        "sourcePackageSha256": "6c3e983e7b9163358ab39c905a442902b0722eaef5b02674a81a0f9c249061d4",
+        "platformId": "macos-arm64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.3-linux-x64",
+        "sourceVersion": "1.0.3",
+        "sourceTag": "v1.0.3",
+        "sourcePackageSha256": "6c3e983e7b9163358ab39c905a442902b0722eaef5b02674a81a0f9c249061d4",
+        "platformId": "linux-x64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.3-windows-2022-powershell-5.1",
+        "sourceVersion": "1.0.3",
+        "sourceTag": "v1.0.3",
+        "sourcePackageSha256": "6c3e983e7b9163358ab39c905a442902b0722eaef5b02674a81a0f9c249061d4",
+        "platformId": "windows-2022-powershell-5.1",
+        "shells": [
+          "Windows PowerShell 5.1"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      },
+      {
+        "cellId": "1.0.3-windows-2022-powershell-7",
+        "sourceVersion": "1.0.3",
+        "sourceTag": "v1.0.3",
+        "sourcePackageSha256": "6c3e983e7b9163358ab39c905a442902b0722eaef5b02674a81a0f9c249061d4",
+        "platformId": "windows-2022-powershell-7",
+        "shells": [
+          "PowerShell 7"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      },
+      {
+        "cellId": "1.0.4-macos-arm64",
+        "sourceVersion": "1.0.4",
+        "sourceTag": "v1.0.4",
+        "sourcePackageSha256": "4f3fad6a83c09a8beba340002d00934d32c02ae8114bb01bd1c6c8dba671a03b",
+        "platformId": "macos-arm64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.4-linux-x64",
+        "sourceVersion": "1.0.4",
+        "sourceTag": "v1.0.4",
+        "sourcePackageSha256": "4f3fad6a83c09a8beba340002d00934d32c02ae8114bb01bd1c6c8dba671a03b",
+        "platformId": "linux-x64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.4-windows-2022-powershell-5.1",
+        "sourceVersion": "1.0.4",
+        "sourceTag": "v1.0.4",
+        "sourcePackageSha256": "4f3fad6a83c09a8beba340002d00934d32c02ae8114bb01bd1c6c8dba671a03b",
+        "platformId": "windows-2022-powershell-5.1",
+        "shells": [
+          "Windows PowerShell 5.1"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      },
+      {
+        "cellId": "1.0.4-windows-2022-powershell-7",
+        "sourceVersion": "1.0.4",
+        "sourceTag": "v1.0.4",
+        "sourcePackageSha256": "4f3fad6a83c09a8beba340002d00934d32c02ae8114bb01bd1c6c8dba671a03b",
+        "platformId": "windows-2022-powershell-7",
+        "shells": [
+          "PowerShell 7"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      },
+      {
+        "cellId": "1.0.5-macos-arm64",
+        "sourceVersion": "1.0.5",
+        "sourceTag": "v1.0.5",
+        "sourcePackageSha256": "a4573da6604516c9aaf8af0b1c7261eef908a89e677a9544cc9ce7d5ebfa50ef",
+        "platformId": "macos-arm64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.5-linux-x64",
+        "sourceVersion": "1.0.5",
+        "sourceTag": "v1.0.5",
+        "sourcePackageSha256": "a4573da6604516c9aaf8af0b1c7261eef908a89e677a9544cc9ce7d5ebfa50ef",
+        "platformId": "linux-x64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.5-windows-2022-powershell-5.1",
+        "sourceVersion": "1.0.5",
+        "sourceTag": "v1.0.5",
+        "sourcePackageSha256": "a4573da6604516c9aaf8af0b1c7261eef908a89e677a9544cc9ce7d5ebfa50ef",
+        "platformId": "windows-2022-powershell-5.1",
+        "shells": [
+          "Windows PowerShell 5.1"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      },
+      {
+        "cellId": "1.0.5-windows-2022-powershell-7",
+        "sourceVersion": "1.0.5",
+        "sourceTag": "v1.0.5",
+        "sourcePackageSha256": "a4573da6604516c9aaf8af0b1c7261eef908a89e677a9544cc9ce7d5ebfa50ef",
+        "platformId": "windows-2022-powershell-7",
+        "shells": [
+          "PowerShell 7"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      },
+      {
+        "cellId": "1.0.6-macos-arm64",
+        "sourceVersion": "1.0.6",
+        "sourceTag": "v1.0.6",
+        "sourcePackageSha256": "c99a3ce32aeebabe346f32d95957ed5eddf68018fdd3eddf7930912eed37a47e",
+        "platformId": "macos-arm64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.6-linux-x64",
+        "sourceVersion": "1.0.6",
+        "sourceTag": "v1.0.6",
+        "sourcePackageSha256": "c99a3ce32aeebabe346f32d95957ed5eddf68018fdd3eddf7930912eed37a47e",
+        "platformId": "linux-x64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.6-windows-2022-powershell-5.1",
+        "sourceVersion": "1.0.6",
+        "sourceTag": "v1.0.6",
+        "sourcePackageSha256": "c99a3ce32aeebabe346f32d95957ed5eddf68018fdd3eddf7930912eed37a47e",
+        "platformId": "windows-2022-powershell-5.1",
+        "shells": [
+          "Windows PowerShell 5.1"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      },
+      {
+        "cellId": "1.0.6-windows-2022-powershell-7",
+        "sourceVersion": "1.0.6",
+        "sourceTag": "v1.0.6",
+        "sourcePackageSha256": "c99a3ce32aeebabe346f32d95957ed5eddf68018fdd3eddf7930912eed37a47e",
+        "platformId": "windows-2022-powershell-7",
+        "shells": [
+          "PowerShell 7"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      },
+      {
+        "cellId": "1.0.7-macos-arm64",
+        "sourceVersion": "1.0.7",
+        "sourceTag": "v1.0.7",
+        "sourcePackageSha256": "52309766563d6c93dd79a136073b95283531d188fdc46832d2e139a4a3d2cfee",
+        "platformId": "macos-arm64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.7-linux-x64",
+        "sourceVersion": "1.0.7",
+        "sourceTag": "v1.0.7",
+        "sourcePackageSha256": "52309766563d6c93dd79a136073b95283531d188fdc46832d2e139a4a3d2cfee",
+        "platformId": "linux-x64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.7-windows-2022-powershell-5.1",
+        "sourceVersion": "1.0.7",
+        "sourceTag": "v1.0.7",
+        "sourcePackageSha256": "52309766563d6c93dd79a136073b95283531d188fdc46832d2e139a4a3d2cfee",
+        "platformId": "windows-2022-powershell-5.1",
+        "shells": [
+          "Windows PowerShell 5.1"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      },
+      {
+        "cellId": "1.0.7-windows-2022-powershell-7",
+        "sourceVersion": "1.0.7",
+        "sourceTag": "v1.0.7",
+        "sourcePackageSha256": "52309766563d6c93dd79a136073b95283531d188fdc46832d2e139a4a3d2cfee",
+        "platformId": "windows-2022-powershell-7",
+        "shells": [
+          "PowerShell 7"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      },
+      {
+        "cellId": "1.0.8-macos-arm64",
+        "sourceVersion": "1.0.8",
+        "sourceTag": "v1.0.8",
+        "sourcePackageSha256": "524a818cc44ec520274cc5700d4caca80a8373d7cea0248f90b42f8c5a2726fa",
+        "platformId": "macos-arm64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.8-linux-x64",
+        "sourceVersion": "1.0.8",
+        "sourceTag": "v1.0.8",
+        "sourcePackageSha256": "524a818cc44ec520274cc5700d4caca80a8373d7cea0248f90b42f8c5a2726fa",
+        "platformId": "linux-x64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.8-windows-2022-powershell-5.1",
+        "sourceVersion": "1.0.8",
+        "sourceTag": "v1.0.8",
+        "sourcePackageSha256": "524a818cc44ec520274cc5700d4caca80a8373d7cea0248f90b42f8c5a2726fa",
+        "platformId": "windows-2022-powershell-5.1",
+        "shells": [
+          "Windows PowerShell 5.1"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      },
+      {
+        "cellId": "1.0.8-windows-2022-powershell-7",
+        "sourceVersion": "1.0.8",
+        "sourceTag": "v1.0.8",
+        "sourcePackageSha256": "524a818cc44ec520274cc5700d4caca80a8373d7cea0248f90b42f8c5a2726fa",
+        "platformId": "windows-2022-powershell-7",
+        "shells": [
+          "PowerShell 7"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      },
+      {
+        "cellId": "1.0.9-macos-arm64",
+        "sourceVersion": "1.0.9",
+        "sourceTag": "v1.0.9",
+        "sourcePackageSha256": "3db72b8c7e06bbe932f499d799f3c6161fda54264d7fead6ffbf812a941ae4c1",
+        "platformId": "macos-arm64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.9-linux-x64",
+        "sourceVersion": "1.0.9",
+        "sourceTag": "v1.0.9",
+        "sourcePackageSha256": "3db72b8c7e06bbe932f499d799f3c6161fda54264d7fead6ffbf812a941ae4c1",
+        "platformId": "linux-x64",
+        "shells": [
+          "bash"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required"
+      },
+      {
+        "cellId": "1.0.9-windows-2022-powershell-5.1",
+        "sourceVersion": "1.0.9",
+        "sourceTag": "v1.0.9",
+        "sourcePackageSha256": "3db72b8c7e06bbe932f499d799f3c6161fda54264d7fead6ffbf812a941ae4c1",
+        "platformId": "windows-2022-powershell-5.1",
+        "shells": [
+          "Windows PowerShell 5.1"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      },
+      {
+        "cellId": "1.0.9-windows-2022-powershell-7",
+        "sourceVersion": "1.0.9",
+        "sourceTag": "v1.0.9",
+        "sourcePackageSha256": "3db72b8c7e06bbe932f499d799f3c6161fda54264d7fead6ffbf812a941ae4c1",
+        "platformId": "windows-2022-powershell-7",
+        "shells": [
+          "PowerShell 7"
+        ],
+        "stages": [
+          "install-source",
+          "upgrade-to-candidate",
+          "failed-upgrade-auto-recovery",
+          "rollback-to-source",
+          "reupgrade-and-uninstall"
+        ],
+        "statusRequirement": "required-not-waived"
+      }
+    ]
+  },
+  "execution": {
+    "candidateInterface": "installed public apexcn launcher",
+    "recorder": "scripts/ga-qualification-recorder.mjs",
+    "scorer": "scripts/ga-qualification-score.mjs",
+    "shellExecutionAllowed": false,
+    "candidateProcessUsesArgvArray": true,
+    "candidateMustBeAbsolute": true,
+    "candidateVersionMustEqualTarget": true,
+    "realUserHomeMutationAllowed": false,
+    "productionWriteAllowed": false,
+    "inAppBrowserAllowed": false,
+    "realChromeRequiredForBoundTasks": true
+  },
+  "evidence": {
+    "appendOnlyStartLedger": "events.jsonl",
+    "appendOnlyAttemptLedger": "attempts.jsonl",
+    "appendOnlyAssessmentLedger": "results.jsonl",
+    "rawSecretBearingOutputMayBePersisted": false,
+    "persistedOutputMustBeRedacted": true,
+    "stdoutStderrExitCodeAndHashesRequired": true,
+    "finalTaskDenominator": 200
+  },
+  "assetDigests": {
+    "publicSurface": {
+      "path": "qualification/ga/public-surface-v2.json",
+      "sha256": "c42dc06720c8175392606e1a830aa7b16ba0fc2ee0c888eff7537e0e8c238b86"
+    },
+    "supportMatrix": {
+      "path": "qualification/ga/support-matrix-v2.json",
+      "sha256": "903737700b4230a39f8d3612e4fa6cb767be4de5206cd1f311c343edbd96a827"
+    },
+    "qualificationContract": {
+      "path": "qualification/ga/qualification-contract-v2.json",
+      "sha256": "bac582ec4f1c6228b49acb4c476494c031beca13d38ec7c11855053248f3db9b"
+    },
+    "qualificationDataset": {
+      "path": "eval/qualification/tasks.v2.jsonl",
+      "sha256": "34a658900b2a94418f8e497d6bf6b4d804e7f304088eaacda81e86f237a2e3c9"
+    },
+    "fixtures": {
+      "path": "qualification/ga/fixtures-v1.json",
+      "sha256": "bcd21430f40c80e6f166c94f7a50d78835a7cb012ce84ec777effb99149dfa70"
+    },
+    "recorder": {
+      "path": "scripts/ga-qualification-recorder.mjs",
+      "sha256": "effe8beb4bfc90af92857b195f9e492aab29150a6aa9109574c5f4bc68b327e4"
+    },
+    "scorer": {
+      "path": "scripts/ga-qualification-score.mjs",
+      "sha256": "b09bc33b26685381251155bfe9e1dd1fc551c0827dea91a3d4c2d27f6ab75d94"
+    },
+    "lifecycleBash": {
+      "path": "scripts/lifecycle-agent.sh",
+      "sha256": "13a8068daf95ec5e3708e77a44e96ece249fc2840f4ba621148e222adb355a14"
+    },
+    "lifecyclePowerShell": {
+      "path": "scripts/lifecycle-agent.ps1",
+      "sha256": "5ac1a3a1a38a58cf8493853eacbbee7ba89908c532dc37f80f4c6969e77b2b5f"
+    }
+  }
+}

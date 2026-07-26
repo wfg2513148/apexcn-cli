@@ -4,7 +4,8 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const defaultOutput = join(repoRoot, "eval/qualification/tasks.v1.jsonl");
+const DATASET_VERSION = "M090-GA-TASKS-2";
+const defaultOutput = join(repoRoot, "eval/qualification/tasks.v2.jsonl");
 const roles = [
   ["apex-developer", "Oracle APEX 开发者"],
   ["automation-engineer", "自动化工程师"],
@@ -19,19 +20,22 @@ export async function buildGaQualificationTasks() {
   const tasks = [];
 
   for (const [commandIndex, command] of commands.entries()) {
-    for (let variant = 0; variant < 2; variant += 1) {
+    const variantCount = command.id === "confirm" ? 1 : 2;
+    for (let variant = 0; variant < variantCount; variant += 1) {
       const [role, roleLabel] = roles[(commandIndex * 2 + variant) % roles.length];
       const safety = safetyFor(command);
-      const prompt = variant === 0
-        ? `你是${roleLabel}。在全新隔离终端中，只依据公开文档完成“${command.summary}”。选择合适的 apexcn 公开命令，保留首次尝试命令、退出码和脱敏输出；${safety.promptBoundary}`
-        : `一位用户请${roleLabel}处理这个任务：${command.summary}。不要查看实现代码，先发现公开命令再完成任务，说明结果和安全边界；${safety.promptBoundary}`;
+      const prompt = command.id === "confirm"
+        ? `你是${roleLabel}。在全新隔离终端中，只依据公开文档验证 apexcn confirm 会拒绝一个不存在的 operation id。保留首次尝试命令、退出码和脱敏输出；不得使用真实 operation id 或产生 API 写入。`
+        : variant === 0
+          ? `你是${roleLabel}。在全新隔离终端中，只依据公开文档完成“${command.summary}”。选择合适的 apexcn 公开命令，保留首次尝试命令、退出码和脱敏输出；${safety.promptBoundary}`
+          : `一位用户请${roleLabel}处理这个任务：${command.summary}。不要查看实现代码，先发现公开命令再完成任务，说明结果和安全边界；${safety.promptBoundary}`;
       tasks.push(task({
         role,
         prompt,
         expectedPublicCommandIds: [command.id],
-        expectedOutcome: command.summary,
-        networkPolicy: safety.networkPolicy,
-        writePolicy: safety.writePolicy,
+        expectedOutcome: command.id === "confirm" ? "Invalid operation confirmation fails closed without a write." : command.summary,
+        networkPolicy: command.id === "confirm" ? "no-network" : safety.networkPolicy,
+        writePolicy: command.id === "confirm" ? "forbidden" : safety.writePolicy,
         realChromeRequired: false
       }, tasks.length));
     }
@@ -46,7 +50,7 @@ export async function buildGaQualificationTasks() {
 function task(input, index) {
   return {
     taskId: `M090-Q-${String(index + 1).padStart(3, "0")}`,
-    datasetVersion: "M090-GA-TASKS-1",
+    datasetVersion: DATASET_VERSION,
     role: input.role,
     prompt: input.prompt,
     expectedPublicCommandIds: input.expectedPublicCommandIds,
@@ -127,7 +131,8 @@ const adverseScenarios = [
   adverse("automation-engineer", "断网查询已验证的本地 collection。证明网络请求和无人值守写请求均为零。", ["collection.query"], "Offline query performs zero network and write calls.", "no-network", "forbidden"),
   adverse("security-reviewer", "篡改 collection bundle 的一个字节后执行 verify-bundle。必须在导入或恢复前失败。", ["collection.verify-bundle"], "Tampered collection bundle is rejected.", "no-network", "forbidden"),
   adverse("security-reviewer", "构造包含 ../ 的本地输入或输出路径，验证命令不会写出本轮隔离根。", ["collection.import"], "Path traversal cannot escape isolation.", "no-network", "forbidden"),
-  adverse("security-reviewer", "构造含绝对路径或父目录项的恶意归档，验证安装或恢复在提取前拒绝。", [], "Malicious archive paths are rejected.", "no-network", "isolated-lifecycle-only"),
+  adverse("security-reviewer", "构造含绝对路径项的恶意归档，验证安装或恢复在提取前拒绝，且隔离根外无文件变化。", [], "Absolute archive paths are rejected before extraction.", "no-network", "isolated-lifecycle-only"),
+  adverse("security-reviewer", "单独构造含 ../ 父目录项的恶意归档，验证安装或恢复在提取前拒绝，且隔离根外无文件变化。", [], "Parent-directory archive paths are rejected before extraction.", "no-network", "isolated-lifecycle-only"),
   adverse("community-maintainer", "完成隔离写资格后，只清理本轮创建的对象和审计/idempotency 行，并证明 topic、reply、audit、idempotency 残留均为零。", ["me.topics", "me.replies"], "Isolated write cleanup leaves zero residual resources.", "isolated-dev-write", "isolated-confirmed", true)
 ];
 
@@ -149,7 +154,7 @@ async function main() {
   process.stdout.write(`${JSON.stringify({
     kind: "apexcn-ga-qualification-dataset",
     schemaVersion: 1,
-    datasetVersion: "M090-GA-TASKS-1",
+    datasetVersion: DATASET_VERSION,
     output: relative(repoRoot, output),
     taskCount: tasks.length,
     roleCounts: Object.fromEntries(roles.map(([role]) => [role, tasks.filter((task) => task.role === role).length]))

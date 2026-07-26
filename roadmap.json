@@ -2683,7 +2683,7 @@
         {
           "id": "M090-AC-004",
           "gate": "core",
-          "description": "所有受支持 1.x 稳定版本升级至 1.0.9 的路径全部通过。",
+          "description": "所有受支持 1.x 稳定版本升级至 1.0.10 的路径全部通过。",
           "metric": "supportedUpgradePathSuccessRate",
           "comparator": "eq",
           "target": 100,
@@ -2772,7 +2772,7 @@
         },
         {
           "id": "M090-V-UPGRADE",
-          "description": "从每个受支持 1.x 稳定版本升级到 1.0.9。",
+          "description": "从每个受支持 1.x 稳定版本升级到 1.0.10。",
           "mode": "platform"
         },
         {
@@ -3355,7 +3355,7 @@
       ],
       "status": "mitigated",
       "blockingAt": "activation",
-      "description": "1.0.9 公开面清单和冻结规则已通过本地漂移检查与 R7 独立黑盒核对：83 个命令、80 个 JSON schema、10 个 workflow goal、37 个 API operation 完全匹配，MCP 仍移除且没有新增公开命令族。最终 clean candidate hash 仍由完成验收与发布门禁绑定。",
+      "description": "1.0.10 公开面清单和冻结规则已通过本地确定性漂移检查：83 个命令、80 个 JSON schema、10 个 workflow goal、37 个 API operation 完全匹配，MCP 仍移除且没有新增公开命令族。最终 clean candidate hash 和独立复验仍由完成验收与发布门禁绑定。",
       "resolutionEvidenceIds": [
         "M090-E-LOCAL-ACTIVATION-R1",
         "M090-E-ACTIVATION-R7-READY"
@@ -3369,7 +3369,7 @@
       ],
       "status": "mitigated",
       "blockingAt": "activation",
-      "description": "8 个受支持 1.x 起点、32 个平台单元和五阶段恢复合同已冻结；R2 证明公开 v1.0.8 macOS 隔离生命周期基础设施，server-owner 与 R7 证明 DEV 最低权限身份、候选安装、失败拒绝、权限和零残留环境可执行。32 单元全部通过仍是 M090-AC-004 的完成验收，不作为已完成结论。",
+      "description": "9 个受支持 1.x 起点、36 个平台单元和五阶段恢复合同已为 1.0.10 冻结；18 个 macOS/Linux 单元与 18 个 Windows 单元均为必需，v1.0.9 的一次性 Windows 豁免没有继承。36 单元全部通过仍是 M090-AC-004 的完成验收，不作为已完成结论。",
       "resolutionEvidenceIds": [
         "M090-E-INFRA-R2-BLOCKED",
         "M090-E-DEV-WRITE-ENV",
@@ -3398,7 +3398,7 @@
       ],
       "status": "mitigated",
       "blockingAt": "activation",
-      "description": "200 题跨角色资格集、97% 评分器边界、DEV 隔离写与独立安全审查合同均可执行；R5 关闭两个 medium，R7 独立关闭 R6 high 并以真实 Chrome、权限拒绝和七项零残留证明环境就绪，当前 critical/high/medium 为零。最终 200 题首次成功率与 clean candidate 安全审查仍是完成验收。",
+      "description": "1.0.10 已把恰好 200 题的允许命令、凭据模式、fixture、分阶段停止点、append-only recorder、36 单元生命周期计划、DEV/真实 Chrome 与独立安全边界固化为随包发布且受哈希验证的公开 harness。97% 首次成功率、完整平台执行与 clean candidate 安全审查仍须由全新独立 validator 实证。",
       "resolutionEvidenceIds": [
         "M090-E-SECURITY-FIX-R5",
         "M090-E-DEV-WRITE-ENV",
@@ -3416,7 +3416,7 @@
       ],
       "status": "open",
       "blockingAt": "completion",
-      "description": "v1.0.9 is released under the explicit 2026-07-26 timebox without current-candidate Q001-Q200 execution, the 16 applicable macOS/Linux lifecycle cells, final DEV API plus real-Chrome write-back qualification, or the current-candidate independent security review. R24 stopped before candidate use and supplies no acceptance evidence. GitHub issue #2 is the public open follow-up; Windows remains waived only for v1.0.9 and does not count as passed.",
+      "description": "v1.0.9 的 R24 在候选使用前按 timebox 停止，不提供验收证据。1.0.10 已消除 validator 运行时设计大规模 harness 的根因，但当前候选仍须实际执行 Q001-Q200、18 个 macOS/Linux 生命周期单元、18 个无豁免 Windows 单元、DEV API 加真实 Chrome 写回、清理和独立安全审查；GitHub issue #2 在这些实证完成前保持开放。",
       "resolutionEvidenceIds": []
     }
   ]

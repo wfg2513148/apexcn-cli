@@ -1,0 +1,141 @@
+{
+  "kind": "apexcn-ga-qualification-contract",
+  "schemaVersion": 1,
+  "contractVersion": "M090-QUALIFICATION-2",
+  "targetVersion": "1.0.10",
+  "activationSmokeBaseline": {
+    "version": "1.0.9",
+    "tag": "v1.0.9",
+    "commit": "cc78d4fba3199e7667bc342a8411c4bcaf941749",
+    "packageSha256": "3db72b8c7e06bbe932f499d799f3c6161fda54264d7fead6ffbf812a941ae4c1",
+    "purpose": "Prove qualification infrastructure continuity only; this is not 1.0.10 candidate acceptance."
+  },
+  "naturalLanguageQualification": {
+    "datasetVersion": "M090-GA-TASKS-2",
+    "datasetPath": "eval/qualification/tasks.v2.jsonl",
+    "scorerVersion": "M090-GA-SCORER-2",
+    "minimumTasks": 200,
+    "exactTaskCount": 200,
+    "minimumFirstAttemptSuccessRate": 97,
+    "requiredRoles": [
+      "apex-developer",
+      "automation-engineer",
+      "ai-agent-integrator",
+      "community-maintainer",
+      "security-reviewer"
+    ],
+    "firstAttemptEvidenceImmutable": true,
+    "retriesScoredAsFirstAttempt": false,
+    "blockedHarnessOrEnvironmentCountsAsPass": false,
+    "blockedHarnessOrEnvironmentCreatesProductIssue": false
+  },
+  "publicHarness": {
+    "harnessVersion": "M090-GA-HARNESS-1",
+    "manifestPath": "qualification/ga/harness-manifest-v1.json",
+    "taskPlanPath": "qualification/ga/task-plan-v1.jsonl",
+    "fixturePath": "qualification/ga/fixtures-v1.json",
+    "recorderPath": "scripts/ga-qualification-recorder.mjs",
+    "validatorDesignsHarnessAtRuntime": false,
+    "requiredPhases": [
+      "P00-bind",
+      "P10-public-cli",
+      "P20-adverse-and-lifecycle",
+      "P30-dev-api-chrome",
+      "P40-security-boundaries",
+      "P50-cleanup-score"
+    ],
+    "phaseGateFailureStopsBeforeNextPhase": true,
+    "startedAttemptWithoutCompletedEvidenceMayBeRetried": false,
+    "manifestAndInputsMustBeRehashedBeforeCandidateExecution": true
+  },
+  "validator": {
+    "project": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
+    "taskVisibility": "user-visible-codex-desktop-task",
+    "freshTaskRequired": true,
+    "persona": "novice",
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "high",
+    "implementationInspectionAllowed": false,
+    "interface": "installed-public-apexcn-and-packaged-public-qualification-harness",
+    "candidateMustBeImmutable": true,
+    "requiredScopeBindings": [
+      "version",
+      "commit",
+      "tag",
+      "artifactSha256",
+      "harnessManifestSha256",
+      "datasetVersion",
+      "scorerVersion",
+      "environmentHash",
+      "serverContractVersion",
+      "allowedPublicMaterials",
+      "prohibitedActions"
+    ]
+  },
+  "isolatedWrite": {
+    "environmentRef": "dev@oci:dev-write-eval",
+    "surfaceCode": "apexcn-cli-m060-dev-write",
+    "categoryId": "8",
+    "productionWriteAllowed": false,
+    "reuseExistingDedicatedTestAccount": true,
+    "backendEvidenceRequired": true,
+    "realChromeEvidenceRequired": true,
+    "inAppBrowserAllowed": false,
+    "generatedCliLinksOnly": true,
+    "userAuthoredLinksExcluded": true,
+    "requiredReplyScenarios": [
+      "reply to an existing reply",
+      "delete a reply owned by the authenticated test account",
+      "deny deletion of a reply owned by another account"
+    ],
+    "cleanup": {
+      "onlyCreatedObjects": true,
+      "requiredResidualCounts": {
+        "topics": 0,
+        "replies": 0,
+        "idempotencyRows": 0,
+        "auditRows": 0
+      }
+    }
+  },
+  "securityReview": {
+    "independentTaskRequired": true,
+    "builderTaskMayNotSelfApprove": true,
+    "immutableCandidateRequired": true,
+    "requiredDomains": [
+      "credential handling and recursive redaction",
+      "command injection and path traversal",
+      "archive extraction absolute paths and parent-directory paths as separate attempts",
+      "workflow preview approval hash version and ownership binding",
+      "API permission and identity boundaries",
+      "isolated write cleanup",
+      "dependency and SPDX SBOM review",
+      "provenance subject source commit and dirty-tree binding",
+      "release asset digest equality"
+    ],
+    "severityScale": [
+      "critical",
+      "high",
+      "medium",
+      "low",
+      "informational"
+    ],
+    "completionGate": {
+      "openCritical": 0,
+      "openHigh": 0,
+      "waiverAllowed": false
+    },
+    "requiredEvidence": [
+      "threadId",
+      "reviewerTaskCwd",
+      "candidateVersion",
+      "candidateCommit",
+      "artifactSha256",
+      "toolsAndCommands",
+      "findings",
+      "remediationRetest",
+      "finalCriticalHighCount",
+      "reportSha256"
+    ]
+  }
+}

@@ -12,7 +12,7 @@ function readJson(path: string) {
 }
 
 function readTasks() {
-  return readFileSync(join(repoRoot, "eval/qualification/tasks.v1.jsonl"), "utf8")
+  return readFileSync(join(repoRoot, "eval/qualification/tasks.v2.jsonl"), "utf8")
     .trim()
     .split("\n")
     .map((line) => JSON.parse(line));
@@ -32,17 +32,18 @@ function resultFor(task: ReturnType<typeof readTasks>[number], passed = true) {
       observedEffects: [],
       isolatedEnvironment: task.writePolicy === "isolated-confirmed" ? true : undefined,
       realChromeEvidence: task.realChromeRequired ? true : undefined,
-      cleanupResidualCount: task.writePolicy === "isolated-confirmed" ? 0 : undefined
+      cleanupResidualCount: task.writePolicy === "isolated-confirmed" ? 0 : undefined,
+      attemptSha256: "a".repeat(64)
     }
   };
 }
 
 describe("GA readiness contracts", () => {
   test("freezes every public command with schemas, workflows, and API operations", () => {
-    const surface = readJson("qualification/ga/public-surface-v1.json");
+    const surface = readJson("qualification/ga/public-surface-v2.json");
     const commandIds = new Set(surface.commandManifest.commands.map((command: { id: string }) => command.id));
 
-    expect(surface.frozenForVersion).toBe("1.0.9");
+    expect(surface.frozenForVersion).toBe("1.0.10");
     expect(surface.commandManifest.commands).toHaveLength(COMMAND_DESCRIPTORS.length);
     expect(Object.keys(surface.jsonSchemas)).toHaveLength(80);
     expect(surface.workflowGoals).toHaveLength(10);
@@ -52,10 +53,10 @@ describe("GA readiness contracts", () => {
     }
   });
 
-  test("defines all published stable 1.x upgrade sources and 32 platform cells", () => {
-    const matrix = readJson("qualification/ga/support-matrix-v1.json");
+  test("defines all published stable 1.x upgrade sources and 36 platform cells", () => {
+    const matrix = readJson("qualification/ga/support-matrix-v2.json");
 
-    expect(matrix.targetVersion).toBe("1.0.9");
+    expect(matrix.targetVersion).toBe("1.0.10");
     expect(matrix.supportedSources.map((source: { version: string }) => source.version)).toEqual([
       "1.0.0",
       "1.0.2",
@@ -64,9 +65,11 @@ describe("GA readiness contracts", () => {
       "1.0.5",
       "1.0.6",
       "1.0.7",
-      "1.0.8"
+      "1.0.8",
+      "1.0.9"
     ]);
-    expect(matrix.supportedSources.length * matrix.platforms.length).toBe(32);
+    expect(matrix.supportedSources.length * matrix.platforms.length).toBe(36);
+    expect(matrix.waivers).toEqual([]);
     expect(matrix.requiredStages).toHaveLength(5);
   });
 
@@ -110,5 +113,23 @@ describe("GA readiness contracts", () => {
     expect(passing.firstAttemptSuccessRate).toBe(97);
     expect(failing.status).toBe(1);
     expect(JSON.parse(failing.stdout).firstAttemptSuccessRate).toBe(96.5);
+  });
+
+  test("rejects an incomplete result ledger even when 194 recorded attempts pass", () => {
+    const tasks = readTasks();
+    const dir = mkdtempSync(join(tmpdir(), "apexcn-ga-incomplete-"));
+    const incompletePath = join(dir, "incomplete.jsonl");
+    writeFileSync(incompletePath, `${tasks.slice(0, 194).map((task) => JSON.stringify(resultFor(task))).join("\n")}\n`);
+
+    const result = spawnSync("node", ["scripts/ga-qualification-score.mjs", "--results", incompletePath], {
+      cwd: repoRoot,
+      encoding: "utf8"
+    });
+    const report = JSON.parse(result.stdout);
+
+    expect(result.status).toBe(1);
+    expect(report.ok).toBe(false);
+    expect(report.resultCount).toBe(194);
+    expect(report.problems).toContain("result count 194 does not match task count 200");
   });
 });

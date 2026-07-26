@@ -181,8 +181,8 @@ describe("cross-platform lifecycle assets", () => {
       const legacyEntrypoint = `#!/usr/bin/env node\nconsole.log('${legacyVersion}');\n`;
       mkdirSync(join(installRoot, "dist"), { recursive: true });
       mkdirSync(join(backupRoot, "dist"), { recursive: true });
-      writeFileSync(join(installRoot, "package.json"), '{"name":"apexcn-cli","version":"1.0.9","type":"module"}\n');
-      writeFileSync(join(installRoot, "dist", "index.js"), "#!/usr/bin/env node\nconsole.log('1.0.9');\n");
+      writeFileSync(join(installRoot, "package.json"), '{"name":"apexcn-cli","version":"1.0.10","type":"module"}\n');
+      writeFileSync(join(installRoot, "dist", "index.js"), "#!/usr/bin/env node\nconsole.log('1.0.10');\n");
       writeFileSync(join(backupRoot, "package.json"), `{"name":"apexcn-cli","version":"${legacyVersion}","type":"module"}\n`);
       writeFileSync(join(backupRoot, "dist", "index.js"), legacyEntrypoint);
 

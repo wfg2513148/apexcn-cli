@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildGaPublicSurface } from "./generate-ga-public-surface.mjs";
 import { buildGaQualificationTasks } from "./generate-ga-qualification-dataset.mjs";
+import { buildGaQualificationHarness } from "./generate-ga-qualification-harness.mjs";
 
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const args = parseArgs(process.argv.slice(2));
@@ -14,10 +15,12 @@ const evidence = [];
 
 const roadmap = readJson("roadmap.json");
 const issues = readJson("issues.json");
-const frozenSurface = readJson("qualification/ga/public-surface-v1.json");
-const supportMatrix = readJson("qualification/ga/support-matrix-v1.json");
-const qualificationContract = readJson("qualification/ga/qualification-contract-v1.json");
-const frozenTasks = readJsonLines("eval/qualification/tasks.v1.jsonl");
+const frozenSurface = readJson("qualification/ga/public-surface-v2.json");
+const supportMatrix = readJson("qualification/ga/support-matrix-v2.json");
+const qualificationContract = readJson("qualification/ga/qualification-contract-v2.json");
+const frozenTasks = readJsonLines("eval/qualification/tasks.v2.jsonl");
+const frozenHarness = readJson("qualification/ga/harness-manifest-v1.json");
+const frozenTaskPlan = readJsonLines("qualification/ga/task-plan-v1.jsonl");
 
 const generatedSurface = await buildGaPublicSurface();
 if (canonical(frozenSurface) !== canonical(generatedSurface)) {
@@ -26,6 +29,7 @@ if (canonical(frozenSurface) !== canonical(generatedSurface)) {
 validateSurface(frozenSurface);
 validateSupportMatrix(supportMatrix);
 await validateQualification(frozenSurface, qualificationContract, frozenTasks);
+validateHarness(frozenHarness, frozenTaskPlan);
 validateRoadmapState(roadmap, issues);
 validateMcpRemoval();
 validateRagIsolation();
@@ -42,7 +46,7 @@ const report = {
   schemaVersion: 1,
   ok: problems.length === 0,
   auditedAt: new Date().toISOString(),
-  targetVersion: "1.0.9",
+  targetVersion: "1.0.10",
   repository: {
     commit: git(["rev-parse", "HEAD"]),
     branch: git(["branch", "--show-current"]),
@@ -60,13 +64,16 @@ const report = {
     apiOperations: frozenSurface.api.supportedOperations.length,
     supportedSourceVersions: supportMatrix.supportedSources.length,
     platformCells: supportMatrix.supportedSources.length * supportMatrix.platforms.length,
-    qualificationTasks: frozenTasks.length
+    qualificationTasks: frozenTasks.length,
+    harnessTasks: frozenTaskPlan.length
   },
   inputs: {
-    publicSurfaceSha256: sha256("qualification/ga/public-surface-v1.json"),
-    supportMatrixSha256: sha256("qualification/ga/support-matrix-v1.json"),
-    qualificationContractSha256: sha256("qualification/ga/qualification-contract-v1.json"),
-    qualificationDatasetSha256: sha256("eval/qualification/tasks.v1.jsonl")
+    publicSurfaceSha256: sha256("qualification/ga/public-surface-v2.json"),
+    supportMatrixSha256: sha256("qualification/ga/support-matrix-v2.json"),
+    qualificationContractSha256: sha256("qualification/ga/qualification-contract-v2.json"),
+    qualificationDatasetSha256: sha256("eval/qualification/tasks.v2.jsonl"),
+    harnessManifestSha256: sha256("qualification/ga/harness-manifest-v1.json"),
+    taskPlanSha256: sha256("qualification/ga/task-plan-v1.jsonl")
   },
   checks: {
     onlineReleaseBaseline: args.online,
@@ -84,8 +91,8 @@ if (problems.length > 0) process.exitCode = 1;
 function validateSurface(surface) {
   const problemCountBefore = problems.length;
   if (surface.kind !== "apexcn-ga-public-surface"
-    || surface.frozenForVersion !== "1.0.9"
-    || surface.baselineVersion !== "1.0.8") {
+    || surface.frozenForVersion !== "1.0.10"
+    || surface.baselineVersion !== "1.0.9") {
     problems.push("public surface identity or target version is invalid");
   }
   const commands = surface.commandManifest?.commands ?? [];
@@ -122,12 +129,16 @@ function validateSurface(surface) {
 }
 
 function validateSupportMatrix(matrix) {
-  if (matrix.targetVersion !== "1.0.9") problems.push("support matrix target must be 1.0.9");
+  if (matrix.targetVersion !== "1.0.10") problems.push("support matrix target must be 1.0.10");
   const versions = matrix.supportedSources?.map((source) => source.version) ?? [];
-  const expected = ["1.0.0", "1.0.2", "1.0.3", "1.0.4", "1.0.5", "1.0.6", "1.0.7", "1.0.8"];
+  const expected = ["1.0.0", "1.0.2", "1.0.3", "1.0.4", "1.0.5", "1.0.6", "1.0.7", "1.0.8", "1.0.9"];
   if (canonical(versions) !== canonical(expected)) problems.push("supported stable 1.x source list drifted");
   const cells = versions.length * (matrix.platforms?.length ?? 0);
   if (cells !== matrix.expectedMatrixCells) problems.push(`support matrix expected ${matrix.expectedMatrixCells} cells but defines ${cells}`);
+  if (matrix.applicableLocalAndLinuxCells !== versions.length * 2 || matrix.windowsCellsRequired !== versions.length * 2) {
+    problems.push("support matrix platform denominators are inconsistent");
+  }
+  if ((matrix.waivers ?? []).length !== 0) problems.push("1.0.10 support matrix must not inherit a Windows waiver");
   if ((matrix.requiredStages ?? []).length !== 5) problems.push("support matrix must define the five lifecycle stages");
   if (matrix.environmentContract?.realUserHomeMutationAllowed !== false || matrix.environmentContract?.productionWriteAllowed !== false) {
     problems.push("support matrix isolation boundary is unsafe");
@@ -141,13 +152,13 @@ function validateSupportMatrix(matrix) {
 
 async function validateQualification(surface, contract, tasks) {
   const problemCountBefore = problems.length;
-  if (contract.targetVersion !== "1.0.9") problems.push("qualification contract target must be 1.0.9");
-  if (contract.activationSmokeBaseline?.version !== "1.0.8"
-    || contract.activationSmokeBaseline?.packageSha256 !== "524a818cc44ec520274cc5700d4caca80a8373d7cea0248f90b42f8c5a2726fa") {
-    problems.push("qualification activation smoke baseline must bind public v1.0.8");
+  if (contract.targetVersion !== "1.0.10") problems.push("qualification contract target must be 1.0.10");
+  if (contract.activationSmokeBaseline?.version !== "1.0.9"
+    || contract.activationSmokeBaseline?.packageSha256 !== "3db72b8c7e06bbe932f499d799f3c6161fda54264d7fead6ffbf812a941ae4c1") {
+    problems.push("qualification activation smoke baseline must bind public v1.0.9");
   }
-  if (tasks.length < contract.naturalLanguageQualification.minimumTasks) {
-    problems.push("qualification dataset has fewer than 200 tasks");
+  if (tasks.length !== contract.naturalLanguageQualification.exactTaskCount) {
+    problems.push("qualification dataset must contain exactly 200 tasks");
   }
   const taskIds = new Set();
   const prompts = new Set();
@@ -185,6 +196,41 @@ async function validateQualification(surface, contract, tasks) {
     kind: "dataset-and-scorer-contract",
     tasks: tasks.length,
     roles: Object.fromEntries([...roleCounts.entries()].sort()),
+    result: problems.length === problemCountBefore ? "pass" : "fail"
+  });
+}
+
+function validateHarness(manifest, taskPlan) {
+  const problemCountBefore = problems.length;
+  const built = buildGaQualificationHarness();
+  if (canonical(manifest) !== canonical(built.manifest)) problems.push("qualification harness manifest drifted");
+  if (canonical(taskPlan) !== canonical(built.taskPlan)) problems.push("qualification task plan drifted");
+  if (manifest.targetVersion !== "1.0.10"
+    || manifest.harnessVersion !== "M090-GA-HARNESS-1"
+    || manifest.taskPlan?.taskCount !== 200
+    || taskPlan.length !== 200) {
+    problems.push("qualification harness identity or denominator is invalid");
+  }
+  const taskIds = taskPlan.map((task) => task.taskId);
+  if (new Set(taskIds).size !== 200
+    || taskIds[0] !== "M090-Q-001"
+    || taskIds.at(-1) !== "M090-Q-200") {
+    problems.push("qualification task plan ids must be exact and unique Q001-Q200");
+  }
+  if (manifest.lifecyclePlan?.expectedCells !== 36
+    || manifest.lifecyclePlan?.applicableMacOsLinuxCells !== 18
+    || manifest.lifecyclePlan?.windowsCellsRequired !== 18
+    || manifest.lifecyclePlan?.waivers?.length !== 0) {
+    problems.push("qualification lifecycle plan denominator or waiver state is invalid");
+  }
+  for (const phase of ["P00-bind", "P10-public-cli", "P20-adverse-and-lifecycle", "P30-dev-api-chrome", "P40-security-boundaries", "P50-cleanup-score"]) {
+    if (!manifest.phases?.some((item) => item.id === phase)) problems.push(`qualification phase is missing: ${phase}`);
+  }
+  evidence.push({
+    id: "M090-ACT-PUBLIC-HARNESS",
+    kind: "deterministic-harness-comparison",
+    tasks: taskPlan.length,
+    lifecycleCells: manifest.lifecyclePlan?.cells?.length,
     result: problems.length === problemCountBefore ? "pass" : "fail"
   });
 }
