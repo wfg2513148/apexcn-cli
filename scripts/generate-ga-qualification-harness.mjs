@@ -93,6 +93,7 @@ export function buildGaQualificationHarness() {
       realChromeRequiredForBoundTasks: true
     },
     evidence: {
+      appendOnlyFixtureLedger: "fixtures.jsonl",
       appendOnlyStartLedger: "events.jsonl",
       appendOnlyAttemptLedger: "attempts.jsonl",
       appendOnlyAssessmentLedger: "results.jsonl",
@@ -115,8 +116,13 @@ function taskBinding(task, index, publicTaskCount, commands) {
     return descriptor;
   });
   const templates = descriptors.flatMap((descriptor) => safeTemplates(descriptor, task));
+  const setup = descriptors.flatMap((descriptor) => setupFor(descriptor));
+  const staticFixtures = descriptors.flatMap((descriptor) => staticFixturesFor(descriptor));
   const credentialMode = credentialModeFor(task, descriptors);
-  const requiredBindings = new Set(templates.flatMap((template) => bindingsIn(template.commandTemplate)));
+  const requiredBindings = new Set([
+    ...templates.flatMap((template) => bindingsIn(template.commandTemplate)),
+    ...setup.flatMap((fixture) => bindingsIn(fixture.commandTemplate))
+  ]);
   if (credentialMode === "approved-dev") requiredBindings.add("DEV_CONFIG_PATH");
   if (credentialMode === "synthetic") requiredBindings.add("RUN_ROOT");
   if (task.realChromeRequired) {
@@ -139,6 +145,8 @@ function taskBinding(task, index, publicTaskCount, commands) {
       kind: actionKind(task, isPublicTask),
       credentialMode,
       commandTemplates: templates,
+      setup,
+      staticFixtures,
       requiredBindings: [...requiredBindings].sort(),
       executor: executorFor(task, isPublicTask)
     },
@@ -197,6 +205,20 @@ function safeTemplates(descriptor, task) {
       commandTemplate: "${APEXCN_BIN} confirm qualification-invalid-operation --yes --json"
     }];
   }
+  if (descriptor.id === "draft.question") {
+    return [{
+      commandId: descriptor.id,
+      mode: "read",
+      commandTemplate: "${APEXCN_BIN} draft question --title \"资格测试标题\" --problem \"资格测试问题\" --json"
+    }];
+  }
+  if (descriptor.id === "draft.reply") {
+    return [{
+      commandId: descriptor.id,
+      mode: "read",
+      commandTemplate: "${APEXCN_BIN} draft reply --topic-id ${PUBLIC_TOPIC_ID} --answer \"资格测试回复建议\" --json"
+    }];
+  }
   let examples = descriptor.examples;
   if (task.writePolicy === "preview-only") {
     const previews = examples.filter((example) => example.mode === "preview");
@@ -207,18 +229,153 @@ function safeTemplates(descriptor, task) {
   return examples.map((example) => ({
     commandId: descriptor.id,
     mode: example.mode,
-    commandTemplate: sanitizeExample(example.command)
+    commandTemplate: sanitizeExample(example.command, descriptor.id)
   }));
 }
 
-function sanitizeExample(command) {
-  return command
+function sanitizeExample(command, commandId) {
+  let result = command
     .replace(/^apexcn\b/, "${APEXCN_BIN}")
     .replaceAll("agent-prod", "qualifier-synthetic")
     .replaceAll("APEXCN_API_KEY", "APEXCN_QUALIFICATION_SYNTHETIC_TOKEN")
     .replaceAll("<operation-id>", "qualification-invalid-operation")
-    .replaceAll("<draft-id>", "qualification-missing-draft")
-    .replaceAll("./", "${RUN_ROOT}/");
+    .replaceAll("<draft-id>", "${DRAFT_ID}")
+    .replaceAll("./", "${TASK_ROOT}/");
+  if (["favorite.add", "favorite.remove", "subscription.add", "subscription.remove", "reply.create", "topic.view"].includes(commandId)) {
+    result = result.replace("30549", "${PUBLIC_TOPIC_ID}");
+  }
+  if (["topic.update", "topic.delete"].includes(commandId)) {
+    result = result
+      .replace("30549", "${MUTABLE_TOPIC_ID}")
+      .replace("--if-version 2", "--if-version ${MUTABLE_TOPIC_VERSION}")
+      .replace("\"精确标题\"", "\"${MUTABLE_TOPIC_TITLE}\"");
+  }
+  if (["reply.update", "reply.delete"].includes(commandId)) {
+    result = result
+      .replace("67890", "${MUTABLE_REPLY_ID}")
+      .replace("--if-version 2", "--if-version ${MUTABLE_REPLY_VERSION}");
+  }
+  if (["reply.mark-answer", "reply.unmark-answer"].includes(commandId)) {
+    result = result
+      .replace("30549", "${MUTABLE_TOPIC_ID}")
+      .replace("67890", "${MUTABLE_REPLY_ID}")
+      .replace(/--if-version [23]/, "--if-version ${MUTABLE_REPLY_VERSION}");
+  }
+  if (commandId === "workflow.run") {
+    result = result.replace("${TASK_ROOT}/workflow-runs", "${TASK_ROOT}/run");
+  }
+  if (["workflow.approve", "workflow.audit-log", "workflow.diff", "workflow.export", "workflow.verify"].includes(commandId)) {
+    result = result.replace("${TASK_ROOT}/run", "${RUN_DIR}");
+  }
+  if (commandId === "collection.restore") {
+    result = result.replace("--dir ${TASK_ROOT}/collection", "--dir ${TASK_ROOT}/restored");
+  }
+  return result;
+}
+
+function setupFor(descriptor) {
+  if ([
+    "collection.automation.plan",
+    "collection.export",
+    "collection.import",
+    "collection.index",
+    "collection.query",
+    "collection.restore",
+    "collection.stats",
+    "collection.sync",
+    "collection.verify",
+    "collection.verify-bundle"
+  ].includes(descriptor.id)) {
+    const setup = [{
+      id: "build-collection",
+      commandId: "collection.build",
+      credentialMode: "approved-dev",
+      commandTemplate: "${APEXCN_BIN} collection build --query \"REST API\" --topic-id ${PUBLIC_TOPIC_ID} --output-dir ${TASK_ROOT}/collection --json"
+    }];
+    if (["collection.import", "collection.restore", "collection.verify-bundle"].includes(descriptor.id)) {
+      setup.push({
+        id: "export-collection-bundle",
+        commandId: "collection.export",
+        credentialMode: "synthetic",
+        commandTemplate: "${APEXCN_BIN} collection export --dir ${TASK_ROOT}/collection --output ${TASK_ROOT}/bundle.json --json"
+      });
+    }
+    return setup;
+  }
+  if (descriptor.id === "collection.automation.run") {
+    return [
+      {
+        id: "build-collection",
+        commandId: "collection.build",
+        credentialMode: "approved-dev",
+        commandTemplate: "${APEXCN_BIN} collection build --query \"REST API\" --topic-id ${PUBLIC_TOPIC_ID} --output-dir ${TASK_ROOT}/collection --json"
+      },
+      {
+        id: "build-automation-plan",
+        commandId: "collection.automation.plan",
+        credentialMode: "synthetic",
+        commandTemplate: "${APEXCN_BIN} collection automation plan --dir ${TASK_ROOT}/collection --query \"ORDS auth\" --output ${TASK_ROOT}/plan.json --json"
+      }
+    ];
+  }
+  if (["draft.delete", "draft.restore"].includes(descriptor.id)) {
+    return [{
+      id: "create-saved-draft",
+      commandId: "draft.question",
+      credentialMode: "synthetic",
+      commandTemplate: "${APEXCN_BIN} draft question --title \"资格草稿\" --problem \"资格问题\" --save --json",
+      capture: {
+        DRAFT_ID: "$.draft.id|$.id"
+      }
+    }];
+  }
+  if (descriptor.id === "draft.import") {
+    return [{
+      id: "export-draft-bundle",
+      commandId: "draft.export",
+      credentialMode: "synthetic",
+      commandTemplate: "${APEXCN_BIN} draft export --output ${TASK_ROOT}/drafts.json --json"
+    }];
+  }
+  if (["workflow.approve", "workflow.audit-log", "workflow.diff", "workflow.export", "workflow.verify"].includes(descriptor.id)) {
+    return [{
+      id: "create-workflow-run",
+      commandId: "workflow.plan",
+      credentialMode: "synthetic",
+      commandTemplate: "${APEXCN_BIN} workflow plan --goal ask-question --keyword \"REST API\" --title \"资格标题\" --problem \"资格问题\" --category-id 4 --output-dir ${TASK_ROOT}/run --json",
+      capture: {
+        RUN_DIR: "$.runDir"
+      }
+    }];
+  }
+  if (descriptor.id === "workflow.verify-bundle") {
+    return [
+      {
+        id: "create-workflow-run",
+        commandId: "workflow.plan",
+        credentialMode: "synthetic",
+        commandTemplate: "${APEXCN_BIN} workflow plan --goal ask-question --keyword \"REST API\" --title \"资格标题\" --problem \"资格问题\" --category-id 4 --output-dir ${TASK_ROOT}/run --json",
+        capture: {
+          RUN_DIR: "$.runDir"
+        }
+      },
+      {
+        id: "export-workflow-bundle",
+        commandId: "workflow.export",
+        credentialMode: "synthetic",
+        commandTemplate: "${APEXCN_BIN} workflow export --run-dir ${RUN_DIR} --output ${TASK_ROOT}/workflow-bundle.json --json"
+      }
+    ];
+  }
+  return [];
+}
+
+function staticFixturesFor(descriptor) {
+  const fixtures = [];
+  if (["review.reply", "reply.update"].includes(descriptor.id)) fixtures.push("reply.md", "updated-reply.md");
+  if (["review.topic", "topic.create", "topic.update"].includes(descriptor.id)) fixtures.push("question.md", "post.md", "updated-post.md");
+  if (descriptor.id === "draft.question") fixtures.push("research.json");
+  return [...new Set(fixtures)];
 }
 
 function bindingsIn(value) {

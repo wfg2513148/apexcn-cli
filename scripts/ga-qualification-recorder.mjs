@@ -22,19 +22,26 @@ const command = process.argv[2];
 const args = process.argv.slice(3);
 
 if (command === "init") initialize(parseOptions(args));
+else if (command === "fixture") runFixture(parseOptions(args, true));
 else if (command === "run") runCandidate(parseOptions(args, true));
 else if (command === "begin") beginExternal(parseOptions(args));
 else if (command === "complete") completeExternal(parseOptions(args));
 else if (command === "assess") assess(parseOptions(args));
 else if (command === "status") status(parseOptions(args));
 else if (command === "finalize") finalize(parseOptions(args));
-else throw new Error("Usage: ga-qualification-recorder.mjs <init|run|begin|complete|assess|status|finalize> [options]");
+else throw new Error("Usage: ga-qualification-recorder.mjs <init|fixture|run|begin|complete|assess|status|finalize> [options]");
 
 function initialize(options) {
   const evidenceDir = requiredAbsolute(options, "evidence-dir");
   const candidate = requiredAbsolute(options, "candidate");
   const devConfig = optionalAbsolute(options, "dev-config");
   if (!existsSync(candidate) || !statSync(candidate).isFile()) throw new Error("Candidate launcher does not exist");
+  if (devConfig && (!existsSync(devConfig) || !statSync(devConfig).isFile())) {
+    throw new Error("DEV config path does not reference a regular file");
+  }
+  if (devConfig && process.platform !== "win32" && (statSync(devConfig).mode & 0o077) !== 0) {
+    throw new Error("DEV config permissions must not allow group or other access");
+  }
   if (existsSync(evidenceDir) && readdirSync(evidenceDir).length > 0) {
     throw new Error("Evidence directory must be absent or empty");
   }
@@ -86,7 +93,7 @@ function initialize(options) {
     devConfig: devConfig ?? null
   };
   writePrivateJson(join(evidenceDir, "state.json"), state);
-  for (const file of ["events.jsonl", "attempts.jsonl", "results.jsonl"]) {
+  for (const file of ["fixtures.jsonl", "events.jsonl", "attempts.jsonl", "results.jsonl"]) {
     writeFileSync(join(evidenceDir, file), "", { encoding: "utf8", mode: 0o600, flag: "wx" });
   }
   print({
@@ -112,7 +119,9 @@ function runCandidate(options) {
   }
   const candidateArgs = options._afterDoubleDash;
   if (candidateArgs.length === 0) throw new Error("run requires candidate argv after --");
-  validateCandidateArgs(task, candidateArgs);
+  const runtime = runtimeFor(state, task, task.action.credentialMode);
+  validateCandidateArgs(state, task, candidateArgs, task.expectedPublicCommandIds);
+  validateBoundPaths(state, candidateArgs);
   appendEvent(state, {
     event: "started",
     taskId: task.taskId,
@@ -121,10 +130,9 @@ function runCandidate(options) {
     commandOrAction: publicCommandLabel(candidateArgs)
   });
 
-  const runtime = runtimeFor(state, task);
   const childArgs = ["--config", runtime.configPath, ...candidateArgs];
   const child = spawnSync(state.candidate, childArgs, {
-    cwd: state.runRoot,
+    cwd: runtime.taskRoot,
     encoding: "utf8",
     shell: false,
     env: runtime.env,
@@ -150,6 +158,54 @@ function runCandidate(options) {
   };
   appendJsonLine(ledger(state, "attempts.jsonl"), attempt);
   print({ kind: "apexcn-ga-qualification-attempt", schemaVersion: 1, ...attempt });
+}
+
+function runFixture(options) {
+  const state = loadState(options);
+  const task = taskFor(options["task-id"]);
+  if (startedEvent(state, task.taskId)) throw new Error(`${task.taskId} already started; fixture setup is closed`);
+  const fixtureId = required(options, "fixture-id");
+  const fixture = task.action.setup.find((item) => item.id === fixtureId);
+  if (!fixture) throw new Error(`${task.taskId} has no fixture ${fixtureId}`);
+  if (fixtureFor(state, task.taskId, fixtureId)) throw new Error(`${task.taskId} fixture ${fixtureId} already ran`);
+  const fixtureIndex = task.action.setup.indexOf(fixture);
+  for (const prerequisite of task.action.setup.slice(0, fixtureIndex)) {
+    if (!fixtureFor(state, task.taskId, prerequisite.id)) {
+      throw new Error(`${task.taskId} fixture ${fixtureId} requires ${prerequisite.id}`);
+    }
+  }
+  const candidateArgs = options._afterDoubleDash;
+  if (candidateArgs.length === 0) throw new Error("fixture requires candidate argv after --");
+  const runtime = runtimeFor(state, task, fixture.credentialMode);
+  validateCandidateArgs(state, task, candidateArgs, [fixture.commandId], false);
+  validateBoundPaths(state, candidateArgs);
+  const child = spawnSync(state.candidate, ["--config", runtime.configPath, ...candidateArgs], {
+    cwd: runtime.taskRoot,
+    encoding: "utf8",
+    shell: false,
+    env: runtime.env,
+    maxBuffer: 16 * 1024 * 1024
+  });
+  const exitCode = child.status ?? 1;
+  const redactedStdout = redact(child.stdout ?? "", runtime.secretValues);
+  const redactedStderr = redact(child.stderr ?? "", runtime.secretValues);
+  const stdoutPath = writeFixtureOutput(state, task.taskId, fixtureId, "stdout", redactedStdout);
+  const stderrPath = writeFixtureOutput(state, task.taskId, fixtureId, "stderr", redactedStderr);
+  const record = {
+    taskId: task.taskId,
+    fixtureId,
+    attemptedAt: new Date().toISOString(),
+    commandOrAction: publicCommandLabel(candidateArgs),
+    exitCode,
+    stdoutSha256: sha256(redactedStdout),
+    stderrSha256: sha256(redactedStderr),
+    evidenceRefs: [relativeEvidence(state, stdoutPath), relativeEvidence(state, stderrPath)],
+    capture: fixture.capture ?? {},
+    outputRedacted: true,
+    candidateSha256: state.candidateSha256
+  };
+  appendJsonLine(ledger(state, "fixtures.jsonl"), record);
+  print({ kind: "apexcn-ga-qualification-fixture", schemaVersion: 1, ...record });
 }
 
 function beginExternal(options) {
@@ -249,6 +305,7 @@ function status(options) {
   const events = readJsonLines(ledger(state, "events.jsonl"), true);
   const attempts = readJsonLines(ledger(state, "attempts.jsonl"), true);
   const results = readJsonLines(ledger(state, "results.jsonl"), true);
+  const fixtures = readJsonLines(ledger(state, "fixtures.jsonl"), true);
   const started = new Set(events.filter((event) => event.event === "started").map((event) => event.taskId));
   const completed = new Set(attempts.map((attempt) => attempt.taskId));
   const assessed = new Set(results.map((result) => result.taskId));
@@ -261,6 +318,7 @@ function status(options) {
     started: started.size,
     completed: completed.size,
     assessed: assessed.size,
+    fixtureAttempts: fixtures.length,
     startedWithoutCompletedEvidence: [...started].filter((taskId) => !completed.has(taskId)).sort(),
     completedWithoutAssessment: [...completed].filter((taskId) => !assessed.has(taskId)).sort(),
     remaining: tasks.map((task) => task.taskId).filter((taskId) => !started.has(taskId))
@@ -302,26 +360,34 @@ function finalize(options) {
 
 function ensureTaskMayStart(state, task) {
   if (startedEvent(state, task.taskId)) throw new Error(`${task.taskId} already started; retry is forbidden`);
+  for (const fixture of task.action.setup ?? []) {
+    const record = fixtureFor(state, task.taskId, fixture.id);
+    if (!record || record.exitCode !== 0) {
+      throw new Error(`${task.taskId} requires successful fixture ${fixture.id}`);
+    }
+  }
   if (sha256File(manifestPath) !== state.manifestSha256 || sha256File(planPath) !== state.taskPlanSha256) {
     throw new Error("Frozen harness inputs drifted after initialization");
   }
   if (sha256File(state.candidate) !== state.candidateSha256) throw new Error("Candidate launcher drifted after initialization");
 }
 
-function validateCandidateArgs(task, values) {
+function validateCandidateArgs(state, task, values, allowedCommandIds, enforceTaskPolicy = true) {
+  if (values.some((value) => value.includes("${"))) {
+    throw new Error("All qualification bindings must be resolved before candidate execution");
+  }
   if (values.some((value) => /^(--token|--api-key|--authorization|--cookie)(?:=|$)/i.test(value))) {
     throw new Error("Secret-bearing argv is forbidden; use the bound synthetic or DEV config");
   }
-  const planCommands = new Map(task.action.commandTemplates.map((item) => [item.commandId, item]));
   const surface = readJson(join(repoRoot, "qualification/ga/public-surface-v2.json"));
   const matched = surface.commandManifest.commands.find((descriptor) => {
     const path = descriptor.path.split(" ");
     return path.every((part, index) => values[index] === part);
   });
-  if (!matched || !planCommands.has(matched.id)) {
+  if (!matched || !allowedCommandIds.includes(matched.id)) {
     throw new Error(`${task.taskId} argv does not select an allowed public command`);
   }
-  if (task.writePolicy === "preview-only" && matched.id !== "confirm" && !values.includes("--preview")) {
+  if (enforceTaskPolicy && task.writePolicy === "preview-only" && matched.id !== "confirm" && !values.includes("--preview")) {
     throw new Error(`${task.taskId} requires --preview`);
   }
   if (matched.id === "confirm" && values[1] !== "qualification-invalid-operation") {
@@ -329,21 +395,71 @@ function validateCandidateArgs(task, values) {
   }
 }
 
-function runtimeFor(state, task) {
+function validateBoundPaths(state, values) {
+  const pathFlags = new Set([
+    "--bundle",
+    "--content-file",
+    "--dir",
+    "--draft-file",
+    "--input",
+    "--output",
+    "--output-dir",
+    "--plan",
+    "--policy",
+    "--research-file",
+    "--run-dir",
+    "--topic-file"
+  ]);
+  for (let index = 0; index < values.length - 1; index += 1) {
+    if (!pathFlags.has(values[index]) || !isAbsolute(values[index + 1])) continue;
+    const path = resolve(values[index + 1]);
+    if (path !== state.runRoot && !path.startsWith(`${state.runRoot}/`)) {
+      throw new Error(`Path argument for ${values[index]} escapes the isolated run root`);
+    }
+  }
+}
+
+function runtimeFor(state, task, credentialMode) {
   const secrets = readJson(state.secretPath);
-  if (task.action.credentialMode === "approved-dev") {
+  const taskRoot = join(state.runRoot, "tasks", task.taskId);
+  mkdirSync(taskRoot, { recursive: true, mode: 0o700 });
+  materializeStaticFixtures(taskRoot, task.action.staticFixtures ?? []);
+  if (credentialMode === "approved-dev") {
     if (!state.devConfig) throw new Error(`${task.taskId} requires --dev-config binding`);
     return {
       configPath: state.devConfig,
       env: safeEnvironment(state.runRoot, {}),
-      secretValues: []
+      secretValues: [],
+      taskRoot
     };
   }
+  const taskConfig = join(state.runRoot, ".qualification-runtime", "task-configs", `${task.taskId}.json`);
+  if (!existsSync(taskConfig)) {
+    mkdirSync(dirname(taskConfig), { recursive: true, mode: 0o700 });
+    writeFileSync(taskConfig, readFileSync(state.syntheticConfig), { mode: 0o600, flag: "wx" });
+    chmodSync(taskConfig, 0o600);
+  }
   return {
-    configPath: state.syntheticConfig,
+    configPath: taskConfig,
     env: safeEnvironment(state.runRoot, secrets),
-    secretValues: Object.values(secrets)
+    secretValues: Object.values(secrets),
+    taskRoot
   };
+}
+
+function materializeStaticFixtures(taskRoot, names) {
+  const fixtures = {
+    "research.json": `${JSON.stringify({ links: [] }, null, 2)}\n`,
+    "reply.md": "## Qualification reply\n\nThis is an isolated qualification reply.\n",
+    "updated-reply.md": "## Updated qualification reply\n\nThis is an isolated updated reply.\n",
+    "question.md": "# Qualification question\n\nThis is isolated qualification content.\n",
+    "post.md": "# Qualification post\n\nThis is isolated qualification content.\n",
+    "updated-post.md": "# Updated qualification post\n\nThis is isolated updated content.\n"
+  };
+  for (const name of names) {
+    const path = join(taskRoot, name);
+    if (!existsSync(path)) writeFileSync(path, fixtures[name], { encoding: "utf8", mode: 0o600, flag: "wx" });
+  }
 }
 
 function safeEnvironment(runRoot, additions) {
@@ -375,6 +491,14 @@ function writeOutput(state, taskId, stream, value) {
   const dir = join(state.evidenceDir, "output");
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   const path = join(dir, `${taskId}.${stream}.txt`);
+  writeFileSync(path, value, { encoding: "utf8", mode: 0o600, flag: "wx" });
+  return path;
+}
+
+function writeFixtureOutput(state, taskId, fixtureId, stream, value) {
+  const dir = join(state.evidenceDir, "fixtures");
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  const path = join(dir, `${taskId}.${fixtureId}.${stream}.txt`);
   writeFileSync(path, value, { encoding: "utf8", mode: 0o600, flag: "wx" });
   return path;
 }
@@ -412,6 +536,11 @@ function attemptFor(state, taskId) {
 
 function assessmentFor(state, taskId) {
   return readJsonLines(ledger(state, "results.jsonl"), true).find((result) => result.taskId === taskId);
+}
+
+function fixtureFor(state, taskId, fixtureId) {
+  return readJsonLines(ledger(state, "fixtures.jsonl"), true)
+    .find((fixture) => fixture.taskId === taskId && fixture.fixtureId === fixtureId);
 }
 
 function ledger(state, name) {

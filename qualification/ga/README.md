@@ -9,6 +9,6 @@
 - `task-plan-v1.jsonl`：恰好 200 行、由公开命令示例和资格数据确定性生成的执行绑定；
 - `harness-manifest-v1.json`：上述输入、recorder、scorer、生命周期脚本、阶段停止点和 36 个矩阵单元的哈希清单。
 
-`scripts/ga-qualification-recorder.mjs` 在候选动作之前先写 append-only `started` 事件，再保存脱敏后的 stdout/stderr、退出码和哈希；一旦动作已开始但证据未完成，禁止重试制造“首次成功”。
+`scripts/ga-qualification-recorder.mjs` 为每题创建独立 task root 和 synthetic config，并按 `task-plan-v1.jsonl` 的固定顺序执行/记录 fixture。正式候选动作之前先写 append-only `started` 事件，再保存脱敏后的 stdout/stderr、退出码和哈希；一旦动作已开始但证据未完成，禁止重试制造“首次成功”。
 
 这些文件只证明 denominator、执行动作和停止边界已经提前冻结。它们本身不证明资格通过。实际候选仍须提供独立首次尝试结果、完整矩阵、供应链验证、安全审查和零残留证据；未执行的 Windows 单元不得标记为通过或沿用 v1.0.9 的一次性豁免。

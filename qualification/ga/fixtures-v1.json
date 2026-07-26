@@ -38,6 +38,12 @@
       "secret": false
     },
     {
+      "name": "TASK_ROOT",
+      "required": true,
+      "source": "recorder-created per-task directory under RUN_ROOT",
+      "secret": false
+    },
+    {
       "name": "DEV_CONFIG_PATH",
       "requiredFor": [
         "approved-readonly-api",
@@ -53,6 +59,55 @@
         "approved-readonly-api"
       ],
       "source": "current DEV/API read-only discovery",
+      "secret": false
+    },
+    {
+      "name": "PUBLIC_REPLY_ID",
+      "requiredFor": [
+        "approved-readonly-api",
+        "preview-network-only"
+      ],
+      "source": "current DEV/API read-only discovery",
+      "secret": false
+    },
+    {
+      "name": "MUTABLE_TOPIC_ID",
+      "requiredFor": [
+        "preview-network-only"
+      ],
+      "source": "existing dedicated DEV account-owned fixture or topic created and cleaned by this run",
+      "secret": false
+    },
+    {
+      "name": "MUTABLE_TOPIC_VERSION",
+      "requiredFor": [
+        "preview-network-only"
+      ],
+      "source": "current DEV/API read of MUTABLE_TOPIC_ID",
+      "secret": false
+    },
+    {
+      "name": "MUTABLE_TOPIC_TITLE",
+      "requiredFor": [
+        "preview-network-only"
+      ],
+      "source": "current DEV/API read of MUTABLE_TOPIC_ID",
+      "secret": false
+    },
+    {
+      "name": "MUTABLE_REPLY_ID",
+      "requiredFor": [
+        "preview-network-only"
+      ],
+      "source": "existing dedicated DEV account-owned fixture or reply created and cleaned by this run",
+      "secret": false
+    },
+    {
+      "name": "MUTABLE_REPLY_VERSION",
+      "requiredFor": [
+        "preview-network-only"
+      ],
+      "source": "current DEV/API read of MUTABLE_REPLY_ID",
       "secret": false
     },
     {

@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -147,6 +147,101 @@ if (process.argv.includes("--version")) {
         assessed: 1,
         startedWithoutCompletedEvidence: [externalTask.taskId]
       });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("enforces frozen fixture order and isolated path bindings before a task starts", () => {
+    const root = mkdtempSync(join(tmpdir(), "apexcn-ga-fixtures-"));
+    const evidenceDir = join(root, "evidence");
+    const candidate = join(root, "apexcn");
+    const devConfig = join(root, "dev-config.json");
+    writeFileSync(candidate, `#!/usr/bin/env node
+if (process.argv.includes("--version")) process.stdout.write("1.0.10\\n");
+else process.stdout.write(JSON.stringify({ ok: true }) + "\\n");
+`);
+    chmodSync(candidate, 0o755);
+    writeFileSync(devConfig, "{\"profiles\":{}}\n");
+    chmodSync(devConfig, 0o600);
+    const plan = readJsonLines("qualification/ga/task-plan-v1.jsonl");
+    const automationTask = plan.find((task) => task.expectedPublicCommandIds[0] === "collection.automation.run");
+    const schemaTask = plan.find((task) => task.expectedPublicCommandIds[0] === "schema.bundle");
+    const taskRoot = join(root, "tasks", automationTask.taskId);
+
+    try {
+      expect(runRecorder([
+        "init",
+        "--evidence-dir", evidenceDir,
+        "--candidate", candidate,
+        "--dev-config", devConfig
+      ]).status).toBe(0);
+
+      const outOfOrder = runRecorder([
+        "fixture",
+        "--evidence-dir", evidenceDir,
+        "--task-id", automationTask.taskId,
+        "--fixture-id", "build-automation-plan",
+        "--",
+        "collection", "automation", "plan",
+        "--dir", join(taskRoot, "collection"),
+        "--query", "ORDS auth",
+        "--output", join(taskRoot, "plan.json"),
+        "--json"
+      ]);
+      expect(outOfOrder.status).not.toBe(0);
+      expect(outOfOrder.stderr).toContain("requires build-collection");
+
+      const built = runRecorder([
+        "fixture",
+        "--evidence-dir", evidenceDir,
+        "--task-id", automationTask.taskId,
+        "--fixture-id", "build-collection",
+        "--",
+        "collection", "build",
+        "--query", "REST API",
+        "--topic-id", "30549",
+        "--output-dir", join(taskRoot, "collection"),
+        "--json"
+      ]);
+      expect(built.status, built.stderr).toBe(0);
+      const planned = runRecorder([
+        "fixture",
+        "--evidence-dir", evidenceDir,
+        "--task-id", automationTask.taskId,
+        "--fixture-id", "build-automation-plan",
+        "--",
+        "collection", "automation", "plan",
+        "--dir", join(taskRoot, "collection"),
+        "--query", "ORDS auth",
+        "--output", join(taskRoot, "plan.json"),
+        "--json"
+      ]);
+      expect(planned.status, planned.stderr).toBe(0);
+      const attempted = runRecorder([
+        "run",
+        "--evidence-dir", evidenceDir,
+        "--task-id", automationTask.taskId,
+        "--",
+        "collection", "automation", "run",
+        "--plan", join(taskRoot, "plan.json"),
+        "--output", join(taskRoot, "result.json"),
+        "--json"
+      ]);
+      expect(attempted.status, attempted.stderr).toBe(0);
+      expect(existsSync(join(root, ".qualification-runtime", "task-configs", `${automationTask.taskId}.json`))).toBe(true);
+
+      const escaped = runRecorder([
+        "run",
+        "--evidence-dir", evidenceDir,
+        "--task-id", schemaTask.taskId,
+        "--",
+        "schema", "bundle",
+        "--output", "/tmp/apexcn-qualification-escape.json",
+        "--json"
+      ]);
+      expect(escaped.status).not.toBe(0);
+      expect(escaped.stderr).toContain("escapes the isolated run root");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
