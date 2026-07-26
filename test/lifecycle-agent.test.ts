@@ -172,6 +172,48 @@ describe("cross-platform lifecycle assets", () => {
     expect(existsSync(join(binDir, "apexcn"))).toBe(false);
   }, 60_000);
 
+  for (const legacyVersion of ["1.0.0", "1.0.2"]) {
+    posixTest(`shell rollback keeps legacy ${legacyVersion} launcher safe for re-upgrade`, () => {
+      const root = mkdtempSync(join(tmpdir(), "apexcn-legacy-reupgrade-"));
+      const installRoot = join(root, "install");
+      const binDir = join(root, "bin");
+      const backupRoot = join(root, `backup-${legacyVersion}`);
+      const legacyEntrypoint = `#!/usr/bin/env node\nconsole.log('${legacyVersion}');\n`;
+      mkdirSync(join(installRoot, "dist"), { recursive: true });
+      mkdirSync(join(backupRoot, "dist"), { recursive: true });
+      writeFileSync(join(installRoot, "package.json"), '{"name":"apexcn-cli","version":"1.0.9","type":"module"}\n');
+      writeFileSync(join(installRoot, "dist", "index.js"), "#!/usr/bin/env node\nconsole.log('1.0.9');\n");
+      writeFileSync(join(backupRoot, "package.json"), `{"name":"apexcn-cli","version":"${legacyVersion}","type":"module"}\n`);
+      writeFileSync(join(backupRoot, "dist", "index.js"), legacyEntrypoint);
+
+      try {
+        const rollback = spawnSync("bash", [
+          "scripts/lifecycle-agent.sh",
+          "rollback",
+          "--install-root", installRoot,
+          "--bin-dir", binDir,
+          "--backup", backupRoot,
+          "--yes"
+        ], {
+          cwd: repoRoot,
+          env: process.env,
+          encoding: "utf8"
+        });
+
+        expect(rollback.status, rollback.stderr).toBe(0);
+        const launcher = join(binDir, "apexcn");
+        expect(lstatSync(launcher).isSymbolicLink()).toBe(false);
+
+        writeFileSync(launcher, `#!/usr/bin/env bash
+exec node "${join(installRoot, "dist", "index.js")}" "$@"
+`);
+        expect(readFileSync(join(installRoot, "dist", "index.js"), "utf8")).toBe(legacyEntrypoint);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    });
+  }
+
   test("PowerShell lifecycle has the same guarded operations and recovery path", () => {
     const script = readFileSync(join(repoRoot, "scripts/lifecycle-agent.ps1"), "utf8");
 

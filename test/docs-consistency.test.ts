@@ -120,10 +120,10 @@ describe("documentation consistency", () => {
     const security = read("docs/security-model.md");
     const workflow = read(".github/workflows/release.yml");
 
-    for (const asset of ["apexcn-cli.tgz", "install-agent.sh", "install-agent.ps1", "checksums.txt"]) {
+    for (const asset of ["apexcn-cli.tgz", "install-agent.sh", "install-agent.ps1", "apexcn-cli.spdx.json", "release-provenance.json", "checksums.txt"]) {
       expect(security).toContain(asset);
     }
-    for (const asset of ["apexcn-cli.tgz", "install-agent.sh", "install-agent.ps1", "checksums.txt", "apexcn-cli.tgz.sha256", "install-agent.sh.sha256", "install-agent.ps1.sha256"]) {
+    for (const asset of ["apexcn-cli.tgz", "install-agent.sh", "install-agent.ps1", "apexcn-cli.spdx.json", "release-provenance.json", "checksums.txt", "apexcn-cli.tgz.sha256", "install-agent.sh.sha256", "install-agent.ps1.sha256", "apexcn-cli.spdx.json.sha256", "release-provenance.json.sha256"]) {
       expect(workflow).toContain(`artifacts/${asset}`);
     }
   });

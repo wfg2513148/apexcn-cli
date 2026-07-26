@@ -2062,16 +2062,24 @@ function textList(value: unknown): string {
 }
 
 function enrichAskReference(source: Record<string, unknown>): Record<string, unknown> {
-  const threadUrl = absoluteCommunityTopicUrl(source.threadUrl)
-    ?? absoluteCommunityTopicUrl(source.card_link);
-  const topicUrl = firstAbsoluteUrl(source.canonicalUrl)
-    ?? threadUrl
-    ?? firstAbsoluteUrl(source.url);
+  const backendThreadUrl = absoluteCommunityTopicUrl(source.threadUrl)
+    ?? absoluteCommunityTopicUrl(source.card_link)
+    ?? absoluteCommunityTopicUrl(source.url);
+  const topicId = topicIdFromAskReference(source);
+  const threadUrl = topicId
+    ? `https://oracleapex.cn/t/${topicId}`
+    : firstAbsoluteUrl(source.canonicalUrl) ?? backendThreadUrl;
+  const replyId = positiveId(source.replyId ?? source.postId);
+  const replyUrl = threadUrl && replyId ? `${threadUrl}#post_${replyId}` : undefined;
+  const originalUrl = source.originalUrl
+    ?? source.source_url
+    ?? (backendThreadUrl && backendThreadUrl !== threadUrl ? backendThreadUrl : undefined);
   return compactBody({
     ...source,
-    url: topicUrl,
-    threadUrl: threadUrl ?? topicUrl,
-    originalUrl: source.originalUrl ?? source.source_url
+    url: replyUrl ?? threadUrl,
+    threadUrl,
+    replyUrl,
+    originalUrl
   });
 }
 
@@ -2093,11 +2101,13 @@ function firstAbsoluteUrl(...values: unknown[]): string | undefined {
 }
 
 function topicIdFromAskReference(source: Record<string, unknown>): number | undefined {
-  const direct = topicIdFromSearchItem(source);
-  if (direct !== undefined) {
-    return direct;
+  for (const key of ["topicId", "threadId"]) {
+    const direct = positiveId(source[key]);
+    if (direct !== undefined) {
+      return direct;
+    }
   }
-  for (const key of ["doc_id", "card_link"]) {
+  for (const key of ["doc_id", "card_link", "threadUrl", "url", "originalUrl"]) {
     const value = source[key];
     if (typeof value !== "string") {
       continue;
@@ -2110,7 +2120,7 @@ function topicIdFromAskReference(source: Record<string, unknown>): number | unde
       return Number(value);
     }
   }
-  return undefined;
+  return positiveId(source.id);
 }
 
 function topicIdFromSearchItem(item: Record<string, unknown>): number | undefined {

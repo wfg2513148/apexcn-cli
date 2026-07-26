@@ -1,6 +1,6 @@
-import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, readdir, realpath, unlink, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { isAbsolute, join, normalize, sep } from "node:path";
+import { isAbsolute, join, normalize, parse, relative, resolve, sep } from "node:path";
 import { Command, InvalidArgumentError } from "commander";
 import { ConfigFileError } from "../config.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
@@ -479,6 +479,9 @@ async function indexCollection(io: CommandIo, options: IndexOptions): Promise<vo
     return;
   }
   const jsonl = records.map((record) => JSON.stringify(record)).join("\n") + (records.length > 0 ? "\n" : "");
+  if (!await validateCollectionIndexDestination(io, options)) {
+    return;
+  }
   const indexEvidence = await writeTextWithEvidence(join(options.dir, "index.jsonl"), jsonl);
   const meta = createIndexMeta({
     createdAt: collection.createdAt,
@@ -503,6 +506,21 @@ async function indexCollection(io: CommandIo, options: IndexOptions): Promise<vo
       meta: join(options.dir, "index.meta.json")
     }
   }, options.json === true);
+}
+
+async function validateCollectionIndexDestination(io: CommandIo, options: IndexOptions): Promise<boolean> {
+  try {
+    await assertNoSymlinkPath(options.dir);
+    const root = await realpath(options.dir);
+    await assertNoSymlinkComponents(root, "index.jsonl");
+    await assertNoSymlinkComponents(root, "index.meta.json");
+    return true;
+  } catch (error) {
+    if (!(error instanceof UnsafeCollectionDestinationError)) throw error;
+    printError(io, { type: "validation", message: error.message }, undefined, options.json);
+    process.exitCode = 1;
+    return false;
+  }
 }
 
 async function queryCollection(io: CommandIo, query: string, options: QueryOptions): Promise<void> {
@@ -854,8 +872,14 @@ async function importCollectionBundle(io: CommandIo, options: ImportOptions): Pr
     process.exitCode = 1;
     return;
   }
-  await mkdir(options.outputDir, { recursive: true });
-  await writeBundleFiles(options.outputDir, bundle);
+  try {
+    await writeBundleFiles(options.outputDir, bundle);
+  } catch (error) {
+    if (!(error instanceof UnsafeCollectionDestinationError)) throw error;
+    printError(io, { type: "validation", message: error.message }, undefined, options.json);
+    process.exitCode = 1;
+    return;
+  }
   const collection = JSON.parse(await readFile(join(options.outputDir, "collection.json"), "utf8")) as unknown;
   const verification = await collectionVerificationReport(options.outputDir, collection);
   if (!verification.ok) {
@@ -873,7 +897,14 @@ async function restoreCollectionBundle(io: CommandIo, options: RestoreOptions): 
     process.exitCode = 1;
     return;
   }
-  await writeBundleFiles(options.dir, bundle);
+  try {
+    await writeBundleFiles(options.dir, bundle);
+  } catch (error) {
+    if (!(error instanceof UnsafeCollectionDestinationError)) throw error;
+    printError(io, { type: "validation", message: error.message }, undefined, options.json);
+    process.exitCode = 1;
+    return;
+  }
   const collection = JSON.parse(await readFile(join(options.dir, "collection.json"), "utf8")) as unknown;
   const verification = await collectionVerificationReport(options.dir, collection);
   if (!verification.ok) {
@@ -989,11 +1020,67 @@ async function readVerifiedBundle(path: string): Promise<CollectionBundle | unde
 }
 
 async function writeBundleFiles(dir: string, bundle: CollectionBundle): Promise<void> {
+  await assertNoSymlinkPath(dir);
+  await mkdir(dir, { recursive: true });
+  const rootStat = await lstat(dir);
+  if (rootStat.isSymbolicLink()) throw new UnsafeCollectionDestinationError("Collection destination contains a symbolic link.");
+  if (!rootStat.isDirectory()) throw new UnsafeCollectionDestinationError("Collection destination is not a directory.");
+  const root = await realpath(dir);
   for (const file of bundle.files) {
     if (!safeRelativePath(file.path)) throw new Error(`Unsafe bundle path: ${file.path}`);
-    const path = join(dir, normalize(file.path));
+    await assertNoSymlinkComponents(root, normalize(file.path));
+  }
+  for (const file of bundle.files) {
+    const path = join(root, normalize(file.path));
     await mkdir(join(path, ".."), { recursive: true });
+    await assertNoSymlinkComponents(root, normalize(file.path));
     await writeFile(path, file.content, "utf8");
+  }
+}
+
+class UnsafeCollectionDestinationError extends Error {}
+
+async function assertNoSymlinkPath(path: string): Promise<void> {
+  const absolute = resolve(path);
+  const root = parse(absolute).root;
+  let current = root;
+  const segments = relative(root, absolute).split(sep).filter(Boolean);
+  for (let index = 0; index < segments.length; index += 1) {
+    const segment = segments[index];
+    current = join(current, segment);
+    try {
+      const stat = await lstat(current);
+      if (stat.isSymbolicLink()) {
+        if (index === 0) continue;
+        throw new UnsafeCollectionDestinationError("Collection destination contains a symbolic link.");
+      }
+      if (!stat.isDirectory()) {
+        throw new UnsafeCollectionDestinationError("Collection destination parent is not a directory.");
+      }
+    } catch (error) {
+      if (isNodeError(error) && error.code === "ENOENT") return;
+      throw error;
+    }
+  }
+}
+
+async function assertNoSymlinkComponents(root: string, relativePath: string): Promise<void> {
+  let current = root;
+  const parts = relativePath.split(sep);
+  for (let index = 0; index < parts.length; index += 1) {
+    current = join(current, parts[index]);
+    try {
+      const stat = await lstat(current);
+      if (stat.isSymbolicLink()) {
+        throw new UnsafeCollectionDestinationError("Collection destination contains a symbolic link.");
+      }
+      if (index < parts.length - 1 && !stat.isDirectory()) {
+        throw new UnsafeCollectionDestinationError("Collection destination parent is not a directory.");
+      }
+    } catch (error) {
+      if (isNodeError(error) && error.code === "ENOENT") return;
+      throw error;
+    }
   }
 }
 

@@ -95,6 +95,7 @@ describe("zero-argument one-click installers", () => {
     expect(script).toContain("Verified package checksum");
     expect(script).toContain("releases/latest/download/apexcn-cli.tgz");
     expect(script).toContain('ln -sfn "$cli_entrypoint" "$launcher"');
+    expect(script).toContain("APEXCN_CLI_SKILL_HOME");
     expect(script).not.toContain("APEXCN_API_KEY");
     for (const option of [
       "--dry-run",
@@ -122,6 +123,12 @@ describe("zero-argument one-click installers", () => {
     expect(script).toContain("releases/latest/download/apexcn-cli.tgz");
     expect(script).toContain("$UsingDefaultPaths");
     expect(script).toContain("if ($UsingDefaultPaths -and $Resolved");
+    expect(script).toContain("APEXCN_CLI_SKILL_HOME");
+    expect(script).toContain("$StagingRoot");
+    expect(script).toContain("$PreviousRoot");
+    expect(script).toContain("Staged launcher verification failed");
+    expect(script).toContain("Installed launcher verification failed");
+    expect(script).toContain('$env:OS -eq "Windows_NT"');
     expect(script).not.toContain("APEXCN_API_KEY");
     expect(script).not.toContain("param(");
     expect(script).not.toContain("[switch]");
@@ -152,10 +159,40 @@ describe("zero-argument one-click installers", () => {
       expect(execFileSync(join(root, "bin", "apexcn"), ["--version"], {
         env,
         encoding: "utf8"
-      })).toBe("1.0.8\n");
+      })).toBe("1.0.9\n");
       expect(existsSync(join(root, "home", ".apexcn", "config.json"))).toBe(false);
       expect(existsSync(join(root, "home", ".agents", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
       expect(existsSync(join(root, "home", ".codex", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  posixTest("shell installer can isolate every skill write from the real user home", () => {
+    const root = mkdtempSync(join(tmpdir(), "apexcn-skill-isolation-"));
+    const packagePaths = preparePackage(root);
+    const realHome = join(root, "real-home");
+    const isolatedSkillHome = join(root, "isolated-skill-home");
+    const sentinel = join(realHome, ".codex", "skills", "apexcn-cli", "sentinel.txt");
+    mkdirSync(join(sentinel, ".."), { recursive: true });
+    writeFileSync(sentinel, "preserve\n");
+
+    try {
+      const result = spawnSync("bash", [], {
+        cwd: repoRoot,
+        env: installEnvironment(root, packagePaths, {
+          HOME: realHome,
+          APEXCN_CLI_SKILL_HOME: isolatedSkillHome
+        }),
+        encoding: "utf8",
+        input: readRepoFile("scripts/install-agent.sh")
+      });
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(readFileSync(sentinel, "utf8")).toBe("preserve\n");
+      expect(existsSync(join(isolatedSkillHome, ".agents", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
+      expect(existsSync(join(isolatedSkillHome, ".codex", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
+      expect(existsSync(join(isolatedSkillHome, ".config", "opencode", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -190,6 +227,38 @@ describe("zero-argument one-click installers", () => {
     }
   }, 30_000);
 
+  posixTest("shell installer preserves an existing installation when a checksummed archive is truncated", () => {
+    const root = mkdtempSync(join(tmpdir(), "apexcn-zero-truncated-"));
+    const packagePaths = preparePackage(root);
+    const truncatedArchive = join(root, "truncated.tgz");
+    const truncatedChecksums = join(root, "truncated-checksums.txt");
+    const archiveBytes = readFileSync(packagePaths.archive);
+    writeFileSync(truncatedArchive, archiveBytes.subarray(0, Math.floor(archiveBytes.length / 2)));
+    const digest = createHash("sha256").update(readFileSync(truncatedArchive)).digest("hex");
+    writeFileSync(truncatedChecksums, `${digest}  apexcn-cli.tgz\n`);
+    const installRoot = join(root, "install");
+    const sentinel = join(installRoot, "sentinel.txt");
+    mkdirSync(installRoot, { recursive: true });
+    writeFileSync(sentinel, "preserve\n");
+
+    try {
+      const result = spawnSync("bash", ["scripts/install-agent.sh"], {
+        cwd: repoRoot,
+        env: installEnvironment(root, {
+          archive: truncatedArchive,
+          checksums: truncatedChecksums
+        }),
+        encoding: "utf8"
+      });
+
+      expect(result.status).not.toBe(0);
+      expect(result.stdout).toContain("Verified package checksum");
+      expect(readFileSync(sentinel, "utf8")).toBe("preserve\n");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
   posixTest("shell installer replaces a working older apexcn-cli launcher", () => {
     const root = mkdtempSync(join(tmpdir(), "apexcn-zero-shadow-"));
     const packagePaths = preparePackage(root);
@@ -216,7 +285,7 @@ exit 0
 
       expect(result.status, result.stderr).toBe(0);
       expect(result.stdout).toContain("Updated shell-resolved launcher");
-      expect(execFileSync(shadow, ["--version"], { env, encoding: "utf8" })).toBe("1.0.8\n");
+      expect(execFileSync(shadow, ["--version"], { env, encoding: "utf8" })).toBe("1.0.9\n");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -249,7 +318,7 @@ printf 'external launcher\\n'
       expect(result.stdout).not.toContain("Updated shell-resolved launcher");
       expect(readFileSync(externalLauncher, "utf8")).toBe(originalLauncher);
       expect(execFileSync(join(root, "bin", "apexcn"), ["--version"], { env, encoding: "utf8" }))
-        .toBe("1.0.8\n");
+        .toBe("1.0.9\n");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

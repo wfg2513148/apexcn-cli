@@ -2168,7 +2168,7 @@ describe("content commands", () => {
       "APEX 可以用 REST Data Source。",
       "Sources:",
       "1. REST Data - https://oracleapex.cn/ords/test/api/v1/topics/42/visual | original https://example.com/rest-data | score 0.88 | 第一行 第二行",
-      "2. 43",
+      "2. 43 - https://oracleapex.cn/t/43",
       "requestId: req-ask",
       ""
     ].join("\n"));
@@ -2252,7 +2252,7 @@ describe("content commands", () => {
           {
             id: 29667,
             title: "APEXLang import",
-            url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:29667&cs=checksum",
+            url: "https://oracleapex.cn/t/29667",
             originalUrl: "https://oracleapex.cn/ords/r/apex-cn/website/thread?session=abc"
           }
         ]
@@ -2262,13 +2262,37 @@ describe("content commands", () => {
           card_title: "APEXLang import",
           card_link: "f?p=100:14:::::P14_THREAD_ID:29667&cs=checksum",
           source_url: "https://oracleapex.cn/ords/r/apex-cn/website/thread?session=abc",
-          url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:29667&cs=checksum",
-          threadUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:29667&cs=checksum",
+          url: "https://oracleapex.cn/t/29667",
+          threadUrl: "https://oracleapex.cn/t/29667",
           originalUrl: "https://oracleapex.cn/ords/r/apex-cn/website/thread?session=abc"
         }
       ],
       requestId: "req-ask"
     });
+  });
+
+  test("ask derives stable reply URLs while preserving the backend URL", async () => {
+    const { program, stdout } = await configuredProgram(async () =>
+      Response.json({
+        answer: "Use the accepted reply.",
+        sources: [
+          {
+            topicId: 29667,
+            replyId: 91,
+            threadUrl: "f?p=100:14:::::P14_THREAD_ID:29667"
+          }
+        ]
+      })
+    );
+
+    await program.parseAsync(["node", "apexcn", "ask", "Which reply?", "--json"]);
+
+    expect(JSON.parse(stdout.join("")).sources[0]).toEqual(expect.objectContaining({
+      url: "https://oracleapex.cn/t/29667#post_91",
+      threadUrl: "https://oracleapex.cn/t/29667",
+      replyUrl: "https://oracleapex.cn/t/29667#post_91",
+      originalUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:29667"
+    }));
   });
 
   test("ask resolves relative thread links to absolute community topic URLs", async () => {
@@ -2294,8 +2318,8 @@ describe("content commands", () => {
     expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
       sources: [
         expect.objectContaining({
-          url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:23142",
-          threadUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:23142",
+          url: "https://oracleapex.cn/t/23142",
+          threadUrl: "https://oracleapex.cn/t/23142",
           originalUrl: "https://blog.example/apex-ords"
         })
       ],
@@ -2304,7 +2328,7 @@ describe("content commands", () => {
         sources: [
           expect.objectContaining({
             id: 23142,
-            url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:23142",
+            url: "https://oracleapex.cn/t/23142",
             originalUrl: "https://blog.example/apex-ords"
           })
         ]
@@ -2343,8 +2367,8 @@ describe("content commands", () => {
       references: [
         expect.objectContaining({
           card_title: "ORDS OAuth",
-          url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:23722",
-          threadUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:23722"
+          url: "https://oracleapex.cn/t/23722",
+          threadUrl: "https://oracleapex.cn/t/23722"
         })
       ]
     }));

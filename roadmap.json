@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "product": "apexcn-cli",
   "baselineRelease": "1.0.0",
-  "updatedAt": "2026-07-18",
+  "updatedAt": "2026-07-26",
   "versionPolicy": {
     "productStageToReleaseLine": {
       "0.2": "0.20.x",
@@ -2505,11 +2505,11 @@
       "releaseLine": "0.90.x",
       "title": "GA 候选版本",
       "objective": "冻结受支持公开面，并证明后续 GA 决策所需的发布、升级、安全、可靠性、恢复和文档成熟度。",
-      "status": "planned",
+      "status": "in_progress",
       "activationGate": {
-        "status": "waiting",
+        "status": "approved",
         "previousMilestoneId": "0.8",
-        "confirmationRef": null
+        "confirmationRef": "M090-E-ACTIVATION-R7-READY"
       },
       "completionReview": {
         "status": "not_due",
@@ -2533,7 +2533,7 @@
           "dependencies": [
             "external:qualification-infrastructure"
           ],
-          "status": "not_started",
+          "status": "implemented",
           "acceptanceCriterionIds": [
             "M090-AC-001",
             "M090-AC-003"
@@ -2543,7 +2543,8 @@
           ],
           "evidenceIds": [],
           "readinessRiskIds": [
-            "RISK-090-FREEZE"
+            "RISK-090-FREEZE",
+            "RISK-090-TIMEBOXED-QUALIFICATION"
           ]
         },
         {
@@ -2563,7 +2564,7 @@
           "dependencies": [
             "external:qualification-infrastructure"
           ],
-          "status": "not_started",
+          "status": "implemented",
           "acceptanceCriterionIds": [
             "M090-AC-004",
             "M090-AC-010"
@@ -2574,7 +2575,8 @@
           ],
           "evidenceIds": [],
           "readinessRiskIds": [
-            "RISK-090-RECOVERY"
+            "RISK-090-RECOVERY",
+            "RISK-090-TIMEBOXED-QUALIFICATION"
           ]
         },
         {
@@ -2592,7 +2594,7 @@
           "dependencies": [
             "external:qualification-infrastructure"
           ],
-          "status": "not_started",
+          "status": "implemented",
           "acceptanceCriterionIds": [
             "M090-AC-005"
           ],
@@ -2601,7 +2603,8 @@
           ],
           "evidenceIds": [],
           "readinessRiskIds": [
-            "RISK-090-SUPPLY"
+            "RISK-090-SUPPLY",
+            "RISK-090-TIMEBOXED-QUALIFICATION"
           ]
         },
         {
@@ -2612,7 +2615,6 @@
             "200 natural-language tasks",
             "client revalidation",
             "isolated write qualification",
-            "30-day soak",
             "independent security review"
           ],
           "nonGoals": [
@@ -2621,21 +2623,20 @@
           "dependencies": [
             "external:qualification-infrastructure"
           ],
-          "status": "not_started",
+          "status": "partial",
           "acceptanceCriterionIds": [
             "M090-AC-002",
             "M090-AC-007",
-            "M090-AC-008",
             "M090-AC-009"
           ],
           "validatorScenarioIds": [
             "M090-V-QUALIFICATION",
-            "M090-V-SOAK",
             "M090-V-SECURITY"
           ],
           "evidenceIds": [],
           "readinessRiskIds": [
-            "RISK-090-QUALIFICATION"
+            "RISK-090-QUALIFICATION",
+            "RISK-090-TIMEBOXED-QUALIFICATION"
           ]
         }
       ],
@@ -2682,7 +2683,7 @@
         {
           "id": "M090-AC-004",
           "gate": "core",
-          "description": "所有受支持 roadmap release line 升级至 0.90.x 的路径全部通过。",
+          "description": "所有受支持 1.x 稳定版本升级至 1.0.9 的路径全部通过。",
           "metric": "supportedUpgradePathSuccessRate",
           "comparator": "eq",
           "target": 100,
@@ -2714,19 +2715,6 @@
           "target": 100,
           "unit": "percent",
           "measurementMethod": "dev@oci isolated write suite and cleanup inventory",
-          "status": "pending",
-          "evidenceIds": [],
-          "measurementProfileId": "PROFILE-GA-QUALIFICATION"
-        },
-        {
-          "id": "M090-AC-008",
-          "gate": "core",
-          "description": "30 天资格 soak 达到文档化可靠性目标。",
-          "metric": "qualificationSoakDays",
-          "comparator": "eq",
-          "target": 30,
-          "unit": "days",
-          "measurementMethod": "continuous qualification report",
           "status": "pending",
           "evidenceIds": [],
           "measurementProfileId": "PROFILE-GA-QUALIFICATION"
@@ -2767,8 +2755,13 @@
           "unit": "risks",
           "measurementMethod": "readiness risk register",
           "measurementProfileId": "PROFILE-GA-QUALIFICATION",
-          "status": "pending",
-          "evidenceIds": []
+          "status": "pass",
+          "evidenceIds": [
+            "M090-E-INFRA-R2-BLOCKED",
+            "M090-E-DEV-WRITE-ENV",
+            "M090-E-LOCAL-ACTIVATION-R1",
+            "M090-E-ACTIVATION-R7-READY"
+          ]
         }
       ],
       "validatorScenarios": [
@@ -2779,7 +2772,7 @@
         },
         {
           "id": "M090-V-UPGRADE",
-          "description": "从每个支持 release line 升级到 0.90.x。",
+          "description": "从每个受支持 1.x 稳定版本升级到 1.0.9。",
           "mode": "platform"
         },
         {
@@ -2793,11 +2786,6 @@
           "mode": "black_box"
         },
         {
-          "id": "M090-V-SOAK",
-          "description": "运行 30 天资格 soak。",
-          "mode": "soak"
-        },
-        {
           "id": "M090-V-SECURITY",
           "description": "完成独立安全审查并关闭 critical/high 问题。",
           "mode": "security_review"
@@ -2806,7 +2794,88 @@
       "dependencies": [
         "external:qualification-infrastructure"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "id": "M090-E-INFRA-R2-BLOCKED",
+          "kind": "independent_activation_infrastructure_audit",
+          "path": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-m090-act-infra-r2-20260724T000000+0800/report.json",
+          "description": "Fresh visible Luna/high novice R2 verified the frozen hashes, 200-task and 83-command contracts, 8-by-4 matrix definition, public v1.0.8 identity, macOS isolated lifecycle smoke and cleanup. Readiness remained fail-closed because the DEV isolated-write environment, dedicated test account and Chrome DEV evidence were unavailable; no product issue or community write occurred.",
+          "threadId": "019f929b-70da-7523-b25f-4f444799647f",
+          "assignmentRef": "M090-ACT-INFRA-R2-20260724",
+          "commit": "a6c687c835dee977c48c9f90553eec43bfc03127",
+          "sha256": "726753398575f05823d0417cf4f7ff76681dabfe2f50af67d369c409b3d6ede5"
+        },
+        {
+          "id": "M090-E-SECURITY-BASELINE-R1",
+          "kind": "independent_security_baseline",
+          "path": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-m090-act-security-r1-20260724-001/security-baseline.json",
+          "description": "Fresh visible Luna/high v1.0.8 black-box security baseline recorded zero critical/high findings, two open medium local-boundary findings, blocked live API/ownership qualification, and the absence of SBOM/provenance from the public baseline; it is not 1.0.9 approval.",
+          "threadId": "019f928f-4bf3-74e1-a35d-b8b2956a462d",
+          "assignmentRef": "M090-ACT-SECURITY-BASELINE-R1-20260724",
+          "commit": "a6c687c835dee977c48c9f90553eec43bfc03127",
+          "sha256": "e034a90ff61bc415b1643602f64448340896a40dcd582efd38f17d10a6ade7e5"
+        },
+        {
+          "id": "M090-E-SECURITY-FIX-R5",
+          "kind": "independent_security_fix_revalidation",
+          "path": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-m090-act-security-fix-r5-20260724T174618+0800/report.json",
+          "description": "Fresh visible Luna/high novice R5 black-box validation against immutable 1.0.9 candidate sha256 454d92f387a3af0a707e0c4147266b99d088115f1f66d65c13b7b1d836f600a4 independently closed MED-SEC-001 and MED-SEC-002. Isolated installer writes preserved the real HOME, ten import/restore symlink scenarios failed before external mutation, normal macOS /var-alias behavior remained usable, and cleanup completed with zero open critical/high/medium findings. This scoped fix round is not final GA or release approval.",
+          "threadId": "019f9382-b633-7ed1-98f2-f6a1483605c3",
+          "assignmentRef": "M090-ACT-SECURITY-FIX-R5-20260724",
+          "commit": "working-tree-candidate",
+          "sha256": "5a29a420a85a5ea90932c27fbe88ecac34b75d0d1bd6af7626705b00f1ae1d4d"
+        },
+        {
+          "id": "M090-E-DEV-WRITE-ENV",
+          "kind": "server_dev_qualification_environment",
+          "path": "/Users/kwang/apexcn-forums/.apexcn-validator/m090-dev-write-readiness-report.md",
+          "description": "A fresh visible Terra/high server-owner task verified dev@oci/f102 contract 0.8.3-candidate, reused one existing minimum-role dedicated account, rotated only its DEV key, and bound apexcn-cli-m060-dev-write to category 8. First API evidence passed topic creation and idempotent replay, direct and nested replies, own-reply deletion, and cross-owner 403 denial. Cleanup proved zero topic, post, idempotency, audit, transient-account, transient-key and transient-surface residue. The 0600 ignored handoff is ready for a fresh independent CLI black-box round; no server code changed and no production write occurred.",
+          "threadId": "019f9383-f6fb-7192-8dd0-c0170088fd51",
+          "assignmentRef": "M090-ACT-DEV-WRITE-ENV-20260724",
+          "commit": "no-server-code-change",
+          "sha256": "3ea52026039fe5e181fde906c427d7b8c5df49c339659845ab85af50c10be3c8"
+        },
+        {
+          "id": "M090-E-LOCAL-ACTIVATION-R1",
+          "kind": "builder_activation_readiness_audit",
+          "path": "reports/m090-activation-candidate-r1/local-readiness.json",
+          "description": "Current-code local audit passed deterministic public-surface comparison, 200-task and scorer contracts, live digest verification of all eight public 1.x source releases, and the 1.0.9 activation candidate checksum/SBOM/provenance chain. The immutable package sha256 is 454d92f387a3af0a707e0c4147266b99d088115f1f66d65c13b7b1d836f600a4. Provenance honestly records a dirty activation source tree, so this evidence establishes readiness infrastructure only and is not final clean-release approval.",
+          "threadId": "019f927c-227f-7f12-af57-2b06dc7bf78f",
+          "assignmentRef": "M090-ACT-LOCAL-R1-20260724",
+          "commit": "45b078eddd4641c86c0126d8269559bfeb0d37e8",
+          "sha256": "aa6c486841bf8b9351bd7e63503cf2a9237a04229ca180f48aeca4d279a53cd7"
+        },
+        {
+          "id": "M090-E-ACTIVATION-R6-NOT-READY",
+          "kind": "independent_activation_black_box",
+          "path": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/reports/M090-ACT-FULL-R6-20260724-report.md",
+          "description": "Fresh visible Luna/high novice R6 independently passed frozen hashes, checksum/SBOM/provenance verification, authoritative isolated 1.0.9 install, 83-command and 80-schema public-surface parity, 200-task/scorer contract execution, five DEV CLI/API write and permission scenarios, real-Chrome topic rendering, RAG/ask isolation, and full local/server cleanup. It correctly returned NOT_READY because collection index followed a symlink root and wrote index artifacts outside the selected collection path, producing one open high finding. Chrome screenshot/reload timeouts were recorded as harness evidence, not product findings. No production write or 30-day soak evaluation occurred.",
+          "threadId": "019f9395-6580-7e02-a983-3298fe492aa3",
+          "assignmentRef": "M090-ACT-FULL-R6-20260724",
+          "commit": "working-tree-candidate",
+          "sha256": "d079cbb64649e426c010133d6fe9b79fdc26868054e9f43b67299e909ad32f97"
+        },
+        {
+          "id": "M090-E-ACTIVATION-R7-READY",
+          "kind": "independent_activation_fix_revalidation",
+          "path": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-m090-act-fix-r7-20260724T000000+0800/report.md",
+          "description": "Fresh visible Luna/high novice R7 independently returned READY for activation against immutable 1.0.9 Candidate R2 sha256 33f5d381336766b9313e8928dc610984f57e6780266be70b777e9e104f2edb3d. Applicable baseline was 10/10, DEV dynamic scenarios 5/5 and real-Chrome visual recognition 3/3. Four collection-index symlink cases and import/restore boundaries failed before mutation with unchanged external hashes, closing the R6 high finding; normal and macOS /var-alias indexing remained usable. Checksum/SBOM/provenance, 83-command/80-schema freeze, 200-task/scorer contracts, permission denial, RAG/ask isolation and cleanup all passed. The screenshot sha256 is b93e6af4837e980ce62e6da30f7ea3515092dbff23fd7b3ceeb57078faa91878, R7 issues are empty, and server cleanup evidence c66efd5e20dddef27797ff42ee2d3fc589c841b43bd39ea41d87ce69b3b361a7 reports all seven residual counts at zero. Dirty activation provenance remains explicitly non-final.",
+          "threadId": "019f93b7-d963-7da2-8af6-97040fbdda48",
+          "assignmentRef": "M090-ACT-FIX-R7-20260724",
+          "commit": "working-tree-candidate",
+          "sha256": "c4872e8570e3dbc6eb7bbfef550da750fe6fa53414da28ed014a09d83bd16b9c"
+        },
+        {
+          "id": "M090-E-R24-TIMEBOX-CLOSURE",
+          "kind": "independent_validation_timebox",
+          "path": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/evidence/M090-V109-GA-CANDIDATE-R24-20260726/phase0-proof.json",
+          "description": "The explicit 2026-07-26 release timebox stopped the fresh visible Luna/high novice R24 round before any candidate, installer, Q001-Q200, DEV, browser or production attempt. The immutable phase-0 proof records candidateProductAttempts=0, naturalLanguageFirstAttemptRows=0, DEV writes=0, production writes=0 and issues=[]. This is not product acceptance and not a product finding. Deferred qualification is tracked in GitHub issue #2.",
+          "threadId": "019f9d76-b8bd-7fb2-8f70-fcfca4702c41",
+          "assignmentRef": "M090-V109-GA-CANDIDATE-R24-20260726",
+          "commit": "working-tree-candidate",
+          "sha256": "a58daf104d27d636e55eca59afbe28c6b5ac02afe448742545fb114ea08b02bd"
+        }
+      ],
       "userOutcome": "维护者能够基于冻结证据判断产品是否达到 GA，而不是继续补新功能。",
       "stageNonGoals": [
         "新增公开命令族",
@@ -2939,12 +3008,12 @@
     {
       "id": "PROFILE-GA-QUALIFICATION",
       "owner": "independent-validator",
-      "purpose": "跨角色、跨平台、迁移、安全、供应链和 soak 资格验证",
+      "purpose": "跨角色、跨平台、迁移、安全和供应链资格验证",
       "integrityRules": [
         "资格集和支持矩阵在 0.9 激活前冻结",
         "证据记录版本、平台、commit、artifact hash 和时间窗",
         "critical 或 high 安全问题不得豁免",
-        "影响公开行为的修复必须重新评估相关 soak 窗口"
+        "影响公开行为的修复必须重新执行受影响的资格场景"
       ]
     }
   ],
@@ -3149,12 +3218,18 @@
         "0.9"
       ],
       "requiredAt": "activation",
-      "status": "unverified",
-      "resolutionThreadId": null,
+      "status": "ready",
+      "resolutionThreadId": "019f93b7-d963-7da2-8af6-97040fbdda48",
       "readinessEvidence": {
-        "availabilityArtifact": null,
-        "versionMatrix": null,
-        "smokeArtifact": null
+        "availabilityArtifact": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-m090-act-fix-r7-20260724T000000+0800/report.md",
+        "availabilityArtifactSha256": "c4872e8570e3dbc6eb7bbfef550da750fe6fa53414da28ed014a09d83bd16b9c",
+        "versionMatrix": "qualification/ga/support-matrix-v1.json sha256:5c3d757f3761aa36a0e4e381913f6aca22bd5b0e56594622f6b0e6ee8fc2f0ec",
+        "smokeArtifact": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-m090-act-fix-r7-20260724T000000+0800/report.json",
+        "smokeArtifactSha256": "e6d9dd24da307d324212ad5e28ff1a970ddbf2e5e9db925ebe1ebd971c6d3e23",
+        "smokeResult": "READY",
+        "serverEnvironmentArtifact": "/Users/kwang/apexcn-forums/.apexcn-validator/m090-dev-write-readiness-report.md",
+        "serverCleanupArtifact": "/Users/kwang/apexcn-forums/.apexcn-validator/m090-r7-cleanup-evidence.json",
+        "priorIndependentAudit": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-m090-act-infra-r2-20260724T000000+0800/report.json"
       }
     },
     {
@@ -3278,10 +3353,13 @@
       "capabilityIds": [
         "M090-CAP-FREEZE"
       ],
-      "status": "open",
+      "status": "mitigated",
       "blockingAt": "activation",
-      "description": "受支持公开面清单和冻结规则尚未完成资格化",
-      "resolutionEvidenceIds": []
+      "description": "1.0.9 公开面清单和冻结规则已通过本地漂移检查与 R7 独立黑盒核对：83 个命令、80 个 JSON schema、10 个 workflow goal、37 个 API operation 完全匹配，MCP 仍移除且没有新增公开命令族。最终 clean candidate hash 仍由完成验收与发布门禁绑定。",
+      "resolutionEvidenceIds": [
+        "M090-E-LOCAL-ACTIVATION-R1",
+        "M090-E-ACTIVATION-R7-READY"
+      ]
     },
     {
       "id": "RISK-090-RECOVERY",
@@ -3289,10 +3367,14 @@
       "capabilityIds": [
         "M090-CAP-RECOVERY"
       ],
-      "status": "open",
+      "status": "mitigated",
       "blockingAt": "activation",
-      "description": "支持版本、迁移矩阵和恢复环境尚未冻结",
-      "resolutionEvidenceIds": []
+      "description": "8 个受支持 1.x 起点、32 个平台单元和五阶段恢复合同已冻结；R2 证明公开 v1.0.8 macOS 隔离生命周期基础设施，server-owner 与 R7 证明 DEV 最低权限身份、候选安装、失败拒绝、权限和零残留环境可执行。32 单元全部通过仍是 M090-AC-004 的完成验收，不作为已完成结论。",
+      "resolutionEvidenceIds": [
+        "M090-E-INFRA-R2-BLOCKED",
+        "M090-E-DEV-WRITE-ENV",
+        "M090-E-ACTIVATION-R7-READY"
+      ]
     },
     {
       "id": "RISK-090-SUPPLY",
@@ -3300,10 +3382,13 @@
       "capabilityIds": [
         "M090-CAP-SUPPLY"
       ],
-      "status": "open",
+      "status": "mitigated",
       "blockingAt": "activation",
-      "description": "SBOM 和 provenance 发布链尚未证明可用",
-      "resolutionEvidenceIds": []
+      "description": "checksum、独立 detached hash、SPDX 2.3 SBOM 和 in-toto/SLSA provenance 生成/验证链已由本地 audit 与 R7 独立复验；dirty activation provenance 被如实保留。最终 clean provenance 与 GitHub 上传 digest equality 仍是 M090-AC-005 和发布门禁。",
+      "resolutionEvidenceIds": [
+        "M090-E-LOCAL-ACTIVATION-R1",
+        "M090-E-ACTIVATION-R7-READY"
+      ]
     },
     {
       "id": "RISK-090-QUALIFICATION",
@@ -3311,9 +3396,27 @@
       "capabilityIds": [
         "M090-CAP-QUALIFICATION"
       ],
-      "status": "open",
+      "status": "mitigated",
       "blockingAt": "activation",
-      "description": "独立安全审查与 30 天 soak 资源尚未锁定",
+      "description": "200 题跨角色资格集、97% 评分器边界、DEV 隔离写与独立安全审查合同均可执行；R5 关闭两个 medium，R7 独立关闭 R6 high 并以真实 Chrome、权限拒绝和七项零残留证明环境就绪，当前 critical/high/medium 为零。最终 200 题首次成功率与 clean candidate 安全审查仍是完成验收。",
+      "resolutionEvidenceIds": [
+        "M090-E-SECURITY-FIX-R5",
+        "M090-E-DEV-WRITE-ENV",
+        "M090-E-ACTIVATION-R7-READY"
+      ]
+    },
+    {
+      "id": "RISK-090-TIMEBOXED-QUALIFICATION",
+      "milestoneId": "0.9",
+      "capabilityIds": [
+        "M090-CAP-FREEZE",
+        "M090-CAP-RECOVERY",
+        "M090-CAP-SUPPLY",
+        "M090-CAP-QUALIFICATION"
+      ],
+      "status": "open",
+      "blockingAt": "completion",
+      "description": "v1.0.9 is released under the explicit 2026-07-26 timebox without current-candidate Q001-Q200 execution, the 16 applicable macOS/Linux lifecycle cells, final DEV API plus real-Chrome write-back qualification, or the current-candidate independent security review. R24 stopped before candidate use and supplies no acceptance evidence. GitHub issue #2 is the public open follow-up; Windows remains waived only for v1.0.9 and does not count as passed.",
       "resolutionEvidenceIds": []
     }
   ]

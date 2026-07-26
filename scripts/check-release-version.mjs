@@ -17,10 +17,14 @@ const allowedReleaseAssets = new Set([
   "apexcn-cli.tgz",
   "install-agent.sh",
   "install-agent.ps1",
+  "apexcn-cli.spdx.json",
+  "release-provenance.json",
   "checksums.txt",
   "apexcn-cli.tgz.sha256",
   "install-agent.sh.sha256",
-  "install-agent.ps1.sha256"
+  "install-agent.ps1.sha256",
+  "apexcn-cli.spdx.json.sha256",
+  "release-provenance.json.sha256"
 ]);
 const failures = [];
 
@@ -178,10 +182,14 @@ function checkReleaseWorkflow() {
     "artifacts/apexcn-cli.tgz",
     "artifacts/install-agent.sh",
     "artifacts/install-agent.ps1",
+    "artifacts/apexcn-cli.spdx.json",
+    "artifacts/release-provenance.json",
     "artifacts/checksums.txt",
     "artifacts/apexcn-cli.tgz.sha256",
     "artifacts/install-agent.sh.sha256",
-    "artifacts/install-agent.ps1.sha256"
+    "artifacts/install-agent.ps1.sha256",
+    "artifacts/apexcn-cli.spdx.json.sha256",
+    "artifacts/release-provenance.json.sha256"
   ];
   for (const asset of expectedAssets) {
     if (!assets.includes(asset)) {
@@ -228,6 +236,7 @@ function checkPackageFiles() {
     "scripts/install-agent.ps1",
     "scripts/lifecycle-agent.sh",
     "scripts/lifecycle-agent.ps1",
+    "scripts/verify-release-supply-chain.mjs",
     "README.md"
   ];
   for (const file of required) {

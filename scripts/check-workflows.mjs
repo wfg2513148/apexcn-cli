@@ -57,10 +57,14 @@ function checkReleaseWorkflow() {
     "scripts/check-release-artifacts.mjs",
     "RELEASE_TAG: ${{ inputs.tag }}",
     "gh release create \"$RELEASE_TAG\"",
+    "artifacts/apexcn-cli.spdx.json",
+    "artifacts/release-provenance.json",
     "artifacts/checksums.txt",
     "artifacts/apexcn-cli.tgz.sha256",
     "artifacts/install-agent.sh.sha256",
-    "artifacts/install-agent.ps1.sha256"
+    "artifacts/install-agent.ps1.sha256",
+    "artifacts/apexcn-cli.spdx.json.sha256",
+    "artifacts/release-provenance.json.sha256"
   ]);
   checkOrder(path, text, "npm run check:release", "gh release create \"$RELEASE_TAG\"");
   checkOrder(path, text, "scripts/check-release-artifacts.mjs", "gh release create \"$RELEASE_TAG\"");

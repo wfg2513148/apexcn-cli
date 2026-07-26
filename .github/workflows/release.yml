@@ -40,9 +40,13 @@ jobs:
             artifacts/apexcn-cli.tgz \
             artifacts/install-agent.sh \
             artifacts/install-agent.ps1 \
+            artifacts/apexcn-cli.spdx.json \
+            artifacts/release-provenance.json \
             artifacts/checksums.txt \
             artifacts/apexcn-cli.tgz.sha256 \
             artifacts/install-agent.sh.sha256 \
             artifacts/install-agent.ps1.sha256 \
+            artifacts/apexcn-cli.spdx.json.sha256 \
+            artifacts/release-provenance.json.sha256 \
             --title "$RELEASE_TAG" \
             --notes "apexcn-cli release $RELEASE_TAG"

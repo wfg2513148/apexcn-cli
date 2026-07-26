@@ -29,10 +29,14 @@ const releaseAssets = [
   "apexcn-cli.tgz",
   "install-agent.sh",
   "install-agent.ps1",
+  "apexcn-cli.spdx.json",
+  "release-provenance.json",
   "checksums.txt",
   "apexcn-cli.tgz.sha256",
   "install-agent.sh.sha256",
-  "install-agent.ps1.sha256"
+  "install-agent.ps1.sha256",
+  "apexcn-cli.spdx.json.sha256",
+  "release-provenance.json.sha256"
 ];
 const schemaFiles = run("git", ["ls-files", "src/schemas/*.ts"])
   .split("\n")

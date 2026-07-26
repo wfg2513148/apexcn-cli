@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -316,6 +316,173 @@ describe("roadmap 0.7 collection assets", () => {
     stdout.length = 0;
     await program.parseAsync(["node", "apexcn", "collection", "import", "--bundle", bundlePath, "--output-dir", importDir, "--json"]);
     await expect(readFile(join(importDir, "collection.json"), "utf8")).rejects.toThrow();
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("restore rejects a symlinked parent before writing outside the collection root", async () => {
+    const sourceDir = await tempPath("symlink-source");
+    const restoreDir = await tempPath("symlink-restore");
+    const outsideDir = await tempPath("symlink-outside");
+    const bundle = await tempPath("symlink-bundle.json");
+    const { program, stdout, stderr } = await configuredProgram(async (input) => {
+      if (String(input).includes("/api/v1/search")) {
+        return Response.json({ requestId: "search", items: [{ id: 27 }] });
+      }
+      return topicResponse(27, "Must stay inside the collection root");
+    });
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--query", "symlink", "--output-dir", sourceDir]);
+    await program.parseAsync(["node", "apexcn", "collection", "index", "--dir", sourceDir]);
+    await program.parseAsync(["node", "apexcn", "collection", "export", "--dir", sourceDir, "--output", bundle]);
+    await mkdir(restoreDir, { recursive: true });
+    await mkdir(outsideDir, { recursive: true });
+    await symlink(outsideDir, join(restoreDir, "topics"), "dir");
+    stdout.length = 0;
+    stderr.length = 0;
+
+    await program.parseAsync(["node", "apexcn", "collection", "restore", "--bundle", bundle, "--dir", restoreDir, "--json"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual(expect.objectContaining({
+      error: expect.objectContaining({ message: "Collection destination contains a symbolic link." })
+    }));
+    await expect(readFile(join(outsideDir, "27.json"), "utf8")).rejects.toThrow();
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("index rejects a symlinked collection root before writing index files outside it", async () => {
+    const outsideDir = await tempPath("index-symlink-outside");
+    const linkParent = await tempPath("index-symlink-parent");
+    const linkedDir = join(linkParent, "collection-link");
+    const { program, stdout, stderr } = await configuredProgram(async (input) => {
+      if (String(input).includes("/api/v1/search")) {
+        return Response.json({ requestId: "search", items: [{ id: 26 }] });
+      }
+      return topicResponse(26, "Index must not follow a symlinked collection root");
+    });
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--query", "symlink", "--output-dir", outsideDir]);
+    await mkdir(linkParent, { recursive: true });
+    await symlink(outsideDir, linkedDir, "dir");
+    stdout.length = 0;
+    stderr.length = 0;
+
+    await program.parseAsync(["node", "apexcn", "collection", "index", "--dir", linkedDir, "--json"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual(expect.objectContaining({
+      error: expect.objectContaining({ message: "Collection destination contains a symbolic link." })
+    }));
+    await expect(readFile(join(outsideDir, "index.jsonl"), "utf8")).rejects.toThrow();
+    await expect(readFile(join(outsideDir, "index.meta.json"), "utf8")).rejects.toThrow();
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("restore rejects a symlink in the selected collection path before creating the root", async () => {
+    const sourceDir = await tempPath("symlink-path-source");
+    const parentDir = await tempPath("symlink-path-parent");
+    const outsideDir = await tempPath("symlink-path-outside");
+    const bundle = await tempPath("symlink-path-bundle.json");
+    const linkedParent = join(parentDir, "linked-parent");
+    const restoreDir = join(linkedParent, "collection");
+    const { program, stdout, stderr } = await configuredProgram(async (input) => {
+      if (String(input).includes("/api/v1/search")) {
+        return Response.json({ requestId: "search", items: [{ id: 29 }] });
+      }
+      return topicResponse(29, "Do not follow a symlink before the collection root");
+    });
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--query", "symlink", "--output-dir", sourceDir]);
+    await program.parseAsync(["node", "apexcn", "collection", "index", "--dir", sourceDir]);
+    await program.parseAsync(["node", "apexcn", "collection", "export", "--dir", sourceDir, "--output", bundle]);
+    await mkdir(parentDir, { recursive: true });
+    await mkdir(outsideDir, { recursive: true });
+    await symlink(outsideDir, linkedParent, "dir");
+    stdout.length = 0;
+    stderr.length = 0;
+
+    await program.parseAsync(["node", "apexcn", "collection", "restore", "--bundle", bundle, "--dir", restoreDir, "--json"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual(expect.objectContaining({
+      error: expect.objectContaining({ message: "Collection destination contains a symbolic link." })
+    }));
+    await expect(readFile(join(outsideDir, "collection", "collection.json"), "utf8")).rejects.toThrow();
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("restore rejects an existing collection root reached through a symlinked ancestor", async () => {
+    const sourceDir = await tempPath("existing-symlink-path-source");
+    const parentDir = await tempPath("existing-symlink-path-parent");
+    const outsideDir = await tempPath("existing-symlink-path-outside");
+    const bundle = await tempPath("existing-symlink-path-bundle.json");
+    const linkedParent = join(parentDir, "linked-parent");
+    const restoreDir = join(linkedParent, "collection");
+    const { program, stdout, stderr } = await configuredProgram(async (input) => {
+      if (String(input).includes("/api/v1/search")) {
+        return Response.json({ requestId: "search", items: [{ id: 30 }] });
+      }
+      return topicResponse(30, "Reject an existing root below a symlinked ancestor");
+    });
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--query", "symlink", "--output-dir", sourceDir]);
+    await program.parseAsync(["node", "apexcn", "collection", "index", "--dir", sourceDir]);
+    await program.parseAsync(["node", "apexcn", "collection", "export", "--dir", sourceDir, "--output", bundle]);
+    await mkdir(parentDir, { recursive: true });
+    await mkdir(join(outsideDir, "collection"), { recursive: true });
+    await symlink(outsideDir, linkedParent, "dir");
+    stdout.length = 0;
+    stderr.length = 0;
+
+    await program.parseAsync(["node", "apexcn", "collection", "restore", "--bundle", bundle, "--dir", restoreDir, "--json"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual(expect.objectContaining({
+      error: expect.objectContaining({ message: "Collection destination contains a symbolic link." })
+    }));
+    await expect(readFile(join(outsideDir, "collection", "collection.json"), "utf8")).rejects.toThrow();
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("restore rejects symlinked roots and target files without changing their destinations", async () => {
+    const sourceDir = await tempPath("symlink-target-source");
+    const realRoot = await tempPath("symlink-real-root");
+    const rootLink = await tempPath("symlink-root-link");
+    const targetRoot = await tempPath("symlink-target-root");
+    const outsideFile = await tempPath("symlink-outside-file.json");
+    const bundle = await tempPath("symlink-target-bundle.json");
+    const { program, stdout, stderr } = await configuredProgram(async (input) => {
+      if (String(input).includes("/api/v1/search")) {
+        return Response.json({ requestId: "search", items: [{ id: 28 }] });
+      }
+      return topicResponse(28, "Do not follow destination symlinks");
+    });
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--query", "symlink", "--output-dir", sourceDir]);
+    await program.parseAsync(["node", "apexcn", "collection", "index", "--dir", sourceDir]);
+    await program.parseAsync(["node", "apexcn", "collection", "export", "--dir", sourceDir, "--output", bundle]);
+    await mkdir(realRoot, { recursive: true });
+    await symlink(realRoot, rootLink, "dir");
+    stdout.length = 0;
+    stderr.length = 0;
+
+    await program.parseAsync(["node", "apexcn", "collection", "restore", "--bundle", bundle, "--dir", rootLink, "--json"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual(expect.objectContaining({
+      error: expect.objectContaining({ message: "Collection destination contains a symbolic link." })
+    }));
+    await expect(readFile(join(realRoot, "collection.json"), "utf8")).rejects.toThrow();
+
+    process.exitCode = undefined;
+    stdout.length = 0;
+    stderr.length = 0;
+    await mkdir(targetRoot, { recursive: true });
+    await writeFile(outsideFile, "preserve\n", "utf8");
+    await symlink(outsideFile, join(targetRoot, "collection.json"), "file");
+
+    await program.parseAsync(["node", "apexcn", "collection", "restore", "--bundle", bundle, "--dir", targetRoot, "--json"]);
+
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toEqual(expect.objectContaining({
+      error: expect.objectContaining({ message: "Collection destination contains a symbolic link." })
+    }));
+    expect(await readFile(outsideFile, "utf8")).toBe("preserve\n");
     expect(process.exitCode).toBe(1);
   });
 

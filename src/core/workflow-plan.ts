@@ -1,14 +1,16 @@
-export type WorkflowGoal =
-  | "ask-question"
-  | "reply"
-  | "research-only"
-  | "publish-topic"
-  | "topic-create"
-  | "topic-update"
-  | "topic-delete"
-  | "reply-create"
-  | "reply-update"
-  | "reply-delete";
+export const WORKFLOW_GOALS = [
+  "ask-question",
+  "reply",
+  "research-only",
+  "publish-topic",
+  "topic-create",
+  "topic-update",
+  "topic-delete",
+  "reply-create",
+  "reply-update",
+  "reply-delete"
+] as const;
+export type WorkflowGoal = typeof WORKFLOW_GOALS[number];
 export type WorkflowStepMode = "local" | "api-read" | "api-write-preview" | "api-write-execute";
 
 export type WorkflowPlanInput = {

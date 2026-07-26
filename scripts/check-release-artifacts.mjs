@@ -47,6 +47,11 @@ function buildArtifacts() {
   renameSync(join(artifactsDir, pack.filename), archivePath);
   cpSync(join(repoRoot, "scripts/install-agent.sh"), join(artifactsDir, "install-agent.sh"));
   cpSync(join(repoRoot, "scripts/install-agent.ps1"), join(artifactsDir, "install-agent.ps1"));
+  execFileSync("node", ["scripts/generate-release-supply-chain.mjs", artifactsDir], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
   execFileSync("node", ["scripts/generate-release-checksums.mjs", artifactsDir], {
     cwd: repoRoot,
     encoding: "utf8",
@@ -84,10 +89,14 @@ function verifyArtifacts() {
     "apexcn-cli.tgz",
     "install-agent.sh",
     "install-agent.ps1",
+    "apexcn-cli.spdx.json",
+    "release-provenance.json",
     "checksums.txt",
     "apexcn-cli.tgz.sha256",
     "install-agent.sh.sha256",
-    "install-agent.ps1.sha256"
+    "install-agent.ps1.sha256",
+    "apexcn-cli.spdx.json.sha256",
+    "release-provenance.json.sha256"
   ];
   for (const asset of requiredAssets) {
     readFileSync(join(artifactsDir, asset));
@@ -120,7 +129,8 @@ function verifyArtifacts() {
     "package/scripts/install-agent.sh",
     "package/scripts/install-agent.ps1",
     "package/scripts/lifecycle-agent.sh",
-    "package/scripts/lifecycle-agent.ps1"
+    "package/scripts/lifecycle-agent.ps1",
+    "package/scripts/verify-release-supply-chain.mjs"
   ];
   for (const file of requiredFiles) {
     if (!entries.has(file)) {
@@ -157,6 +167,12 @@ function verifyArtifacts() {
   if (packageJson.version !== expectedVersion) {
     throw new Error(`release package version: expected ${expectedVersion}, got ${String(packageJson.version)}`);
   }
+
+  execFileSync("node", ["scripts/verify-release-supply-chain.mjs", artifactsDir], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
 }
 
 function readJson(path) {

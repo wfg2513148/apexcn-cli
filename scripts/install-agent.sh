@@ -12,8 +12,10 @@ default_install_root="$HOME/.apexcn/tools/apexcn-cli"
 default_bin_dir="$HOME/.local/bin"
 install_root="${APEXCN_CLI_INSTALL_ROOT:-$default_install_root}"
 bin_dir="${APEXCN_CLI_BIN_DIR:-$default_bin_dir}"
+skill_home="${APEXCN_CLI_SKILL_HOME:-$HOME}"
 tmp_dir="$(mktemp -d)"
-trap 'rm -rf "$tmp_dir"' EXIT
+stage_root=""
+trap 'rm -rf "$tmp_dir" "${stage_root:-}"' EXIT
 
 log() {
   printf '[apexcn-cli] %s\n' "$1"
@@ -57,24 +59,60 @@ actual="$(sha256 "$archive" | tr '[:upper:]' '[:lower:]')"
 [[ "$actual" == "$expected" ]] || die "Checksum verification failed for apexcn-cli.tgz."
 log "Verified package checksum."
 
-rm -rf "$install_root"
-mkdir -p "$install_root"
-tar -xzf "$archive" -C "$install_root"
-cli_root="$install_root"
-[[ -f "$cli_root/package.json" ]] || cli_root="$install_root/package"
+install_parent="$(dirname "$install_root")"
+mkdir -p "$install_parent"
+stage_root="$(mktemp -d "$install_parent/.apexcn-cli-stage.XXXXXX")"
+tar -xzf "$archive" -C "$stage_root"
+cli_root="$stage_root"
+[[ -f "$cli_root/package.json" ]] || cli_root="$stage_root/package"
 [[ -f "$cli_root/package.json" ]] || die "Downloaded package is missing package.json."
 [[ -f "$cli_root/dist/index.js" ]] || die "Downloaded package is missing dist/index.js."
 [[ -d "$cli_root/node_modules/commander" ]] || die "Downloaded package is missing runtime dependencies."
 printf '%s\n' "$install_root" > "$cli_root/.apexcn-install-root"
 printf '%s\n' "$bin_dir" > "$cli_root/.apexcn-bin-dir"
-cli_entrypoint="$cli_root/dist/index.js"
-chmod +x "$cli_entrypoint"
+staged_entrypoint="$cli_root/dist/index.js"
+chmod +x "$staged_entrypoint"
+ln -s "$staged_entrypoint" "$tmp_dir/apexcn"
+version="$("$tmp_dir/apexcn" --version)" || die "Staged launcher verification failed."
 
 mkdir -p "$bin_dir"
 launcher="$bin_dir/apexcn"
-ln -sfn "$cli_entrypoint" "$launcher"
+launcher_backup="$tmp_dir/apexcn.previous"
+launcher_existed=false
+if [[ -e "$launcher" || -L "$launcher" ]]; then
+  cp -P "$launcher" "$launcher_backup"
+  launcher_existed=true
+fi
+previous_root="$install_parent/.apexcn-cli-previous.$$"
+[[ ! -e "$previous_root" && ! -L "$previous_root" ]] || die "Previous-install staging path already exists."
+restore_previous_install() {
+  rm -rf "$install_root"
+  [[ ! -e "$previous_root" && ! -L "$previous_root" ]] || mv "$previous_root" "$install_root"
+  rm -f "$launcher"
+  [[ "$launcher_existed" == "false" ]] || cp -P "$launcher_backup" "$launcher"
+}
+if [[ -e "$install_root" || -L "$install_root" ]]; then
+  mv "$install_root" "$previous_root"
+fi
+if ! mv "$stage_root" "$install_root"; then
+  [[ ! -e "$previous_root" && ! -L "$previous_root" ]] || mv "$previous_root" "$install_root"
+  die "Unable to switch to the verified installation."
+fi
+stage_root=""
+cli_root="$install_root"
+[[ -f "$cli_root/package.json" ]] || cli_root="$install_root/package"
+cli_entrypoint="$cli_root/dist/index.js"
+if ! ln -sfn "$cli_entrypoint" "$launcher"; then
+  restore_previous_install
+  die "Unable to switch the launcher to the verified installation."
+fi
+if ! installed_version="$("$launcher" --version)" || [[ "$installed_version" != "$version" ]]; then
+  restore_previous_install
+  die "Installed launcher verification failed."
+fi
+[[ ! -e "$previous_root" && ! -L "$previous_root" ]] || rm -rf "$previous_root"
 
-for skill_root in "$HOME/.agents/skills" "$HOME/.codex/skills" "$HOME/.config/opencode/skills"; do
+for skill_root in "$skill_home/.agents/skills" "$skill_home/.codex/skills" "$skill_home/.config/opencode/skills"; do
   skill_target="$skill_root/apexcn-cli"
   rm -rf "$skill_target"
   mkdir -p "$skill_root"
@@ -100,7 +138,6 @@ if [[ -n "$resolved" && "$resolved" != "$launcher" ]]; then
   fi
 fi
 
-version="$("$launcher" --version)" || die "Installed launcher verification failed."
 log "Installed apexcn-cli $version."
 printf '\n'
 printf 'apexcn-cli installation complete.\n\n'

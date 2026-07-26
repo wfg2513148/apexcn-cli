@@ -1,0 +1,139 @@
+{
+  "kind": "apexcn-ga-support-matrix",
+  "schemaVersion": 1,
+  "matrixVersion": "M090-UPGRADE-1",
+  "targetVersion": "1.0.9",
+  "supportPolicy": {
+    "releaseLine": "1.x",
+    "includeEveryPublishedStable1xRelease": true,
+    "excludedVersions": [
+      {
+        "version": "1.0.1",
+        "reason": "No public stable v1.0.1 Release exists."
+      }
+    ]
+  },
+  "supportedSources": [
+    {
+      "version": "1.0.0",
+      "tag": "v1.0.0",
+      "commit": "cfb53a55a9abde0987ca276730e23f2c404878a1",
+      "releaseUrl": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.0.0",
+      "packageSha256": "5dbf98417754894102e06ed87726e0b11b52c76152495fb0f67414fa1baf48bc"
+    },
+    {
+      "version": "1.0.2",
+      "tag": "v1.0.2",
+      "commit": "9fa32bfe208c4f32ef267b470bce6fee2a0ffa72",
+      "releaseUrl": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.0.2",
+      "packageSha256": "0c73f6d9fe4880be8c9d34ead105d462e746db492e102a0928fba1c951417766"
+    },
+    {
+      "version": "1.0.3",
+      "tag": "v1.0.3",
+      "commit": "911b905167ecb8ee0e35c040df6d1f30c8713d62",
+      "releaseUrl": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.0.3",
+      "packageSha256": "6c3e983e7b9163358ab39c905a442902b0722eaef5b02674a81a0f9c249061d4"
+    },
+    {
+      "version": "1.0.4",
+      "tag": "v1.0.4",
+      "commit": "0ae7b41b2997dde54e2be533880470d5d2baa440",
+      "releaseUrl": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.0.4",
+      "packageSha256": "4f3fad6a83c09a8beba340002d00934d32c02ae8114bb01bd1c6c8dba671a03b"
+    },
+    {
+      "version": "1.0.5",
+      "tag": "v1.0.5",
+      "commit": "6f05654325cc24a33873b65a2660f03abfd0da79",
+      "releaseUrl": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.0.5",
+      "packageSha256": "a4573da6604516c9aaf8af0b1c7261eef908a89e677a9544cc9ce7d5ebfa50ef"
+    },
+    {
+      "version": "1.0.6",
+      "tag": "v1.0.6",
+      "commit": "7415092e9d9309313ce435f72619a433611b00cd",
+      "releaseUrl": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.0.6",
+      "packageSha256": "c99a3ce32aeebabe346f32d95957ed5eddf68018fdd3eddf7930912eed37a47e"
+    },
+    {
+      "version": "1.0.7",
+      "tag": "v1.0.7",
+      "commit": "acc11f1d3ac07d298851d428e45214f2746d8d6a",
+      "releaseUrl": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.0.7",
+      "packageSha256": "52309766563d6c93dd79a136073b95283531d188fdc46832d2e139a4a3d2cfee"
+    },
+    {
+      "version": "1.0.8",
+      "tag": "v1.0.8",
+      "commit": "a6c687c835dee977c48c9f90553eec43bfc03127",
+      "releaseUrl": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.0.8",
+      "packageSha256": "524a818cc44ec520274cc5700d4caca80a8373d7cea0248f90b42f8c5a2726fa"
+    }
+  ],
+  "platforms": [
+    {
+      "id": "macos-arm64",
+      "runner": "local macOS arm64",
+      "shells": [
+        "bash"
+      ],
+      "node": "22.x or newer compatible release"
+    },
+    {
+      "id": "linux-x64",
+      "runner": "GitHub ubuntu-22.04 x64",
+      "shells": [
+        "bash"
+      ],
+      "node": "22.x"
+    },
+    {
+      "id": "windows-2022-powershell-5.1",
+      "runner": "GitHub windows-2022",
+      "shells": [
+        "Windows PowerShell 5.1"
+      ],
+      "node": "22.x"
+    },
+    {
+      "id": "windows-2022-powershell-7",
+      "runner": "GitHub windows-2022",
+      "shells": [
+        "PowerShell 7"
+      ],
+      "node": "22.x"
+    }
+  ],
+  "requiredStages": [
+    "install-source",
+    "upgrade-to-candidate",
+    "failed-upgrade-auto-recovery",
+    "rollback-to-source",
+    "reupgrade-and-uninstall"
+  ],
+  "requiredAssertions": [
+    "candidate version and package checksum match the frozen scope contract",
+    "authentication configuration is preserved through every stage",
+    "invalid candidate checksum fails before replacement",
+    "failed upgrade restores the exact source version",
+    "rollback restores the exact source version",
+    "uninstall removes only the isolated CLI installation and launcher",
+    "no production community write request occurs",
+    "first-attempt stdout, stderr, exit code, timestamps, and artifact hashes are retained"
+  ],
+  "environmentContract": {
+    "isolatedInstallRootRequired": true,
+    "isolatedLauncherRequired": true,
+    "isolatedConfigRequired": true,
+    "realUserHomeMutationAllowed": false,
+    "productionWriteAllowed": false,
+    "cleanupScope": "Only directories and launchers created under the run-specific isolation root.",
+    "failureInjection": [
+      "missing candidate package",
+      "candidate checksum mismatch",
+      "truncated candidate archive"
+    ]
+  },
+  "expectedMatrixCells": 32
+}

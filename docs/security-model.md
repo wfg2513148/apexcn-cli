@@ -69,10 +69,13 @@ apexcn doctor snapshot --output ./support-snapshot.json --json
 
 - `apexcn-cli.tgz`；
 - `install-agent.sh` 与 `install-agent.ps1`；
+- `apexcn-cli.spdx.json` 与 `release-provenance.json`；
 - `checksums.txt`；
-- 三个发布文件对应的独立 `.sha256` 校验文件。
+- 上述五个发布文件对应的独立 `.sha256` 校验文件。
 
 安装脚本必须使用 `checksums.txt` 对下载包执行 SHA-256 校验。校验缺失或失败时安装立即停止，不提供跳过选项。
+
+维护者在上传前运行 `node scripts/verify-release-supply-chain.mjs artifacts`，核对全部 checksum、SPDX 2.3 SBOM、in-toto/SLSA provenance、源 commit 与候选版本。发布后还必须将 GitHub Release API 返回的资产 digest 与本地冻结资产逐项比较。完整资格边界见 `docs/ga-support-policy.md`。
 
 生命周期脚本是独立脚本，不是 `apexcn` 子命令，因此不会出现在 `apexcn --help` 或 `apexcn commands --json` 中。安装器会打印实际的 `Installed source`；自定义安装目录时，应以该路径替换下面的 `CLI_SOURCE`。安装器会在 source 内记录实际安装根目录和 launcher 目录，因此从自定义 `Installed source` 运行生命周期脚本时无需再次传入路径参数。
 

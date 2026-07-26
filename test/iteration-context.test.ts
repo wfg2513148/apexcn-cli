@@ -112,6 +112,9 @@ describe("iteration context compaction", () => {
   test("keeps an incomplete released milestone active in the handoff", () => {
     const packageJson = loadJson("package.json");
     const roadmap = loadJson("roadmap.json");
+    const milestone = roadmap.milestones.find((entry: { id: string }) => entry.id === "0.8");
+    milestone.status = "in_progress";
+    milestone.completionReview.status = "pending";
     const summary = {
       ...validSummary(),
       milestoneId: "0.8"

@@ -11,8 +11,10 @@ $DefaultInstallRoot = Join-Path $env:LOCALAPPDATA "apexcn/tools/apexcn-cli"
 $DefaultBinDir = Join-Path $env:LOCALAPPDATA "apexcn/bin"
 $InstallRoot = if ($env:APEXCN_CLI_INSTALL_ROOT) { $env:APEXCN_CLI_INSTALL_ROOT } else { $DefaultInstallRoot }
 $BinDir = if ($env:APEXCN_CLI_BIN_DIR) { $env:APEXCN_CLI_BIN_DIR } else { $DefaultBinDir }
+$SkillHome = if ($env:APEXCN_CLI_SKILL_HOME) { $env:APEXCN_CLI_SKILL_HOME } else { $HOME }
 $UsingDefaultPaths = $InstallRoot -eq $DefaultInstallRoot -and $BinDir -eq $DefaultBinDir
 $TempDir = Join-Path ([IO.Path]::GetTempPath()) ("apexcn-cli-" + [guid]::NewGuid())
+$StagingRoot = $null
 
 function Write-Step([string]$Message) {
   Write-Host "[apexcn-cli] $Message"
@@ -73,25 +75,53 @@ try {
   if ($Actual -ne $Expected) { throw "Checksum verification failed for apexcn-cli.tgz." }
   Write-Step "Verified package checksum."
 
-  Remove-Item -Recurse -Force $InstallRoot -ErrorAction SilentlyContinue
-  New-Item -ItemType Directory -Force -Path $InstallRoot | Out-Null
-  & tar -xzf $Archive -C $InstallRoot
+  $InstallParent = Split-Path -Parent $InstallRoot
+  New-Item -ItemType Directory -Force -Path $InstallParent | Out-Null
+  $StagingRoot = Join-Path $InstallParent (".apexcn-cli-stage-" + [guid]::NewGuid())
+  New-Item -ItemType Directory -Path $StagingRoot | Out-Null
+  & tar -xzf $Archive -C $StagingRoot
   if ($LASTEXITCODE -ne 0) { throw "Unable to extract apexcn-cli.tgz." }
-  $CliRoot = $InstallRoot
-  if (-not (Test-Path (Join-Path $CliRoot "package.json"))) { $CliRoot = Join-Path $InstallRoot "package" }
+  $CliRoot = $StagingRoot
+  if (-not (Test-Path (Join-Path $CliRoot "package.json"))) { $CliRoot = Join-Path $StagingRoot "package" }
   if (-not (Test-Path (Join-Path $CliRoot "dist/index.js"))) { throw "Downloaded package is missing dist/index.js." }
   if (-not (Test-Path (Join-Path $CliRoot "node_modules/commander"))) { throw "Downloaded package is missing runtime dependencies." }
   Set-Content -Encoding UTF8 (Join-Path $CliRoot ".apexcn-install-root") $InstallRoot
   Set-Content -Encoding UTF8 (Join-Path $CliRoot ".apexcn-bin-dir") $BinDir
+  $Version = (& node (Join-Path $CliRoot "dist/index.js") --version).Trim()
+  if ($LASTEXITCODE -ne 0) { throw "Staged launcher verification failed." }
 
   New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
   $Launcher = Join-Path $BinDir "apexcn.cmd"
-  "@echo off`r`nnode `"$CliRoot\dist\index.js`" %*`r`n" | Set-Content -Encoding Ascii $Launcher
+  $LauncherBackup = Join-Path $TempDir "apexcn.previous.cmd"
+  $LauncherExisted = Test-Path $Launcher
+  if ($LauncherExisted) { Copy-Item -Force $Launcher $LauncherBackup }
+  $PreviousRoot = Join-Path $InstallParent (".apexcn-cli-previous-" + [guid]::NewGuid())
+  try {
+    if (Test-Path $InstallRoot) { Move-Item $InstallRoot $PreviousRoot }
+    Move-Item $StagingRoot $InstallRoot
+    $StagingRoot = $null
+    $CliRoot = $InstallRoot
+    if (-not (Test-Path (Join-Path $CliRoot "package.json"))) { $CliRoot = Join-Path $InstallRoot "package" }
+    "@echo off`r`nnode `"$CliRoot\dist\index.js`" %*`r`n" | Set-Content -Encoding Ascii $Launcher
+    $InstalledVersion = if ($env:OS -eq "Windows_NT") {
+      (& $Launcher --version).Trim()
+    } else {
+      (& node (Join-Path $CliRoot "dist/index.js") --version).Trim()
+    }
+    if ($LASTEXITCODE -ne 0 -or $InstalledVersion -ne $Version) { throw "Installed launcher verification failed." }
+  } catch {
+    Remove-Item -Recurse -Force $InstallRoot -ErrorAction SilentlyContinue
+    if (Test-Path $PreviousRoot) { Move-Item $PreviousRoot $InstallRoot }
+    Remove-Item -Force $Launcher -ErrorAction SilentlyContinue
+    if ($LauncherExisted) { Copy-Item -Force $LauncherBackup $Launcher }
+    throw
+  }
+  Remove-Item -Recurse -Force $PreviousRoot -ErrorAction SilentlyContinue
 
   foreach ($SkillRoot in @(
-    (Join-Path $HOME ".agents/skills"),
-    (Join-Path $HOME ".codex/skills"),
-    (Join-Path $HOME ".config/opencode/skills")
+    (Join-Path $SkillHome ".agents/skills"),
+    (Join-Path $SkillHome ".codex/skills"),
+    (Join-Path $SkillHome ".config/opencode/skills")
   )) {
     $SkillTarget = Join-Path $SkillRoot "apexcn-cli"
     Remove-Item -Recurse -Force $SkillTarget -ErrorAction SilentlyContinue
@@ -109,8 +139,6 @@ try {
     }
   }
 
-  $Version = & node (Join-Path $CliRoot "dist/index.js") --version
-  if ($LASTEXITCODE -ne 0) { throw "Installed launcher verification failed." }
   Write-Step "Installed apexcn-cli $Version."
   Write-Host ""
   Write-Host "apexcn-cli installation complete."
@@ -135,5 +163,6 @@ try {
   [Console]::Error.WriteLine("[apexcn-cli] $($_.Exception.Message)")
   exit 1
 } finally {
+  if ($StagingRoot) { Remove-Item -Recurse -Force $StagingRoot -ErrorAction SilentlyContinue }
   Remove-Item -Recurse -Force $TempDir -ErrorAction SilentlyContinue
 }

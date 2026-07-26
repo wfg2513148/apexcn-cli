@@ -88,13 +88,20 @@ compare_versions() {
 }
 
 write_launcher() {
-  local root entrypoint
+  local root entrypoint version
   root="$(cli_root)"
   entrypoint="$root/dist/index.js"
   [[ -f "$entrypoint" ]] || { printf 'Installed apexcn-cli is missing dist/index.js.\n' >&2; exit 1; }
   chmod +x "$entrypoint"
   mkdir -p "$bin_dir"
-  ln -sfn "$entrypoint" "$bin_dir/apexcn"
+  version="$(installed_version)"
+  if [[ "$version" == "1.0.0" || "$version" == "1.0.2" ]]; then
+    rm -f "$bin_dir/apexcn"
+    printf '#!/usr/bin/env bash\nexec node "%s" "$@"\n' "$entrypoint" > "$bin_dir/apexcn"
+    chmod +x "$bin_dir/apexcn"
+  else
+    ln -sfn "$entrypoint" "$bin_dir/apexcn"
+  fi
 }
 
 create_backup() {

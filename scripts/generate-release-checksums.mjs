@@ -3,9 +3,14 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, basename } from "node:path";
 
-const assetNames = ["apexcn-cli.tgz", "install-agent.sh", "install-agent.ps1"];
 const dir = process.argv[2] ?? ".";
 const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+const assetNames = [
+  "apexcn-cli.tgz",
+  "install-agent.sh",
+  "install-agent.ps1",
+  ...["apexcn-cli.spdx.json", "release-provenance.json"].filter((name) => existsSync(join(dir, name)))
+];
 
 function assetPath(name) {
   const direct = join(dir, name);
