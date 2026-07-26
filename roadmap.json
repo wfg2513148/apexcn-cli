@@ -3416,7 +3416,7 @@
       ],
       "status": "open",
       "blockingAt": "completion",
-      "description": "v1.0.9 的 R24 在候选使用前按 timebox 停止，不提供验收证据。1.0.10 已消除 validator 运行时设计大规模 harness 的根因，但当前候选仍须实际执行 Q001-Q200、18 个 macOS/Linux 生命周期单元、18 个无豁免 Windows 单元、DEV API 加真实 Chrome 写回、清理和独立安全审查；GitHub issue #2 在这些实证完成前保持开放。",
+      "description": "v1.0.9 已按 timebox 发布并由 GitHub issue #2 持续跟踪未完成资格。1.0.10 的 R27 已证明冻结资产校验、隔离安装及精确版本 1.0.10，但在 Q001 前按本轮 timebox 停止；公开 harness 的完整执行、Q001-Q200、18 个 macOS/Linux 生命周期单元、18 个无豁免 Windows 单元、DEV API 加真实 Chrome 写回、清理和独立安全审查仍未获得验收证据，不计为通过，issue #2 保持开放。",
       "resolutionEvidenceIds": []
     }
   ]
