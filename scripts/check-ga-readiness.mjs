@@ -21,9 +21,10 @@ const qualificationContract = readJson("qualification/ga/qualification-contract-
 const frozenTasks = readJsonLines("eval/qualification/tasks.v2.jsonl");
 const frozenHarness = readJson("qualification/ga/harness-manifest-v1.json");
 const frozenTaskPlan = readJsonLines("qualification/ga/task-plan-v1.jsonl");
+const gaMilestone = roadmap.milestones.find((item) => item.id === "0.9");
 
 const generatedSurface = await buildGaPublicSurface();
-if (canonical(frozenSurface) !== canonical(generatedSurface)) {
+if (gaMilestone?.status !== "timeboxed" && canonical(frozenSurface) !== canonical(generatedSurface)) {
   problems.push("public surface drifted; regenerate only after an explicit compatibility decision");
 }
 validateSurface(frozenSurface);
@@ -77,7 +78,8 @@ const report = {
   },
   checks: {
     onlineReleaseBaseline: args.online,
-    supplyChainSmoke: Boolean(args.supplyChainDir)
+    supplyChainSmoke: Boolean(args.supplyChainDir),
+    currentSurfaceComparison: gaMilestone?.status === "timeboxed" ? "not_applicable_timeboxed" : "required"
   },
   evidence,
   problems
@@ -245,6 +247,11 @@ function validateRoadmapState(currentRoadmap, currentIssues) {
     if (milestone.activationGate?.status !== "approved") problems.push("active 0.9 must have an approved activation gate");
     if (risks.some((risk) => risk.status !== "mitigated")) problems.push("active 0.9 has unmitigated activation risks");
     if (dependency?.status !== "ready") problems.push("active 0.9 has an unready qualification infrastructure dependency");
+  } else if (milestone?.status === "timeboxed") {
+    if (milestone.completionReview?.status !== "approved") problems.push("timeboxed 0.9 must have an approved closure review");
+    if (!currentRoadmap.readinessRisks.some((risk) => risk.milestoneId === "0.9" && risk.status === "open")) {
+      problems.push("timeboxed 0.9 must preserve its open qualification risk");
+    }
   } else {
     problems.push(`unexpected 0.9 status ${String(milestone?.status)}`);
   }

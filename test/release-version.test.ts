@@ -121,6 +121,7 @@ describe("release version check", () => {
     expect(files).toEqual(expect.arrayContaining([
       "README.md",
       "agent-skill/SKILL.md",
+      "agent-skill/intent-routes.json",
       "dist/index.js",
       "docs/cli-manual.zh.md",
       "docs/security-model.md",
@@ -167,6 +168,7 @@ describe("release version check", () => {
         "package/dist/version.js",
         "package/node_modules/commander/package.json",
         "package/agent-skill/SKILL.md",
+        "package/agent-skill/intent-routes.json",
         "package/docs/cli-manual.en.md",
         "package/docs/cli-manual.zh.md",
         "package/docs/security-model.md",

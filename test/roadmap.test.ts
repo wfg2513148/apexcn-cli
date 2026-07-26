@@ -64,7 +64,7 @@ describe("roadmap contract", () => {
     expect(output).toContain(`Roadmap check passed for ${roadmap.milestones.length} milestones and ${issues.issues.length} active issues`);
   });
 
-  test("defines differentiated measurable stages from 0.2 through 0.9", () => {
+  test("defines differentiated measurable stages through v1.0.11", () => {
     const roadmap = loadJson("roadmap.json");
 
     expect(roadmap.milestones.map((milestone: { id: string }) => milestone.id)).toEqual([
@@ -74,7 +74,8 @@ describe("roadmap contract", () => {
       "0.6",
       "0.7",
       "0.8",
-      "0.9"
+      "0.9",
+      "1.0.11"
     ]);
     expect(roadmap.milestones.map((milestone: { releaseLine: string }) => milestone.releaseLine)).toEqual([
       "0.20.x",
@@ -83,7 +84,8 @@ describe("roadmap contract", () => {
       "0.60.x",
       "0.70.x",
       "0.80.x",
-      "0.90.x"
+      "0.90.x",
+      "1.0.11"
     ]);
     for (const milestone of roadmap.milestones) {
       expect(milestone.capabilities.length).toBeGreaterThan(0);

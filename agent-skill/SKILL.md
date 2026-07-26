@@ -28,23 +28,25 @@ Do not use this skill for:
 - generic mentions of 中文社区, community, forum, 社区帖子, or RAG without APEX Chinese Community or oracleapex.cn context
 - Oracle APEX questions where the user explicitly asks for official documentation only or asks not to use community knowledge
 
+## Intent Router
+
+Read `intent-routes.json` from this skill directory before choosing commands. It is the versioned routing catalog for common novice requests. Every referenced path must exist in `apexcn commands --json`; do not invent a command when no route matches.
+
+- **Local-only routes:** run the listed draft, review, or diagnostic command directly. Do not require auth, account, capability, or API probes.
+- **Remote read routes:** run only the route's `preflightCommands`. Public search, recent content, research, and community RAG do not need a broad account preflight; authenticated personal routes use the targeted auth checks in the catalog.
+- **Remote write routes:** run the route's ownership/version/capability preflights, create a preview with its `mutationCommand`, show the preview to the user, and run `confirm` only after explicit approval.
+
+When several routes appear relevant, prefer the narrowest route matching the user's requested data scope. For example, “在我的收藏里搜索” uses `me search`, not global `search`.
+
 ## Before Acting
 
-1. Confirm the `apexcn` command is available:
+Confirm the `apexcn` command is available only when the current environment has not already established it:
 
 ```bash
 apexcn --help
 ```
 
-2. Confirm auth without exposing secrets:
-
-```bash
-apexcn auth audit --json
-apexcn doctor --json
-apexcn auth show --json
-apexcn me --json
-apexcn commands --json
-```
+Run auth checks only when the selected route lists them. Never expose secrets:
 
 不要输出完整 API key。Do not output the full API key. If auth is missing and `APEXCN_API_KEY` is available, configure it:
 

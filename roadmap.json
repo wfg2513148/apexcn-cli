@@ -11,7 +11,8 @@
       "0.6": "0.60.x",
       "0.7": "0.70.x",
       "0.8": "0.80.x",
-      "0.9": "0.90.x"
+      "0.9": "0.90.x",
+      "1.0.11": "1.0.11"
     },
     "routineIteration": "1.x",
     "allowVersion1": true,
@@ -2505,16 +2506,16 @@
       "releaseLine": "0.90.x",
       "title": "GA 候选版本",
       "objective": "冻结受支持公开面，并证明后续 GA 决策所需的发布、升级、安全、可靠性、恢复和文档成熟度。",
-      "status": "in_progress",
+      "status": "timeboxed",
       "activationGate": {
         "status": "approved",
         "previousMilestoneId": "0.8",
         "confirmationRef": "M090-E-ACTIVATION-R7-READY"
       },
       "completionReview": {
-        "status": "not_due",
-        "summaryEvidenceId": null,
-        "confirmationRef": null
+        "status": "approved",
+        "summaryEvidenceId": "M090-E-R24-TIMEBOX-CLOSURE",
+        "confirmationRef": "user-directed-advance-to-v1.0.11-20260726"
       },
       "capabilities": [
         {
@@ -2885,6 +2886,283 @@
         "M090-AC-002",
         "M090-AC-004",
         "M090-AC-011"
+      ]
+    },
+    {
+      "id": "1.0.11",
+      "releaseLine": "1.0.11",
+      "title": "AI 意图路由加固",
+      "objective": "让本地 AI 工具以最少且必要的检查，将常见自然语言请求稳定路由到 apexcn-cli 现有公开命令，同时保持写操作预览、确认和证据约束。",
+      "status": "completed",
+      "activationGate": {
+        "status": "approved",
+        "previousMilestoneId": "0.9",
+        "confirmationRef": "user-confirmed-v1.0.11-20260726"
+      },
+      "completionReview": {
+        "status": "approved",
+        "summaryEvidenceId": "M1011-E-R3-INDEPENDENT",
+        "confirmationRef": "automatic-v1.0.11-release-closure-20260726"
+      },
+      "capabilities": [
+        {
+          "id": "M1011-CAP-ROUTER",
+          "title": "高频意图路由表",
+          "userValue": "本地 AI 能从用户目标直接选择现有命令，不必遍历全部公开面。",
+          "scope": [
+            "机器可读的版本化意图路由表",
+            "至少十二类高频社区任务",
+            "命令与安全元数据一致性检查"
+          ],
+          "nonGoals": [
+            "新增公开命令族",
+            "绑定特定模型供应商"
+          ],
+          "dependencies": [],
+          "status": "validated",
+          "acceptanceCriterionIds": [
+            "M1011-AC-001",
+            "M1011-AC-002"
+          ],
+          "validatorScenarioIds": [
+            "M1011-V-ROUTING"
+          ],
+          "evidenceIds": [
+            "M1011-E-R3-INDEPENDENT"
+          ],
+          "readinessRiskIds": []
+        },
+        {
+          "id": "M1011-CAP-PREFLIGHT",
+          "title": "按意图最小预检",
+          "userValue": "本地草稿不再被登录检查阻塞，远端读写只执行与目标相关的能力检查。",
+          "scope": [
+            "本地任务零认证预检",
+            "远端读取定向认证或能力预检",
+            "写操作所有权和版本预检"
+          ],
+          "nonGoals": [
+            "凭据存储改造",
+            "无人值守认证"
+          ],
+          "dependencies": [],
+          "status": "validated",
+          "acceptanceCriterionIds": [
+            "M1011-AC-003"
+          ],
+          "validatorScenarioIds": [
+            "M1011-V-PREFLIGHT"
+          ],
+          "evidenceIds": [
+            "M1011-E-R3-INDEPENDENT"
+          ],
+          "readinessRiskIds": []
+        },
+        {
+          "id": "M1011-CAP-SAFETY",
+          "title": "写操作安全路由",
+          "userValue": "AI 发帖、回复、编辑、删除和标记答案时不会跳过当前对象读取、预览和用户确认。",
+          "scope": [
+            "写操作预览",
+            "operationId 确认",
+            "所有权和版本绑定",
+            "零未授权写入"
+          ],
+          "nonGoals": [
+            "无人确认写入",
+            "生产社区测试写入"
+          ],
+          "dependencies": [],
+          "status": "validated",
+          "acceptanceCriterionIds": [
+            "M1011-AC-004",
+            "M1011-AC-006"
+          ],
+          "validatorScenarioIds": [
+            "M1011-V-SAFETY"
+          ],
+          "evidenceIds": [
+            "M1011-E-R3-INDEPENDENT"
+          ],
+          "readinessRiskIds": []
+        },
+        {
+          "id": "M1011-CAP-NOVICE",
+          "title": "小白自然语言可用性",
+          "userValue": "不了解命令名的用户也能让本地 AI 首次选择正确、安全的执行路径。",
+          "scope": [
+            "至少二十五条新鲜自然语言场景",
+            "独立小白黑盒验证",
+            "首次尝试单独计分"
+          ],
+          "nonGoals": [
+            "替代 0.9 的二百任务 GA 资格验证",
+            "Windows 生命周期矩阵补测"
+          ],
+          "dependencies": [],
+          "status": "validated",
+          "acceptanceCriterionIds": [
+            "M1011-AC-005",
+            "M1011-AC-006"
+          ],
+          "validatorScenarioIds": [
+            "M1011-V-ROUTING",
+            "M1011-V-SAFETY"
+          ],
+          "evidenceIds": [
+            "M1011-E-R3-INDEPENDENT"
+          ],
+          "readinessRiskIds": []
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "M1011-AC-001",
+          "gate": "core",
+          "description": "版本化意图路由表至少覆盖十二类高频社区任务。",
+          "metric": "intentRouteCategoryCount",
+          "comparator": "gte",
+          "target": 12,
+          "unit": "categories",
+          "measurementMethod": "agent skill intent route catalog",
+          "status": "pass",
+          "evidenceIds": [
+            "M1011-E-R3-INDEPENDENT"
+          ],
+          "measurementProfileId": "PROFILE-INDEPENDENT-NATURAL-LANGUAGE"
+        },
+        {
+          "id": "M1011-AC-002",
+          "gate": "core",
+          "description": "至少二十五条小白自然语言样例全部映射到现有公开命令，且不存在虚构命令。",
+          "metric": "intentToPublicCommandMappingRate",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "static route catalog versus commands --json manifest",
+          "status": "pass",
+          "evidenceIds": [
+            "M1011-E-R3-INDEPENDENT"
+          ],
+          "measurementProfileId": "PROFILE-INDEPENDENT-NATURAL-LANGUAGE"
+        },
+        {
+          "id": "M1011-AC-003",
+          "gate": "core",
+          "description": "本地草稿和审查路径不要求认证/API 预检，远端路径只使用定向预检。",
+          "metric": "minimalPreflightPolicyCompliance",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "route policy tests and skill static assertions",
+          "status": "pass",
+          "evidenceIds": [
+            "M1011-E-R3-INDEPENDENT"
+          ],
+          "measurementProfileId": "PROFILE-INDEPENDENT-NATURAL-LANGUAGE"
+        },
+        {
+          "id": "M1011-AC-004",
+          "gate": "core",
+          "description": "所有社区内容变更路由均要求预览；需要 operationId 的命令均要求显式确认。",
+          "metric": "writeRouteSafetyCompliance",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "route catalog against command safety manifest",
+          "status": "pass",
+          "evidenceIds": [
+            "M1011-E-R3-INDEPENDENT"
+          ],
+          "measurementProfileId": "PROFILE-WRITE-BACK-DUAL-EVIDENCE"
+        },
+        {
+          "id": "M1011-AC-005",
+          "gate": "core",
+          "description": "新鲜小白 validator 对 v1.0.11 路由套件的首次成功率不低于 95%。",
+          "metric": "noviceRoutingFirstAttemptSuccessRate",
+          "comparator": "gte",
+          "target": 95,
+          "unit": "percent",
+          "measurementMethod": "fresh visible novice validator dynamic suite",
+          "status": "pass",
+          "evidenceIds": [
+            "M1011-E-R3-INDEPENDENT"
+          ],
+          "measurementProfileId": "PROFILE-INDEPENDENT-NATURAL-LANGUAGE"
+        },
+        {
+          "id": "M1011-AC-006",
+          "gate": "core",
+          "description": "独立验证期间秘密泄露和未授权社区写入均为零。",
+          "metric": "secretLeaksAndUnauthorizedWrites",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "events",
+          "measurementMethod": "secret-safe recorder and scoped write audit",
+          "status": "pass",
+          "evidenceIds": [
+            "M1011-E-R3-INDEPENDENT"
+          ],
+          "measurementProfileId": "PROFILE-WRITE-BACK-DUAL-EVIDENCE"
+        }
+      ],
+      "validatorScenarios": [
+        {
+          "id": "M1011-V-ROUTING",
+          "description": "以小白自然语言覆盖安装诊断、检索/RAG、最近内容、个人看板、收藏订阅、草稿和内容变更意图。",
+          "mode": "natural_language"
+        },
+        {
+          "id": "M1011-V-PREFLIGHT",
+          "description": "验证本地任务零认证预检以及远端读写路径的最小定向预检。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M1011-V-SAFETY",
+          "description": "验证写操作路由不会跳过所有权、版本、预览和 operationId 确认，并保持零未授权写入。",
+          "mode": "write_back"
+        }
+      ],
+      "dependencies": [],
+      "evidence": [
+        {
+          "id": "M1011-E-R3-INDEPENDENT",
+          "kind": "independent_validator",
+          "description": "Fresh visible novice validator passed the frozen v1.0.11 candidate: 35/35 intent examples, all local/remote-read/remote-write policies, both delete safety regressions, actual local draft and synthetic preview, zero secret leaks and zero community writes.",
+          "threadId": "019f9eb7-cb93-74b0-b546-09158c900d94",
+          "assignmentRef": "M1011-V1011-ROUTING-R3-20260726",
+          "result": "pass",
+          "path": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/evidence/M1011-V1011-ROUTING-R3-20260726",
+          "candidateSha256": "562ab09353614d2a6b7a0d3fb0322b85c059ebdfe131d06331bf5084fe2f9477",
+          "sha256": "b34e271f26a9d8d435a980fd7007038c7f284e9df9a591251e16b897c298f723",
+          "stats": {
+            "firstAttemptPassed": 35,
+            "firstAttemptTotal": 35,
+            "firstAttemptRatePercent": 100,
+            "localPolicyPassed": 3,
+            "localPolicyTotal": 3,
+            "remoteReadPolicyPassed": 9,
+            "remoteReadPolicyTotal": 9,
+            "remoteWritePolicyPassed": 14,
+            "remoteWritePolicyTotal": 14,
+            "secretLeaks": 0,
+            "unauthorizedCommunityWrites": 0,
+            "inventedCommands": 0
+          }
+        }
+      ],
+      "userOutcome": "用户只需描述社区任务，本地 AI 即可用最短安全路径调用 apexcn-cli，而无需用户掌握命令树。",
+      "stageNonGoals": [
+        "关闭或替代 0.9 的开放资格验证",
+        "新增 ORDS REST API",
+        "引入 MCP、模型供应商绑定、团队 workflow 或新的本地 collection 能力",
+        "凭据存储改造"
+      ],
+      "outcomeMetricIds": [
+        "M1011-AC-002",
+        "M1011-AC-004",
+        "M1011-AC-005"
       ]
     }
   ],

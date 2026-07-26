@@ -10,6 +10,11 @@ describe("command registry", () => {
       apiEffect: "api-read"
     }));
     expect(descriptorForPath("topic delete")).toEqual(expect.objectContaining({
+      apiEffect: "api-write",
+      riskLevel: "destructive"
+    }));
+    expect(descriptorForPath("reply delete")).toEqual(expect.objectContaining({
+      apiEffect: "api-write",
       riskLevel: "destructive"
     }));
   });

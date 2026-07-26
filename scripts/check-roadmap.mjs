@@ -169,9 +169,9 @@ export function renderIssues(issues) {
 
 export function validateRoadmap({ roadmap, issues, agentsText }) {
   const problems = [];
-  const expectedStages = ["0.2", "0.3", "0.4", "0.6", "0.7", "0.8", "0.9"];
-  const expectedReleaseLines = expectedStages.map((stage) => `0.${stage.slice(2)}0.x`);
-  const milestoneStatuses = new Set(["planned", "in_progress", "blocked", "completed"]);
+  const expectedStages = ["0.2", "0.3", "0.4", "0.6", "0.7", "0.8", "0.9", "1.0.11"];
+  const expectedReleaseLines = ["0.20.x", "0.30.x", "0.40.x", "0.60.x", "0.70.x", "0.80.x", "0.90.x", "1.0.11"];
+  const milestoneStatuses = new Set(["planned", "in_progress", "blocked", "timeboxed", "completed"]);
   const capabilityStatuses = new Set(["not_started", "partial", "implemented", "validated"]);
   const acceptanceStatuses = new Set(["pending", "pass", "fail"]);
   const completionStatuses = new Set(["not_due", "pending", "approved", "changes_requested"]);
@@ -297,7 +297,7 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
   check(roadmap.testingBindings?.server?.reasoningEffort === "high", "server reasoning must be high", problems);
   check(roadmap.testingBindings?.server?.apiKeyEnvironment === "dev@oci", "server API key environment must be dev@oci", problems);
   check(roadmap.testingBindings?.server?.apiKeyPolicy?.productionUseAllowed === false, "production API key use must be disabled", problems);
-  check(Array.isArray(roadmap.milestones) && roadmap.milestones.length === 7, "roadmap must contain seven milestones", problems);
+  check(Array.isArray(roadmap.milestones) && roadmap.milestones.length === expectedStages.length, `roadmap must contain ${expectedStages.length} milestones`, problems);
 
   const measurementProfileIds = new Set();
   for (const profile of roadmap.measurementProfiles ?? []) {
@@ -477,6 +477,11 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
           check(risk.status !== "open", `completed milestone ${milestone.id} has open readiness risk ${risk.id}`, problems);
         }
       }
+    }
+    if (milestone.status === "timeboxed") {
+      check(milestone.completionReview?.status === "approved", `timeboxed milestone ${milestone.id} must have an approved closure review`, problems);
+      check(milestone.acceptanceCriteria.some((criterion) => criterion.status !== "pass"), `timeboxed milestone ${milestone.id} must preserve incomplete acceptance`, problems);
+      check(roadmap.readinessRisks.some((risk) => risk.milestoneId === milestone.id && risk.status === "open"), `timeboxed milestone ${milestone.id} must preserve an open readiness risk`, problems);
     }
     for (const outcomeMetricId of milestone.outcomeMetricIds ?? []) {
       check(criterionIds.has(outcomeMetricId), `milestone ${milestone.id} references unknown outcome metric ${outcomeMetricId}`, problems);

@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 1,
+  "release": "1.0.11",
+  "commandManifest": "apexcn commands --json",
+  "policy": {
+    "localTasksRequireAuthPreflight": false,
+    "remotePreflightIsIntentSpecific": true,
+    "communityMutationsRequirePreview": true,
+    "previewedMutationsRequireExplicitConfirmation": true
+  },
+  "routes": [
+    {
+      "id": "diagnose-installation",
+      "category": "install-diagnose",
+      "network": "local",
+      "commands": ["doctor snapshot"],
+      "preflightCommands": [],
+      "requiresPreview": false,
+      "requiresConfirmation": false,
+      "examples": ["检查 apexcn-cli 是否安装正确", "生成一份不含密钥的诊断快照"]
+    },
+    {
+      "id": "inspect-authenticated-account",
+      "category": "authenticated-read",
+      "network": "remote-read",
+      "commands": ["auth audit", "me capabilities", "me"],
+      "preflightCommands": ["auth audit", "me capabilities"],
+      "requiresPreview": false,
+      "requiresConfirmation": false,
+      "examples": ["看看我当前登录的是哪个社区账号", "检查当前账号能使用哪些社区能力"]
+    },
+    {
+      "id": "retrieve-troubleshooting-evidence",
+      "category": "troubleshooting-rag",
+      "network": "remote-read",
+      "commands": ["rag retrieve"],
+      "preflightCommands": [],
+      "requiresPreview": false,
+      "requiresConfirmation": false,
+      "examples": ["APEX 调 ORDS 返回 401 应该怎么排查", "结合社区证据解释 Interactive Grid 保存失败"]
+    },
+    {
+      "id": "search-community",
+      "category": "community-search",
+      "network": "remote-read",
+      "commands": ["search"],
+      "preflightCommands": [],
+      "requiresPreview": false,
+      "requiresConfirmation": false,
+      "examples": ["在 APEX 中文社区搜索 REST API", "查找带 ORDS 标签的帖子"]
+    },
+    {
+      "id": "build-citable-research",
+      "category": "community-research",
+      "network": "remote-read",
+      "commands": ["research"],
+      "preflightCommands": [],
+      "requiresPreview": false,
+      "requiresConfirmation": false,
+      "examples": ["整理一份可引用的 APEX SSO 社区资料"]
+    },
+    {
+      "id": "summarize-recent-community",
+      "category": "recent-summary",
+      "network": "remote-read",
+      "commands": ["topic recent"],
+      "preflightCommands": [],
+      "requiresPreview": false,
+      "requiresConfirmation": false,
+      "examples": ["总结最近两天社区更新", "列出最近发布的十篇帖子"]
+    },
+    {
+      "id": "open-personal-dashboard",
+      "category": "personal-dashboard",
+      "network": "remote-read",
+      "commands": ["auth audit", "me dashboard"],
+      "preflightCommands": ["auth audit"],
+      "requiresPreview": false,
+      "requiresConfirmation": false,
+      "examples": ["打开我的个人看板", "汇总我创建、回复、收藏和订阅的内容"]
+    },
+    {
+      "id": "search-personal-dashboard",
+      "category": "personal-search",
+      "network": "remote-read",
+      "commands": ["auth audit", "me search"],
+      "preflightCommands": ["auth audit"],
+      "requiresPreview": false,
+      "requiresConfirmation": false,
+      "examples": ["只在我的收藏里搜索 ORDS", "从我回复过的帖子中查找 SSO"]
+    },
+    {
+      "id": "list-personal-favorites",
+      "category": "favorites",
+      "network": "remote-read",
+      "commands": ["auth audit", "me favorites"],
+      "preflightCommands": ["auth audit"],
+      "requiresPreview": false,
+      "requiresConfirmation": false,
+      "examples": ["显示我收藏的帖子和回复"]
+    },
+    {
+      "id": "list-personal-subscriptions",
+      "category": "subscriptions",
+      "network": "remote-read",
+      "commands": ["auth audit", "me subscriptions"],
+      "preflightCommands": ["auth audit"],
+      "requiresPreview": false,
+      "requiresConfirmation": false,
+      "examples": ["显示我订阅的帖子"]
+    },
+    {
+      "id": "draft-question-locally",
+      "category": "draft-question",
+      "network": "local",
+      "commands": ["draft question", "review topic"],
+      "preflightCommands": [],
+      "requiresPreview": false,
+      "requiresConfirmation": false,
+      "examples": ["先帮我起草一个问题，不要发布", "检查我的提问草稿有没有敏感信息"]
+    },
+    {
+      "id": "draft-reply-locally",
+      "category": "draft-reply",
+      "network": "local",
+      "commands": ["draft reply", "review reply"],
+      "preflightCommands": [],
+      "requiresPreview": false,
+      "requiresConfirmation": false,
+      "examples": ["先起草一条回复，不要发布", "检查回复草稿是否太空泛"]
+    },
+    {
+      "id": "create-topic-safely",
+      "category": "create-content",
+      "network": "remote-write",
+      "commands": ["review topic", "category list", "topic create", "confirm"],
+      "preflightCommands": ["auth audit", "me capabilities"],
+      "mutationCommand": "topic create",
+      "requiresPreview": true,
+      "requiresConfirmation": true,
+      "examples": ["把检查过的草稿发布成新帖"]
+    },
+    {
+      "id": "create-reply-safely",
+      "category": "create-content",
+      "network": "remote-write",
+      "commands": ["review reply", "reply create", "confirm"],
+      "preflightCommands": ["auth audit", "me capabilities"],
+      "mutationCommand": "reply create",
+      "requiresPreview": true,
+      "requiresConfirmation": true,
+      "examples": ["回复帖子前先给我看预览"]
+    },
+    {
+      "id": "reply-to-existing-reply",
+      "category": "reply-to-reply",
+      "network": "remote-write",
+      "commands": ["topic view", "draft reply", "review reply", "reply create", "confirm"],
+      "preflightCommands": ["auth audit", "me capabilities", "topic view"],
+      "mutationCommand": "reply create",
+      "requiresPreview": true,
+      "requiresConfirmation": true,
+      "examples": ["针对第三条留言回复并先预览"]
+    },
+    {
+      "id": "edit-own-topic",
+      "category": "edit-own-content",
+      "network": "remote-write",
+      "commands": ["me topics", "review topic", "topic update", "confirm"],
+      "preflightCommands": ["auth audit", "me capabilities", "me topics"],
+      "mutationCommand": "topic update",
+      "requiresPreview": true,
+      "requiresConfirmation": true,
+      "examples": ["编辑我自己的帖子"]
+    },
+    {
+      "id": "edit-own-reply",
+      "category": "edit-own-content",
+      "network": "remote-write",
+      "commands": ["me replies", "review reply", "reply update", "confirm"],
+      "preflightCommands": ["auth audit", "me capabilities", "me replies"],
+      "mutationCommand": "reply update",
+      "requiresPreview": true,
+      "requiresConfirmation": true,
+      "examples": ["修改我发过的一条回复"]
+    },
+    {
+      "id": "delete-own-topic",
+      "category": "delete-own-content",
+      "network": "remote-write",
+      "commands": ["me topics", "topic view", "topic delete", "confirm"],
+      "preflightCommands": ["auth audit", "me capabilities", "me topics", "topic view"],
+      "mutationCommand": "topic delete",
+      "requiresPreview": true,
+      "requiresConfirmation": true,
+      "examples": ["删除我自己的帖子"]
+    },
+    {
+      "id": "delete-own-reply",
+      "category": "delete-own-content",
+      "network": "remote-write",
+      "commands": ["me replies", "reply delete", "confirm"],
+      "preflightCommands": ["auth audit", "me capabilities", "me replies"],
+      "mutationCommand": "reply delete",
+      "requiresPreview": true,
+      "requiresConfirmation": true,
+      "examples": ["删除我自己发布的回复"]
+    },
+    {
+      "id": "mark-correct-answer",
+      "category": "answer-marking",
+      "network": "remote-write",
+      "commands": ["topic view", "reply mark-answer", "confirm"],
+      "preflightCommands": ["auth audit", "me capabilities", "topic view"],
+      "mutationCommand": "reply mark-answer",
+      "requiresPreview": true,
+      "requiresConfirmation": true,
+      "examples": ["把第三条回复标记为正确答案"]
+    },
+    {
+      "id": "unmark-correct-answer",
+      "category": "answer-marking",
+      "network": "remote-write",
+      "commands": ["topic view", "reply unmark-answer", "confirm"],
+      "preflightCommands": ["auth audit", "me capabilities", "topic view"],
+      "mutationCommand": "reply unmark-answer",
+      "requiresPreview": true,
+      "requiresConfirmation": true,
+      "examples": ["取消这条回复的正确答案标记"]
+    },
+    {
+      "id": "favorite-topic",
+      "category": "favorite-change",
+      "network": "remote-write",
+      "commands": ["favorite add", "confirm"],
+      "preflightCommands": ["auth audit", "me capabilities"],
+      "mutationCommand": "favorite add",
+      "requiresPreview": true,
+      "requiresConfirmation": true,
+      "examples": ["收藏这个帖子"]
+    },
+    {
+      "id": "favorite-reply",
+      "category": "favorite-change",
+      "network": "remote-write",
+      "commands": ["topic view", "favorite add", "confirm"],
+      "preflightCommands": ["auth audit", "me capabilities", "topic view"],
+      "mutationCommand": "favorite add",
+      "requiresPreview": true,
+      "requiresConfirmation": true,
+      "examples": ["收藏第二条留言"]
+    },
+    {
+      "id": "remove-favorite",
+      "category": "favorite-change",
+      "network": "remote-write",
+      "commands": ["me favorites", "favorite remove", "confirm"],
+      "preflightCommands": ["auth audit", "me capabilities", "me favorites"],
+      "mutationCommand": "favorite remove",
+      "requiresPreview": true,
+      "requiresConfirmation": true,
+      "examples": ["取消收藏这个帖子"]
+    },
+    {
+      "id": "subscribe-topic",
+      "category": "subscription-change",
+      "network": "remote-write",
+      "commands": ["subscription add", "confirm"],
+      "preflightCommands": ["auth audit", "me capabilities"],
+      "mutationCommand": "subscription add",
+      "requiresPreview": true,
+      "requiresConfirmation": true,
+      "examples": ["订阅这个帖子"]
+    },
+    {
+      "id": "unsubscribe-topic",
+      "category": "subscription-change",
+      "network": "remote-write",
+      "commands": ["me subscriptions", "subscription remove", "confirm"],
+      "preflightCommands": ["auth audit", "me capabilities", "me subscriptions"],
+      "mutationCommand": "subscription remove",
+      "requiresPreview": true,
+      "requiresConfirmation": true,
+      "examples": ["取消订阅这个帖子"]
+    }
+  ]
+}

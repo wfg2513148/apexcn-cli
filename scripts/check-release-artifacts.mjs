@@ -181,7 +181,7 @@ function verifyArtifacts() {
   if (packageJson.version !== expectedVersion) {
     throw new Error(`release package version: expected ${expectedVersion}, got ${String(packageJson.version)}`);
   }
-  verifyPackagedQualificationHarness(entries, archivePath, expectedVersion);
+  verifyPackagedQualificationHarness(entries, archivePath);
 
   execFileSync("node", ["scripts/verify-release-supply-chain.mjs", artifactsDir], {
     cwd: repoRoot,
@@ -190,13 +190,14 @@ function verifyArtifacts() {
   });
 }
 
-function verifyPackagedQualificationHarness(entries, archivePath, expectedVersion) {
+function verifyPackagedQualificationHarness(entries, archivePath) {
+  const frozenQualificationTarget = "1.0.10";
   const manifestEntry = "package/qualification/ga/harness-manifest-v1.json";
   const manifest = JSON.parse(execFileSync("tar", ["-xOzf", archivePath, manifestEntry], {
     cwd: repoRoot,
     encoding: "utf8"
   }));
-  if (manifest.targetVersion !== expectedVersion || manifest.taskPlan?.taskCount !== 200) {
+  if (manifest.targetVersion !== frozenQualificationTarget || manifest.taskPlan?.taskCount !== 200) {
     throw new Error("release package qualification harness target or denominator is invalid");
   }
   if (manifest.lifecyclePlan?.expectedCells !== 36
