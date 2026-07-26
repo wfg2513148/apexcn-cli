@@ -12,7 +12,7 @@
 - CLI 实际使用的 `/api/v1` ORDS 路径、HTTP 方法与身份语义；
 - 中英文用户文档和 Agent Skill 中的公开使用方式。
 
-冻结清单由 `qualification/ga/public-surface-v1.json` 记录，`npm run check:ga-readiness` 会将当前构建与该清单逐项比较。1.x 内允许增加可选字段、增强说明和兼容修复；删除命令、改变既有字段类型、增加必填字段、绕过 preview/confirmation、改变身份语义或替换既有 API 路径都属于破坏性变化。本里程碑不新增公开命令族。
+冻结清单由 `qualification/ga/public-surface-v2.json` 记录，`npm run check:ga-readiness` 会校验该 timeboxed 资格资产的内部完整性。1.x 内允许增加可选字段、增强说明和兼容修复；删除命令、改变既有字段类型、增加必填字段、绕过 preview/confirmation、改变身份语义或替换既有 API 路径都属于破坏性变化。本里程碑不新增公开命令族。
 
 `rag retrieve` 只使用现有 search 和 topic detail 只读端点；`ask` 继续独立使用 App 100 `/api/v1/ask`。GA 候选不得修改 App 100 页面 100 或其现有 RAG 知识问答实现。
 
@@ -20,7 +20,7 @@
 
 1.0.10 候选支持从已公开发布的稳定 1.x 版本升级。当前冻结起点为 `1.0.0`、`1.0.2`、`1.0.3`、`1.0.4`、`1.0.5`、`1.0.6`、`1.0.7`、`1.0.8` 和 `1.0.9`；`1.0.1` 从未公开发布，因此不是升级起点。
 
-`qualification/ga/support-matrix-v1.json` 给出每个起点、平台、shell 和生命周期阶段。每条资格路径必须执行：
+`qualification/ga/support-matrix-v2.json` 给出每个起点、平台、shell 和生命周期阶段。每条资格路径必须执行：
 
 1. 安装冻结起点；
 2. 保留认证配置升级到候选；
@@ -51,6 +51,6 @@ provenance 证明构建输入、源 commit、构建器和 subject digest；它�
 
 ## 独立资格与安全审查
 
-跨角色资格集、评分器、隔离写与清理边界定义在 `qualification/ga/qualification-contract-v1.json`。候选必须由 `/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test` 中全新的用户可见 novice task 黑盒执行，使用冻结候选和结构化 scope contract。
+跨角色资格集、评分器、隔离写与清理边界定义在 `qualification/ga/qualification-contract-v2.json`。候选必须由 `/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test` 中全新的用户可见 novice task 黑盒执行，使用冻结候选和结构化 scope contract。
 
 独立安全审查使用与 builder 不同的用户可见任务和不可变候选。审查至少覆盖凭据与脱敏、命令注入与路径穿越、归档提取、workflow preview/approval/hash 绑定、权限边界、隔离写清理、依赖与 SBOM、provenance 和 Release 资产一致性。未关闭的 critical 或 high 发现不得豁免。

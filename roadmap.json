@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "product": "apexcn-cli",
   "baselineRelease": "1.0.0",
-  "updatedAt": "2026-07-26",
+  "updatedAt": "2026-07-27",
   "versionPolicy": {
     "productStageToReleaseLine": {
       "0.2": "0.20.x",
@@ -3501,7 +3501,7 @@
       "readinessEvidence": {
         "availabilityArtifact": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-m090-act-fix-r7-20260724T000000+0800/report.md",
         "availabilityArtifactSha256": "c4872e8570e3dbc6eb7bbfef550da750fe6fa53414da28ed014a09d83bd16b9c",
-        "versionMatrix": "qualification/ga/support-matrix-v1.json sha256:5c3d757f3761aa36a0e4e381913f6aca22bd5b0e56594622f6b0e6ee8fc2f0ec",
+        "versionMatrix": "historical support-matrix-v1 sha256:5c3d757f3761aa36a0e4e381913f6aca22bd5b0e56594622f6b0e6ee8fc2f0ec (source retired after 0.9 timebox closure)",
         "smokeArtifact": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/run-m090-act-fix-r7-20260724T000000+0800/report.json",
         "smokeArtifactSha256": "e6d9dd24da307d324212ad5e28ff1a970ddbf2e5e9db925ebe1ebd971c6d3e23",
         "smokeResult": "READY",

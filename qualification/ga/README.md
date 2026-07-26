@@ -2,6 +2,8 @@
 
 > 此目录冻结于 `1.0.10`，用于保留 0.9 timebox 后尚未完成的资格验证契约。后续产品版本只验证这些资产的内部完整性，不把它们描述成当前版本的 GA 验收结果；开放工作继续由 GitHub Issue #2 跟踪。
 
+`1.0.9` 的 v1 数据集、公开面、资格契约和支持矩阵已由本目录的 v2 资产完整替代，并在 `v1.0.12` 工程清理中从当前源码树移除；其历史哈希和结论仍保留在 Git 历史、roadmap timebox 记录与 GitHub Issue #2 中。
+
 这里保存 0.9 激活与候选资格验证必须冻结的机器可读契约：
 
 - `public-surface-v2.json`：从 1.0.10 可执行文件、command manifest、Schema registry、workflow goal 和源码 API 路径生成的公开面；
