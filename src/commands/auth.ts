@@ -21,10 +21,26 @@ export type AuthCommandOptions = CommandIo & {
 };
 
 export function createAuthCommand(options: AuthCommandOptions): Command {
-  const auth = new Command("auth");
+  const auth = new Command("auth")
+    .description("configure and inspect APEX 中文社区 API key profiles")
+    .addHelpText("after", `
+First-time API key setup:
+  Recommended (keeps the key out of the CLI config file):
+    export APEXCN_API_KEY="your-api-key"
+    apexcn auth set-token --token-env APEXCN_API_KEY
+
+  Simplest local setup:
+    apexcn -apikey "your-api-key"
+
+  Verify the setup:
+    apexcn auth audit
+
+Security: run these commands in your own shell. A key passed with -apikey may remain in shell history.
+`);
 
   auth
     .command("set-token")
+    .description("register a file or environment API key profile")
     .option("--token <token>", "file credential used directly or as fallback")
     .option("--token-env <name>", "environment variable used before the file credential")
     .option("--base-url <url>", "ORDS base URL", DEFAULT_BASE_URL)
@@ -95,6 +111,7 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
 
   auth
     .command("list")
+    .description("list configured API key profiles")
     .option("--json", "pretty-print JSON")
     .action(async (commandOptions: { json?: boolean }) => {
       let config;
@@ -133,6 +150,7 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
 
   auth
     .command("audit")
+    .description("verify local API key profile configuration")
     .option("--json", "pretty-print JSON")
     .action(async (commandOptions: { json?: boolean }) => {
       let config;
@@ -163,6 +181,7 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
 
   auth
     .command("use")
+    .description("select the current API key profile")
     .argument("<profile>")
     .action(async (profile: string) => {
       try {
@@ -183,6 +202,7 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
 
   auth
     .command("remove")
+    .description("remove an API key profile")
     .argument("<profile>")
     .action(async (profile: string) => {
       try {
@@ -203,6 +223,7 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
 
   auth
     .command("show")
+    .description("show the current API key profile with redacted credentials")
     .option("--json", "pretty-print JSON")
     .action(async (commandOptions: { json?: boolean }) => {
       let config;
@@ -238,17 +259,19 @@ export function createAuthCommand(options: AuthCommandOptions): Command {
       options.stdout(`Profile: ${profile}\nBase URL: ${current.baseUrl}\nCredential Store: ${credentialStore}\nToken: ${redactedToken || "[environment only]"}\n`);
     });
 
-  auth.command("logout").action(async () => {
-    try {
-      await clearCurrentProfile(options.configPath);
-    } catch (error) {
-      if (printConfigError(error, options)) {
-        return;
+  auth.command("logout")
+    .description("clear the current API key profile selection")
+    .action(async () => {
+      try {
+        await clearCurrentProfile(options.configPath);
+      } catch (error) {
+        if (printConfigError(error, options)) {
+          return;
+        }
+        throw error;
       }
-      throw error;
-    }
-    options.stdout("Logged out\n");
-  });
+      options.stdout("Logged out\n");
+    });
 
   return auth;
 }

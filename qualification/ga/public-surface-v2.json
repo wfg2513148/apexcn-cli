@@ -1980,7 +1980,7 @@
         },
         "id": "reply.delete",
         "capability": "write",
-        "apiEffect": "destructive",
+        "apiEffect": "api-write",
         "riskLevel": "destructive",
         "authRequired": true,
         "supportsJson": true,
@@ -2695,7 +2695,7 @@
         },
         "id": "topic.delete",
         "capability": "write",
-        "apiEffect": "destructive",
+        "apiEffect": "api-write",
         "riskLevel": "destructive",
         "authRequired": true,
         "supportsJson": true,
@@ -3443,6 +3443,59 @@
         },
         "errors": {
           "type": "array"
+        },
+        "requestUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "references": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "evidenceId",
+              "title",
+              "communityUrl"
+            ],
+            "properties": {
+              "evidenceId": {
+                "type": "string",
+                "pattern": "^S[1-9][0-9]*$"
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1
+              },
+              "communityUrl": {
+                "type": "string",
+                "format": "uri"
+              },
+              "originalUrl": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "synthesisPolicy": {
+          "type": "object",
+          "required": [
+            "visibleCitationLabel",
+            "forbidBareEvidenceIdLabels"
+          ],
+          "properties": {
+            "visibleCitationLabel": {
+              "const": "title"
+            },
+            "forbidBareEvidenceIdLabels": {
+              "const": true
+            },
+            "refuseUnsupportedClaims": {
+              "const": true
+            }
+          },
+          "additionalProperties": true
         }
       },
       "additionalProperties": true,
@@ -7722,7 +7775,6 @@
       "/api/v1/topics/{topicId}",
       "/api/v1/topics/{topicId}/replies",
       "/api/v1/topics/{topicId}/replies/{replyId}/correct-answer",
-      "/api/v1/topics/{topicId}/visual",
       "/api/v1/topics/{topicId}/{relation}"
     ],
     "supportedOperations": [
@@ -7855,11 +7907,6 @@
         "method": "POST",
         "path": "/api/v1/topics/{topicId}/replies",
         "commandId": "reply.create"
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/topics/{topicId}/visual",
-        "commandId": "topic.view"
       },
       {
         "method": "POST",

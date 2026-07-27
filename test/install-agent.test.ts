@@ -159,7 +159,7 @@ describe("zero-argument one-click installers", () => {
       expect(execFileSync(join(root, "bin", "apexcn"), ["--version"], {
         env,
         encoding: "utf8"
-      })).toBe("1.0.12\n");
+      })).toBe("1.0.13\n");
       expect(existsSync(join(root, "home", ".apexcn", "config.json"))).toBe(false);
       expect(existsSync(join(root, "home", ".agents", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
       expect(existsSync(join(root, "home", ".codex", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
@@ -290,7 +290,7 @@ exit 0
 
       expect(result.status, result.stderr).toBe(0);
       expect(result.stdout).toContain("Updated shell-resolved launcher");
-      expect(execFileSync(shadow, ["--version"], { env, encoding: "utf8" })).toBe("1.0.12\n");
+      expect(execFileSync(shadow, ["--version"], { env, encoding: "utf8" })).toBe("1.0.13\n");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -323,7 +323,7 @@ printf 'external launcher\\n'
       expect(result.stdout).not.toContain("Updated shell-resolved launcher");
       expect(readFileSync(externalLauncher, "utf8")).toBe(originalLauncher);
       expect(execFileSync(join(root, "bin", "apexcn"), ["--version"], { env, encoding: "utf8" }))
-        .toBe("1.0.12\n");
+        .toBe("1.0.13\n");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -384,6 +384,8 @@ printf 'external launcher\\n'
     expect(skill).toContain("Do not output the full API key");
     expect(skill).toContain("prefer `replyUrl` for a published reply");
     expect(skill).toContain("label `originalUrl` separately as the original source");
+    expect(skill).toContain("label is the evidence's full `title`");
+    expect(skill).toContain("never show a bare `S1`, `S4`");
     expect(skill).toContain("Do not open, validate, or score URLs embedded in user-authored prompts, drafts, topic bodies, or reply bodies");
   });
 });

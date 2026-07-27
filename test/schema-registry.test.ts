@@ -68,6 +68,16 @@ describe("public JSON Schema registry", () => {
     })).toEqual([]);
   });
 
+  test("publishes the ask URL and visible citation contract", () => {
+    expect(publicSchemaForId("ask-response-v1")).toEqual(expect.objectContaining({
+      properties: expect.objectContaining({
+        requestUrl: { type: "string", format: "uri" },
+        references: expect.objectContaining({ type: "array" }),
+        synthesisPolicy: expect.objectContaining({ type: "object" })
+      })
+    }));
+  });
+
   test("lists, shows, and bundles schemas through the public CLI", async () => {
     const stdout: string[] = [];
     const program = createProgram({

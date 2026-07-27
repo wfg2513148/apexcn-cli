@@ -47,7 +47,7 @@ describe("GA readiness contracts", () => {
     expect(surface.commandManifest.commands).toHaveLength(COMMAND_DESCRIPTORS.length);
     expect(Object.keys(surface.jsonSchemas)).toHaveLength(80);
     expect(surface.workflowGoals).toHaveLength(10);
-    expect(surface.api.supportedOperations).toHaveLength(37);
+    expect(surface.api.supportedOperations).toHaveLength(36);
     for (const descriptor of COMMAND_DESCRIPTORS) {
       expect(commandIds.has(descriptor.id)).toBe(true);
     }

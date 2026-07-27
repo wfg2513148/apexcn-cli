@@ -558,7 +558,7 @@ apexcn rag retrieve "How should I diagnose an ORDS 401 in APEX?" --top-k 5 --jso
 apexcn rag retrieve "Why does this happen?" --context "The prior question was an ORDS 401 from APEX" --query ORDS --query OAuth --json
 ```
 
-This command calls only the existing readonly `/api/v1/search` and `/api/v1/topics/{topicId}` endpoints. It returns topic, reply, correct-answer, stable community URL, optional original URL, `evidenceId`, `answerability`, and request-id provenance. It never calls or falls back to `/api/v1/ask`. The local AI owns synthesis, must cite evidence IDs for material claims, must refuse an `unanswerable` result, and must state limitations for a `partial` result.
+This command calls only the existing readonly `/api/v1/search` and `/api/v1/topics/{topicId}` endpoints. It returns topic, reply, correct-answer, server-generated App URL, optional original URL, `evidenceId`, `answerability`, and request-id provenance. It never calls or falls back to `/api/v1/ask`. The local AI owns synthesis and binds claims to evidence IDs internally, but user-visible citations use the full topic title as the link label. It must refuse an `unanswerable` result and state limitations for a `partial` result.
 
 ## ask
 
@@ -573,7 +573,7 @@ apexcn ask "How do I call a REST API from Oracle APEX?" --format text
 
 Filtered ask requests with `--category-id`, `--from/--to`, or `--tag` return scoped references, `confidence`, `limitations`, and `filters`. Until the server contract changes, do not treat filtered ask as full RAG generation.
 
-Ask references try to derive clickable `https://oracleapex.cn/t/<id>` links from backend topic ids, `card_link`, `doc_id`, `url`, or `threadUrl`. Original backend URLs are preserved as `originalUrl`.
+Ask references preserve absolute App URLs returned by the server. The CLI does not reconstruct relative links or generate APEX checksums. An ask response keeps `requestUrl` only when the server returns an absolute request-page URL. Source-article URLs remain separate as `originalUrl`. Every JSON reference and `provenance.sources` entry includes a full `title`, `communityUrl`, and `evidenceId`; local AI tools must use the full title as the visible link label instead of showing only `S1` or `S4`.
 
 ## Common Flows
 

@@ -947,7 +947,7 @@
   "assetDigests": {
     "publicSurface": {
       "path": "qualification/ga/public-surface-v2.json",
-      "sha256": "c42dc06720c8175392606e1a830aa7b16ba0fc2ee0c888eff7537e0e8c238b86"
+      "sha256": "b901885f33aea133af2f59abe43911a0d873f213ce0ed896128c97354b9337bf"
     },
     "supportMatrix": {
       "path": "qualification/ga/support-matrix-v2.json",

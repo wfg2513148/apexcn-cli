@@ -21,6 +21,26 @@ describe("auth command", () => {
     process.exitCode = undefined;
   });
 
+  test("auth help teaches a first-time user how to register and verify an API key", () => {
+    const stdout: string[] = [];
+    const program = createProgram({
+      stdout: (text) => stdout.push(text),
+      stderr: () => undefined
+    });
+    const auth = program.commands.find((command) => command.name() === "auth");
+
+    auth?.outputHelp();
+
+    const help = stdout.join("");
+    expect(help).toContain("First-time API key setup:");
+    expect(help).toContain('export APEXCN_API_KEY="your-api-key"');
+    expect(help).toContain("apexcn auth set-token --token-env APEXCN_API_KEY");
+    expect(help).toContain('apexcn -apikey "your-api-key"');
+    expect(help).toContain("apexcn auth audit");
+    expect(help).toContain("shell history");
+    expect(help).toContain("register a file or environment API key profile");
+  });
+
   test("auth show redacts the token", async () => {
     const configPath = await tempConfigPath();
     const output: string[] = [];

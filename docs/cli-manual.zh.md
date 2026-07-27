@@ -560,7 +560,7 @@ apexcn rag retrieve "APEX 中 ORDS 401 怎么排查？" --top-k 5 --json
 apexcn rag retrieve "这个错误为什么发生？" --context "上一问是 APEX 调用 ORDS 返回 401" --query ORDS --query OAuth --json
 ```
 
-命令只调用现有 `/api/v1/search` 与 `/api/v1/topics/{topicId}` 只读接口，输出主题、回复、正确答案、稳定社区链接、可选原文链接、`evidenceId`、`answerability` 和 requestId provenance。它不会调用或回退到 `/api/v1/ask`。本地 AI 应基于证据自行生成回答，为关键结论引用 `evidenceId`；`unanswerable` 时不得编造结论，`partial` 时必须说明证据局限。
+命令只调用现有 `/api/v1/search` 与 `/api/v1/topics/{topicId}` 只读接口，输出主题、回复、正确答案、服务端生成的 App 链接、可选原文链接、`evidenceId`、`answerability` 和 requestId provenance。它不会调用或回退到 `/api/v1/ask`。本地 AI 应基于证据自行生成回答，在内部用 `evidenceId` 绑定结论，但用户可见引用必须以完整话题标题作为链接文字；`unanswerable` 时不得编造结论，`partial` 时必须说明证据局限。
 
 ## ask
 
@@ -575,7 +575,7 @@ apexcn ask "Oracle APEX 如何调用 REST API？" --format text
 
 带 `--category-id`、`--from/--to` 或 `--tag` 的 filtered ask 会按范围返回 scoped references、`confidence`、`limitations` 和 `filters`。在服务端契约变更前，不要把 filtered ask 当作完整 RAG 生成回答。
 
-问答引用会尽量从后端的 topic id、`card_link`、`doc_id`、`url` 或 `threadUrl` 补全可点击的 `https://oracleapex.cn/t/<id>` 链接；原始后端链接会保留为 `originalUrl`。
+问答引用只保留服务端返回的绝对 App 链接。CLI 不补全相对链接，也不生成 APEX checksum；仅当服务端返回绝对的请求页面地址时，问答响应才保留 `requestUrl`。原文链接始终单独保留为 `originalUrl`。JSON 中的每条引用及 `provenance.sources` 均包含完整 `title`、`communityUrl` 和 `evidenceId`；本地 AI 应以完整标题作为用户可见链接文字，不得只显示 `S1`、`S4`。
 
 ## 常用组合
 

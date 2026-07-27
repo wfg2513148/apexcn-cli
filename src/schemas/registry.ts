@@ -135,6 +135,35 @@ function legacySchema(id: string): Record<string, unknown> {
 }
 
 function commandSpecificProperties(commandId: string): Record<string, unknown> {
+  if (commandId === "ask") {
+    return {
+      requestUrl: { type: "string", format: "uri" },
+      references: {
+        type: "array",
+        items: {
+          type: "object",
+          required: ["evidenceId", "title", "communityUrl"],
+          properties: {
+            evidenceId: { type: "string", pattern: "^S[1-9][0-9]*$" },
+            title: { type: "string", minLength: 1 },
+            communityUrl: { type: "string", format: "uri" },
+            originalUrl: { type: "string", format: "uri" }
+          },
+          additionalProperties: true
+        }
+      },
+      synthesisPolicy: {
+        type: "object",
+        required: ["visibleCitationLabel", "forbidBareEvidenceIdLabels"],
+        properties: {
+          visibleCitationLabel: { const: "title" },
+          forbidBareEvidenceIdLabels: { const: true },
+          refuseUnsupportedClaims: { const: true }
+        },
+        additionalProperties: true
+      }
+    };
+  }
   if (commandId === "rag.retrieve") {
     return {
       kind: { const: "rag-evidence-bundle" },

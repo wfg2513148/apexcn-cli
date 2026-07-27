@@ -21,6 +21,7 @@ describe("agent RAG live evaluation scorer", () => {
             evidenceId: "S1",
             type: "topic",
             topicId: 42,
+            title: "ORDS 401 排查",
             communityUrl: "https://oracleapex.cn/topic/42",
             originalUrl: "https://example.com/article"
           },
@@ -29,15 +30,20 @@ describe("agent RAG live evaluation scorer", () => {
             type: "correct-answer",
             topicId: 42,
             replyId: 90,
+            title: "ORDS 401 排查 — 正确答案",
             communityUrl: "https://oracleapex.cn/topic/42#post_90"
           }
         ],
+        synthesisPolicy: {
+          visibleCitationLabel: "title",
+          forbidBareEvidenceIdLabels: true
+        },
         provenance: {
           appRagEndpointCalled: false,
           endpoints: ["/api/v1/search", "/api/v1/topics/{topicId}"],
           sources: [
-            { evidenceId: "S1", communityUrl: "https://oracleapex.cn/topic/42" },
-            { evidenceId: "S2", communityUrl: "https://oracleapex.cn/topic/42#post_90" }
+            { evidenceId: "S1", title: "ORDS 401 排查", communityUrl: "https://oracleapex.cn/topic/42" },
+            { evidenceId: "S2", title: "ORDS 401 排查 — 正确答案", communityUrl: "https://oracleapex.cn/topic/42#post_90" }
           ],
           requestIds: ["req-1", "req-2"]
         }

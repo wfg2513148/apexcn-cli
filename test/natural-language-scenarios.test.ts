@@ -337,7 +337,11 @@ const EXECUTABLE_NATURAL_LANGUAGE_SCENARIOS: ExecutableNaturalLanguageScenario[]
       expect(init?.body).toBe(JSON.stringify({ question: "APEXLang 支持单页面导入吗？", topK: 1 }));
       return Response.json({
         answer: "支持。",
-        sources: [{ card_link: "f?p=100:14:::::P14_THREAD_ID:29667&cs=checksum" }],
+        sources: [{
+          title: "APEXLang 单页面导入",
+          card_link: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:29667&cs=checksum",
+          source_url: "https://blog.example/apexlang-single-page"
+        }],
         requestId: "req-ask"
       });
     },
@@ -345,9 +349,10 @@ const EXECUTABLE_NATURAL_LANGUAGE_SCENARIOS: ExecutableNaturalLanguageScenario[]
       expect(fetch).toHaveBeenCalledOnce();
       expect(stderr).toBe("");
       expect(JSON.parse(stdout).sources[0]).toEqual(expect.objectContaining({
-        url: "https://oracleapex.cn/t/29667",
-        threadUrl: "https://oracleapex.cn/t/29667",
-        originalUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:29667&cs=checksum"
+        title: "APEXLang 单页面导入",
+        url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:29667&cs=checksum",
+        threadUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:29667&cs=checksum",
+        originalUrl: "https://blog.example/apexlang-single-page"
       }));
     }
   },
@@ -832,7 +837,7 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
         expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/me/search?keyword=ORDS&scope=favorited%2Csubscribed");
         return Response.json({
           kind: "me-search",
-          items: [{ id: 42, title: "Personal ORDS", matchedScopes: ["favorited"], url: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual" }],
+          items: [{ id: 42, title: "Personal ORDS", matchedScopes: ["favorited"], url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:42&cs=checksum-42" }],
           page: { count: 1, hasMore: false },
           requestId: "req-me-search"
         });

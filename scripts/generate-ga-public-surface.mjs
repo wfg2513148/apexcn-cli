@@ -85,7 +85,6 @@ export const SUPPORTED_API_OPERATIONS = [
   operation("POST", "/api/v1/topics/{topicId}", "topic.update"),
   operation("DELETE", "/api/v1/topics/{topicId}", "topic.delete"),
   operation("POST", "/api/v1/topics/{topicId}/replies", "reply.create"),
-  operation("GET", "/api/v1/topics/{topicId}/visual", "topic.view"),
   operation("POST", "/api/v1/replies/{replyId}", "reply.update"),
   operation("DELETE", "/api/v1/replies/{replyId}", "reply.delete"),
   operation("POST", "/api/v1/topics/{topicId}/replies/{replyId}/correct-answer", "reply.mark-answer"),

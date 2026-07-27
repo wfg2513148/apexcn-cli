@@ -226,8 +226,8 @@ describe("me command", () => {
     const stderr: string[] = [];
     const responses: Record<string, unknown> = {
       "/api/v1/me/stats": { kind: "me-stats", authoredTopicCount: 1, authoredReplyCount: 1, favoriteCount: 1, subscriptionCount: 1 },
-      "/api/v1/me/topics?pageSize=2": { kind: "me-topics", items: [{ id: 11, title: "Created", url: "https://oracleapex.cn/ords/test/api/v1/topics/11/visual" }] },
-      "/api/v1/me/replies?pageSize=2": { kind: "me-replies", items: [{ id: 21, topicId: 12, topic: { title: "Replied" }, replyUrl: "https://oracleapex.cn/ords/test/api/v1/topics/12/visual#post_21" }] },
+      "/api/v1/me/topics?pageSize=2": { kind: "me-topics", items: [{ id: 11, title: "Created", url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:11&cs=checksum-11" }] },
+      "/api/v1/me/replies?pageSize=2": { kind: "me-replies", items: [{ id: 21, topicId: 12, topic: { title: "Replied" }, replyUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:12&cs=checksum-12#post_21" }] },
       "/api/v1/me/favorites?pageSize=2": {
         kind: "me-favorites",
         items: [{
@@ -236,12 +236,12 @@ describe("me command", () => {
           topicId: 13,
           replyId: 31,
           title: "Favorited reply",
-          replyUrl: "https://oracleapex.cn/ords/test/api/v1/topics/13/visual#post_31",
-          threadUrl: "https://oracleapex.cn/ords/test/api/v1/topics/13/visual",
+          replyUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:13&cs=checksum-13#post_31",
+          threadUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:13&cs=checksum-13",
           originalUrl: "https://example.com/source-13"
         }]
       },
-      "/api/v1/me/subscriptions?pageSize=2": { kind: "me-subscriptions", items: [{ topicId: 14, title: "Subscribed", url: "https://oracleapex.cn/ords/test/api/v1/topics/14/visual" }] }
+      "/api/v1/me/subscriptions?pageSize=2": { kind: "me-subscriptions", items: [{ topicId: 14, title: "Subscribed", url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:14&cs=checksum-14" }] }
     };
     vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request) => {
       const key = String(url).replace("https://oracleapex.cn/ords/test", "");
@@ -282,8 +282,8 @@ describe("me command", () => {
         replyId: 31,
         title: "Favorited reply",
         relationCreatedDate: "2026-07-23T10:00:00Z",
-        replyUrl: "https://oracleapex.cn/ords/test/api/v1/topics/13/visual#post_31",
-        threadUrl: "https://oracleapex.cn/ords/test/api/v1/topics/13/visual"
+        replyUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:13&cs=checksum-13#post_31",
+        threadUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:13&cs=checksum-13"
       }],
       requestId: "req-favorites"
     })));
@@ -298,8 +298,8 @@ describe("me command", () => {
     await program.parseAsync(["node", "apexcn", "me", "favorites", "--format", "text"]);
 
     expect(stdout.join("")).toContain("POST\t31\t13\t31\tFavorited reply");
-    expect(stdout.join("")).toContain("https://oracleapex.cn/ords/test/api/v1/topics/13/visual#post_31");
-    expect(stdout.join("")).toContain("https://oracleapex.cn/ords/test/api/v1/topics/13/visual");
+    expect(stdout.join("")).toContain("https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:13&cs=checksum-13#post_31");
+    expect(stdout.join("")).toContain("https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:13&cs=checksum-13");
   });
 
   test("searches only the personal dashboard after capability preflight", async () => {
@@ -324,15 +324,15 @@ describe("me command", () => {
             id: 42,
             title: "Personal APEX result",
             matchedScopes: ["created", "favorited"],
-            url: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual",
+            url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:42&cs=checksum-42",
             originalUrl: "https://example.com/source-42",
             favoriteTargets: [{
               targetType: "POST",
               targetId: 90,
               topicId: 42,
               replyId: 90,
-              replyUrl: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90",
-              threadUrl: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual"
+              replyUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:42&cs=checksum-42#post_90",
+              threadUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:42&cs=checksum-42"
             }]
           }],
           page: { pageSize: 2, count: 1, hasMore: false, nextCursor: null },
@@ -357,11 +357,11 @@ describe("me command", () => {
     expect(fetchMock.mock.calls.map(([url]) => String(url))).not.toEqual(expect.arrayContaining([
       expect.stringContaining("/api/v1/search")
     ]));
-    expect(stdout.join("")).toContain("communityUrl: https://oracleapex.cn/ords/test/api/v1/topics/42/visual\n");
+    expect(stdout.join("")).toContain("communityUrl: https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:42&cs=checksum-42\n");
     expect(stdout.join("")).toContain("originalUrl: https://example.com/source-42\n");
     expect(stdout.join("")).toContain("matchedScopes: created,favorited\n");
     expect(stdout.join("")).toContain("favoriteTarget: POST 90 topic=42 reply=90\n");
-    expect(stdout.join("")).toContain("replyUrl: https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90\n");
+    expect(stdout.join("")).toContain("replyUrl: https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:42&cs=checksum-42#post_90\n");
     expect(stderr.join("")).toBe("");
   });
 
@@ -503,10 +503,10 @@ describe("me command", () => {
     const stdout: string[] = [];
     const stderr: string[] = [];
     const responses: Record<string, unknown> = {
-      "/api/v1/me/topics?pageSize=2&offset=4": { kind: "me-topics", items: [{ id: 42, title: "Topic", version: 3, canEdit: true, canDelete: true, createdDate: "2026-07-01", updatedDate: "2026-07-02", url: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual", originalUrl: "https://example.com/topic-42" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } },
-      "/api/v1/me/replies?pageSize=2&offset=4": { kind: "me-replies", items: [{ id: 90, replyId: 90, topicId: 42, parentPostId: 80, version: 2, canEdit: true, canDelete: true, topic: { title: "Topic", originalUrl: "https://example.com/topic-42" }, createdDate: "2026-07-02", updatedDate: "2026-07-03", url: "https://oracleapex.cn/ords/f?p=100:14:old-checksum", replyUrl: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } },
-      "/api/v1/me/favorites?pageSize=2&offset=4": { kind: "me-favorites", items: [{ topicId: 43, title: "Favorite", relationCreatedDate: "2026-07-04", updatedDate: "2026-07-05", url: "https://oracleapex.cn/ords/test/api/v1/topics/43/visual", originalUrl: "https://example.com/topic-43" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } },
-      "/api/v1/me/subscriptions?pageSize=2&offset=4": { kind: "me-subscriptions", items: [{ topicId: 44, title: "Subscription", relationCreatedDate: "2026-07-04", updatedDate: "2026-07-05", url: "https://oracleapex.cn/ords/test/api/v1/topics/44/visual" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } }
+      "/api/v1/me/topics?pageSize=2&offset=4": { kind: "me-topics", items: [{ id: 42, title: "Topic", version: 3, canEdit: true, canDelete: true, createdDate: "2026-07-01", updatedDate: "2026-07-02", url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:42&cs=checksum-42", originalUrl: "https://example.com/topic-42" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } },
+      "/api/v1/me/replies?pageSize=2&offset=4": { kind: "me-replies", items: [{ id: 90, replyId: 90, topicId: 42, parentPostId: 80, version: 2, canEdit: true, canDelete: true, topic: { title: "Topic", originalUrl: "https://example.com/topic-42" }, createdDate: "2026-07-02", updatedDate: "2026-07-03", url: "https://oracleapex.cn/ords/f?p=100:14:old-checksum", replyUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:42&cs=checksum-42#post_90" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } },
+      "/api/v1/me/favorites?pageSize=2&offset=4": { kind: "me-favorites", items: [{ topicId: 43, title: "Favorite", relationCreatedDate: "2026-07-04", updatedDate: "2026-07-05", url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:43&cs=checksum-43", originalUrl: "https://example.com/topic-43" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } },
+      "/api/v1/me/subscriptions?pageSize=2&offset=4": { kind: "me-subscriptions", items: [{ topicId: 44, title: "Subscription", relationCreatedDate: "2026-07-04", updatedDate: "2026-07-05", url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:44&cs=checksum-44" }], page: { pageSize: 2, offset: 4, count: 1, hasMore: false } }
     };
     vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request) => {
       const key = String(url).replace("https://oracleapex.cn/ords/test", "");
@@ -526,12 +526,12 @@ describe("me command", () => {
       textByCommand[command] = stdout.join("");
     }
     expect(textByCommand.topics).toContain("\t3\ttrue\ttrue\t");
-    expect(textByCommand.topics).toContain("https://oracleapex.cn/ords/test/api/v1/topics/42/visual\thttps://example.com/topic-42");
+    expect(textByCommand.topics).toContain("https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:42&cs=checksum-42\thttps://example.com/topic-42");
     expect(textByCommand.replies).toContain("90\t42\t80\t2\ttrue\ttrue\t");
-    expect(textByCommand.replies).toContain("https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90\thttps://example.com/topic-42");
+    expect(textByCommand.replies).toContain("https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:42&cs=checksum-42#post_90\thttps://example.com/topic-42");
     expect(textByCommand.replies).not.toContain("old-checksum");
-    expect(textByCommand.favorites).toContain("https://oracleapex.cn/ords/test/api/v1/topics/43/visual\thttps://example.com/topic-43");
-    expect(textByCommand.subscriptions).toContain("https://oracleapex.cn/ords/test/api/v1/topics/44/visual\t");
+    expect(textByCommand.favorites).toContain("https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:43&cs=checksum-43\thttps://example.com/topic-43");
+    expect(textByCommand.subscriptions).toContain("https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:44&cs=checksum-44\t");
 
     expect(fetch).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/me/topics?pageSize=2&offset=4", expect.any(Object));
     expect(fetch).toHaveBeenCalledWith("https://oracleapex.cn/ords/test/api/v1/me/replies?pageSize=2&offset=4", expect.any(Object));

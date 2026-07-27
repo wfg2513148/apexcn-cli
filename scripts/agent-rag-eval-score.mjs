@@ -19,6 +19,7 @@ export function scoreAgentRagCase(testCase, run) {
   );
   const evidenceIds = evidence.map((item) => item?.evidenceId);
   const evidenceIdSet = new Set(evidenceIds);
+  const evidenceById = new Map(evidence.map((item) => [item?.evidenceId, item]));
   const expectedTopicEvidence = evidence.filter((item) => expectedTopics.has(String(item?.topicId)));
   const endpoints = Array.isArray(value.provenance?.endpoints) ? value.provenance.endpoints : [];
   const endpointIsolation = value.provenance?.appRagEndpointCalled === false
@@ -28,8 +29,16 @@ export function scoreAgentRagCase(testCase, run) {
   const citationIntegrity = run.ok
     && evidenceIds.length === evidenceIdSet.size
     && evidenceIds.every((id) => typeof id === "string" && /^S\d+$/.test(id))
-    && evidence.every((item) => validUrl(item?.communityUrl))
-    && sources.every((source) => evidenceIdSet.has(source?.evidenceId) && validUrl(source?.communityUrl))
+    && evidence.every((item) => validTitle(item?.title) && validUrl(item?.communityUrl))
+    && sources.every((source) => {
+      const matchingEvidence = evidenceById.get(source?.evidenceId);
+      return matchingEvidence
+        && validTitle(source?.title)
+        && source.title === matchingEvidence.title
+        && validUrl(source?.communityUrl);
+    })
+    && value.synthesisPolicy?.visibleCitationLabel === "title"
+    && value.synthesisPolicy?.forbidBareEvidenceIdLabels === true
     && originalUrlsComplete
     && endpointIsolation;
 
@@ -90,4 +99,8 @@ function validUrl(value) {
   } catch {
     return false;
   }
+}
+
+function validTitle(value) {
+  return typeof value === "string" && value.trim().length > 0 && !/^S\d+$/.test(value.trim());
 }

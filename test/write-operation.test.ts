@@ -161,8 +161,8 @@ describe("business write confirmation", () => {
       id: 90,
       replyId: 90,
       topicId: 42,
-      url: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90",
-      replyUrl: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90",
+      url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:42&cs=checksum-42#post_90",
+      replyUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:42&cs=checksum-42#post_90",
       requestId: "req-write"
     })]);
     await context.program.parseAsync(["node", "apexcn", "reply", "create", "42", "--parent-post-id", "90", "--content", "Nested reply", "--json"]);
@@ -193,8 +193,8 @@ describe("business write confirmation", () => {
       status: "completed",
       requestId: "req-write",
       result: expect.objectContaining({
-        url: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90",
-        replyUrl: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90"
+        url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:42&cs=checksum-42#post_90",
+        replyUrl: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:42&cs=checksum-42#post_90"
       })
     }));
 

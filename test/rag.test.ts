@@ -51,7 +51,7 @@ describe("local-AI RAG evidence retrieval", () => {
             id: 42,
             title: "ORDS 401",
             content: "调用接口时返回 401。",
-            threadUrl: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual",
+            threadUrl: "https://oracleapex.cn/ords/f?p=102:14:::::P14_THREAD_ID:42&cs=topic-42-checksum",
             originalUrl: "https://example.com/ords-401",
             updatedDate: "2026-07-23T10:00:00Z"
           },
@@ -59,7 +59,7 @@ describe("local-AI RAG evidence retrieval", () => {
             replyId: 90,
             content: "检查 ORDS privilege 和 OAuth client role。",
             isUseful: true,
-            replyUrl: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90",
+            replyUrl: "https://oracleapex.cn/ords/f?p=102:14:::::P14_THREAD_ID:42&cs=topic-42-checksum#post_90",
             updatedDate: "2026-07-23T11:00:00Z"
           }],
           requestId: "req-topic-42"
@@ -71,7 +71,7 @@ describe("local-AI RAG evidence retrieval", () => {
             id: 43,
             title: "REST 权限",
             content: "REST Enabled SQL 权限说明。",
-            threadUrl: "https://oracleapex.cn/ords/test/api/v1/topics/43/visual"
+            threadUrl: "https://oracleapex.cn/ords/f?p=102:14:::::P14_THREAD_ID:43&cs=topic-43-checksum"
           },
           replies: [],
           requestId: "req-topic-43"
@@ -96,7 +96,14 @@ describe("local-AI RAG evidence retrieval", () => {
       queries: ["ORDS", "REST"],
       answerability: expect.objectContaining({ status: "answerable" }),
       provenance: expect.objectContaining({
-        requestIds: expect.arrayContaining(["req-search-ords", "req-search-rest", "req-topic-42", "req-topic-43"])
+        requestIds: expect.arrayContaining(["req-search-ords", "req-search-rest", "req-topic-42", "req-topic-43"]),
+        sources: expect.arrayContaining([
+          expect.objectContaining({
+            evidenceId: "S1",
+            title: "ORDS 401",
+            communityUrl: "https://oracleapex.cn/ords/f?p=102:14:::::P14_THREAD_ID:42&cs=topic-42-checksum"
+          })
+        ])
       })
     }));
     expect(output.evidence).toEqual(expect.arrayContaining([
@@ -104,16 +111,20 @@ describe("local-AI RAG evidence retrieval", () => {
         evidenceId: "S1",
         type: "topic",
         topicId: 42,
-        communityUrl: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual",
+        communityUrl: "https://oracleapex.cn/ords/f?p=102:14:::::P14_THREAD_ID:42&cs=topic-42-checksum",
         originalUrl: "https://example.com/ords-401"
       }),
       expect.objectContaining({
         type: "correct-answer",
         topicId: 42,
         replyId: 90,
-        communityUrl: "https://oracleapex.cn/ords/test/api/v1/topics/42/visual#post_90"
+        communityUrl: "https://oracleapex.cn/ords/f?p=102:14:::::P14_THREAD_ID:42&cs=topic-42-checksum#post_90"
       })
     ]));
+    expect(output.synthesisPolicy).toEqual(expect.objectContaining({
+      visibleCitationLabel: "title",
+      forbidBareEvidenceIdLabels: true
+    }));
     const urls = fetch.mock.calls.map(([input]) => String(input));
     expect(urls).not.toEqual(expect.arrayContaining([expect.stringContaining("/api/v1/ask")]));
     expect(urls.every((url) => url.includes("/api/v1/search") || /\/api\/v1\/topics\/\d+$/.test(url))).toBe(true);
@@ -148,6 +159,35 @@ describe("local-AI RAG evidence retrieval", () => {
     );
   });
 
+  test("does not invent a visual page when topic detail has no absolute App URL", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const url = String(input);
+      if (url.includes("/api/v1/search")) {
+        return Response.json({ items: [{ id: 77, title: "Missing link" }], requestId: "req-search" });
+      }
+      if (url.endsWith("/api/v1/topics/77")) {
+        return Response.json({
+          topic: { id: 77, title: "Missing link", content: "Evidence without an App URL." },
+          replies: [],
+          requestId: "req-topic"
+        });
+      }
+      return Response.json({ error: { message: `unexpected ${url}` } }, { status: 500 });
+    });
+
+    await program.parseAsync([
+      "node", "apexcn", "rag", "retrieve", "Missing link",
+      "--query", "Missing link",
+      "--json"
+    ]);
+
+    const output = JSON.parse(stdout.join(""));
+    expect(output.evidence).toEqual([]);
+    expect(output.answerability.status).toBe("unanswerable");
+    expect(stdout.join("")).not.toContain("/visual");
+    expect(stdout.join("")).not.toContain("/t/77");
+  });
+
   test("falls back to the original question only when explicit queries return no topics", async () => {
     const { program, stdout, fetch } = await configuredProgram(async (input) => {
       const url = String(input);
@@ -166,7 +206,7 @@ describe("local-AI RAG evidence retrieval", () => {
             id: 51,
             title: "APEX 全局水印",
             content: "在页面模板中统一加载水印。",
-            threadUrl: "https://oracleapex.cn/ords/test/api/v1/topics/51/visual"
+            threadUrl: "https://oracleapex.cn/ords/f?p=102:14:::::P14_THREAD_ID:51&cs=topic-51-checksum"
           },
           replies: [],
           requestId: "req-topic"
@@ -211,7 +251,7 @@ describe("local-AI RAG evidence retrieval", () => {
             id: 52,
             title: "APEX 水印",
             content: "水印实现。",
-            threadUrl: "https://oracleapex.cn/ords/test/api/v1/topics/52/visual"
+            threadUrl: "https://oracleapex.cn/ords/f?p=102:14:::::P14_THREAD_ID:52&cs=topic-52-checksum"
           },
           replies: [],
           requestId: "req-topic"
@@ -243,7 +283,10 @@ describe("local-AI RAG evidence retrieval", () => {
       if (url.endsWith("/api/v1/ask") && init?.method === "POST") {
         return Response.json({
           answer: "Existing App 100 answer",
-          references: [{ topicId: 42, threadUrl: "https://oracleapex.cn/t/42" }],
+          references: [{
+            topicId: 42,
+            threadUrl: "https://oracleapex.cn/ords/f?p=102:14:::::P14_THREAD_ID:42&cs=topic-42-checksum"
+          }],
           requestId: "req-existing-ask"
         });
       }

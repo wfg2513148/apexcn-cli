@@ -1421,7 +1421,7 @@ async function retrieveRagEvidence(
       if (isRecord(detail) && typeof detail.requestId === "string" && detail.requestId.trim()) {
         requestIds.add(detail.requestId);
       }
-      appendTopicEvidence(evidence, detail, topicId, [...(topicMatches.get(topicId) ?? [])], session.baseUrl);
+      appendTopicEvidence(evidence, detail, topicId, [...(topicMatches.get(topicId) ?? [])]);
     } catch (error) {
       retrievalErrors.push(researchTopicError(error, topicId, retrievalErrors.length, session));
     }
@@ -1462,6 +1462,8 @@ async function retrieveRagEvidence(
     synthesisPolicy: {
       owner: "local-ai",
       requireEvidenceIds: true,
+      visibleCitationLabel: "title",
+      forbidBareEvidenceIdLabels: true,
       refuseUnsupportedClaims: true
     },
     provenance: {
@@ -1473,6 +1475,7 @@ async function retrieveRagEvidence(
         evidenceId: item.evidenceId,
         topicId: item.topicId,
         replyId: item.replyId,
+        title: item.title,
         communityUrl: item.communityUrl,
         originalUrl: item.originalUrl
       }))
@@ -1484,14 +1487,15 @@ function appendTopicEvidence(
   evidence: Array<Record<string, unknown>>,
   detail: unknown,
   fallbackTopicId: number,
-  matchedQueries: string[],
-  baseUrl: string
+  matchedQueries: string[]
 ): void {
   const topic = topicFromData(detail) ?? {};
   const topicId = topicIdFromSearchItem(topic) ?? fallbackTopicId;
   const title = fieldText(topic.title ?? topic.topicTitle ?? `Topic ${topicId}`);
-  const communityUrl = firstAbsoluteUrl(topic.canonicalUrl, topic.threadUrl, topic.url)
-    ?? `${baseUrl.replace(/\/+$/, "")}/api/v1/topics/${topicId}/visual`;
+  const communityUrl = firstAbsoluteUrl(topic.canonicalUrl, topic.threadUrl, topic.visualUrl, topic.url);
+  if (!communityUrl) {
+    return;
+  }
   const originalUrl = fieldText(topic.originalUrl);
   evidence.push(compactBody({
     type: "topic",
@@ -1510,8 +1514,7 @@ function appendTopicEvidence(
     .slice(0, 3);
   for (const { reply, sourceIndex } of replies) {
     const replyId = positiveId(reply.replyId ?? reply.id ?? reply.postId);
-    const replyUrl = fieldText(reply.replyUrl ?? reply.url)
-      || (communityUrl && replyId ? `${communityUrl}#post_${replyId}` : communityUrl);
+    const replyUrl = firstAbsoluteUrl(reply.replyUrl, reply.url) ?? communityUrl;
     evidence.push(compactBody({
       type: reply.isUseful === true ? "correct-answer" : "reply",
       topicId,
@@ -1773,7 +1776,7 @@ function formatAskText(data: unknown): string {
   const sources = sourcesFromData(data);
   const sourceLines = sources.map((source, index) => {
     const title = fieldText(source.title ?? source.topicTitle ?? source.topicId ?? `source ${index + 1}`);
-    const url = fieldText(source.url ?? source.threadUrl);
+    const url = fieldText(source.communityUrl ?? source.url ?? source.threadUrl);
     const originalUrl = fieldText(source.originalUrl);
     const score = fieldText(source.score);
     const snippet = fieldText(source.snippet ?? source.content);
@@ -1879,17 +1882,19 @@ function enrichAskReferences(data: unknown, question?: string): unknown {
   for (const key of ["sources", "citations", "references", "items"]) {
     const value = output[key];
     if (Array.isArray(value)) {
-      output[key] = value.map((item) => isRecord(item) ? enrichAskReference(item) : item);
+      output[key] = value.map((item, index) => isRecord(item) ? enrichAskReference(item, index) : item);
     }
   }
+  output.synthesisPolicy = {
+    visibleCitationLabel: "title",
+    forbidBareEvidenceIdLabels: true,
+    refuseUnsupportedClaims: true
+  };
   return withAskFallback(output, question);
 }
 
 function normalizeAskResponse(data: Record<string, unknown>): Record<string, unknown> {
-  if (!isRecord(data.data)) {
-    return { ...data };
-  }
-  const inner = data.data;
+  const inner = isRecord(data.data) ? data.data : {};
   return compactBody({
     ...inner,
     ...data,
@@ -1899,7 +1904,8 @@ function normalizeAskResponse(data: Record<string, unknown>): Record<string, unk
       ? data.references
       : Array.isArray(inner.references) ? inner.references : undefined,
     requestId: data.requestId ?? data.request_id ?? inner.requestId ?? inner.request_id,
-    requestUrl: data.requestUrl ?? data.request_url ?? inner.requestUrl ?? inner.request_url
+    request_url: undefined,
+    requestUrl: firstAbsoluteUrl(data.requestUrl, data.request_url, inner.requestUrl, inner.request_url)
   });
 }
 
@@ -2061,37 +2067,28 @@ function textList(value: unknown): string {
   return value.map((item) => `- ${fieldText(item)}`).filter((lineText) => lineText !== "- ").join("\n");
 }
 
-function enrichAskReference(source: Record<string, unknown>): Record<string, unknown> {
-  const backendThreadUrl = absoluteCommunityTopicUrl(source.threadUrl)
-    ?? absoluteCommunityTopicUrl(source.card_link)
-    ?? absoluteCommunityTopicUrl(source.url);
-  const topicId = topicIdFromAskReference(source);
-  const threadUrl = topicId
-    ? `https://oracleapex.cn/t/${topicId}`
-    : firstAbsoluteUrl(source.canonicalUrl) ?? backendThreadUrl;
-  const replyId = positiveId(source.replyId ?? source.postId);
-  const replyUrl = threadUrl && replyId ? `${threadUrl}#post_${replyId}` : undefined;
-  const originalUrl = source.originalUrl
-    ?? source.source_url
-    ?? (backendThreadUrl && backendThreadUrl !== threadUrl ? backendThreadUrl : undefined);
+function enrichAskReference(source: Record<string, unknown>, index: number): Record<string, unknown> {
+  const originalUrl = firstAbsoluteUrl(source.originalUrl, source.source_url);
+  const explicitThreadUrl = firstAbsoluteUrl(
+    source.threadUrl,
+    source.canonicalUrl,
+    source.visualUrl,
+    source.card_link
+  );
+  const genericUrl = firstAbsoluteUrl(source.url);
+  const threadUrl = explicitThreadUrl ?? (genericUrl !== originalUrl ? genericUrl : undefined);
+  const replyUrl = firstAbsoluteUrl(source.replyUrl);
+  const communityUrl = replyUrl ?? threadUrl;
   return compactBody({
     ...source,
-    url: replyUrl ?? threadUrl,
+    evidenceId: fieldText(source.evidenceId) || `S${index + 1}`,
+    title: source.title ?? source.topicTitle ?? source.card_title,
+    communityUrl,
+    url: communityUrl,
     threadUrl,
     replyUrl,
     originalUrl
   });
-}
-
-function absoluteCommunityTopicUrl(value: unknown): string | undefined {
-  const url = fieldText(value).trim();
-  if (/^https?:\/\//i.test(url)) {
-    return url;
-  }
-  if (!/^f\?p=/i.test(url)) {
-    return undefined;
-  }
-  return `https://oracleapex.cn/ords/${url.replace(/^f\?p=:/i, "f?p=100:")}`;
 }
 
 function firstAbsoluteUrl(...values: unknown[]): string | undefined {
@@ -2207,10 +2204,13 @@ function readRequestIds(value: unknown): string[] {
 
 function readSourceSummary(source: Record<string, unknown>): Record<string, unknown> {
   const topicId = topicIdFromAskReference(source);
+  const url = source.canonicalUrl ?? source.threadUrl ?? source.url;
   return compactBody({
     id: source.id ?? source.topicId ?? source.threadId ?? topicId,
+    evidenceId: source.evidenceId,
     title: source.title ?? source.topicTitle ?? source.card_title,
-    url: source.canonicalUrl ?? source.threadUrl ?? source.url,
+    communityUrl: source.communityUrl,
+    url,
     originalUrl: source.originalUrl ?? source.source_url,
     sourceDomain: source.sourceDomain,
     sourceType: source.sourceType,
