@@ -1,153 +1,168 @@
 # apexcn-cli User Guide
 
-This guide is for APEX developers who use apexcn-cli through an AI tool. You do not need to memorize terminal commands or flags. Describe the intended outcome, let the AI assistant operate the CLI, and require a preview and explicit confirmation before any publish, update, or delete action.
+This guide is for people who use an AI tool to access the APEX Chinese Community. You do not need to memorize commands or flags. Describe what you want to find, understand, or change, and let the AI operate the CLI.
 
-Choose topic and reply ids from search results or content owned by the current account. The prompts below do not assume that a fixed id is valid online.
+## 1. Before You Start
 
-Every content change uses the same two-step confirmation. The AI first shows the business content and receives a short operation id. After you confirm, it uses that id to execute the exact change you reviewed. You do not need to manage directories or intermediate files.
+You need:
 
-## 1. First Use
+- a computer with Node.js 20 or later;
+- an APEX Chinese Community account;
+- an API key for that account;
+- a local AI tool that can run commands on your computer.
 
-Install the CLI first without supplying an API key:
+If apexcn-cli is not installed, tell your AI:
 
-> Please install apexcn-cli and its skill. Do not request, store, or verify an API key during installation. First confirm that the installed launcher resolves to the new version.
+> Install apexcn-cli for me and verify the installed version. Do not ask for my API key during installation.
 
-Configure authentication only after installation succeeds:
+Get your API key by signing in to [APEX Chinese Community](https://oracleapex.cn/) and opening **API Key Management** from the account menu.
 
-> I will set APEXCN_API_KEY in my own shell. Configure apexcn-cli to store only that environment variable name without reading or printing its value, then verify my account, category list, and search capability.
+## 2. Connect Your API Key
 
-If it is already installed, say:
+For the shortest setup, run this in your own terminal:
 
-> Please check whether apexcn-cli is available and confirm which community account is currently logged in. Do not print the full API key.
+```bash
+apexcn -apikey "YOUR_API_KEY"
+apexcn auth audit
+```
 
-## 2. Search Community Posts
+Replace `YOUR_API_KEY` with the real key. This method may leave the command in your shell history.
 
-> Use apexcn-cli to search for “APEX REST API” posts. Summarize the first 5 results and include each post's real URL and original URL.
+On a shared computer or when you prefer not to store the key in the CLI configuration, use an environment variable.
 
-> Search for “ORDS authentication failure” and group the results into “most useful”, “extra reading”, and “less related”.
+macOS / Linux:
 
-> Search for “APEX JSON_TABLE” posts and order them from foundational to advanced.
+```bash
+export APEXCN_API_KEY="YOUR_API_KEY"
+apexcn auth set-token --token-env APEXCN_API_KEY
+apexcn auth audit
+```
 
-## 3. Read and Summarize a Topic
+Windows PowerShell:
 
-> Select a topic from the previous search results and summarize what it is about. Include key steps, important notes, and the real URL.
+```powershell
+$env:APEXCN_API_KEY="YOUR_API_KEY"
+apexcn auth set-token --token-env APEXCN_API_KEY
+apexcn auth audit
+```
 
-> Read this topic and tell me whether it helps with my current issue: I cannot get JSON back when calling a REST API from APEX.
+Run `apexcn auth --help` whenever you need to see these setup instructions again.
 
-## 4. Check Account and Categories
+Then tell your AI:
 
-> Check which community account apexcn-cli is currently logged in as.
+> Confirm which community account apexcn-cli is using and check that search works. Do not display the full API key.
 
-> List the community categories I can post to and explain what each category is best for.
+## 3. Search and Read Community Content
+
+> Search APEX Chinese Community for “APEX REST API”. Select the 5 most relevant topics and explain what each one helps with.
+
+> Find discussions about “ORDS authentication failure” and group them into priority reading, extra reading, and background material.
+
+> Show me new topics from the last 7 days, grouped by category.
+
+> Read the selected topic and summarize its key steps, prerequisites, and cautions.
+
+Results should include links that open the existing community pages. Imported content should also show its original source URL. References should use full topic titles, not internal evidence labels.
+
+## 4. Answer Questions with Community Evidence
+
+> Use existing community content to answer “How can Oracle APEX call a REST API?” Attach the supporting topic title and link to each important conclusion.
+
+> Create an ORDS OAuth2 Bearer Token troubleshooting checklist from community discussions.
+
+> Compare the solutions in the three selected topics, including common points, differences, applicable versions, and risks.
+
+The AI should say when the available evidence is incomplete instead of inventing a source.
+
+## 5. Use Your Personal Dashboard
 
 > Open my personal dashboard and show what I created, replied to, favorited, and subscribed to.
 
-> Search for ORDS only inside my personal dashboard, not across the whole community. To limit the scope, say “search my favorites for ORDS.”
+> Show only my recently created topics.
 
-## 5. Ask Questions Against Community Content
+> Search for ORDS only in my favorites and subscriptions, not across the whole community.
 
-To inspect personal-workbench support, say:
+When you specify a personal scope, the AI should not silently expand the search to the full community.
 
-> Check the server capability inventory first, then read my notifications, inbox, community rules, and privacy policy. Report missing capabilities as unavailable and do not invent content.
+## 6. Draft and Publish a Topic
 
-> Use apexcn-cli to answer this from community content: How do I call a REST API from Oracle APEX? Include reference topic links.
+> I receive a 401 when APEX calls a REST API. Search for similar discussions, then draft a support topic with my environment, steps, actual result, expected result, and attempted fixes. Do not publish it yet.
 
-> Based on community content, create a troubleshooting checklist for ORDS OAuth2 Bearer Token issues.
+When the draft is ready:
 
-## 6. Draft a Topic
+> Publish the confirmed content in the right category. Show the category, title, body, and tags again, then wait for my confirmation.
 
-> I want to ask the community about APEX returning 401 when calling a REST API. Search related posts first, then draft a clear question. Do not publish it until I confirm.
+After publishing, the AI should return a working link to the existing community topic page.
 
-> Help me write a community support topic from the issue below. Include background, what I tried, error messages, expected result, and tags. Show me the draft first; do not publish it directly.
+## 7. Edit or Delete Your Topic
 
-## 7. Publish a Topic
+> Find the target in my topics and make the title and body clearer. Preview the changes without saving them.
 
-If you are not ready to publish, say:
+> Delete the selected topic. Show its title, category, author, and link, then wait for my confirmation.
 
-> Save the draft in the current profile's local draft inventory. When I ask for my drafts later, show only drafts owned by this profile.
+Deletion is irreversible. The AI should stop if the target is unclear, the content changed, or the account lacks permission.
 
-For profile or machine migration:
+## 8. Reply and Manage Replies
 
-> Export the current profile's local drafts, switch to the target profile, then import them. Do not show the API key or replace matching drafts unless I explicitly confirm.
+> Draft a friendly reply to the selected topic and include my test result. Preview it without publishing.
 
-> Publish the confirmed content to the right category. Before publishing, show me the selected category, title, body, and tags, then wait for my confirmation.
+> Reply to a specific message in that topic. Confirm that the message belongs to the selected topic before showing the preview.
 
-> Publish this topic. After it succeeds, send me the real topic URL.
+> Edit my selected reply. Show the revised text and wait for confirmation before saving.
 
-## 8. Edit a Topic
+> Delete my selected reply. Confirm that it belongs to the current account and show its full content first.
 
-> Select the target from my topics and make its title and body clearer. Show me the preview first; do not save it directly.
+## 9. Favorites, Subscriptions, and Correct Answers
 
-> Update that topic with the confirmed version and return the real topic URL.
+> Favorite the selected topic and subscribe to future updates. Let me confirm the target first.
 
-## 9. Delete a Topic
+> Remove this topic from my favorites but keep the subscription.
 
-> Select the target from my topics and confirm it is the one I want to delete. Show me its title, author, category, and link first.
+> Show my favorites, including both topics and replies.
 
-> I confirm deleting the topic that was just previewed. Please follow the safe deletion flow and tell me the result.
+> Mark the selected reply as the correct answer. Confirm its content, current state, and my permission, then show a preview.
 
-## 10. Reply to a Topic
+Only accounts with the required permission can mark or unmark a correct answer. The CLI follows the permission returned by the community service.
 
-> Draft a friendly reply to the selected topic and add my solution. Show me the preview first; do not publish it directly.
+## 10. Why Changes Require Confirmation
 
-> Publish the confirmed reply to that topic and send me the real topic URL.
+Publishing, editing, deleting, favoriting, subscribing, and marking an answer use the same safety flow:
 
-> Reply to a specific reply under that topic with my additional test result. Preview first, then publish after I confirm.
+1. the AI reads the current target and shows a preview;
+2. the CLI creates a short operation id for that preview;
+3. you explicitly confirm;
+4. the AI uses that id to execute the exact action you reviewed.
 
-For this request, the AI first confirms that the selected reply belongs to the selected topic and preserves its reply id in the preview so the publish cannot silently become a top-level reply.
+If the target, account, or state changes before confirmation, a new preview is required. You do not need to record or manage operation ids yourself.
 
-## 11. Edit and Delete Replies
+## 11. Understand Returned Links
 
-> Select the target from my replies and polish it. Show me the updated version first; do not save it directly.
+- **Community link** opens an existing topic, reply, or account page on APEX Chinese Community.
+- **Original link** appears for imported content and opens the external source.
+- **Protected page** may require you to sign in through the browser first.
 
-> Update the selected reply with the confirmed text.
+The CLI API key does not automatically sign in the browser. If the browser asks you to sign in, use the normal community login instead of regenerating the API key.
 
-> Delete the selected reply. Before deleting, confirm that it is the reply I intended to remove.
+## 12. Replace an API Key
 
-The AI should also verify that the reply belongs to the current account and that the server permits deletion, then create the operation id with the freshly read content version. If the version changes, it must create a new preview instead of reusing the old operation id.
+If the key is lost or may have leaked, regenerate it in **API Key Management**, then tell your AI:
 
-## 12. Favorite and Unfavorite
+> Help me reconnect apexcn-cli with my new API key. Do not display the full key in replies, logs, or screenshots. Verify the current account afterward.
 
-> Favorite the selected topic and send me the topic link.
+Regenerating the key immediately invalidates the old one.
 
-> Remove the selected topic from my favorites.
+## 13. Troubleshooting
 
-> Favorite the selected reply. Let me verify the reply and preview before execution.
+Tell your AI:
 
-A reply favorite preserves both its topic and reply identity, so it can be found again through favorites, the personal dashboard, or personal-scope search.
+> apexcn-cli does not seem to work. Check the installed version, API key configuration, current account, community connection, and search. Tell me which step fails without displaying the full API key.
 
-## 13. Mark and Unmark a Correct Answer
+Common cases:
 
-> Mark the selected reply as a correct answer. Verify its id, current version, and my permission before creating the preview.
+- **`apexcn` not found**: restart the AI tool or terminal, then check the installation;
+- **authentication failed**: run `apexcn auth audit` and reconnect the key if needed;
+- **browser asks for sign-in**: sign in through the browser because CLI and browser sessions are separate;
+- **a link does not open**: preserve the complete output and report an issue instead of editing the URL;
+- **a change did not happen**: check whether the flow stopped at preview and still needs your confirmation.
 
-> Remove the correct-answer mark from this reply.
-
-The AI first reads the topic detail and continues only when the server explicitly grants permission, using the freshly read reply version in the operation preview.
-
-## 14. Subscribe and Unsubscribe
-
-> Subscribe to the selected topic so I can follow updates.
-
-> Unsubscribe from the selected topic.
-
-## 15. Turn Results into Notes
-
-> Search for “APEX REST API” posts and turn the first 5 results into study notes. For each result include: who it is for, main idea, actionable steps, real URL, and original URL.
-
-> Turn these posts into an “APEX REST API learning path”, ordered from foundational to advanced.
-
-For local offline search:
-
-> Build a BM25 index for my local collection, then query ORDS authentication failures with explain mode.
-
-## 15. Change API Key or Reconfigure
-
-> Help me reconfigure the apexcn-cli API key. I will provide the new key. Verify the account after configuration and do not print the full key.
-
-You can also run `apexcn -apikey "your real API key"` yourself. Quotes are optional for an ordinary alphanumeric key. Replace the example text, and remember that the command may be retained in shell history.
-
-## 16. Troubleshooting
-
-> apexcn-cli seems broken. Please run the built-in diagnostics first, then check the install location, login state, account info, category list, and search capability. Tell me exactly which step failed.
-
-> My AI tool does not seem to recognize apexcn-cli. Please check whether the skill is installed somewhere this AI tool can read.
+For direct command usage, see the [Terminal Manual](cli-manual.en.md). For security details, see the [Security Model](security-model.md).

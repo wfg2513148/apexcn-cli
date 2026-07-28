@@ -43,12 +43,12 @@ async function publicCommands() {
   }>;
 }
 
-describe("v1.0.13 agent intent routes", () => {
+describe("v1.0.14 agent intent routes", () => {
   test("is versioned and covers novice prompts across at least twelve categories", () => {
     const examples = catalog.routes.flatMap((route) => route.examples);
 
     expect(catalog.schemaVersion).toBe(1);
-    expect(catalog.release).toBe("1.0.13");
+    expect(catalog.release).toBe("1.0.14");
     expect(new Set(catalog.routes.map((route) => route.id)).size).toBe(catalog.routes.length);
     expect(new Set(catalog.routes.map((route) => route.category)).size).toBeGreaterThanOrEqual(12);
     expect(examples.length).toBeGreaterThanOrEqual(25);
