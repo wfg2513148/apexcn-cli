@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { Command } from "commander";
+import { currentCliOperation } from "../src/core/request-context.js";
 import { createProgram } from "../src/index.js";
 
 async function tempConfigPath() {
@@ -13,9 +14,10 @@ async function tempConfigPath() {
 async function configuredProgram(fetchImpl: typeof fetch, inputOptions: { readStdin?: () => Promise<string>; isStdinTTY?: () => boolean } = {}) {
   const stdout: string[] = [];
   const stderr: string[] = [];
+  const configPath = await tempConfigPath();
   vi.stubGlobal("fetch", vi.fn(fetchImpl));
   const program = createProgram({
-    configPath: await tempConfigPath(),
+    configPath,
     stdout: (text) => stdout.push(text),
     stderr: (text) => stderr.push(text),
     ...inputOptions
@@ -33,7 +35,7 @@ async function configuredProgram(fetchImpl: typeof fetch, inputOptions: { readSt
     "test@oci"
   ]);
   stdout.length = 0;
-  return { program, stdout, stderr, fetch: vi.mocked(fetch) };
+  return { program, stdout, stderr, fetch: vi.mocked(fetch), configPath };
 }
 
 function withOwnedTopic(fetchImpl: typeof fetch, topicId = 42, userId = 1, authorId = userId): typeof fetch {
@@ -124,6 +126,7 @@ const neverApiDryRunCommands = [
   "auth logout",
   "auth audit",
   "admin list",
+  "admin operations",
   "collection build",
   "collection automation plan",
   "collection automation run",
@@ -297,6 +300,319 @@ describe("content commands", () => {
 
     expect(fetch).toHaveBeenLastCalledWith("https://oracleapex.cn/ords/test/api/v1/admin-list", expect.any(Object));
     expect(stdout.join("")).toBe("1\tAdmin\tAdministrator\t10\tsite:https://example.com\n");
+  });
+
+  test("admin operations forwards bounded filters and preserves the JSON contract", async () => {
+    const payload = {
+      kind: "admin-operations",
+      schemaVersion: 1,
+      requestId: "req_admin_ops",
+      window: { from: "2026-07-01", to: "2026-07-07", days: 7 },
+      filter: { client: "apexcn-cli", limit: 10, user: { id: 42, nickname: "Alice" } },
+      totals: { calls: 7, successCount: 5, failureCount: 2 },
+      daily: [{ date: "2026-07-01", calls: 7, successCount: 5, failureCount: 2 }],
+      operations: [{ route: "/api/v1/search", operation: "search", calls: 7, successCount: 5, failureCount: 2 }],
+      errors: [{ httpStatus: 400, errorCode: "VALIDATION_ERROR", route: "/api/v1/search", operation: "search", calls: 2 }],
+      keywords: [{ date: "2026-07-01", route: "/api/v1/search", operation: "search", keyword: "apex", calls: 3 }]
+    };
+    const { program, stdout, fetch } = await configuredProgram(async () => Response.json(payload));
+
+    await program.parseAsync([
+      "node", "apexcn", "admin", "operations",
+      "--from", "2026-07-01",
+      "--to", "2026-07-07",
+      "--user-id", "42",
+      "--limit", "10",
+      "--json"
+    ]);
+
+    expect(fetch).toHaveBeenLastCalledWith(
+      "https://oracleapex.cn/ords/test/api/v1/admin/operations?from=2026-07-01&to=2026-07-07&userId=42&limit=10",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "X-APEXCN-Client": "apexcn-cli/1.1.0",
+          "X-APEXCN-CLI-Operation": "admin_operations"
+        })
+      })
+    );
+    expect(JSON.parse(stdout.join(""))).toEqual(payload);
+  });
+
+  test("admin operations prints all aggregate sections as stable text", async () => {
+    const { program, stdout } = await configuredProgram(async () => Response.json({
+      kind: "admin-operations",
+      schemaVersion: 1,
+      requestId: "req_admin_ops",
+      window: { from: "2026-07-01", to: "2026-07-07", days: 7 },
+      filter: { client: "apexcn-cli", limit: 20, user: { id: 42, nickname: "Alice" } },
+      totals: { calls: 7, successCount: 5, failureCount: 2 },
+      daily: [{ date: "2026-07-01", calls: 7, successCount: 5, failureCount: 2 }],
+      operations: [{ route: "/api/v1/search", operation: "search", calls: 7, successCount: 5, failureCount: 2 }],
+      errors: [{ httpStatus: 400, errorCode: "VALIDATION_ERROR", route: "/api/v1/search", operation: "search", calls: 2 }],
+      keywords: [{ date: "2026-07-01", route: "/api/v1/search", operation: "search", keyword: "apex", calls: 3 }]
+    }));
+
+    await program.parseAsync(["node", "apexcn", "admin", "operations", "--format", "text"]);
+
+    expect(stdout.join("")).toBe([
+      "Summary:",
+      "window: 2026-07-01 to 2026-07-07 (7 days)",
+      "client: apexcn-cli",
+      "user: 42 Alice",
+      "calls: 7",
+      "success: 5",
+      "failures: 2",
+      "Daily:",
+      "2026-07-01\t7\t5\t2",
+      "Operations:",
+      "search\t/api/v1/search\t7\t5\t2",
+      "Errors:",
+      "400\tVALIDATION_ERROR\tsearch\t/api/v1/search\t2",
+      "Keywords:",
+      "2026-07-01\tapex\tsearch\t/api/v1/search\t3",
+      "requestId: req_admin_ops",
+      ""
+    ].join("\n"));
+  });
+
+  test("admin operations prints explicit empty aggregate sections", async () => {
+    const { program, stdout } = await configuredProgram(async () => Response.json({
+      kind: "admin-operations",
+      schemaVersion: 1,
+      requestId: "req_admin_empty",
+      window: { from: "2026-07-01", to: "2026-07-07", days: 7 },
+      filter: { client: "apexcn-cli", limit: 20 },
+      totals: { calls: 0, successCount: 0, failureCount: 0 },
+      daily: [],
+      operations: [],
+      errors: [],
+      keywords: []
+    }));
+
+    await program.parseAsync(["node", "apexcn", "admin", "operations", "--format", "text"]);
+
+    expect(stdout.join("")).toContain("user: all\n");
+    expect(stdout.join("")).toContain("Daily:\n(none)\nOperations:\n(none)\nErrors:\n(none)\nKeywords:\n(none)\n");
+    expect(stdout.join("")).toContain("requestId: req_admin_empty\n");
+  });
+
+  test("admin operations rejects invalid limits before making API requests", async () => {
+    for (const limit of ["0", "101"]) {
+      const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({}));
+      exitOverrideTree(program);
+
+      await expect(program.parseAsync(["node", "apexcn", "admin", "operations", "--limit", limit])).rejects.toMatchObject({
+        code: "commander.invalidArgument"
+      });
+
+      expect(fetch).not.toHaveBeenCalled();
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).toContain("Expected --limit to be between 1 and 100");
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("admin operations accepts limit boundary values", async () => {
+    for (const limit of [1, 100]) {
+      const { program, fetch } = await configuredProgram(async () => Response.json({
+        kind: "admin-operations",
+        schemaVersion: 1,
+        requestId: `req_admin_limit_${limit}`,
+        window: { from: "2026-07-01", to: "2026-07-07", days: 7 },
+        filter: { client: "apexcn-cli", limit },
+        totals: { calls: 0, successCount: 0, failureCount: 0 },
+        daily: [],
+        operations: [],
+        errors: [],
+        keywords: []
+      }));
+
+      await program.parseAsync(["node", "apexcn", "admin", "operations", "--limit", String(limit), "--json"]);
+
+      expect(fetch).toHaveBeenCalledWith(
+        `https://oracleapex.cn/ords/test/api/v1/admin/operations?limit=${limit}`,
+        expect.any(Object)
+      );
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("admin operations rejects reversed and over-90-day windows before loading a profile", async () => {
+    const cases = [
+      { from: "2026-07-02", to: "2026-07-01", message: "--from must be earlier than or equal to --to" },
+      { from: "2026-01-01", to: "2026-04-01", message: "Admin operations date range must not exceed 90 days" }
+    ];
+
+    for (const item of cases) {
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      vi.stubGlobal("fetch", vi.fn());
+      const program = createProgram({
+        configPath: await tempConfigPath(),
+        stdout: (text) => stdout.push(text),
+        stderr: (text) => stderr.push(text)
+      });
+
+      await program.parseAsync([
+        "node", "apexcn", "admin", "operations",
+        "--from", item.from,
+        "--to", item.to
+      ]);
+
+      expect(fetch).not.toHaveBeenCalled();
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).toBe(`${item.message}\n`);
+      expect(stderr.join("")).not.toContain("No active profile");
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("admin operations accepts an inclusive 90-day window", async () => {
+    const { program, fetch } = await configuredProgram(async () => Response.json({
+      kind: "admin-operations",
+      schemaVersion: 1,
+      requestId: "req_admin_90_days",
+      window: { from: "2026-01-01", to: "2026-03-31", days: 90 },
+      filter: { client: "apexcn-cli", limit: 20 },
+      totals: { calls: 0, successCount: 0, failureCount: 0 },
+      daily: [],
+      operations: [],
+      errors: [],
+      keywords: []
+    }));
+
+    await program.parseAsync([
+      "node", "apexcn", "admin", "operations",
+      "--from", "2026-01-01",
+      "--to", "2026-03-31",
+      "--json"
+    ]);
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://oracleapex.cn/ords/test/api/v1/admin/operations?from=2026-01-01&to=2026-03-31",
+      expect.any(Object)
+    );
+  });
+
+  test("admin operations requires --from and --to together before loading a profile", async () => {
+    for (const argv of [
+      ["--from", "2026-07-01"],
+      ["--to", "2026-07-07"]
+    ]) {
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      vi.stubGlobal("fetch", vi.fn());
+      const program = createProgram({
+        configPath: await tempConfigPath(),
+        stdout: (text) => stdout.push(text),
+        stderr: (text) => stderr.push(text)
+      });
+
+      await program.parseAsync(["node", "apexcn", "admin", "operations", ...argv]);
+
+      expect(fetch).not.toHaveBeenCalled();
+      expect(stdout.join("")).toBe("");
+      expect(stderr.join("")).toBe("--from and --to must be provided together\n");
+      expect(stderr.join("")).not.toContain("No active profile");
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("API requests use canonical command operations for direct and aliased command paths", async () => {
+    const { program, stdout, fetch, configPath } = await configuredProgram(async (input) => {
+      const url = String(input);
+      if (url.includes("/api/v1/search")) {
+        return Response.json({ items: [], requestId: "req-search" });
+      }
+      return Response.json({ topic: { id: 42, title: "Topic" }, requestId: "req-topic" });
+    });
+
+    await program.parseAsync(["node", "apexcn", "--config", configPath, "search", "APEX", "--json"]);
+    expect(fetch).toHaveBeenLastCalledWith(
+      expect.stringContaining("/api/v1/search"),
+      expect.objectContaining({ headers: expect.objectContaining({ "X-APEXCN-CLI-Operation": "search" }) })
+    );
+    expect(currentCliOperation()).toBeUndefined();
+
+    stdout.length = 0;
+    await program.parseAsync(["thread", "view", "42", "--json"], { from: "user" });
+    expect(fetch).toHaveBeenLastCalledWith(
+      expect.stringContaining("/api/v1/topics/42"),
+      expect.objectContaining({ headers: expect.objectContaining({ "X-APEXCN-CLI-Operation": "topic_view" }) })
+    );
+    expect(currentCliOperation()).toBeUndefined();
+  });
+
+  test("API requests use the leaf operation when parent options precede a subcommand", async () => {
+    const { program, fetch } = await configuredProgram(async () => Response.json({
+      kind: "me-stats",
+      topicCount: 1,
+      replyCount: 2,
+      requestId: "req_me_stats"
+    }));
+
+    await program.parseAsync(["node", "apexcn", "me", "--json", "stats"]);
+
+    expect(fetch).toHaveBeenLastCalledWith(
+      expect.stringContaining("/api/v1/me/stats"),
+      expect.objectContaining({ headers: expect.objectContaining({ "X-APEXCN-CLI-Operation": "me_stats" }) })
+    );
+    expect(currentCliOperation()).toBeUndefined();
+  });
+
+  test("admin operations emits structured errors for --format json", async () => {
+    for (const status of [401, 403, 429, 500]) {
+      const requestId = `req_admin_${status}`;
+      const { program, stdout, stderr } = await configuredProgram(async () => Response.json({
+        error: {
+          code: status === 403 ? "FORBIDDEN" : "ADMIN_OPERATIONS_ERROR",
+          message: `admin operations failed with ${status}`,
+          requestId,
+          retryAfterSeconds: status === 429 ? 5 : undefined
+        }
+      }, { status }));
+
+      await program.parseAsync(["node", "apexcn", "admin", "operations", "--format", "json"]);
+
+      expect(stdout.join("")).toBe("");
+      expect(JSON.parse(stderr.join(""))).toEqual(expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({ type: "http", status, requestId, exitCode: 1 })
+      }));
+      expect(stderr.join("").trim().split("\n")).toHaveLength(1);
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("admin operations emits structured local and profile errors for --format json", async () => {
+    for (const argv of [
+      ["--from", "2026-07-01"],
+      []
+    ]) {
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      const program = createProgram({
+        configPath: await tempConfigPath(),
+        stdout: (text) => stdout.push(text),
+        stderr: (text) => stderr.push(text)
+      });
+
+      await program.parseAsync(["node", "apexcn", "admin", "operations", ...argv, "--format", "json"]);
+
+      expect(stdout.join("")).toBe("");
+      expect(JSON.parse(stderr.join(""))).toEqual(expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({ type: argv.length > 0 ? "validation" : "no-profile", exitCode: 1 })
+      }));
+      expect(process.exitCode).toBe(1);
+      process.exitCode = undefined;
+    }
   });
 
   test("category list prints clean errors for non-JSON API failures", async () => {
@@ -1331,7 +1647,7 @@ describe("content commands", () => {
 
   test("format option is exposed only on read commands with text output", () => {
     const program = createProgram();
-    const formatCommands = ["doctor", "doctor snapshot", "draft list", "draft reply", "draft question", "draft restore", "guide", "review reply", "review topic", "workflow audit-log", "workflow plan", "admin list", "me", "me capabilities", "me dashboard", "me favorites", "me inbox", "me notifications", "me privacy", "me replies", "me rules", "me search", "me stats", "me subscriptions", "me topics", "category list", "search", "stats category", "stats tag", "stats topic", "rag retrieve", "research", "topic list", "topic recent", "topic view", "thread list", "thread recent", "thread view", "ask"];
+    const formatCommands = ["doctor", "doctor snapshot", "draft list", "draft reply", "draft question", "draft restore", "guide", "review reply", "review topic", "workflow audit-log", "workflow plan", "admin list", "admin operations", "me", "me capabilities", "me dashboard", "me favorites", "me inbox", "me notifications", "me privacy", "me replies", "me rules", "me search", "me stats", "me subscriptions", "me topics", "category list", "search", "stats category", "stats tag", "stats topic", "rag retrieve", "research", "topic list", "topic recent", "topic view", "thread list", "thread recent", "thread view", "ask"];
 
     for (const path of leafCommandPaths(program)) {
       if (formatCommands.includes(path)) {

@@ -1,10 +1,51 @@
 {
   "schemaVersion": 1,
   "product": "apexcn-cli",
-  "updatedAt": "2026-07-27",
+  "updatedAt": "2026-07-31",
   "activeOnly": true,
   "issues": [],
-  "enhancementRequests": [],
+  "enhancementRequests": [
+    {
+      "id": "ENH-20260731-ADMIN-OPERATIONS",
+      "status": "in_progress",
+      "title": "管理员运营观测",
+      "requestedAt": "2026-07-31",
+      "requestRef": "user-request-admin-cli-operations-20260731",
+      "currentBehavior": [
+        "admin list 仅返回公开管理员目录，不提供运营数据",
+        "stats 命令仅统计社区内容，不统计 apexcn-cli 调用",
+        "服务端现有审计数据不足以可靠区分 CLI 调用、稳定错误码和隐私化查询关键词"
+      ],
+      "requiredOutcomes": [
+        "管理员可按日期窗口和可选用户查看 apexcn-cli 调用总量、成功数、失败数及趋势",
+        "管理员可查看按 HTTP 状态、稳定错误码和命令或路由聚合的调用异常",
+        "管理员可查看 search、me search 及 research/rag retrieve 所触发搜索请求的规范化关键词趋势；ask 仅计调用量，不采集问题正文",
+        "非管理员稳定返回 403，所有输出不包含 API key、Authorization 或原始请求正文",
+        "CLI 提供稳定文本和 JSON 契约、输入边界校验、文档与独立黑盒验证"
+      ],
+      "privacyConstraints": [
+        "只返回管理员授权范围内的用户 ID 与公开显示名",
+        "不返回原始查询正文，仅返回规范化关键词及聚合计数",
+        "单次查询默认 7 天、最长 90 天，结果数量有界"
+      ],
+      "serverCapabilityAuditRequired": true,
+      "serverTaskThreadId": "019fb8a0-12dd-77f0-affd-cc31453f934a",
+      "serverEvidence": {
+        "status": "verified-dev",
+        "commit": "cc74ec415d30f55446f3503df5f7973c7d98df06",
+        "contractVersion": "0.9.0-candidate",
+        "endpoint": "/api/v1/admin/operations",
+        "evidencePath": "/Users/kwang/apexcn-forums/output/admin-operations-observability/dev-e2e-verified.log",
+        "sha256": "d21b5370ea28cda50a3d239bec0aee142a43356050fe9188001d8ad2b6b4e4c2"
+      },
+      "executionOrder": [
+        "apexcn-forums-if-server-change-required",
+        "apexcn-cli",
+        "apexcn-cli-test"
+      ],
+      "promotionToActiveIssue": "only-after-fresh-independent-validator-finding"
+    }
+  ],
   "developmentExtensionProtocol": {
     "schemaVersion": 1,
     "scope": "all-future-cli-capability-extensions",

@@ -43,12 +43,12 @@ async function publicCommands() {
   }>;
 }
 
-describe("v1.0.14 agent intent routes", () => {
+describe("v1.1.0 agent intent routes", () => {
   test("is versioned and covers novice prompts across at least twelve categories", () => {
     const examples = catalog.routes.flatMap((route) => route.examples);
 
     expect(catalog.schemaVersion).toBe(1);
-    expect(catalog.release).toBe("1.0.14");
+    expect(catalog.release).toBe("1.1.0");
     expect(new Set(catalog.routes.map((route) => route.id)).size).toBe(catalog.routes.length);
     expect(new Set(catalog.routes.map((route) => route.category)).size).toBeGreaterThanOrEqual(12);
     expect(examples.length).toBeGreaterThanOrEqual(25);
@@ -61,6 +61,22 @@ describe("v1.0.14 agent intent routes", () => {
     const referenced = catalog.routes.flatMap((route) => [...route.commands, ...route.preflightCommands]);
 
     expect(referenced.filter((path) => !commandPaths.has(path))).toEqual([]);
+  });
+
+  test("routes administrator operations monitoring through capability-aware readonly preflight", () => {
+    expect(catalog.routes).toContainEqual(expect.objectContaining({
+      id: "monitor-cli-operations",
+      category: "admin-operations",
+      network: "remote-read",
+      commands: ["auth audit", "me capabilities", "admin operations"],
+      preflightCommands: ["auth audit", "me capabilities"],
+      requiresPreview: false,
+      requiresConfirmation: false,
+      examples: expect.arrayContaining([
+        "查看最近七天 apexcn-cli 调用量和失败情况",
+        "按用户查看 CLI 调用异常和搜索关键词"
+      ])
+    }));
   });
 
   test("keeps local drafting and review paths free of auth and API preflight", () => {

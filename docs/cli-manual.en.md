@@ -148,9 +148,15 @@ Read the public admin directory:
 ```bash
 apexcn admin list --json
 apexcn admin list --format text
+apexcn admin operations --json
+apexcn admin operations --from 2026-07-01 --to 2026-07-07 --user-id 42 --limit 20 --format text
 ```
 
 `admin list` returns only server-approved public admin fields and public contact entries; private contact data is not exposed.
+
+`admin operations` is an administrator-only view of apexcn-cli requests received by the server. The default window is the last seven days. A custom window must provide both `--from` and `--to`; they are inclusive `YYYY-MM-DD` dates with a maximum 90-day window. `--user-id` applies an exact community user filter, and `--limit` bounds each operation, error, and keyword section to 1-100 rows, defaulting to 20. Output contains five aggregate sections: summary, daily trend, operation/route distribution, HTTP status and stable error distribution, and explicit search keywords, followed by the `requestId`. Errors also use structured JSON with `--format json`, `--format pretty`, or `--json`. Its JSON contract is `admin-operations-response-v1`.
+
+Counts represent requests that reached the server with a valid versioned client marker, not local process starts. Local validation/configuration failures and network failures that never reach the server are absent. Keywords come only from explicit `search` and `me search` input; `research` and `rag retrieve` appear through the search requests they perform, while `ask` question bodies are never included in keyword analytics. The response never exposes API keys, Authorization values, or request bodies.
 
 ## me activity
 
@@ -177,7 +183,7 @@ apexcn me subscriptions --json
 
 `me` recursively redacts email, phone, IP, address, and secret-like fields by default. Only explicit `me --include-private` prints private account fields returned by the server. Personal lists and `me search` should continue with the server's opaque `page.nextCursor`. Numeric `offset/page.nextOffset` remains available for older list endpoints, but `--cursor` and `--offset` cannot be combined.
 
-`me capabilities` reads the server `contractVersion` and capability inventory, then adds `clientCompatibility`. The client accepts only the declared 0.8, 0.7, and 0.6 candidate contract window; malformed, incomplete, newer, or older contracts fail closed. `--require-capability <ids...>` also exits nonzero when any requested capability is unavailable. `me notifications`, `me inbox`, `me rules`, and `me privacy` only relay authoritative readonly contracts. When a capability is missing, the CLI preserves `available: false`, `status: "UNAVAILABLE"`, `unavailableReason`, and `requestId`; it never fabricates empty messages, rules, or policy content.
+`me capabilities` reads the server `contractVersion` and capability inventory, then adds `clientCompatibility`. The client accepts only the declared 0.9, 0.8.3, 0.8, 0.7, and 0.6 candidate contract window; malformed, incomplete, newer, or older contracts fail closed. `--require-capability <ids...>` also exits nonzero when any requested capability is unavailable. `me notifications`, `me inbox`, `me rules`, and `me privacy` only relay authoritative readonly contracts. When a capability is missing, the CLI preserves `available: false`, `status: "UNAVAILABLE"`, `unavailableReason`, and `requestId`; it never fabricates empty messages, rules, or policy content.
 
 ## search
 

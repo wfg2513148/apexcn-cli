@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { runWithCliRequestContext } from "../src/core/request-context.js";
 import { HttpError, joinUrl, NetworkError, redactSecret, requestJson, TimeoutError } from "../src/http.js";
 
 describe("http", () => {
@@ -13,19 +14,23 @@ describe("http", () => {
     );
   });
 
-  test("requestJson sends bearer auth and user agent headers", async () => {
+  test("requestJson sends auth, client identity, user agent, and command operation headers", async () => {
     const fetch = vi.fn(async () => Response.json({ ok: true }));
     vi.stubGlobal("fetch", fetch);
 
-    await requestJson("https://oracleapex.cn/ords/apexcn", "/api/v1/me", {
-      token: "abc123",
-      userAgent: "apexcn-test"
-    });
+    await runWithCliRequestContext("me_search", () =>
+      requestJson("https://oracleapex.cn/ords/apexcn", "/api/v1/me", {
+        token: "abc123",
+        userAgent: "apexcn-test"
+      })
+    );
 
     expect(fetch).toHaveBeenCalledWith("https://oracleapex.cn/ords/apexcn/api/v1/me", {
       headers: {
         Authorization: "Bearer abc123",
         "X-APEXCN-API-Key": "abc123",
+        "X-APEXCN-Client": "apexcn-cli/1.1.0",
+        "X-APEXCN-CLI-Operation": "me_search",
         "User-Agent": "apexcn-test"
       }
     });
@@ -47,7 +52,8 @@ describe("http", () => {
       headers: {
         Authorization: "Bearer abc123",
         "X-APEXCN-API-Key": "abc123",
-        "User-Agent": "apexcn-cli/1.0.14",
+        "X-APEXCN-Client": "apexcn-cli/1.1.0",
+        "User-Agent": "apexcn-cli/1.1.0",
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ title: "Hello" })

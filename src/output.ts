@@ -51,6 +51,10 @@ export function outputFormat(options: FormatOption): OutputFormat {
   return options.format ?? "json";
 }
 
+export function usesJsonOutput(options: FormatOption): boolean {
+  return Boolean(options.json || options.format === "json" || options.format === "pretty");
+}
+
 export function printData(options: CommandIo, data: unknown, formatOrJson?: OutputFormat | boolean, textFormatter?: (data: unknown) => string): void {
   const format = typeof formatOrJson === "string" ? formatOrJson : formatOrJson ? "pretty" : "json";
   if (format === "text" && textFormatter) {

@@ -150,9 +150,15 @@ apexcn stats tag --from 2026-07-01 --top 20 --json
 ```bash
 apexcn admin list --json
 apexcn admin list --format text
+apexcn admin operations --json
+apexcn admin operations --from 2026-07-01 --to 2026-07-07 --user-id 42 --limit 20 --format text
 ```
 
 `admin list` 只返回服务端标记为公开的管理员信息和公开联系方式，不包含私有联系信息。
+
+`admin operations` 仅供管理员读取服务端接收的 apexcn-cli 调用聚合。默认窗口为最近 7 天；自定义日期时必须同时传入 `--from` 和 `--to`，两者使用包含首尾的 `YYYY-MM-DD` 日期，单次最多 90 天；`--user-id` 按社区用户 ID 精确过滤；`--limit` 控制命令、异常和关键词各分区最多返回 1 到 100 行，默认 20。输出包含概览、按日趋势、命令/路由、HTTP 状态与稳定错误码、显式搜索关键词五个分区及 `requestId`。`--format json`、`--format pretty` 和 `--json` 的错误也使用结构化 JSON。JSON 契约为 `admin-operations-response-v1`。
+
+该统计只覆盖到达服务端且带合法版本客户端标识的请求，不等同于本机进程启动次数；本地参数校验失败、认证配置失败和未到达服务端的网络错误不会计入。关键词只来自 `search` 与 `me search` 的显式搜索输入；`research` 和 `rag retrieve` 通过其实际 search 请求体现，`ask` 问题正文不进入关键词统计。服务端不会在此响应中返回 API Key、Authorization 或请求正文。
 
 ## me activity
 
@@ -179,7 +185,7 @@ apexcn me subscriptions --json
 
 `me` 默认递归脱敏 email、手机号、IP、地址和 secret-like 字段；只有显式 `me --include-private` 才显示服务端返回的私有账号字段。个人列表与 `me search` 优先使用服务端返回的 opaque `page.nextCursor` 继续分页；兼容旧服务端时，四个独立列表仍可使用 `offset/page.nextOffset`，但 `--cursor` 与 `--offset` 不能同时使用。
 
-`me capabilities` 读取服务端 `contractVersion` 与能力矩阵，并增加 `clientCompatibility`。客户端只接受已声明的 0.8、0.7、0.6 candidate 契约窗口；格式错误、超出支持窗口或内容不完整的契约都会 fail closed。`--require-capability <ids...>` 会在任一必需能力不可用时以非零状态退出。`me notifications`、`me inbox`、`me rules` 和 `me privacy` 只转发权威只读契约；能力缺失时保留服务端的 `available: false`、`status: "UNAVAILABLE"`、`unavailableReason` 和 `requestId`，不会生成空消息、规则或政策冒充真实数据。
+`me capabilities` 读取服务端 `contractVersion` 与能力矩阵，并增加 `clientCompatibility`。客户端只接受已声明的 0.9、0.8.3、0.8、0.7、0.6 candidate 契约窗口；格式错误、超出支持窗口或内容不完整的契约都会 fail closed。`--require-capability <ids...>` 会在任一必需能力不可用时以非零状态退出。`me notifications`、`me inbox`、`me rules` 和 `me privacy` 只转发权威只读契约；能力缺失时保留服务端的 `available: false`、`status: "UNAVAILABLE"`、`unavailableReason` 和 `requestId`，不会生成空消息、规则或政策冒充真实数据。
 
 ## search
 

@@ -27,6 +27,7 @@ import { createWorkflowCommand } from "./commands/workflow.js";
 import { DEFAULT_BASE_URL, setProfile } from "./config.js";
 import { descriptorForPath } from "./core/command-registry.js";
 import { isUsableCredential } from "./core/credential-store.js";
+import { runWithCliRequestContext, setCurrentCliOperation } from "./core/request-context.js";
 import { formatCliUsageError } from "./output.js";
 import { COMMAND_MANIFEST_JSON_SCHEMA } from "./schemas/command-manifest.js";
 import { CLI_VERSION } from "./version.js";
@@ -105,6 +106,12 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   program.addCommand(createRelationCommand("subscription", commandOptions));
   program.addCommand(createAskCommand(commandOptions));
   program.addCommand(createCommandsCommand(program, io));
+  program.hook("preAction", (_hookCommand, actionCommand) => {
+    const descriptor = descriptorForPath(canonicalCommandPath(actionCommand));
+    if (descriptor) {
+      setCurrentCliOperation(descriptor.id.replace(/[^a-z0-9]+/g, "_").slice(0, 64));
+    }
+  });
   configureCommandOutput(program, io, () => activeJsonErrors);
   const parseAsync = program.parseAsync.bind(program);
   program.parseAsync = async (argv, parseOptions) => {
@@ -112,7 +119,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
     activeCliConfigPath = configPathFromArgv(argv, parseOptions);
     activeJsonErrors = jsonErrorsFromArgv(argv, parseOptions);
     try {
-      return await parseAsync(argv, parseOptions);
+      return await runWithCliRequestContext(undefined, () => parseAsync(argv, parseOptions));
     } finally {
       activeCliConfigPath = undefined;
       activeJsonErrors = false;
@@ -254,6 +261,7 @@ function commandManifest(root: Command): CommandManifest {
 const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "ask": "answer a question using APEX Chinese Community content",
   "admin list": "list public community admins",
+  "admin operations": "show administrator-only apexcn-cli operations aggregates",
   "auth audit": "audit local auth profile configuration",
   "auth list": "list configured auth profiles",
   "auth logout": "clear the active auth profile",
@@ -341,6 +349,13 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
   "admin list": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn admin list --json", mode: "read" }]
+  },
+  "admin operations": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [
+      { command: "apexcn admin operations --json", mode: "read" },
+      { command: "apexcn admin operations --from 2026-07-01 --to 2026-07-07 --user-id 42 --limit 20 --json", mode: "read" }
+    ]
   },
   "ask": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
@@ -782,6 +797,16 @@ function parseConfigPath(value: string): string {
     throw new InvalidArgumentError("Config path must not be blank");
   }
   return value;
+}
+
+function canonicalCommandPath(command: Command): string {
+  const names: string[] = [];
+  let current: Command | null = command;
+  while (current.parent) {
+    names.unshift(current.name());
+    current = current.parent;
+  }
+  return names.join(" ");
 }
 
 function configPathFromArgv(argv: readonly string[] | undefined, parseOptions: Parameters<Command["parseAsync"]>[1]): string | undefined {

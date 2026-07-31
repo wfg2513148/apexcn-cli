@@ -21,15 +21,19 @@ const qualificationContract = readJson("qualification/ga/qualification-contract-
 const frozenTasks = readJsonLines("eval/qualification/tasks.v2.jsonl");
 const frozenHarness = readJson("qualification/ga/harness-manifest-v1.json");
 const frozenTaskPlan = readJsonLines("qualification/ga/task-plan-v1.jsonl");
-const gaMilestone = roadmap.milestones.find((item) => item.id === "0.9");
+const releaseContract = readJson("qualification/releases/1.1.0/qualification-contract-v1.json");
+const releaseSurface = readJson(releaseContract.current.surfacePath);
+const releaseTasks = readJsonLines(releaseContract.current.datasetPath);
 
 const generatedSurface = await buildGaPublicSurface();
-if (gaMilestone?.status !== "timeboxed" && canonical(frozenSurface) !== canonical(generatedSurface)) {
-  problems.push("public surface drifted; regenerate only after an explicit compatibility decision");
+if (canonical(releaseSurface) !== canonical(generatedSurface)) {
+  problems.push("1.1.0 public surface drifted from its versioned release contract");
 }
 validateSurface(frozenSurface);
+validateReleaseSurface(frozenSurface, releaseSurface, releaseContract);
 validateSupportMatrix(supportMatrix);
 await validateQualification(frozenSurface, qualificationContract, frozenTasks);
+await validateReleaseQualification(releaseSurface, releaseContract, releaseTasks);
 validateHarness(frozenHarness, frozenTaskPlan);
 validateRoadmapState(roadmap, issues);
 validateMcpRemoval();
@@ -47,7 +51,7 @@ const report = {
   schemaVersion: 1,
   ok: problems.length === 0,
   auditedAt: new Date().toISOString(),
-  targetVersion: "1.0.10",
+  targetVersion: releaseContract.targetVersion,
   repository: {
     commit: git(["rev-parse", "HEAD"]),
     branch: git(["branch", "--show-current"]),
@@ -59,27 +63,31 @@ const report = {
     arch: process.arch
   },
   counts: {
-    publicCommands: frozenSurface.commandManifest.commands.length,
-    publicJsonSchemas: Object.keys(frozenSurface.jsonSchemas).length,
+    publicCommands: releaseSurface.commandManifest.commands.length,
+    publicJsonSchemas: Object.keys(releaseSurface.jsonSchemas).length,
     workflowGoals: frozenSurface.workflowGoals.length,
-    apiOperations: frozenSurface.api.supportedOperations.length,
+    apiOperations: releaseSurface.api.supportedOperations.length,
     supportedSourceVersions: supportMatrix.supportedSources.length,
     platformCells: supportMatrix.supportedSources.length * supportMatrix.platforms.length,
-    qualificationTasks: frozenTasks.length,
+    qualificationTasks: releaseTasks.length,
     harnessTasks: frozenTaskPlan.length
   },
   inputs: {
-    publicSurfaceSha256: sha256("qualification/ga/public-surface-v2.json"),
+    gaPublicSurfaceSha256: sha256("qualification/ga/public-surface-v2.json"),
     supportMatrixSha256: sha256("qualification/ga/support-matrix-v2.json"),
     qualificationContractSha256: sha256("qualification/ga/qualification-contract-v2.json"),
-    qualificationDatasetSha256: sha256("eval/qualification/tasks.v2.jsonl"),
+    gaQualificationDatasetSha256: sha256("eval/qualification/tasks.v2.jsonl"),
     harnessManifestSha256: sha256("qualification/ga/harness-manifest-v1.json"),
-    taskPlanSha256: sha256("qualification/ga/task-plan-v1.jsonl")
+    taskPlanSha256: sha256("qualification/ga/task-plan-v1.jsonl"),
+    releaseContractSha256: sha256("qualification/releases/1.1.0/qualification-contract-v1.json"),
+    releasePublicSurfaceSha256: sha256(releaseContract.current.surfacePath),
+    releaseQualificationDatasetSha256: sha256(releaseContract.current.datasetPath)
   },
   checks: {
     onlineReleaseBaseline: args.online,
     supplyChainSmoke: Boolean(args.supplyChainDir),
-    currentSurfaceComparison: gaMilestone?.status === "timeboxed" ? "not_applicable_timeboxed" : "required"
+    gaBaselinePreserved: true,
+    currentSurfaceComparison: "required"
   },
   evidence,
   problems
@@ -126,6 +134,58 @@ function validateSurface(surface) {
   evidence.push({
     id: "M090-ACT-FREEZE",
     kind: "generated-contract-comparison",
+    result: problems.length === problemCountBefore ? "pass" : "fail"
+  });
+}
+
+function validateReleaseSurface(baseline, surface, contract) {
+  const problemCountBefore = problems.length;
+  if (contract.kind !== "apexcn-release-qualification-contract"
+    || contract.contractVersion !== "M110-QUALIFICATION-1"
+    || contract.targetVersion !== "1.1.0"
+    || surface.frozenForVersion !== contract.targetVersion
+    || surface.baselineVersion !== contract.baseline.version) {
+    problems.push("1.1.0 release qualification identity is invalid");
+  }
+  const baselineCommandIds = new Set(baseline.commandManifest.commands.map((command) => command.id));
+  const releaseCommands = surface.commandManifest.commands;
+  const releaseCommandIds = new Set(releaseCommands.map((command) => command.id));
+  const additions = [...releaseCommandIds].filter((id) => !baselineCommandIds.has(id)).sort();
+  const approvedAdditions = contract.approvedAdditions.map((item) => item.commandId).sort();
+  if (canonical(additions) !== canonical(approvedAdditions)) {
+    problems.push(`1.1.0 command additions differ from the approved contract: ${additions.join(", ")}`);
+  }
+  for (const id of baselineCommandIds) {
+    if (!releaseCommandIds.has(id)) problems.push(`1.1.0 removed baseline command ${id}`);
+  }
+  if (releaseCommands.length !== contract.current.expectedCommandCount
+    || Object.keys(surface.jsonSchemas).length !== contract.current.expectedSchemaCount
+    || surface.api.supportedOperations.length !== contract.current.expectedApiOperationCount) {
+    problems.push("1.1.0 public surface denominator differs from the release contract");
+  }
+  for (const addition of contract.approvedAdditions) {
+    const command = releaseCommands.find((item) => item.id === addition.commandId);
+    const operation = surface.api.supportedOperations.find((item) => item.commandId === addition.commandId);
+    if (command?.path !== addition.path
+      || command?.jsonContract?.successSchemaId !== addition.successSchemaId
+      || operation?.method !== addition.method
+      || operation?.path !== addition.apiPath) {
+      problems.push(`approved addition ${addition.commandId} does not match its release contract`);
+    }
+  }
+  if (contract.privacy.rawApiKeysAllowed !== false
+    || contract.privacy.authorizationHeadersAllowed !== false
+    || contract.privacy.requestBodiesAllowed !== false
+    || contract.privacy.askQuestionCaptureAllowed !== false
+    || canonical(contract.privacy.keywordSources) !== canonical(["search", "me_search"])) {
+    problems.push("1.1.0 administrator operations privacy contract is unsafe");
+  }
+  evidence.push({
+    id: "M110-QUALIFICATION-SURFACE",
+    kind: "versioned-release-surface",
+    baselineCommands: baselineCommandIds.size,
+    releaseCommands: releaseCommandIds.size,
+    approvedAdditions: additions,
     result: problems.length === problemCountBefore ? "pass" : "fail"
   });
 }
@@ -183,10 +243,6 @@ async function validateQualification(surface, contract, tasks) {
   for (const command of surface.commandManifest.commands) {
     if (!coveredCommands.has(command.id)) problems.push(`qualification dataset does not cover public command ${command.id}`);
   }
-  const generatedTasks = await buildGaQualificationTasks();
-  if (canonical(generatedTasks) !== canonical(tasks)) {
-    problems.push("qualification dataset drifted from its deterministic generator");
-  }
   if (contract.isolatedWrite?.productionWriteAllowed !== false || contract.isolatedWrite?.inAppBrowserAllowed !== false) {
     problems.push("isolated write contract must forbid production writes and the in-app browser");
   }
@@ -198,6 +254,51 @@ async function validateQualification(surface, contract, tasks) {
     kind: "dataset-and-scorer-contract",
     tasks: tasks.length,
     roles: Object.fromEntries([...roleCounts.entries()].sort()),
+    result: problems.length === problemCountBefore ? "pass" : "fail"
+  });
+}
+
+async function validateReleaseQualification(surface, contract, tasks) {
+  const problemCountBefore = problems.length;
+  const current = contract.current;
+  if (tasks.length !== current.exactTaskCount) {
+    problems.push(`1.1.0 qualification dataset must contain exactly ${current.exactTaskCount} tasks`);
+  }
+  const taskIds = new Set();
+  const prompts = new Set();
+  const coveredCommands = new Set();
+  const roles = new Set();
+  for (const task of tasks) {
+    if (task.datasetVersion !== current.datasetVersion) problems.push(`1.1.0 dataset version mismatch in ${task.taskId}`);
+    if (taskIds.has(task.taskId)) problems.push(`duplicate 1.1.0 qualification task ${task.taskId}`);
+    if (prompts.has(task.prompt)) problems.push(`duplicate 1.1.0 qualification prompt ${task.taskId}`);
+    taskIds.add(task.taskId);
+    prompts.add(task.prompt);
+    roles.add(task.role);
+    for (const commandId of task.expectedPublicCommandIds ?? []) coveredCommands.add(commandId);
+  }
+  for (const command of surface.commandManifest.commands) {
+    if (!coveredCommands.has(command.id)) problems.push(`1.1.0 qualification dataset does not cover ${command.id}`);
+  }
+  for (const role of contract.requiredRoles) {
+    if (!roles.has(role)) problems.push(`1.1.0 qualification role is missing: ${role}`);
+  }
+  const generatedTasks = await buildGaQualificationTasks();
+  if (canonical(generatedTasks) !== canonical(tasks)) {
+    problems.push("1.1.0 qualification dataset drifted from its deterministic generator");
+  }
+  if (contract.independentValidation.freshUserVisibleTaskRequired !== true
+    || contract.independentValidation.candidateChecksumRequired !== true
+    || contract.independentValidation.productionWritesAllowed !== false
+    || contract.independentValidation.candidateRepairAllowed !== false) {
+    problems.push("1.1.0 independent validation contract is incomplete or unsafe");
+  }
+  evidence.push({
+    id: "M110-QUALIFICATION-DATASET",
+    kind: "versioned-release-qualification-dataset",
+    tasks: tasks.length,
+    coveredCommands: coveredCommands.size,
+    roles: [...roles].sort(),
     result: problems.length === problemCountBefore ? "pass" : "fail"
   });
 }
@@ -255,8 +356,40 @@ function validateRoadmapState(currentRoadmap, currentIssues) {
   } else {
     problems.push(`unexpected 0.9 status ${String(milestone?.status)}`);
   }
-  if ((currentIssues.issues ?? []).length !== 0 || (currentIssues.enhancementRequests ?? []).length !== 0) {
-    problems.push("readiness baseline expected empty issues and enhancement requests");
+
+  const releaseMilestone = currentRoadmap.milestones.find((item) => item.id === "1.1");
+  const releaseRisk = currentRoadmap.readinessRisks.find((risk) => risk.id === "RISK-110-SERVER-TELEMETRY");
+  const releaseDependency = currentRoadmap.dependencyRegistry.find((item) => item.id === "server:admin-cli-operations");
+  const releaseEnhancements = currentIssues.enhancementRequests ?? [];
+  const matchingEnhancement = releaseEnhancements.find((item) => item.id === "ENH-20260731-ADMIN-OPERATIONS");
+  if (releaseMilestone?.activationGate?.status !== "approved"
+    || releaseRisk?.status !== "mitigated"
+    || releaseDependency?.status !== "ready") {
+    problems.push("1.1 administrator operations activation dependencies are not ready");
+  }
+  if (releaseMilestone?.status === "in_progress") {
+    if (releaseMilestone.completionReview?.status !== "pending"
+      || matchingEnhancement?.status !== "in_progress") {
+      problems.push("in-progress 1.1 must retain its pending review and matching enhancement request");
+    }
+    if (releaseMilestone.acceptanceCriteria?.some((criterion) => criterion.status === "fail")) {
+      problems.push("in-progress 1.1 contains a failed acceptance criterion");
+    }
+  } else if (releaseMilestone?.status === "completed") {
+    if (releaseMilestone.completionReview?.status !== "approved"
+      || releaseMilestone.capabilities?.some((capability) => capability.status !== "validated")
+      || releaseMilestone.acceptanceCriteria?.some((criterion) => criterion.status !== "pass" || criterion.evidenceIds?.length === 0)) {
+      problems.push("completed 1.1 lacks approved review, validated capabilities, or acceptance evidence");
+    }
+    if (matchingEnhancement) problems.push("completed 1.1 must close its enhancement request");
+  } else {
+    problems.push(`unexpected 1.1 status ${String(releaseMilestone?.status)}`);
+  }
+  if (releaseEnhancements.some((item) => item.id !== "ENH-20260731-ADMIN-OPERATIONS")) {
+    problems.push("1.1 readiness contains an unrelated enhancement request");
+  }
+  if ((currentIssues.issues ?? []).length !== 0) {
+    problems.push("1.1 readiness contains active validator findings");
   }
 }
 

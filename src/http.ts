@@ -1,3 +1,6 @@
+import { currentCliOperation } from "./core/request-context.js";
+import { DEFAULT_USER_AGENT } from "./version.js";
+
 export type RequestJsonOptions = {
   token: string;
   method?: string;
@@ -52,8 +55,6 @@ export class TimeoutError extends Error {
   }
 }
 
-import { DEFAULT_USER_AGENT } from "./version.js";
-
 export { DEFAULT_USER_AGENT };
 
 export function joinUrl(baseUrl: string, path: string): string {
@@ -85,8 +86,13 @@ export async function requestJson<T = unknown>(
   const headers: Record<string, string> = {
     Authorization: `Bearer ${options.token}`,
     "X-APEXCN-API-Key": options.token,
+    "X-APEXCN-Client": DEFAULT_USER_AGENT,
     "User-Agent": options.userAgent ?? DEFAULT_USER_AGENT
   };
+  const operation = currentCliOperation();
+  if (operation !== undefined) {
+    headers["X-APEXCN-CLI-Operation"] = operation;
+  }
   const init: RequestInit = { headers };
   if (timeoutMs !== undefined) {
     init.signal = AbortSignal.timeout(timeoutMs);

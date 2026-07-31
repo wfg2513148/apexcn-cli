@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const defaultOutput = join(repoRoot, "qualification/ga/public-surface-v2.json");
+const defaultOutput = join(repoRoot, "qualification/releases/1.1.0/public-surface-v1.json");
 
 export async function buildGaPublicSurface() {
   const manifest = JSON.parse(execFileSync(process.execPath, [join(repoRoot, "dist/index.js"), "commands", "--json"], {
@@ -19,12 +19,13 @@ export async function buildGaPublicSurface() {
   return {
     kind: "apexcn-ga-public-surface",
     schemaVersion: 1,
-    frozenForVersion: "1.0.10",
-    baselineVersion: "1.0.9",
+    frozenForVersion: "1.1.0",
+    baselineVersion: "1.0.14",
     compatibilityPolicy: {
       releaseLine: "1.x",
       backwardCompatibleChanges: [
         "add optional JSON properties",
+        "add documented public commands in a minor release",
         "add documentation",
         "fix behavior without changing documented inputs or outputs"
       ],
@@ -36,7 +37,6 @@ export async function buildGaPublicSurface() {
         "change an existing API path, HTTP method, or identity meaning"
       ],
       milestoneNonGoals: [
-        "new public command families",
         "unqualified storage or transport layers",
         "MCP",
         "changes to App 100 page 100 or its existing RAG implementation"
@@ -60,6 +60,7 @@ export async function buildGaPublicSurface() {
 
 export const SUPPORTED_API_OPERATIONS = [
   operation("GET", "/api/v1/admin-list", "admin.list"),
+  operation("GET", "/api/v1/admin/operations", "admin.operations"),
   operation("POST", "/api/v1/ask", "ask"),
   operation("GET", "/api/v1/capabilities", "me.capabilities"),
   operation("GET", "/api/v1/categories", "category.list"),
@@ -145,6 +146,7 @@ async function main() {
     throw new Error("Usage: node scripts/generate-ga-public-surface.mjs [--output <path>]");
   }
   const surface = await buildGaPublicSurface();
+  mkdirSync(dirname(output), { recursive: true });
   writeFileSync(output, `${JSON.stringify(surface, null, 2)}\n`, { encoding: "utf8", mode: 0o644 });
   process.stdout.write(`${JSON.stringify({
     kind: surface.kind,

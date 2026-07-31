@@ -8,6 +8,7 @@ import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError,
 import { loadRuntimeSession } from "../core/runtime-session.js";
 import { confirmWriteOperation, createWriteOperation, type WriteOperationRequest, type WriteOperationSession } from "../core/write-operation.js";
 import {
+  adminOperations,
   askCommunity,
   listAdmins,
   listCategories,
@@ -18,7 +19,7 @@ import {
   viewTopic
 } from "../core/services.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
-import { blockText, fieldText, isRecord, itemsFromData, outputFormat, parseOutputFormat, printData, printError, validateFormatOptions, type FormatOption, type JsonOption } from "../output.js";
+import { blockText, fieldText, isRecord, itemsFromData, outputFormat, parseOutputFormat, printData, printError, usesJsonOutput, validateFormatOptions, type FormatOption, type JsonOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
 
 type ApiCommandOptions = CommandIo & {
@@ -38,9 +39,7 @@ type DryRunOption = {
   preview?: boolean;
 };
 
-type ErrorFormatOption = {
-  json?: boolean;
-};
+type ErrorFormatOption = FormatOption;
 
 type ApiRequestPlan = {
   method: string;
@@ -84,6 +83,13 @@ type StatsFilterOptions = {
   top?: number;
   limit?: number;
   pageSize?: number;
+};
+
+type AdminOperationsOptions = FormatOption & {
+  from?: string;
+  to?: string;
+  userId?: number;
+  limit?: number;
 };
 
 type AskFilterOptions = {
@@ -263,6 +269,33 @@ export function createAdminCommand(options: ApiCommandOptions): Command {
       await runApi(options, commandOptions, async (session) => {
         const data = await listAdmins(createApiClient(session));
         printData(options, data, outputFormat(commandOptions), formatAdminListText);
+      });
+    });
+
+  admin
+    .command("operations")
+    .description("show administrator-only apexcn-cli operations aggregates")
+    .option("--from <date>", "inclusive start date, YYYY-MM-DD", parseSearchDate)
+    .option("--to <date>", "inclusive end date, YYYY-MM-DD", parseSearchDate)
+    .option("--user-id <id>", "exact community user id", parsePositiveInteger)
+    .option("--limit <n>", "maximum operation, error, and keyword rows, 1-100", parseAdminOperationsLimit)
+    .option("--json", "pretty-print JSON")
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async (commandOptions: AdminOperationsOptions) => {
+      if (!validateFormatOptions(options, commandOptions)) {
+        return;
+      }
+      if (!validateAdminOperationsDateRange(options, commandOptions)) {
+        return;
+      }
+      await runApi(options, commandOptions, async (session) => {
+        const data = await adminOperations(createApiClient(session), {
+          from: commandOptions.from,
+          to: commandOptions.to,
+          userId: commandOptions.userId,
+          limit: commandOptions.limit
+        });
+        printData(options, data, outputFormat(commandOptions), formatAdminOperationsText);
       });
     });
   return admin;
@@ -902,6 +935,7 @@ class CliSafetyError extends Error {
 
 async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOption, callback: (session: Session) => Promise<void>): Promise<void> {
   let session: Session | undefined;
+  const jsonErrors = usesJsonOutput(commandOptions);
   try {
     session = await loadSession(options, commandOptions);
     if (!session) {
@@ -920,22 +954,22 @@ async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOpt
         windowSeconds: error.windowSeconds,
         remediation: remediationForHttpError(error, session?.token),
         exitCode: 1
-      }, formatHttpErrorText(error, session?.token), commandOptions.json);
+      }, formatHttpErrorText(error, session?.token), jsonErrors);
       process.exitCode = 1;
       return;
     }
     if (error instanceof CliValidationError) {
-      printError(options, { type: "validation", message: error.message, exitCode: 1 }, undefined, commandOptions.json);
+      printError(options, { type: "validation", message: error.message, exitCode: 1 }, undefined, jsonErrors);
       process.exitCode = 1;
       return;
     }
     if (error instanceof CliSafetyError) {
-      printError(options, { type: "safety", message: error.message, exitCode: 1 }, undefined, commandOptions.json);
+      printError(options, { type: "safety", message: error.message, exitCode: 1 }, undefined, jsonErrors);
       process.exitCode = 1;
       return;
     }
     if (error instanceof ConfigFileError) {
-      printError(options, { type: "config", message: error.message, exitCode: 1 }, undefined, commandOptions.json);
+      printError(options, { type: "config", message: error.message, exitCode: 1 }, undefined, jsonErrors);
       process.exitCode = 1;
       return;
     }
@@ -946,7 +980,7 @@ async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOpt
         message: error.message,
         remediation: remediationForTransportError(error),
         exitCode: 1
-      }, formatTransportErrorText(error), commandOptions.json);
+      }, formatTransportErrorText(error), jsonErrors);
       process.exitCode = 1;
       return;
     }
@@ -957,7 +991,7 @@ async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOpt
         message: error.message,
         remediation: remediationForTransportError(error),
         exitCode: 1
-      }, formatTransportErrorText(error), commandOptions.json);
+      }, formatTransportErrorText(error), jsonErrors);
       process.exitCode = 1;
       return;
     }
@@ -972,7 +1006,7 @@ async function loadSession(options: ApiCommandOptions, commandOptions: ErrorForm
       type: "no-profile",
       message: runtime.reason === "no-profile" ? "No active profile" : `No credential is available for profile ${runtime.profile}`,
       exitCode: 1
-    }, undefined, commandOptions.json);
+    }, undefined, usesJsonOutput(commandOptions));
     process.exitCode = 1;
     return undefined;
   }
@@ -1202,6 +1236,31 @@ function validateDateOptions(
   return validateSearchDateRange(options, query.fromDate, query.toDate, commandOptions);
 }
 
+function validateAdminOperationsDateRange(options: CommandIo, dates: Pick<AdminOperationsOptions, "from" | "to" | "json" | "format">): boolean {
+  if (Boolean(dates.from) !== Boolean(dates.to)) {
+    printError(options, { type: "validation", message: "--from and --to must be provided together", exitCode: 1 }, undefined, usesJsonOutput(dates));
+    process.exitCode = 1;
+    return false;
+  }
+  if (!dates.from || !dates.to) {
+    return true;
+  }
+  if (dates.from > dates.to) {
+    printError(options, { type: "validation", message: "--from must be earlier than or equal to --to", exitCode: 1 }, undefined, usesJsonOutput(dates));
+    process.exitCode = 1;
+    return false;
+  }
+  const from = Date.parse(`${dates.from}T00:00:00Z`);
+  const to = Date.parse(`${dates.to}T00:00:00Z`);
+  const days = Math.floor((to - from) / 86_400_000) + 1;
+  if (days > 90) {
+    printError(options, { type: "validation", message: "Admin operations date range must not exceed 90 days", exitCode: 1 }, undefined, usesJsonOutput(dates));
+    process.exitCode = 1;
+    return false;
+  }
+  return true;
+}
+
 function formatCategoryListText(data: unknown): string {
   const items = itemsFromData(data);
   return items.map((item) => `${fieldText(item.id)}\t${fieldText(item.name)}`).join("\n");
@@ -1253,6 +1312,45 @@ function formatAdminListText(data: unknown): string {
     fieldText(item.roleLevel),
     publicContactsText(item.publicContacts)
   ].join("\t")).join("\n");
+}
+
+function formatAdminOperationsText(data: unknown): string {
+  if (!isRecord(data)) {
+    return "";
+  }
+  const window = isRecord(data.window) ? data.window : {};
+  const filter = isRecord(data.filter) ? data.filter : {};
+  const user = isRecord(filter.user) ? filter.user : undefined;
+  const totals = isRecord(data.totals) ? data.totals : {};
+  const windowText = [fieldText(window.from), fieldText(window.to), fieldText(window.days)];
+  const summary = lines([
+    windowText.every(Boolean) ? `window: ${windowText[0]} to ${windowText[1]} (${windowText[2]} days)` : undefined,
+    line("client", filter.client),
+    user ? `user: ${fieldText(user.id)} ${fieldText(user.nickname)}`.trimEnd() : "user: all",
+    line("calls", totals.calls),
+    line("success", totals.successCount),
+    line("failures", totals.failureCount)
+  ]);
+  const daily = adminOperationsRows(data.daily, (item) => [item.date, item.calls, item.successCount, item.failureCount]);
+  const operations = adminOperationsRows(data.operations, (item) => [item.operation, item.route, item.calls, item.successCount, item.failureCount]);
+  const errors = adminOperationsRows(data.errors, (item) => [item.httpStatus, item.errorCode, item.operation, item.route, item.calls]);
+  const keywords = adminOperationsRows(data.keywords, (item) => [item.date, item.keyword, item.operation, item.route, item.calls]);
+  return [
+    `Summary:\n${summary || "(none)"}`,
+    `Daily:\n${daily}`,
+    `Operations:\n${operations}`,
+    `Errors:\n${errors}`,
+    `Keywords:\n${keywords}`,
+    line("requestId", data.requestId)
+  ].filter(Boolean).join("\n");
+}
+
+function adminOperationsRows(value: unknown, fields: (item: Record<string, unknown>) => unknown[]): string {
+  if (!Array.isArray(value)) {
+    return "(none)";
+  }
+  const rows = value.filter(isRecord).map((item) => fields(item).map(fieldText).join("\t"));
+  return rows.length > 0 ? rows.join("\n") : "(none)";
 }
 
 function formatSearchText(data: unknown): string {
@@ -2387,6 +2485,14 @@ function parseResearchLimit(value: string): number {
   const parsed = parsePositiveInteger(value);
   if (parsed > 10) {
     throw new InvalidArgumentError("Expected --limit to be between 1 and 10");
+  }
+  return parsed;
+}
+
+function parseAdminOperationsLimit(value: string): number {
+  const parsed = parseNumber(value);
+  if (parsed < 1 || parsed > 100) {
+    throw new InvalidArgumentError("Expected --limit to be between 1 and 100");
   }
   return parsed;
 }

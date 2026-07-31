@@ -32,6 +32,7 @@ export type CommandDescriptor = {
 
 export const COMMAND_DESCRIPTORS: CommandDescriptor[] = [
   descriptor("admin.list", ["admin", "list"], "List public community admins", "read", "api-read", "low", true, "apexcn admin list --json"),
+  descriptor("admin.operations", ["admin", "operations"], "Show administrator-only apexcn-cli operations aggregates", "read", "api-read", "medium", true, "apexcn admin operations --json"),
   descriptor("ask", ["ask"], "Ask community RAG or scoped references", "read", "api-read", "medium", true, 'apexcn ask "问题" --top-k 3 --json'),
   descriptor("auth.audit", ["auth", "audit"], "Audit local auth profile configuration", "auth", "no-network", "medium", false, "apexcn auth audit --json"),
   descriptor("auth.list", ["auth", "list"], "List local auth profiles", "auth", "no-network", "medium", false, "apexcn auth list --json"),

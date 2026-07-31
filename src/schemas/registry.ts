@@ -44,6 +44,9 @@ const schemaEntries = COMMAND_DESCRIPTORS
   .filter((command) => command.supportsJson)
   .map((command) => {
     const id = schemaIdForCommand(command.id);
+    if (command.id === "admin.operations") {
+      return [id, adminOperationsSchema(id, command.path.join(" "))] as const;
+    }
     const baseSchema = legacySchema(id);
     const schema: PublicJsonSchema = {
       ...baseSchema,
@@ -62,6 +65,84 @@ const schemaEntries = COMMAND_DESCRIPTORS
     };
     return [id, schema] as const;
   });
+
+function adminOperationsSchema(id: string, commandPath: string): PublicJsonSchema {
+  const countProperties = {
+    calls: { type: "integer", minimum: 0 },
+    successCount: { type: "integer", minimum: 0 },
+    failureCount: { type: "integer", minimum: 0 }
+  };
+  const aggregateItem = (properties: Record<string, unknown>, required: string[]) => ({
+    type: "object",
+    required,
+    properties,
+    additionalProperties: false
+  });
+  return {
+    $schema: "http://json-schema.org/draft-07/schema#",
+    $id: `${SCHEMA_BASE_URL}/${id}.schema.json`,
+    title: `apexcn-cli ${commandPath} response`,
+    type: "object",
+    required: ["kind", "schemaVersion", "requestId", "window", "filter", "totals", "daily", "operations", "errors", "keywords"],
+    properties: {
+      kind: { const: "admin-operations" },
+      schemaVersion: { const: 1 },
+      requestId: { type: "string", pattern: "^req_" },
+      window: aggregateItem({
+        from: { type: "string", format: "date" },
+        to: { type: "string", format: "date" },
+        days: { type: "integer", minimum: 1, maximum: 90 }
+      }, ["from", "to", "days"]),
+      filter: aggregateItem({
+        client: { const: "apexcn-cli" },
+        limit: { type: "integer", minimum: 1, maximum: 100 },
+        user: aggregateItem({
+          id: { type: "integer", minimum: 1 },
+          nickname: { type: ["string", "null"] }
+        }, ["id", "nickname"])
+      }, ["client", "limit"]),
+      totals: aggregateItem(countProperties, ["calls", "successCount", "failureCount"]),
+      daily: {
+        type: "array",
+        items: aggregateItem({
+          date: { type: "string", format: "date" },
+          ...countProperties
+        }, ["date", "calls", "successCount", "failureCount"])
+      },
+      operations: {
+        type: "array",
+        items: aggregateItem({
+          route: { type: "string" },
+          operation: { type: "string" },
+          ...countProperties
+        }, ["route", "operation", "calls", "successCount", "failureCount"])
+      },
+      errors: {
+        type: "array",
+        items: aggregateItem({
+          httpStatus: { type: "integer", minimum: 100, maximum: 599 },
+          errorCode: { type: "string" },
+          route: { type: "string" },
+          operation: { type: "string" },
+          calls: { type: "integer", minimum: 0 }
+        }, ["httpStatus", "errorCode", "route", "operation", "calls"])
+      },
+      keywords: {
+        type: "array",
+        items: aggregateItem({
+          date: { type: "string", format: "date" },
+          route: { type: "string" },
+          operation: { type: "string" },
+          keyword: { type: "string", minLength: 1, maxLength: 200 },
+          calls: { type: "integer", minimum: 0 }
+        }, ["date", "route", "operation", "keyword", "calls"])
+      }
+    },
+    additionalProperties: false,
+    "x-apexcn-schema-version": 1,
+    "x-apexcn-command-ids": ["admin.operations"]
+  };
+}
 
 const schemas = new Map<string, PublicJsonSchema>([
   ...schemaEntries,

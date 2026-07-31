@@ -1,6 +1,7 @@
 import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import Ajv from "ajv";
 import { afterEach, describe, expect, test } from "vitest";
 import { createProgram } from "../src/index.js";
 import { COMMAND_DESCRIPTORS } from "../src/core/command-registry.js";
@@ -76,6 +77,68 @@ describe("public JSON Schema registry", () => {
         synthesisPolicy: expect.objectContaining({ type: "object" })
       })
     }));
+  });
+
+  test("publishes a strict administrator operations aggregate contract", () => {
+    const schema = publicSchemaForId("admin-operations-response-v1");
+
+    expect(schema).toEqual(expect.objectContaining({
+      required: ["kind", "schemaVersion", "requestId", "window", "filter", "totals", "daily", "operations", "errors", "keywords"],
+      additionalProperties: false,
+      properties: expect.objectContaining({
+        kind: { const: "admin-operations" },
+        schemaVersion: { const: 1 },
+        requestId: { type: "string", pattern: "^req_" },
+        window: expect.objectContaining({
+          type: "object",
+          required: ["from", "to", "days"],
+          additionalProperties: false
+        }),
+        filter: expect.objectContaining({
+          type: "object",
+          required: ["client", "limit"],
+          additionalProperties: false
+        }),
+        totals: expect.objectContaining({
+          type: "object",
+          required: ["calls", "successCount", "failureCount"],
+          additionalProperties: false
+        }),
+        daily: expect.objectContaining({ type: "array" }),
+        operations: expect.objectContaining({ type: "array" }),
+        errors: expect.objectContaining({ type: "array" }),
+        keywords: expect.objectContaining({ type: "array" })
+      })
+    }));
+    expect(JSON.stringify(schema)).not.toMatch(/authorization|api.?key|requestBody|question/i);
+  });
+
+  test("validates administrator operations fixtures and rejects sensitive or unknown fields", () => {
+    const schema = publicSchemaForId("admin-operations-response-v1");
+    const validate = new Ajv({ allErrors: true, strict: false, formats: { date: /^\d{4}-\d{2}-\d{2}$/ } }).compile(schema);
+    const fixture = {
+      kind: "admin-operations",
+      schemaVersion: 1,
+      requestId: "req_admin_operations",
+      window: { from: "2026-07-01", to: "2026-07-07", days: 7 },
+      filter: { client: "apexcn-cli", limit: 20, user: { id: 42, nickname: "Alice" } },
+      totals: { calls: 4, successCount: 3, failureCount: 1 },
+      daily: [{ date: "2026-07-01", calls: 4, successCount: 3, failureCount: 1 }],
+      operations: [{ route: "/api/v1/search", operation: "search", calls: 4, successCount: 3, failureCount: 1 }],
+      errors: [{ httpStatus: 400, errorCode: "VALIDATION_ERROR", route: "/api/v1/search", operation: "search", calls: 1 }],
+      keywords: [{ date: "2026-07-01", route: "/api/v1/search", operation: "search", keyword: "apex", calls: 2 }]
+    };
+
+    expect(validate(fixture), JSON.stringify(validate.errors)).toBe(true);
+    for (const invalid of [
+      { ...fixture, requestId: "req-admin-operations" },
+      { ...fixture, authorization: "Bearer secret" },
+      { ...fixture, filter: { ...fixture.filter, apiKey: "secret" } },
+      { ...fixture, operations: [{ ...fixture.operations[0], requestBody: { keyword: "apex" } }] },
+      { ...fixture, keywords: [{ ...fixture.keywords[0], question: "private ask body" }] }
+    ]) {
+      expect(validate(invalid), JSON.stringify(invalid)).toBe(false);
+    }
   });
 
   test("lists, shows, and bundles schemas through the public CLI", async () => {

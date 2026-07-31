@@ -18,6 +18,13 @@ function readTasks() {
     .map((line) => JSON.parse(line));
 }
 
+function readReleaseTasks() {
+  return readFileSync(join(repoRoot, "qualification/releases/1.1.0/tasks-v1.jsonl"), "utf8")
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+}
+
 function resultFor(task: ReturnType<typeof readTasks>[number], passed = true) {
   return {
     taskId: task.taskId,
@@ -39,15 +46,41 @@ function resultFor(task: ReturnType<typeof readTasks>[number], passed = true) {
 }
 
 describe("GA readiness contracts", () => {
-  test("freezes every public command with schemas, workflows, and API operations", () => {
+  test("accepts the current legal 1.1 milestone lifecycle state", () => {
+    const result = spawnSync("node", ["scripts/check-ga-readiness.mjs"], {
+      cwd: repoRoot,
+      encoding: "utf8"
+    });
+    const report = JSON.parse(result.stdout);
+
+    expect(result.status, JSON.stringify(report.problems)).toBe(0);
+    expect(report.targetVersion).toBe("1.1.0");
+    expect(report.problems).toEqual([]);
+  });
+
+  test("preserves the immutable 1.0.10 GA public surface", () => {
     const surface = readJson("qualification/ga/public-surface-v2.json");
-    const commandIds = new Set(surface.commandManifest.commands.map((command: { id: string }) => command.id));
 
     expect(surface.frozenForVersion).toBe("1.0.10");
-    expect(surface.commandManifest.commands).toHaveLength(COMMAND_DESCRIPTORS.length);
+    expect(surface.commandManifest.commands).toHaveLength(83);
     expect(Object.keys(surface.jsonSchemas)).toHaveLength(80);
     expect(surface.workflowGoals).toHaveLength(10);
     expect(surface.api.supportedOperations).toHaveLength(36);
+    expect(surface.commandManifest.commands).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "admin.operations" })
+    ]));
+  });
+
+  test("freezes every 1.1.0 public command with schemas and API operations", () => {
+    const surface = readJson("qualification/releases/1.1.0/public-surface-v1.json");
+    const commandIds = new Set(surface.commandManifest.commands.map((command: { id: string }) => command.id));
+
+    expect(surface.frozenForVersion).toBe("1.1.0");
+    expect(surface.baselineVersion).toBe("1.0.14");
+    expect(surface.commandManifest.commands).toHaveLength(COMMAND_DESCRIPTORS.length);
+    expect(Object.keys(surface.jsonSchemas)).toHaveLength(81);
+    expect(surface.workflowGoals).toHaveLength(10);
+    expect(surface.api.supportedOperations).toHaveLength(37);
     for (const descriptor of COMMAND_DESCRIPTORS) {
       expect(commandIds.has(descriptor.id)).toBe(true);
     }
@@ -74,7 +107,7 @@ describe("GA readiness contracts", () => {
   });
 
   test("freezes exactly 200 unique cross-role tasks with 100 percent command coverage", () => {
-    const tasks = readTasks();
+    const tasks = readReleaseTasks();
     const commandCoverage = new Set(tasks.flatMap((task) => task.expectedPublicCommandIds));
 
     expect(tasks).toHaveLength(200);

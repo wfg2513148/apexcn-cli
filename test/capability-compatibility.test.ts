@@ -18,21 +18,21 @@ function inventory(contractVersion: string, current = false) {
 }
 
 describe("API capability compatibility window", () => {
-  test("accepts current and three previous contracts", () => {
+  test("accepts current and four previous contracts", () => {
     const results = SUPPORTED_API_CONTRACT_VERSIONS.map((version, index) =>
       assessCapabilityCompatibility(inventory(version, index === 0))
     );
 
-    expect(results).toHaveLength(4);
+    expect(results).toHaveLength(5);
     expect(results.every((result) => result.ok && result.status === "compatible")).toBe(true);
-    expect(results.map((result) => result.negotiationMode)).toEqual(["versioned", "legacy", "legacy", "legacy"]);
+    expect(results.map((result) => result.negotiationMode)).toEqual(["versioned", "legacy", "legacy", "legacy", "legacy"]);
   });
 
   test("rejects future, too-old, malformed, and missing required capabilities", () => {
-    expect(assessCapabilityCompatibility(inventory("0.9.0-candidate")).status).toBe("unsupported");
+    expect(assessCapabilityCompatibility(inventory("1.0.0-candidate")).status).toBe("unsupported");
     expect(assessCapabilityCompatibility(inventory("0.4.3-candidate")).status).toBe("unsupported");
-    expect(assessCapabilityCompatibility({ kind: "capabilities", contractVersion: "0.8.0-candidate" }).status).toBe("malformed");
-    expect(assessCapabilityCompatibility(inventory("0.8.0-candidate", true), ["notifications"])).toEqual(expect.objectContaining({
+    expect(assessCapabilityCompatibility({ kind: "capabilities", contractVersion: "0.9.0-candidate" }).status).toBe("malformed");
+    expect(assessCapabilityCompatibility(inventory("0.9.0-candidate", true), ["notifications"])).toEqual(expect.objectContaining({
       ok: false,
       status: "missing-capability",
       missingCapabilities: ["notifications"]

@@ -1,8 +1,10 @@
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import Ajv from "ajv";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createProgram } from "../src/index.js";
+import { publicSchemaForId } from "../src/schemas/registry.js";
 
 type ManifestCommand = {
   path: string;
@@ -108,6 +110,8 @@ const commonReadScenarios: Scenario[] = [
   scenario("topic stats by tag", "统计 ORDS 这个标签下有多少话题", "stats topic", "read", ["read"], "none", ["--tag <tag>", "--json"]),
   scenario("tag stats", "列出社区标签使用次数", "stats tag", "read", ["read"], "none", ["--json"]),
   scenario("admin list", "查看 APEX 中文社区管理员公开列表", "admin list", "read", ["read"], "none", ["--json"]),
+  scenario("admin operations summary", "查看最近七天 apexcn-cli 的调用量、成功和失败情况", "admin operations", "read", ["read"], "none", ["--json"]),
+  scenario("admin operations by user", "按用户 42 查看本月 CLI 调用异常和搜索关键词", "admin operations", "read", ["read"], "none", ["--from <date>", "--to <date>", "--user-id <id>", "--json"]),
   scenario("my stats", "统计我在社区发了多少帖子、回复、收藏和订阅", "me stats", "read", ["read"], "none", ["--json"]),
   scenario("personal capabilities", "检查个人工作台哪些服务端能力真实可用", "me capabilities", "read", ["read"], "none", ["--json"]),
   scenario("personal dashboard", "打开我的个人看板，显示我创建的、回复的、收藏的和订阅的内容", "me dashboard", "read", ["read"], "none", ["--page-size <n>", "--json"]),
@@ -774,6 +778,42 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
         expect(fetch).toHaveBeenCalledOnce();
         expect(stderr).toBe("");
         expect(JSON.parse(stdout).items[0]).toEqual(expect.objectContaining({ nickname: "Admin", roleName: "管理员" }));
+      }
+    },
+    {
+      name: "admin operations reads scoped CLI aggregates",
+      userSays: "按用户 42 查看 7 月第一周 apexcn-cli 调用异常和搜索关键词。",
+      commandPath: "admin operations",
+      argv: ["node", "apexcn", "admin", "operations", "--from", "2026-07-01", "--to", "2026-07-07", "--user-id", "42", "--limit", "10", "--json"],
+      responseForUrl: (url, init) => {
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/admin/operations?from=2026-07-01&to=2026-07-07&userId=42&limit=10");
+        expect(new Headers(init?.headers).get("X-APEXCN-CLI-Operation")).toBe("admin_operations");
+        return Response.json({
+          kind: "admin-operations",
+          schemaVersion: 1,
+          requestId: "req_admin_operations",
+          window: { from: "2026-07-01", to: "2026-07-07", days: 7 },
+          filter: { client: "apexcn-cli", limit: 10, user: { id: 42, nickname: "Alice" } },
+          totals: { calls: 4, successCount: 3, failureCount: 1 },
+          daily: [],
+          operations: [],
+          errors: [{ httpStatus: 400, errorCode: "VALIDATION_ERROR", route: "/api/v1/search", operation: "search", calls: 1 }],
+          keywords: [{ date: "2026-07-01", route: "/api/v1/search", operation: "search", keyword: "apex", calls: 2 }]
+        });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(stderr).toBe("");
+        const payload = JSON.parse(stdout);
+        const validate = new Ajv({ allErrors: true, strict: false, formats: { date: /^\d{4}-\d{2}-\d{2}$/ } }).compile(publicSchemaForId("admin-operations-response-v1"));
+        expect(validate(payload), JSON.stringify(validate.errors)).toBe(true);
+        expect(payload).toEqual(expect.objectContaining({
+          kind: "admin-operations",
+          schemaVersion: 1,
+          totals: { calls: 4, successCount: 3, failureCount: 1 },
+          errors: [expect.objectContaining({ errorCode: "VALIDATION_ERROR" })],
+          keywords: [expect.objectContaining({ keyword: "apex" })]
+        }));
       }
     },
     {

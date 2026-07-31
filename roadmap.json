@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "product": "apexcn-cli",
   "baselineRelease": "1.0.0",
-  "updatedAt": "2026-07-27",
+  "updatedAt": "2026-07-31",
   "versionPolicy": {
     "productStageToReleaseLine": {
       "0.2": "0.20.x",
@@ -12,7 +12,8 @@
       "0.7": "0.70.x",
       "0.8": "0.80.x",
       "0.9": "0.90.x",
-      "1.0.11": "1.0.11"
+      "1.0.11": "1.0.11",
+      "1.1": "1.1.x"
     },
     "routineIteration": "1.x",
     "allowVersion1": true,
@@ -212,8 +213,8 @@
       "threadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
       "replacementThreadId": "019f7d08-d733-74a2-9178-3a87d60b22be",
       "replacementReason": "The original fixed task is absent from the local session store; the replacement task was externally verified for cwd, model, and reasoning effort before use.",
-      "activeTaskThreadId": "019fa1a8-e4d5-7053-a56f-6132815d7ec4",
-      "activeTaskReason": "This fresh user-visible v1.0.13 follow-up task owns the server-side normalization of ask references to absolute checksummed App 100 page URLs after the independent R3 validator found relative f?p values; absolute checksummed f?p URLs remain valid existing App pages.",
+      "activeTaskThreadId": "019fb8a0-12dd-77f0-affd-cc31453f934a",
+      "activeTaskReason": "This fresh user-visible 1.1 server task audits and implements privacy-preserving administrator operations analytics for apexcn-cli calls in dev@oci.",
       "model": "gpt-5.6-terra",
       "reasoningEffort": "high",
       "apiKeyEnvironment": "dev@oci",
@@ -3164,6 +3165,261 @@
         "M1011-AC-004",
         "M1011-AC-005"
       ]
+    },
+    {
+      "id": "1.1",
+      "releaseLine": "1.1.x",
+      "title": "管理员运营观测",
+      "objective": "让社区管理员通过 apexcn-cli 安全查看 CLI 调用量、异常分布和查询关键词趋势，并能按时间与用户定位运营问题。",
+      "status": "in_progress",
+      "activationGate": {
+        "status": "approved",
+        "previousMilestoneId": "1.0.11",
+        "confirmationRef": "user-confirmed-admin-operations-20260731"
+      },
+      "completionReview": {
+        "status": "pending",
+        "summaryEvidenceId": null,
+        "confirmationRef": null
+      },
+      "capabilities": [
+        {
+          "id": "M110-CAP-ATTRIBUTION",
+          "title": "服务端 CLI 调用归因",
+          "userValue": "管理员看到的指标只统计可证明来自 apexcn-cli 的请求，并能关联用户、命令、结果和 requestId。",
+          "scope": [
+            "版本化 CLI 客户端标识",
+            "受限命令标识",
+            "用户、路由、HTTP 状态、稳定错误码和 requestId 审计",
+            "规范化查询关键词"
+          ],
+          "nonGoals": [
+            "将全部 ORDS 流量推断为 CLI 调用",
+            "记录 API key、Authorization 或原始请求正文"
+          ],
+          "dependencies": [
+            "server:admin-cli-operations"
+          ],
+          "status": "not_started",
+          "acceptanceCriterionIds": [
+            "M110-AC-001",
+            "M110-AC-003",
+            "M110-AC-006"
+          ],
+          "validatorScenarioIds": [
+            "M110-V-ATTRIBUTION",
+            "M110-V-AUTH",
+            "M110-V-PRIVACY"
+          ],
+          "evidenceIds": []
+        },
+        {
+          "id": "M110-CAP-ADMIN-ANALYTICS",
+          "title": "管理员运营查询",
+          "userValue": "管理员能用一条只读命令查看调用概览、时间趋势、用户或命令分布、异常和关键词。",
+          "scope": [
+            "默认最近七天的运营概览",
+            "日期和用户过滤",
+            "调用、异常和关键词聚合",
+            "文本与稳定 JSON 输出",
+            "有界结果数量和最多九十天窗口"
+          ],
+          "nonGoals": [
+            "替代完整 SIEM 或日志平台",
+            "提供逐请求正文或无限制明细导出",
+            "修改社区内容或用户状态"
+          ],
+          "dependencies": [
+            "server:admin-cli-operations"
+          ],
+          "status": "not_started",
+          "acceptanceCriterionIds": [
+            "M110-AC-002",
+            "M110-AC-004",
+            "M110-AC-005",
+            "M110-AC-007",
+            "M110-AC-008"
+          ],
+          "validatorScenarioIds": [
+            "M110-V-SUMMARY",
+            "M110-V-ERRORS",
+            "M110-V-KEYWORDS",
+            "M110-V-NOVICE"
+          ],
+          "evidenceIds": []
+        }
+      ],
+      "acceptanceCriteria": [
+        {
+          "id": "M110-AC-001",
+          "gate": "core",
+          "description": "已选定的成功、失败和查询类 DEV 请求全部具有可验证的 CLI、用户、命令、结果和 requestId 归因。",
+          "metric": "cliAttributedAuditCoverage",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "fixed DEV request matrix compared with server audit rows",
+          "status": "pending",
+          "evidenceIds": [],
+          "measurementProfileId": "PROFILE-LIVE-READONLY"
+        },
+        {
+          "id": "M110-AC-002",
+          "gate": "core",
+          "description": "管理员运营命令完整返回概览、按日趋势、命令或路由分布、异常分布和关键词趋势。",
+          "metric": "adminOperationsSections",
+          "comparator": "eq",
+          "target": 5,
+          "unit": "sections",
+          "measurementMethod": "JSON schema and fixture assertions for all aggregate sections",
+          "status": "pending",
+          "evidenceIds": [],
+          "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
+        },
+        {
+          "id": "M110-AC-003",
+          "gate": "core",
+          "description": "管理员访问成功，普通用户和未认证请求均按稳定错误契约拒绝。",
+          "metric": "adminAuthorizationMatrixPassRate",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "admin, non-admin and unauthenticated DEV API matrix",
+          "status": "pending",
+          "evidenceIds": [],
+          "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
+        },
+        {
+          "id": "M110-AC-004",
+          "gate": "core",
+          "description": "默认窗口、日期顺序、最长九十天、用户过滤和 top 边界均在本地与服务端正确执行。",
+          "metric": "adminFilterBoundaryCases",
+          "comparator": "eq",
+          "target": 8,
+          "unit": "cases",
+          "measurementMethod": "CLI parser and API contract boundary matrix",
+          "status": "pending",
+          "evidenceIds": [],
+          "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
+        },
+        {
+          "id": "M110-AC-005",
+          "gate": "core",
+          "description": "命令注册表、JSON Schema、文档和自然语言场景不存在公开面漂移。",
+          "metric": "publicMetadataDrift",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "findings",
+          "measurementMethod": "generated command and schema inventory consistency gates",
+          "status": "pending",
+          "evidenceIds": [],
+          "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
+        },
+        {
+          "id": "M110-AC-006",
+          "gate": "core",
+          "description": "CLI、API 响应、测试 fixture 和证据中不存在密钥、Authorization 或原始请求正文泄露。",
+          "metric": "adminAnalyticsSensitiveFieldLeaks",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "findings",
+          "measurementMethod": "schema allowlist, redaction tests and frozen artifact secret scan",
+          "status": "pending",
+          "evidenceIds": [],
+          "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
+        },
+        {
+          "id": "M110-AC-007",
+          "gate": "core",
+          "description": "全新独立验证任务中的管理员运营自然语言场景全部首次通过。",
+          "metric": "adminOperationsFirstAttemptSuccessRate",
+          "comparator": "eq",
+          "target": 100,
+          "unit": "percent",
+          "measurementMethod": "fresh independent novice black-box baseline and dynamic suite",
+          "status": "pending",
+          "evidenceIds": [],
+          "measurementProfileId": "PROFILE-INDEPENDENT-NATURAL-LANGUAGE"
+        },
+        {
+          "id": "M110-AC-008",
+          "gate": "core",
+          "description": "当前里程碑不存在活动 P0/P1 问题。",
+          "metric": "activeBlockingP0P1",
+          "comparator": "eq",
+          "target": 0,
+          "unit": "issues",
+          "measurementMethod": "issues.json entries scoped to milestone 1.1",
+          "status": "pending",
+          "evidenceIds": [],
+          "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
+        }
+      ],
+      "validatorScenarios": [
+        {
+          "id": "M110-V-ATTRIBUTION",
+          "description": "执行成功、失败和查询类 CLI 请求并与服务端审计归因逐项核对。",
+          "mode": "live_readonly"
+        },
+        {
+          "id": "M110-V-SUMMARY",
+          "description": "管理员读取默认与自定义时间窗口的调用概览、按日趋势和命令分布。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M110-V-ERRORS",
+          "description": "管理员按用户查看 HTTP 状态、稳定错误码和命令维度的异常聚合。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M110-V-KEYWORDS",
+          "description": "管理员查看规范化关键词趋势并证明响应不包含原始请求正文。",
+          "mode": "black_box"
+        },
+        {
+          "id": "M110-V-AUTH",
+          "description": "普通用户和未认证请求均不能访问运营统计。",
+          "mode": "adverse"
+        },
+        {
+          "id": "M110-V-PRIVACY",
+          "description": "扫描 CLI 输出、API 响应和证据，确认无密钥或敏感正文泄露。",
+          "mode": "security"
+        },
+        {
+          "id": "M110-V-NOVICE",
+          "description": "首次使用的管理员用自然语言完成概览、用户异常和关键词趋势查询。",
+          "mode": "natural_language"
+        }
+      ],
+      "dependencies": [
+        "server:admin-cli-operations"
+      ],
+      "evidence": [
+        {
+          "id": "M110-E-SERVER-DEV",
+          "kind": "server_dev_validation",
+          "description": "The dedicated apexcn-forums task delivered the administrator-only operations aggregate, strict cooperative CLI attribution, explicit-search-only keyword capture, permission-aware capability discovery, and a zero-residue DEV acceptance matrix.",
+          "threadId": "019fb8a0-12dd-77f0-affd-cc31453f934a",
+          "result": "pass",
+          "providerCommit": "cc74ec415d30f55446f3503df5f7973c7d98df06",
+          "path": "/Users/kwang/apexcn-forums/output/admin-operations-observability/dev-e2e-verified.log",
+          "sha256": "d21b5370ea28cda50a3d239bec0aee142a43356050fe9188001d8ad2b6b4e4c2"
+        }
+      ],
+      "userOutcome": "社区管理员可以在终端中可信地掌握 apexcn-cli 的使用规模、故障热点和检索需求，同时不暴露密钥或原始请求内容。",
+      "stageNonGoals": [
+        "建设通用日志平台、告警中心或 Web 管理后台",
+        "提供普通用户行为画像或逐请求正文导出",
+        "改变现有社区内容写入流程",
+        "关闭或替代 0.9 的开放资格验证"
+      ],
+      "outcomeMetricIds": [
+        "M110-AC-002",
+        "M110-AC-003",
+        "M110-AC-006",
+        "M110-AC-007"
+      ]
     }
   ],
   "productStrategy": {
@@ -3171,7 +3427,8 @@
     "secondaryPersonas": [
       "依赖稳定 JSON 和 exit code 的脚本或 CI 使用者",
       "通过 Skill 和结构化 JSON 使用 CLI 的 AI Agent 集成者",
-      "需要策略、审计和生命周期治理的团队维护者"
+      "需要策略、审计和生命周期治理的团队维护者",
+      "需要通过 CLI 观察使用量、异常和检索需求的社区管理员"
     ],
     "topJobs": [
       {
@@ -3203,6 +3460,13 @@
         "primaryMilestones": [
           "0.6",
           "0.7"
+        ]
+      },
+      {
+        "id": "JOB-OPERATE",
+        "description": "让社区管理员以最小披露方式监控 CLI 使用、异常与查询需求",
+        "primaryMilestones": [
+          "1.1"
         ]
       }
     ],
@@ -3525,6 +3789,24 @@
         "fixturePath": "/Users/kwang/apexcn-forums/docs/api/apexcn-cli-v1.openapi.yaml",
         "liveSmokeArtifact": "/Users/kwang/apexcn-forums/output/m040-readiness/dev107-personal-community-final2-20260718T002243.json"
       }
+    },
+    {
+      "id": "server:admin-cli-operations",
+      "owner": "server",
+      "requiredAt": "completion",
+      "status": "ready",
+      "milestoneIds": [
+        "1.1"
+      ],
+      "resolutionThreadId": "019fb8a0-12dd-77f0-affd-cc31453f934a",
+      "readinessEvidence": {
+        "auditThreadId": "019fb8a0-12dd-77f0-affd-cc31453f934a",
+        "apiContractVersion": "0.9.0-candidate",
+        "providerCommit": "cc74ec415d30f55446f3503df5f7973c7d98df06",
+        "fixturePath": "/Users/kwang/apexcn-forums/docs/api/apexcn-cli-v1.openapi.yaml",
+        "liveSmokeArtifact": "/Users/kwang/apexcn-forums/output/admin-operations-observability/dev-e2e-verified.log",
+        "liveSmokeSha256": "d21b5370ea28cda50a3d239bec0aee142a43356050fe9188001d8ad2b6b4e4c2"
+      }
     }
   ],
   "readinessRisks": [
@@ -3696,6 +3978,20 @@
       "blockingAt": "completion",
       "description": "v1.0.9 已按 timebox 发布并由 GitHub issue #2 持续跟踪未完成资格。1.0.10 的 R27 已证明冻结资产校验、隔离安装及精确版本 1.0.10，但在 Q001 前按本轮 timebox 停止；公开 harness 的完整执行、Q001-Q200、18 个 macOS/Linux 生命周期单元、18 个无豁免 Windows 单元、DEV API 加真实 Chrome 写回、清理和独立安全审查仍未获得验收证据，不计为通过，issue #2 保持开放。",
       "resolutionEvidenceIds": []
+    },
+    {
+      "id": "RISK-110-SERVER-TELEMETRY",
+      "milestoneId": "1.1",
+      "capabilityIds": [
+        "M110-CAP-ATTRIBUTION",
+        "M110-CAP-ADMIN-ANALYTICS"
+      ],
+      "status": "mitigated",
+      "blockingAt": "completion",
+      "description": "apexcn-forums commit cc74ec4 已在 DEV 补齐稳定 HTTP/错误码、严格 CLI 客户端与命令归因、仅限显式搜索的隐私化关键词统计、权限感知 capabilities 和管理员聚合端点；完整矩阵与零残留清理证据已通过。",
+      "resolutionEvidenceIds": [
+        "M110-E-SERVER-DEV"
+      ]
     }
   ]
 }

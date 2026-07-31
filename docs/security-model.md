@@ -63,6 +63,12 @@ apexcn doctor snapshot --output ./support-snapshot.json --json
 
 快照不会包含完整 API Key、Authorization Header、Cookie、密码或未脱敏配置内容，输出文件仅允许当前用户读写。
 
+## 管理员运营观测与隐私
+
+CLI 的每个社区 API 请求都会发送版本化 `X-APEXCN-Client: apexcn-cli/<version>`；可识别命令还会发送受限值 `X-APEXCN-CLI-Operation`。服务端只把合法客户端标识的请求计入管理员运营统计。该标识是合作式标识，不是新的认证凭据：持有有效社区凭据的其他客户端可以仿造它，因此聚合结果用于运营观测，不能作为不可抵赖的安全审计证明。
+
+`apexcn admin operations` 只读取服务端聚合，不读取本机历史或建立本地遥测。计数表示服务端实际收到的请求；本地参数校验失败、配置加载失败，以及尚未到达服务端的网络错误不会出现。服务端只为显式 `search` 和 `me search` 保存长度受限的规范化关键词；`ask` 问题、Authorization、API Key 和原始请求正文不会写入关键词字段，也不会由聚合端点返回。日志保留遵循社区服务端现有审计日志生命周期，CLI 不会延长或绕过该生命周期。
+
 ## 安装与更新完整性
 
 公开 Release 提供以下文件：

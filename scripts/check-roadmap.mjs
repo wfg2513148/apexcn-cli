@@ -169,8 +169,8 @@ export function renderIssues(issues) {
 
 export function validateRoadmap({ roadmap, issues, agentsText }) {
   const problems = [];
-  const expectedStages = ["0.2", "0.3", "0.4", "0.6", "0.7", "0.8", "0.9", "1.0.11"];
-  const expectedReleaseLines = ["0.20.x", "0.30.x", "0.40.x", "0.60.x", "0.70.x", "0.80.x", "0.90.x", "1.0.11"];
+  const expectedStages = ["0.2", "0.3", "0.4", "0.6", "0.7", "0.8", "0.9", "1.0.11", "1.1"];
+  const expectedReleaseLines = ["0.20.x", "0.30.x", "0.40.x", "0.60.x", "0.70.x", "0.80.x", "0.90.x", "1.0.11", "1.1.x"];
   const milestoneStatuses = new Set(["planned", "in_progress", "blocked", "timeboxed", "completed"]);
   const capabilityStatuses = new Set(["not_started", "partial", "implemented", "validated"]);
   const acceptanceStatuses = new Set(["pending", "pass", "fail"]);

@@ -139,4 +139,27 @@ describe("documentation consistency", () => {
     expect(security).toContain('uninstall --yes');
     expect(security).toContain('lifecycle-agent.ps1" upgrade');
   });
+
+  test("documents administrator operations scope, attribution limits, and keyword privacy", () => {
+    const chineseManual = read("docs/cli-manual.zh.md");
+    const englishManual = read("docs/cli-manual.en.md");
+    const security = read("docs/security-model.md");
+    const guides = [read("docs/user-guide.zh.md"), read("docs/user-guide.en.md")].join("\n");
+
+    for (const manual of [chineseManual, englishManual]) {
+      expect(manual).toContain("apexcn admin operations");
+      expect(manual).toContain("--user-id");
+      expect(manual).toContain("--limit");
+      expect(manual).toMatch(/7|seven/i);
+      expect(manual).toContain("90");
+      expect(manual).toContain("admin-operations-response-v1");
+    }
+    expect(security).toContain("X-APEXCN-Client");
+    expect(security).toContain("X-APEXCN-CLI-Operation");
+    expect(security).toContain("合作式标识");
+    expect(security).toContain("ask");
+    expect(security).toContain("本地参数校验失败");
+    expect(guides).toContain("apexcn-cli 调用");
+    expect(guides).toContain("apexcn-cli usage");
+  });
 });

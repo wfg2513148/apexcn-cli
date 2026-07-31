@@ -135,6 +135,9 @@ function verifyArtifacts() {
     "package/qualification/ga/qualification-contract-v2.json",
     "package/qualification/ga/support-matrix-v2.json",
     "package/qualification/ga/task-plan-v1.jsonl",
+    "package/qualification/releases/1.1.0/public-surface-v1.json",
+    "package/qualification/releases/1.1.0/qualification-contract-v1.json",
+    "package/qualification/releases/1.1.0/tasks-v1.jsonl",
     "package/scripts/ga-qualification-recorder.mjs",
     "package/scripts/ga-qualification-score.mjs",
     "package/scripts/install-agent.sh",
@@ -163,6 +166,9 @@ function verifyArtifacts() {
     "package/vitest.config.ts"
   ];
   for (const entry of entries) {
+    if (/^package\/dist\/(?:mcp\/|commands\/mcp\.|schemas\/mcp\.)/.test(entry)) {
+      throw new Error(`release package contains removed MCP output ${entry}`);
+    }
     if (forbiddenPrefixes.some((prefix) => entry.startsWith(prefix)) && !allowedQualificationFiles.has(entry)) {
       throw new Error(`release package contains forbidden path ${entry}`);
     }
@@ -182,12 +188,48 @@ function verifyArtifacts() {
     throw new Error(`release package version: expected ${expectedVersion}, got ${String(packageJson.version)}`);
   }
   verifyPackagedQualificationHarness(entries, archivePath);
+  verifyPackagedReleaseQualification(entries, archivePath, expectedVersion);
 
   execFileSync("node", ["scripts/verify-release-supply-chain.mjs", artifactsDir], {
     cwd: repoRoot,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   });
+}
+
+function verifyPackagedReleaseQualification(entries, archivePath, expectedVersion) {
+  const contractEntry = `package/qualification/releases/${expectedVersion}/qualification-contract-v1.json`;
+  if (!entries.has(contractEntry)) throw new Error(`release package qualification contract missing ${contractEntry}`);
+  const contract = JSON.parse(execFileSync("tar", ["-xOzf", archivePath, contractEntry], {
+    cwd: repoRoot,
+    encoding: "utf8"
+  }));
+  if (contract.targetVersion !== expectedVersion
+    || contract.current?.exactTaskCount !== 200
+    || contract.approvedAdditions?.length !== 1
+    || contract.approvedAdditions[0]?.commandId !== "admin.operations") {
+    throw new Error("release package current qualification identity or denominator is invalid");
+  }
+  for (const path of [contract.current.surfacePath, contract.current.datasetPath]) {
+    if (!entries.has(`package/${path}`)) throw new Error(`release package qualification asset missing package/${path}`);
+  }
+  const surface = JSON.parse(execFileSync("tar", ["-xOzf", archivePath, `package/${contract.current.surfacePath}`], {
+    cwd: repoRoot,
+    encoding: "utf8"
+  }));
+  if (surface.frozenForVersion !== expectedVersion
+    || surface.commandManifest?.commands?.length !== contract.current.expectedCommandCount
+    || Object.keys(surface.jsonSchemas ?? {}).length !== contract.current.expectedSchemaCount
+    || surface.api?.supportedOperations?.length !== contract.current.expectedApiOperationCount) {
+    throw new Error("release package current public surface differs from its qualification contract");
+  }
+  const tasks = execFileSync("tar", ["-xOzf", archivePath, `package/${contract.current.datasetPath}`], {
+    cwd: repoRoot,
+    encoding: "utf8"
+  }).trim().split("\n").filter(Boolean);
+  if (tasks.length !== contract.current.exactTaskCount) {
+    throw new Error("release package current qualification task denominator is invalid");
+  }
 }
 
 function verifyPackagedQualificationHarness(entries, archivePath) {

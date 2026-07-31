@@ -2,8 +2,19 @@ import type { ApexcnApiClient } from "./api-client.js";
 
 export type TopicFilters = Record<string, string | number | boolean | undefined>;
 
+export type AdminOperationsFilters = {
+  from?: string;
+  to?: string;
+  userId?: number;
+  limit?: number;
+};
+
 export function listAdmins(client: ApexcnApiClient): Promise<unknown> {
   return client.get("/api/v1/admin-list");
+}
+
+export function adminOperations(client: ApexcnApiClient, filters: AdminOperationsFilters = {}): Promise<unknown> {
+  return client.get("/api/v1/admin/operations", filters);
 }
 
 export function searchTopics(client: ApexcnApiClient, keyword: string, filters: TopicFilters = {}): Promise<unknown> {

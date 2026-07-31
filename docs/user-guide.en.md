@@ -151,7 +151,19 @@ If the key is lost or may have leaked, regenerate it in **API Key Management**, 
 
 Regenerating the key immediately invalidates the old one.
 
-## 13. Troubleshooting
+## 13. Monitor CLI Operations as an Administrator
+
+Only community administrator accounts can read apexcn-cli usage aggregates. Tell your AI:
+
+> Show apexcn-cli usage for the last seven days, including successful calls, failures, error distribution, and search keyword trends.
+
+> Filter apexcn-cli failures by community user id and date range. Do not display API keys, request bodies, or ask question text.
+
+Counts represent CLI-marked requests received by the server, so local validation failures and network failures that never arrive are not included. The client marker supports operational attribution but is not an unforgeable security identity. Keyword trends include explicit searches only, never question bodies.
+
+When specifying a date window, provide both the start and end dates. The window is inclusive and may not exceed 90 days.
+
+## 14. Troubleshooting
 
 Tell your AI:
 

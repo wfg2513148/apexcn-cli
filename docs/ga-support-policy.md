@@ -12,7 +12,7 @@
 - CLI 实际使用的 `/api/v1` ORDS 路径、HTTP 方法与身份语义；
 - 中英文用户文档和 Agent Skill 中的公开使用方式。
 
-冻结清单由 `qualification/ga/public-surface-v2.json` 记录，`npm run check:ga-readiness` 会校验该 timeboxed 资格资产的内部完整性。1.x 内允许增加可选字段、增强说明和兼容修复；删除命令、改变既有字段类型、增加必填字段、绕过 preview/confirmation、改变身份语义或替换既有 API 路径都属于破坏性变化。本里程碑不新增公开命令族。
+历史冻结清单由 `qualification/ga/public-surface-v2.json` 记录，`npm run check:ga-readiness` 会校验该 timeboxed 资格资产的内部完整性。后续兼容版本的新增公开能力使用 `qualification/releases/<version>/` 下独立的公开面、资格契约和 200 题数据集，不覆盖历史基线。1.x 内允许按次版本增加已记录的新命令、增加可选字段、增强说明和兼容修复；删除命令、改变既有字段类型、增加必填字段、绕过 preview/confirmation、改变身份语义或替换既有 API 路径都属于破坏性变化。
 
 `rag retrieve` 只使用现有 search 和 topic detail 只读端点；`ask` 继续独立使用 App 100 `/api/v1/ask`。GA 候选不得修改 App 100 页面 100 或其现有 RAG 知识问答实现。
 

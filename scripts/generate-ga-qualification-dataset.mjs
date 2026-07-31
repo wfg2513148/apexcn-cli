@@ -4,8 +4,8 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const DATASET_VERSION = "M090-GA-TASKS-2";
-const defaultOutput = join(repoRoot, "eval/qualification/tasks.v2.jsonl");
+const DATASET_VERSION = "M110-QUALIFICATION-TASKS-1";
+const defaultOutput = join(repoRoot, "qualification/releases/1.1.0/tasks-v1.jsonl");
 const roles = [
   ["apex-developer", "Oracle APEX 开发者"],
   ["automation-engineer", "自动化工程师"],
@@ -20,7 +20,7 @@ export async function buildGaQualificationTasks() {
   const tasks = [];
 
   for (const [commandIndex, command] of commands.entries()) {
-    const variantCount = command.id === "confirm" ? 1 : 2;
+    const variantCount = ["commands", "confirm", "schema.bundle"].includes(command.id) ? 1 : 2;
     for (let variant = 0; variant < variantCount; variant += 1) {
       const [role, roleLabel] = roles[(commandIndex * 2 + variant) % roles.length];
       const safety = safetyFor(command);
@@ -49,7 +49,7 @@ export async function buildGaQualificationTasks() {
 
 function task(input, index) {
   return {
-    taskId: `M090-Q-${String(index + 1).padStart(3, "0")}`,
+    taskId: `M110-Q-${String(index + 1).padStart(3, "0")}`,
     datasetVersion: DATASET_VERSION,
     role: input.role,
     prompt: input.prompt,
@@ -115,7 +115,7 @@ const adverseScenarios = [
   adverse("automation-engineer", "请求达到客户端 timeout。区分 timeout 与服务端空结果，并保留脱敏 stderr。", ["doctor"], "Timeout is classified without fabrication.", "approved-readonly-api", "forbidden"),
   adverse("security-reviewer", "在嵌套 JSON、数组和诊断文本中放入模拟 API key、Authorization 与 Cookie，验证所有输出递归脱敏。", ["doctor.snapshot"], "Recursive redaction leaves zero secret leaks.", "no-network", "forbidden"),
   adverse("ai-agent-integrator", "导出全部公开 Schema，并验证删除字段、改变类型或新增必填字段会被兼容性门禁拒绝。", ["schema.bundle"], "Breaking schema drift is rejected.", "no-network", "forbidden"),
-  adverse("ai-agent-integrator", "比较候选与冻结公开面，确认没有新增公开命令族，且全部既有 command id 仍可发现。", ["commands"], "Public command family drift is zero.", "no-network", "forbidden"),
+  adverse("ai-agent-integrator", "比较 1.1 候选与 1.0.10 冻结公开面，确认 admin operations 是唯一批准新增命令，且全部既有 command id 仍可发现。", ["commands", "admin.operations"], "The approved administrator operations addition preserves every existing command.", "approved-readonly-api", "forbidden"),
   adverse("ai-agent-integrator", "执行 rag retrieve 的只读场景，证明网络只访问 search 与 topic detail，/api/v1/ask 调用数为零。", ["rag.retrieve"], "RAG retrieve remains isolated from App 100 ask.", "approved-readonly-api", "forbidden"),
   adverse("apex-developer", "执行既有 ask 场景，证明它仍独立使用 App 100 /api/v1/ask，且答案包含来源或明确限制。", ["ask"], "Existing ask behavior remains available.", "approved-readonly-api", "forbidden"),
   adverse("ai-agent-integrator", "个人收藏同时含 THREAD 与 POST。验证身份不混淆，旧 collection favorites 只导出话题并显式排除回复。", ["me.favorites", "collection.favorites"], "Favorite identity fidelity is 100%.", "approved-readonly-api", "forbidden"),
