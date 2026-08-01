@@ -111,6 +111,68 @@
           "fresh independent R7 validation"
         ]
       }
+    },
+    {
+      "id": "M110-R8-COLLECTION-REQUEST-IDS",
+      "status": "in_progress",
+      "owner": "cli",
+      "priority": "P1",
+      "milestoneId": "1.1",
+      "blockingMilestones": [
+        "1.1"
+      ],
+      "acceptanceCriterionIds": [
+        "M110-AC-005",
+        "M110-AC-007",
+        "M110-AC-008"
+      ],
+      "title": "collection build/sync 顶层结果丢失 API requestId",
+      "description": "独立验证发现 collection build 与 collection sync 成功调用搜索和主题 API 后，顶层结构化结果未返回 requestId/requestIds，导致真实 API 读取无法从 CLI 汇总结果追溯到服务端请求。",
+      "validatorRound": "M110-VAL-R8",
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "019fbaea-e129-7d52-b71e-0ad432209bea",
+        "assignmentRef": "M110-VAL-R8",
+        "report": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/runs/M110-VAL-R8/report.json",
+        "reportSha256": "2d887142ecfbb1701614f30793057fffc435856ecbd246e6efc9b2143a4be357",
+        "firstAttemptLedger": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/runs/M110-VAL-R8/first-attempt.jsonl",
+        "firstAttemptLedgerSha256": "336613ed8cf30c888f1b62c4b2efd34efba8e3e6565d6711495363b3c0894c99",
+        "findingRefs": [
+          "FIXED_ACCEPTANCE",
+          "MILESTONE_ACCEPTANCE"
+        ],
+        "scenarioOrExplorationRef": [
+          "M090-Q-025",
+          "M090-Q-026",
+          "M090-Q-041",
+          "M090-Q-042",
+          "M110-Q-027",
+          "M110-Q-028",
+          "M110-Q-043",
+          "M110-Q-044"
+        ],
+        "observedCliVersion": "1.1.0",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "collection build 和 collection sync 均退出 0，结构、Schema 与业务形态断言通过，但顶层 requestIds 为空，requestIdPreserved 断言失败；固定与里程碑套件各 150/154。",
+        "expectedUserOutcome": "collection build 与 collection sync 顶层输出以稳定去重的 requestIds 数组保留本次操作中每个搜索、主题读取及服务端错误响应的 requestId。",
+        "responsibilityAssessment": "cli"
+      },
+      "candidate": {
+        "version": "1.1.0",
+        "commit": "50d52575f809d6dff422364305d1ce3653aa6387",
+        "artifact": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/artifacts/apexcn-cli-1.1.0-r8.tgz",
+        "sha256": "50b34b7b87cebf52f8de210d2c6009825ab66acca4e3df67a0b6781d1c80db09"
+      },
+      "resolutionRoute": {
+        "repository": "/Users/kwang/apexcn-cli",
+        "requiredEvidence": [
+          "collection build and sync requestId regression tests",
+          "full CLI build and test gates",
+          "fresh immutable candidate",
+          "fresh independent R9 validation"
+        ]
+      }
     }
   ],
   "enhancementRequests": [

@@ -991,7 +991,11 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
       assertFeedback: async ({ stdout, stderr, fetch, tmpDir }) => {
         expect(fetch).toHaveBeenCalledTimes(2);
         expect(stderr).toBe("");
-        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "collection-build", topicCount: 1 }));
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({
+          kind: "collection-build",
+          topicCount: 1,
+          requestIds: ["req-search", "req-topic-1"]
+        }));
         expect(JSON.parse(await readFile(join(tmpDir, "collection", "collection.json"), "utf8"))).toEqual(expect.objectContaining({ kind: "collection" }));
       }
     },
@@ -1005,7 +1009,11 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
       assertFeedback: ({ stdout, stderr, fetch }) => {
         expect(fetch).toHaveBeenCalledOnce();
         expect(stderr).toBe("");
-        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "collection-sync", unchangedCount: 1 }));
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({
+          kind: "collection-sync",
+          unchangedCount: 1,
+          requestIds: ["req-topic-1"]
+        }));
       }
     },
     {

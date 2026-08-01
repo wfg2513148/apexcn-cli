@@ -94,7 +94,12 @@ describe("collection commands", () => {
     expect(fetch).toHaveBeenCalledTimes(6);
     expect(fetch.mock.calls.map((call) => (call[1] as RequestInit | undefined)?.method ?? "GET")).toEqual(["GET", "GET", "GET", "GET", "GET", "GET"]);
     const summary = JSON.parse(stdout.join(""));
-    expect(summary).toEqual(expect.objectContaining({ kind: "collection-build", topicCount: 4, errorCount: 0 }));
+    expect(summary).toEqual(expect.objectContaining({
+      kind: "collection-build",
+      topicCount: 4,
+      errorCount: 0,
+      requestIds: ["search-rest", "search-ords", "topic-1", "topic-2", "topic-3", "topic-4"]
+    }));
     const collection = await readJson(join(outputDir, "collection.json"));
     expect(collection).toEqual(expect.objectContaining({
       kind: "collection",
@@ -135,10 +140,48 @@ describe("collection commands", () => {
 
     expect(process.exitCode).toBe(1);
     expect(stderr.join("")).toBe("");
-    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({ topicCount: 1, errorCount: 1 }));
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
+      topicCount: 1,
+      errorCount: 1,
+      requestIds: ["search", "topic-1", "bad-topic"]
+    }));
     const collection = await readJson(join(outputDir, "collection.json"));
     expect((collection.errors as unknown[])).toHaveLength(1);
     expect(await readJson(join(outputDir, "topics", "1.json"))).toEqual(expect.objectContaining({ kind: "collection-topic", id: 1 }));
+  });
+
+  test("collection sync preserves request ids from every topic read", async () => {
+    const outputDir = await tempPath("sync-request-ids");
+    const topicRequestCounts = new Map<number, number>();
+    const { program, stdout, stderr } = await configuredProgram(async (input) => {
+      const url = String(input);
+      if (url.includes("/api/v1/search")) {
+        return Response.json({ requestId: "search-build", items: [{ id: 1 }, { id: 2 }] });
+      }
+      const id = Number(/\/api\/v1\/topics\/(\d+)/.exec(url)?.[1]);
+      const requestCount = (topicRequestCounts.get(id) ?? 0) + 1;
+      topicRequestCounts.set(id, requestCount);
+      if (id === 2 && requestCount === 2) {
+        return Response.json({ error: { message: "Topic not found", requestId: "topic-2-missing" } }, { status: 404 });
+      }
+      return Response.json({
+        requestId: `topic-${id}-${requestCount === 1 ? "build" : "sync"}`,
+        topic: { id, title: `Topic ${id}` }
+      });
+    });
+
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--query", "REST", "--limit", "2", "--output-dir", outputDir, "--json"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "collection", "sync", "--dir", outputDir, "--json"]);
+
+    expect(stderr.join("")).toBe("");
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
+      kind: "collection-sync",
+      topicCount: 1,
+      unchangedCount: 1,
+      removedCount: 1,
+      requestIds: ["topic-1-sync", "topic-2-missing"]
+    }));
   });
 
   test("collection build validates required inputs before API calls", async () => {

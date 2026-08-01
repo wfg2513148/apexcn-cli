@@ -325,6 +325,7 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
   const limit = options.limit ?? 3;
   const candidates = new Map<number, TopicSource[]>();
   const errors: Array<Record<string, unknown>> = [];
+  const requestIds = new Set<string>();
 
   for (const query of queries) {
     const search = await requestJson(session.baseUrl, "/api/v1/search", {
@@ -337,6 +338,8 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
         toDate: options.toDate
       }
     });
+    const requestId = requestIdFrom(search);
+    if (requestId) requestIds.add(requestId);
     for (const [searchIndex, item] of itemsFromData(search).slice(0, limit).entries()) {
       const id = topicIdFromItem(item);
       if (id !== undefined) {
@@ -355,13 +358,15 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
     const path = join(outputDir, relativePath);
     try {
       const result = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
+      const requestId = requestIdFrom(result);
+      if (requestId) requestIds.add(requestId);
       const artifact = {
         kind: "collection-topic",
         schemaVersion: 1,
         id,
         sources,
         request: { method: "GET", path: `/api/v1/topics/${id}` },
-        requestId: requestIdFrom(result),
+        requestId,
         result
       };
       const canonicalHash = topicCanonicalHash(artifact);
@@ -377,11 +382,13 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
         canonicalHash
       });
     } catch (error) {
+      const requestId = error instanceof HttpError ? error.requestId : undefined;
+      if (requestId) requestIds.add(requestId);
       errors.push({
         id,
         sources,
         message: redactSecret(errorMessage(error), session.token),
-        requestId: error instanceof HttpError ? error.requestId : undefined
+        requestId
       });
     }
   }
@@ -423,6 +430,7 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
     outputDir,
     topicCount: topicRecords.length,
     errorCount: errors.length,
+    requestIds: [...requestIds],
     files: {
       collection: collectionPath,
       index: indexPath,
@@ -604,6 +612,7 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
   let changedCount = 0;
   let unchangedCount = 0;
   let removedCount = 0;
+  const requestIds = new Set<string>();
   for (const topic of loaded.collection.topics.filter(isRecord)) {
     const id = typeof topic.id === "number" ? topic.id : undefined;
     const relativePath = fieldText(topic.file);
@@ -612,6 +621,8 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
     }
     try {
       const result = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
+      const requestId = requestIdFrom(result);
+      if (requestId) requestIds.add(requestId);
       const sources = Array.isArray(topic.sources) ? topic.sources : [];
       const artifact = {
         kind: "collection-topic",
@@ -619,7 +630,7 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
         id,
         sources,
         request: { method: "GET", path: `/api/v1/topics/${id}` },
-        requestId: requestIdFrom(result),
+        requestId,
         result
       };
       const canonicalHash = topicCanonicalHash(artifact);
@@ -641,6 +652,8 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
       files.push({ id, canonicalHash, ...evidence, path: relativePath });
       changedCount += 1;
     } catch (error) {
+      const requestId = error instanceof HttpError ? error.requestId : undefined;
+      if (requestId) requestIds.add(requestId);
       if (error instanceof HttpError && error.status === 404) {
         await unlink(join(options.dir, relativePath));
         removedCount += 1;
@@ -670,6 +683,7 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
     changedCount,
     unchangedCount,
     removedCount,
+    requestIds: [...requestIds],
     contentHash: updated.contentHash
   }, options.json === true);
 }
