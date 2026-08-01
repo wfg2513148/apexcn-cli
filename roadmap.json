@@ -3200,7 +3200,7 @@
           "dependencies": [
             "server:admin-cli-operations"
           ],
-          "status": "not_started",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M110-AC-001",
             "M110-AC-003",
@@ -3211,7 +3211,10 @@
             "M110-V-AUTH",
             "M110-V-PRIVACY"
           ],
-          "evidenceIds": []
+          "evidenceIds": [
+            "M110-E-SERVER-DEV",
+            "M110-E-R9-INDEPENDENT"
+          ]
         },
         {
           "id": "M110-CAP-ADMIN-ANALYTICS",
@@ -3232,7 +3235,7 @@
           "dependencies": [
             "server:admin-cli-operations"
           ],
-          "status": "not_started",
+          "status": "validated",
           "acceptanceCriterionIds": [
             "M110-AC-002",
             "M110-AC-004",
@@ -3246,7 +3249,10 @@
             "M110-V-KEYWORDS",
             "M110-V-NOVICE"
           ],
-          "evidenceIds": []
+          "evidenceIds": [
+            "M110-E-CLI-LOCAL",
+            "M110-E-R9-INDEPENDENT"
+          ]
         }
       ],
       "acceptanceCriteria": [
@@ -3259,8 +3265,11 @@
           "target": 100,
           "unit": "percent",
           "measurementMethod": "fixed DEV request matrix compared with server audit rows",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M110-E-SERVER-DEV",
+            "M110-E-R9-INDEPENDENT"
+          ],
           "measurementProfileId": "PROFILE-LIVE-READONLY"
         },
         {
@@ -3272,8 +3281,11 @@
           "target": 5,
           "unit": "sections",
           "measurementMethod": "JSON schema and fixture assertions for all aggregate sections",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M110-E-CLI-LOCAL",
+            "M110-E-R9-INDEPENDENT"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -3285,8 +3297,11 @@
           "target": 100,
           "unit": "percent",
           "measurementMethod": "admin, non-admin and unauthenticated DEV API matrix",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M110-E-SERVER-DEV",
+            "M110-E-R9-INDEPENDENT"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -3298,8 +3313,11 @@
           "target": 8,
           "unit": "cases",
           "measurementMethod": "CLI parser and API contract boundary matrix",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M110-E-CLI-LOCAL",
+            "M110-E-R9-INDEPENDENT"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -3311,8 +3329,11 @@
           "target": 0,
           "unit": "findings",
           "measurementMethod": "generated command and schema inventory consistency gates",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M110-E-CLI-LOCAL",
+            "M110-E-R9-INDEPENDENT"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -3324,8 +3345,11 @@
           "target": 0,
           "unit": "findings",
           "measurementMethod": "schema allowlist, redaction tests and frozen artifact secret scan",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M110-E-SERVER-DEV",
+            "M110-E-R9-INDEPENDENT"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         },
         {
@@ -3337,8 +3361,10 @@
           "target": 100,
           "unit": "percent",
           "measurementMethod": "fresh independent novice black-box baseline and dynamic suite",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M110-E-R9-INDEPENDENT"
+          ],
           "measurementProfileId": "PROFILE-INDEPENDENT-NATURAL-LANGUAGE"
         },
         {
@@ -3350,8 +3376,10 @@
           "target": 0,
           "unit": "issues",
           "measurementMethod": "issues.json entries scoped to milestone 1.1",
-          "status": "pending",
-          "evidenceIds": [],
+          "status": "pass",
+          "evidenceIds": [
+            "M110-E-R9-INDEPENDENT"
+          ],
           "measurementProfileId": "PROFILE-CONTRACT-SECURITY"
         }
       ],
@@ -3405,6 +3433,32 @@
           "providerCommit": "8ae75e01a2baf8723405a23b50e2c48c2510289e",
           "path": "/Users/kwang/apexcn-forums/output/admin-operations-observability/dev-full-canonical-attribution-20260801.log",
           "sha256": "e32d0c758c6d75d02089c7b089734fe8c71a502d6799a5385c4698deff3cb2cc"
+        },
+        {
+          "id": "M110-E-CLI-LOCAL",
+          "kind": "local_quality_gates",
+          "description": "CLI 1.1.0 implementation and R8 provenance repair passed the full 51-file test suite, TypeScript build, source-layout, workflow, roadmap, release-artifact and GA harness checks; an independent read-only code review found no P0/P1/P2 issues.",
+          "result": "pass",
+          "commit": "4077103fe5c1810e735300856c1fe5f5e52648fb",
+          "testFiles": 51,
+          "testsPassed": 759,
+          "testsSkipped": 1,
+          "reviewerThreadId": "019fbafa-c376-7623-bde8-b2aca41d33de"
+        },
+        {
+          "id": "M110-E-R9-INDEPENDENT",
+          "kind": "independent_validator",
+          "description": "A fresh novice Codex Desktop task validated the immutable 1.1.0 candidate from the frozen R9 scope: fixed 154/154, milestone 154/154, dynamic 10/10, API-effect commands 44/44 and API operations 37/37, with zero blocking findings, process deviations, privacy findings or cleanup residuals.",
+          "result": "pass",
+          "threadId": "019fbb08-1a15-75c2-b049-863dec753fa4",
+          "model": "gpt-5.6-luna",
+          "reasoning": "high",
+          "candidateCommit": "4077103fe5c1810e735300856c1fe5f5e52648fb",
+          "candidateSha256": "25949f9b99fae18c5ae8c499de11c91007f84514c0a84eaadd7b9e4af3f62019",
+          "scopeSha256": "7d7686ee474186489dfbfe592e52fe5b090103316b5dfad25dfdc92962637a51",
+          "path": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/runs/M110-VAL-R9/report.json",
+          "sha256": "52f8aaee9832913b3d15f6cd23a5f1a915b66e3941c4426684f9a284877f9c98",
+          "firstAttemptLedgerSha256": "e1b909feb3261963035098067cea4615218fd84d67844a492c8ad93fabefe09b"
         }
       ],
       "userOutcome": "社区管理员可以在终端中可信地掌握 apexcn-cli 的使用规模、故障热点和检索需求，同时不暴露密钥或原始请求内容。",
@@ -4000,10 +4054,12 @@
         "M110-CAP-ATTRIBUTION",
         "M110-CAP-ADMIN-ANALYTICS"
       ],
-      "status": "open",
+      "status": "mitigated",
       "blockingAt": "completion",
-      "description": "R7 首次尝试已验证候选、scope、harness 和 DEV 证据输入完整性，preflight、隐私与零残留清理均通过，但未达到发布验收：失效的公共帖子绑定 30549 造成 topic view/collection build 伪失败，synthetic bundle 与 DEV profile 的 base URL 不一致触发 collection sync 正确保护，旧 capability 聚合把非管理员 available=false/FORBIDDEN 声明误判为拥有能力。R7 report SHA-256 为 82cba8dae109d0b8c3be7dfc4805b211dfb567e9d083f4371b87856c159d2e8c；这些失败没有形成候选产品缺陷证据。验证器提交 94f808e 已增加普通用户公共帖子预检、精确权限语义、DEV bundle 绑定与完整哈希覆盖，83/83 测试通过且独立复审无 P0/P1/P2。风险保持 open，必须获得新授权并由冻结候选包和全新 R8 首次尝试证明所有适用场景 100% 通过。",
-      "resolutionEvidenceIds": []
+      "description": "R9 使用全新可见新手任务、冻结候选和冻结 scope，明确禁止读取 skill、AGENTS、历史报告或源码；preflight 14 项全部通过，固定与里程碑适用场景各 154/154、动态场景 10/10、API 命令 44/44、API 操作 37/37 全部首次通过，且阻塞发现、过程偏差、隐私发现和清理残留均为零。R9 report SHA-256 为 52f8aaee9832913b3d15f6cd23a5f1a915b66e3941c4426684f9a284877f9c98。",
+      "resolutionEvidenceIds": [
+        "M110-E-R9-INDEPENDENT"
+      ]
     }
   ]
 }
