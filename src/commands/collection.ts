@@ -681,6 +681,7 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
   }
   const pageSize = options.pageSize ?? 50;
   const items: Array<{ item: Record<string, unknown>; requestId?: string }> = [];
+  const requestIds = new Set<string>();
   const seenCursors = new Set<string>();
   let cursor: string | undefined;
   let pageCount = 0;
@@ -689,9 +690,11 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
       token: session.token,
       query: { pageSize, cursor }
     });
+    const requestId = requestIdFrom(data);
+    if (requestId) requestIds.add(requestId);
     pageCount += 1;
     for (const item of itemsFromData(data)) {
-      items.push({ item, requestId: requestIdFrom(data) });
+      items.push({ item, requestId });
     }
     const page = isRecord(data) && isRecord(data.page) ? data.page : {};
     const next = typeof page.nextCursor === "string" && page.nextCursor.length > 0 ? page.nextCursor : undefined;
@@ -798,6 +801,7 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
     excludedReplyCount,
     unavailableCount: errors.length,
     pageCount,
+    requestIds: [...requestIds],
     contentHash: collection.contentHash
   }, options.json === true);
 }

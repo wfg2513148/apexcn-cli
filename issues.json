@@ -1,9 +1,118 @@
 {
   "schemaVersion": 1,
   "product": "apexcn-cli",
-  "updatedAt": "2026-07-31",
+  "updatedAt": "2026-08-01",
   "activeOnly": true,
-  "issues": [],
+  "issues": [
+    {
+      "id": "M110-R6-CAPABILITY-CONTRACT-091",
+      "status": "in_progress",
+      "owner": "cli",
+      "priority": "P1",
+      "milestoneId": "1.1",
+      "blockingMilestones": [
+        "1.1"
+      ],
+      "acceptanceCriterionIds": [
+        "M110-AC-005",
+        "M110-AC-007",
+        "M110-AC-008"
+      ],
+      "title": "CLI 拒绝服务端已发布的 0.9.1 capability 契约",
+      "description": "独立验证发现服务端已声明 0.9.1-candidate 及完整兼容窗口，但 1.1.0 候选仅接受到 0.9.0-candidate，导致 me capabilities 标记 unsupported，并使 me search、collection 与 workflow 等依赖 capability 的真实场景 fail closed。",
+      "validatorRound": "M110-VAL-R6",
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "019fba43-b3ba-75a3-a7b5-50199f9254d9",
+        "assignmentRef": "M110-VAL-R6",
+        "report": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/runs/M110-VAL-R6/report.json",
+        "reportSha256": "b10f00498ee212a2e761da65f6d485cabf6d46f886adfaa1a7f775865f57955f",
+        "findingRefs": [
+          "FIXED_ACCEPTANCE",
+          "MILESTONE_ACCEPTANCE"
+        ],
+        "scenarioOrExplorationRef": [
+          "M090-Q-076",
+          "M090-Q-077",
+          "M090-Q-092",
+          "M110-Q-093"
+        ],
+        "observedCliVersion": "1.1.0",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "服务端返回 contractVersion 0.9.1-candidate 与六版本 supportedContractVersions；候选输出 clientCompatibility.status=unsupported，后续 me search 返回 unavailableReason=CAPABILITY_INCOMPATIBLE。",
+        "expectedUserOutcome": "CLI 接受服务端已声明且同一 0.9 系列向后兼容的 0.9.1-candidate 契约，同时继续拒绝未来、过旧和不完整契约。",
+        "responsibilityAssessment": "cli"
+      },
+      "candidate": {
+        "version": "1.1.0",
+        "commit": "a219f1e1f21bab85598d16c49382fd9c4a86e9de",
+        "artifact": "artifacts/candidates/1.1.0-round1/apexcn-cli-1.1.0.tgz",
+        "sha256": "7010ab97b8df50fd771453dec33f3812d32c8c9a2f9db9129b9877fe4e4985d6"
+      },
+      "resolutionRoute": {
+        "repository": "/Users/kwang/apexcn-cli",
+        "requiredEvidence": [
+          "capability compatibility regression tests",
+          "full CLI build and test gates",
+          "fresh immutable candidate",
+          "fresh independent R7 validation"
+        ]
+      }
+    },
+    {
+      "id": "M110-R6-FAVORITES-REQUEST-IDS",
+      "status": "in_progress",
+      "owner": "cli",
+      "priority": "P1",
+      "milestoneId": "1.1",
+      "blockingMilestones": [
+        "1.1"
+      ],
+      "acceptanceCriterionIds": [
+        "M110-AC-005",
+        "M110-AC-007",
+        "M110-AC-008"
+      ],
+      "title": "collection favorites 顶层结果丢失分页 requestId",
+      "description": "独立验证发现 favorites export 服务端响应携带 requestId，但 collection favorites 的顶层结构化结果未返回任何 requestId/requestIds，使真实 API 读取无法从 CLI 结果追溯到服务端请求。",
+      "validatorRound": "M110-VAL-R6",
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "019fba43-b3ba-75a3-a7b5-50199f9254d9",
+        "assignmentRef": "M110-VAL-R6",
+        "report": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/runs/M110-VAL-R6/report.json",
+        "reportSha256": "b10f00498ee212a2e761da65f6d485cabf6d46f886adfaa1a7f775865f57955f",
+        "findingRefs": [
+          "FIXED_ACCEPTANCE"
+        ],
+        "scenarioOrExplorationRef": [
+          "M090-Q-029"
+        ],
+        "observedCliVersion": "1.1.0",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "collection-favorites 输出包含 topicCount、pageCount 与 contentHash，但缺少服务端 favorites export 响应中的 requestId，因此 requestIdPreserved 断言失败。",
+        "expectedUserOutcome": "collection favorites 顶层输出以去重 requestIds 数组保留每个分页响应的 requestId，包括空页，以便完整追踪服务端读取。",
+        "responsibilityAssessment": "cli"
+      },
+      "candidate": {
+        "version": "1.1.0",
+        "commit": "a219f1e1f21bab85598d16c49382fd9c4a86e9de",
+        "artifact": "artifacts/candidates/1.1.0-round1/apexcn-cli-1.1.0.tgz",
+        "sha256": "7010ab97b8df50fd771453dec33f3812d32c8c9a2f9db9129b9877fe4e4985d6"
+      },
+      "resolutionRoute": {
+        "repository": "/Users/kwang/apexcn-cli",
+        "requiredEvidence": [
+          "multi-page and topic-only favorites regression tests",
+          "full CLI build and test gates",
+          "fresh immutable candidate",
+          "fresh independent R7 validation"
+        ]
+      }
+    }
+  ],
   "enhancementRequests": [
     {
       "id": "ENH-20260731-ADMIN-OPERATIONS",
@@ -32,11 +141,11 @@
       "serverTaskThreadId": "019fb8a0-12dd-77f0-affd-cc31453f934a",
       "serverEvidence": {
         "status": "verified-dev",
-        "commit": "cc74ec415d30f55446f3503df5f7973c7d98df06",
-        "contractVersion": "0.9.0-candidate",
+        "commit": "8ae75e01a2baf8723405a23b50e2c48c2510289e",
+        "contractVersion": "0.9.1-candidate",
         "endpoint": "/api/v1/admin/operations",
-        "evidencePath": "/Users/kwang/apexcn-forums/output/admin-operations-observability/dev-e2e-verified.log",
-        "sha256": "d21b5370ea28cda50a3d239bec0aee142a43356050fe9188001d8ad2b6b4e4c2"
+        "evidencePath": "/Users/kwang/apexcn-forums/output/admin-operations-observability/dev-full-canonical-attribution-20260801.log",
+        "sha256": "e32d0c758c6d75d02089c7b089734fe8c71a502d6799a5385c4698deff3cb2cc"
       },
       "executionOrder": [
         "apexcn-forums-if-server-change-required",

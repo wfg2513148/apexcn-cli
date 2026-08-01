@@ -25,6 +25,13 @@ function readReleaseTasks() {
     .map((line) => JSON.parse(line));
 }
 
+function readGaTaskPlan() {
+  return readFileSync(join(repoRoot, "qualification/ga/task-plan-v1.jsonl"), "utf8")
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+}
+
 function resultFor(task: ReturnType<typeof readTasks>[number], passed = true) {
   return {
     taskId: task.taskId,
@@ -47,15 +54,18 @@ function resultFor(task: ReturnType<typeof readTasks>[number], passed = true) {
 
 describe("GA readiness contracts", () => {
   test("accepts the current legal 1.1 milestone lifecycle state", () => {
+    const activeFindings = readJson("issues.json").issues ?? [];
     const result = spawnSync("node", ["scripts/check-ga-readiness.mjs"], {
       cwd: repoRoot,
       encoding: "utf8"
     });
     const report = JSON.parse(result.stdout);
 
-    expect(result.status, JSON.stringify(report.problems)).toBe(0);
+    expect(result.status, JSON.stringify(report.problems)).toBe(activeFindings.length === 0 ? 0 : 1);
     expect(report.targetVersion).toBe("1.1.0");
-    expect(report.problems).toEqual([]);
+    expect(report.problems).toEqual(activeFindings.length === 0
+      ? []
+      : ["1.1 readiness contains active validator findings"]);
   });
 
   test("preserves the immutable 1.0.10 GA public surface", () => {
@@ -122,6 +132,36 @@ describe("GA readiness contracts", () => {
       "ai-agent-integrator",
       "community-maintainer",
       "security-reviewer"
+    ]));
+  });
+
+  test("keeps qualification setup deterministic and enforces offline task boundaries", () => {
+    const tasks = readGaTaskPlan();
+    const collectionBuild = tasks.find((task) => task.expectedPublicCommandIds.includes("collection.build"));
+    const workflowSetups = tasks
+      .flatMap((task) => task.action?.setup ?? [])
+      .filter((setup) => setup.id === "create-workflow-run");
+    const noNetworkTasks = tasks.filter((task) => task.action?.kind === "public-cli" && task.networkPolicy === "no-network");
+    const hashMismatch = tasks.find((task) => task.expectedOutcome === "Workflow hash mismatch blocks execution.");
+
+    expect(collectionBuild.action.commandTemplates[0].commandTemplate).toContain("${PUBLIC_TOPIC_ID}");
+    expect(collectionBuild.action.commandTemplates[0].commandTemplate).not.toContain("30549");
+    expect(workflowSetups.length).toBeGreaterThan(0);
+    expect(workflowSetups.every((setup) => setup.commandId === "workflow.run")).toBe(true);
+    expect(workflowSetups.every((setup) => setup.credentialMode === "synthetic")).toBe(true);
+    expect(workflowSetups.every((setup) => setup.commandTemplate.includes("--goal topic-create"))).toBe(true);
+    expect(workflowSetups.every((setup) => setup.commandTemplate.includes("--output-dir ${TASK_ROOT}/run"))).toBe(true);
+    expect(workflowSetups.every((setup) => setup.capture === undefined)).toBe(true);
+    expect(noNetworkTasks.flatMap((task) => task.action.setup ?? []).every((setup) => setup.credentialMode === "synthetic")).toBe(true);
+    expect(hashMismatch.action.kind).toBe("public-cli");
+    expect(hashMismatch.action.fixtureMutations).toEqual([expect.objectContaining({
+      kind: "json-set",
+      file: "run/preview.json",
+      path: ["request", "body", "title"]
+    })]);
+    expect(hashMismatch.action.commandTemplates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ commandId: "workflow.diff", mode: "expected-business-denial" }),
+      expect.objectContaining({ commandId: "workflow.verify", mode: "expected-business-denial" })
     ]));
   });
 

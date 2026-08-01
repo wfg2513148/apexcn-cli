@@ -185,7 +185,7 @@ apexcn me subscriptions --json
 
 `me` 默认递归脱敏 email、手机号、IP、地址和 secret-like 字段；只有显式 `me --include-private` 才显示服务端返回的私有账号字段。个人列表与 `me search` 优先使用服务端返回的 opaque `page.nextCursor` 继续分页；兼容旧服务端时，四个独立列表仍可使用 `offset/page.nextOffset`，但 `--cursor` 与 `--offset` 不能同时使用。
 
-`me capabilities` 读取服务端 `contractVersion` 与能力矩阵，并增加 `clientCompatibility`。客户端只接受已声明的 0.9、0.8.3、0.8、0.7、0.6 candidate 契约窗口；格式错误、超出支持窗口或内容不完整的契约都会 fail closed。`--require-capability <ids...>` 会在任一必需能力不可用时以非零状态退出。`me notifications`、`me inbox`、`me rules` 和 `me privacy` 只转发权威只读契约；能力缺失时保留服务端的 `available: false`、`status: "UNAVAILABLE"`、`unavailableReason` 和 `requestId`，不会生成空消息、规则或政策冒充真实数据。
+`me capabilities` 读取服务端 `contractVersion` 与能力矩阵，并增加 `clientCompatibility`。客户端只接受已声明的 0.9.1、0.9、0.8.3、0.8、0.7、0.6 candidate 契约窗口；格式错误、超出支持窗口或内容不完整的契约都会 fail closed。`--require-capability <ids...>` 会在任一必需能力不可用时以非零状态退出。`me notifications`、`me inbox`、`me rules` 和 `me privacy` 只转发权威只读契约；能力缺失时保留服务端的 `available: false`、`status: "UNAVAILABLE"`、`unavailableReason` 和 `requestId`，不会生成空消息、规则或政策冒充真实数据。
 
 ## search
 

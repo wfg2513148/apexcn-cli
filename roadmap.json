@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "product": "apexcn-cli",
   "baselineRelease": "1.0.0",
-  "updatedAt": "2026-07-31",
+  "updatedAt": "2026-08-01",
   "versionPolicy": {
     "productStageToReleaseLine": {
       "0.2": "0.20.x",
@@ -3402,9 +3402,9 @@
           "description": "The dedicated apexcn-forums task delivered the administrator-only operations aggregate, strict cooperative CLI attribution, explicit-search-only keyword capture, permission-aware capability discovery, and a zero-residue DEV acceptance matrix.",
           "threadId": "019fb8a0-12dd-77f0-affd-cc31453f934a",
           "result": "pass",
-          "providerCommit": "cc74ec415d30f55446f3503df5f7973c7d98df06",
-          "path": "/Users/kwang/apexcn-forums/output/admin-operations-observability/dev-e2e-verified.log",
-          "sha256": "d21b5370ea28cda50a3d239bec0aee142a43356050fe9188001d8ad2b6b4e4c2"
+          "providerCommit": "8ae75e01a2baf8723405a23b50e2c48c2510289e",
+          "path": "/Users/kwang/apexcn-forums/output/admin-operations-observability/dev-full-canonical-attribution-20260801.log",
+          "sha256": "e32d0c758c6d75d02089c7b089734fe8c71a502d6799a5385c4698deff3cb2cc"
         }
       ],
       "userOutcome": "社区管理员可以在终端中可信地掌握 apexcn-cli 的使用规模、故障热点和检索需求，同时不暴露密钥或原始请求内容。",
@@ -3801,11 +3801,11 @@
       "resolutionThreadId": "019fb8a0-12dd-77f0-affd-cc31453f934a",
       "readinessEvidence": {
         "auditThreadId": "019fb8a0-12dd-77f0-affd-cc31453f934a",
-        "apiContractVersion": "0.9.0-candidate",
-        "providerCommit": "cc74ec415d30f55446f3503df5f7973c7d98df06",
+        "apiContractVersion": "0.9.1-candidate",
+        "providerCommit": "8ae75e01a2baf8723405a23b50e2c48c2510289e",
         "fixturePath": "/Users/kwang/apexcn-forums/docs/api/apexcn-cli-v1.openapi.yaml",
-        "liveSmokeArtifact": "/Users/kwang/apexcn-forums/output/admin-operations-observability/dev-e2e-verified.log",
-        "liveSmokeSha256": "d21b5370ea28cda50a3d239bec0aee142a43356050fe9188001d8ad2b6b4e4c2"
+        "liveSmokeArtifact": "/Users/kwang/apexcn-forums/output/admin-operations-observability/dev-full-canonical-attribution-20260801.log",
+        "liveSmokeSha256": "e32d0c758c6d75d02089c7b089734fe8c71a502d6799a5385c4698deff3cb2cc"
       }
     }
   ],
@@ -3988,10 +3988,22 @@
       ],
       "status": "mitigated",
       "blockingAt": "completion",
-      "description": "apexcn-forums commit cc74ec4 已在 DEV 补齐稳定 HTTP/错误码、严格 CLI 客户端与命令归因、仅限显式搜索的隐私化关键词统计、权限感知 capabilities 和管理员聚合端点；完整矩阵与零残留清理证据已通过。",
+      "description": "apexcn-forums commit 8ae75e0 已在 DEV 补齐稳定 HTTP/错误码、严格 CLI 客户端与 canonical 命令归因、仅限显式搜索的隐私化关键词统计、0.9.1 权限感知 capabilities 和管理员聚合端点；完整矩阵与零残留清理证据已通过。",
       "resolutionEvidenceIds": [
         "M110-E-SERVER-DEV"
       ]
+    },
+    {
+      "id": "RISK-110-VALIDATOR-FIDELITY",
+      "milestoneId": "1.1",
+      "capabilityIds": [
+        "M110-CAP-ATTRIBUTION",
+        "M110-CAP-ADMIN-ANALYTICS"
+      ],
+      "status": "open",
+      "blockingAt": "completion",
+      "description": "R6 证明独立验收器会因结构化脱敏破坏 JSON、遗漏 requestIds、混淆 request preview 与 durable preview、错误解释 review exit 1、缺失认证与 workflow 夹具以及在只读轮次使用 mutable fixture 而产生伪失败。修正后的独立验收器已通过 78/78 测试及 82/82 个适用 no-network 真实任务；多轮独立批判式审核进一步关闭了公开记录器的 OS 网络隔离、冻结 setup argv、绝对/内联/相对/symlink 路径逃逸、伪造 hash mismatch、额外未声明 body 篡改及人工误判问题，最终复审无 P0/P1/P2。风险保持 open，必须由冻结候选包和全新 R7 首次尝试证明未放宽产品门禁且所有适用场景 100% 通过。",
+      "resolutionEvidenceIds": []
     }
   ]
 }

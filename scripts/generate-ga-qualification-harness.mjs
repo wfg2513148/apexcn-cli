@@ -116,8 +116,15 @@ function taskBinding(task, index, publicTaskCount, commands) {
     return descriptor;
   });
   const templates = descriptors.flatMap((descriptor) => safeTemplates(descriptor, task));
-  const setup = descriptors.flatMap((descriptor) => setupFor(descriptor));
+  const setup = setupForTask(task, descriptors);
+  const fixtureMutations = fixtureMutationsFor(task);
   const staticFixtures = descriptors.flatMap((descriptor) => staticFixturesFor(descriptor));
+  if ([...templates, ...setup].some((entry) => entry.commandTemplate.includes("${TASK_ROOT}/bundle.json"))) {
+    staticFixtures.push("bundle.json");
+  }
+  if ([...templates, ...setup].some((entry) => entry.commandTemplate.includes("${TASK_ROOT}/post.md"))) {
+    staticFixtures.push("post.md");
+  }
   const credentialMode = credentialModeFor(task, descriptors);
   const requiredBindings = new Set([
     ...templates.flatMap((template) => bindingsIn(template.commandTemplate)),
@@ -146,7 +153,8 @@ function taskBinding(task, index, publicTaskCount, commands) {
       credentialMode,
       commandTemplates: templates,
       setup,
-      staticFixtures,
+      ...(fixtureMutations.length > 0 ? { fixtureMutations } : {}),
+      staticFixtures: [...new Set(staticFixtures)],
       requiredBindings: [...requiredBindings].sort(),
       executor: executorFor(task, isPublicTask)
     },
@@ -174,14 +182,14 @@ function phaseFor(task, isPublicTask) {
 }
 
 function actionKind(task, isPublicTask) {
-  if (isPublicTask) return "public-cli";
+  if (isPublicTask || isExecutableAdverseTask(task)) return "public-cli";
   if (task.realChromeRequired) return "dev-api-real-chrome-scenario";
   if (task.writePolicy === "isolated-lifecycle-only") return "isolated-lifecycle-scenario";
   return "public-adverse-scenario";
 }
 
 function executorFor(task, isPublicTask) {
-  if (isPublicTask) return "recorder-run";
+  if (isPublicTask || isExecutableAdverseTask(task)) return "recorder-run";
   if (task.realChromeRequired) return "recorder-begin-complete-plus-real-chrome";
   if (task.writePolicy === "isolated-lifecycle-only") return "packaged-lifecycle-agent-plus-recorder";
   return "recorder-begin-complete";
@@ -228,7 +236,7 @@ function safeTemplates(descriptor, task) {
   }
   return examples.map((example) => ({
     commandId: descriptor.id,
-    mode: example.mode,
+    mode: isWorkflowHashMismatchTask(task) ? "expected-business-denial" : example.mode,
     commandTemplate: sanitizeExample(example.command, descriptor.id)
   }));
 }
@@ -241,7 +249,7 @@ function sanitizeExample(command, commandId) {
     .replaceAll("<operation-id>", "qualification-invalid-operation")
     .replaceAll("<draft-id>", "${DRAFT_ID}")
     .replaceAll("./", "${TASK_ROOT}/");
-  if (["favorite.add", "favorite.remove", "subscription.add", "subscription.remove", "reply.create", "topic.view"].includes(commandId)) {
+  if (["collection.build", "favorite.add", "favorite.remove", "subscription.add", "subscription.remove", "reply.create", "review.reply", "topic.view"].includes(commandId)) {
     result = result.replace("30549", "${PUBLIC_TOPIC_ID}");
   }
   if (["topic.update", "topic.delete"].includes(commandId)) {
@@ -264,52 +272,34 @@ function sanitizeExample(command, commandId) {
   if (commandId === "workflow.run") {
     result = result.replace("${TASK_ROOT}/workflow-runs", "${TASK_ROOT}/run");
   }
-  if (["workflow.approve", "workflow.audit-log", "workflow.diff", "workflow.export", "workflow.verify"].includes(commandId)) {
-    result = result.replace("${TASK_ROOT}/run", "${RUN_DIR}");
-  }
   if (commandId === "collection.restore") {
     result = result.replace("--dir ${TASK_ROOT}/collection", "--dir ${TASK_ROOT}/restored");
   }
   return result;
 }
 
+function setupForTask(task, descriptors) {
+  if (isWorkflowHashMismatchTask(task)) {
+    return [...offlineWorkflowRunSetup(), approveWorkflowSetup()];
+  }
+  return descriptors.flatMap((descriptor) => setupFor(descriptor));
+}
+
 function setupFor(descriptor) {
   if ([
     "collection.automation.plan",
     "collection.export",
-    "collection.import",
     "collection.index",
     "collection.query",
-    "collection.restore",
     "collection.stats",
     "collection.sync",
-    "collection.verify",
-    "collection.verify-bundle"
+    "collection.verify"
   ].includes(descriptor.id)) {
-    const setup = [{
-      id: "build-collection",
-      commandId: "collection.build",
-      credentialMode: "approved-dev",
-      commandTemplate: "${APEXCN_BIN} collection build --query \"REST API\" --topic-id ${PUBLIC_TOPIC_ID} --output-dir ${TASK_ROOT}/collection --json"
-    }];
-    if (["collection.import", "collection.restore", "collection.verify-bundle"].includes(descriptor.id)) {
-      setup.push({
-        id: "export-collection-bundle",
-        commandId: "collection.export",
-        credentialMode: "synthetic",
-        commandTemplate: "${APEXCN_BIN} collection export --dir ${TASK_ROOT}/collection --output ${TASK_ROOT}/bundle.json --json"
-      });
-    }
-    return setup;
+    return [importCollectionFixtureSetup()];
   }
   if (descriptor.id === "collection.automation.run") {
     return [
-      {
-        id: "build-collection",
-        commandId: "collection.build",
-        credentialMode: "approved-dev",
-        commandTemplate: "${APEXCN_BIN} collection build --query \"REST API\" --topic-id ${PUBLIC_TOPIC_ID} --output-dir ${TASK_ROOT}/collection --json"
-      },
+      importCollectionFixtureSetup(),
       {
         id: "build-automation-plan",
         commandId: "collection.automation.plan",
@@ -337,37 +327,71 @@ function setupFor(descriptor) {
       commandTemplate: "${APEXCN_BIN} draft export --output ${TASK_ROOT}/drafts.json --json"
     }];
   }
-  if (["workflow.approve", "workflow.audit-log", "workflow.diff", "workflow.export", "workflow.verify"].includes(descriptor.id)) {
-    return [{
-      id: "create-workflow-run",
-      commandId: "workflow.plan",
-      credentialMode: "synthetic",
-      commandTemplate: "${APEXCN_BIN} workflow plan --goal ask-question --keyword \"REST API\" --title \"资格标题\" --problem \"资格问题\" --category-id 4 --output-dir ${TASK_ROOT}/run --json",
-      capture: {
-        RUN_DIR: "$.runDir"
-      }
-    }];
+  if (["workflow.approve", "workflow.audit-log"].includes(descriptor.id)) {
+    return offlineWorkflowRunSetup();
+  }
+  if (["workflow.diff", "workflow.export", "workflow.verify"].includes(descriptor.id)) {
+    return [...offlineWorkflowRunSetup(), approveWorkflowSetup()];
   }
   if (descriptor.id === "workflow.verify-bundle") {
     return [
-      {
-        id: "create-workflow-run",
-        commandId: "workflow.plan",
-        credentialMode: "synthetic",
-        commandTemplate: "${APEXCN_BIN} workflow plan --goal ask-question --keyword \"REST API\" --title \"资格标题\" --problem \"资格问题\" --category-id 4 --output-dir ${TASK_ROOT}/run --json",
-        capture: {
-          RUN_DIR: "$.runDir"
-        }
-      },
+      ...offlineWorkflowRunSetup(),
+      approveWorkflowSetup(),
       {
         id: "export-workflow-bundle",
         commandId: "workflow.export",
         credentialMode: "synthetic",
-        commandTemplate: "${APEXCN_BIN} workflow export --run-dir ${RUN_DIR} --output ${TASK_ROOT}/workflow-bundle.json --json"
+        commandTemplate: "${APEXCN_BIN} workflow export --run-dir ${TASK_ROOT}/run --output ${TASK_ROOT}/workflow-bundle.json --json"
       }
     ];
   }
   return [];
+}
+
+function importCollectionFixtureSetup() {
+  return {
+    id: "import-collection-fixture",
+    commandId: "collection.import",
+    credentialMode: "synthetic",
+    commandTemplate: "${APEXCN_BIN} collection import --bundle ${TASK_ROOT}/bundle.json --output-dir ${TASK_ROOT}/collection --json"
+  };
+}
+
+function offlineWorkflowRunSetup() {
+  return [{
+    id: "create-workflow-run",
+    commandId: "workflow.run",
+    credentialMode: "synthetic",
+    commandTemplate: "${APEXCN_BIN} workflow run --goal topic-create --category-id 4 --title \"资格标题\" --content-file ${TASK_ROOT}/post.md --output-dir ${TASK_ROOT}/run --json"
+  }];
+}
+
+function approveWorkflowSetup() {
+  return {
+    id: "approve-workflow-run",
+    commandId: "workflow.approve",
+    credentialMode: "synthetic",
+    commandTemplate: "${APEXCN_BIN} workflow approve --run-dir ${TASK_ROOT}/run --approved-by qualification-reviewer --json"
+  };
+}
+
+function fixtureMutationsFor(task) {
+  if (!isWorkflowHashMismatchTask(task)) return [];
+  return [{
+    id: "tamper-approved-workflow-preview",
+    kind: "json-set",
+    file: "run/preview.json",
+    path: ["request", "body", "title"],
+    value: "Tampered after approval"
+  }];
+}
+
+function isExecutableAdverseTask(task) {
+  return isWorkflowHashMismatchTask(task);
+}
+
+function isWorkflowHashMismatchTask(task) {
+  return task.expectedOutcome === "Workflow hash mismatch blocks execution.";
 }
 
 function staticFixturesFor(descriptor) {

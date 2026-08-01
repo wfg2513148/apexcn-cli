@@ -214,7 +214,12 @@ describe("roadmap 0.7 collection assets", () => {
 
     await program.parseAsync(["node", "apexcn", "collection", "favorites", "--page-size", "2", "--output-dir", outputDir, "--json"]);
 
-    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({ topicCount: 3, unavailableCount: 1, pageCount: 2 }));
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
+      topicCount: 3,
+      unavailableCount: 1,
+      pageCount: 2,
+      requestIds: ["favorites-1", "favorites-2"]
+    }));
     expect(fetch).toHaveBeenCalledTimes(2);
     const artifact = await readJson(join(outputDir, "topics", "11.json"));
     expect(artifact.result.topic).toEqual(expect.objectContaining({ id: 11, content: "Body 11", url: "https://oracleapex.cn/t/11" }));
@@ -222,6 +227,39 @@ describe("roadmap 0.7 collection assets", () => {
     const manifest = await readJson(join(outputDir, "collection.json"));
     expect(manifest.errors).toEqual([expect.objectContaining({ topicId: 14, unavailableReason: "TOPIC_NOT_FOUND" })]);
     expect(process.exitCode).toBe(1);
+  });
+
+  test("favorites import preserves request ids from an empty terminal page", async () => {
+    const outputDir = await tempPath("favorites-empty-terminal-page");
+    const { program, stdout, fetch } = await configuredProgram(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/v1/me/favorites/export?pageSize=1")) {
+        return Response.json({
+          requestId: "favorites-page-1",
+          items: [{ topicId: 11, title: "Favorite 11", content: "Body 11" }],
+          page: { count: 1, hasMore: true, nextCursor: "terminal.empty" }
+        });
+      }
+      if (url.endsWith("/api/v1/me/favorites/export?pageSize=1&cursor=terminal.empty")) {
+        return Response.json({
+          requestId: "favorites-page-2-empty",
+          items: [],
+          page: { count: 0, hasMore: false, nextCursor: null }
+        });
+      }
+      return Response.json({ error: "unexpected" }, { status: 500 });
+    });
+
+    await program.parseAsync([
+      "node", "apexcn", "collection", "favorites", "--page-size", "1", "--output-dir", outputDir, "--json"
+    ]);
+
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
+      topicCount: 1,
+      pageCount: 2,
+      requestIds: ["favorites-page-1", "favorites-page-2-empty"]
+    }));
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   test("favorites import keeps its topic-only boundary and never treats a reply id as a topic id", async () => {
@@ -268,7 +306,8 @@ describe("roadmap 0.7 collection assets", () => {
       kind: "collection-favorites",
       topicCount: 1,
       excludedReplyCount: 1,
-      unavailableCount: 1
+      unavailableCount: 1,
+      requestIds: ["favorites-targets"]
     }));
     const collection = await readJson(join(outputDir, "collection.json"));
     expect(collection.topics.map((topic: { id: number }) => topic.id)).toEqual([11]);

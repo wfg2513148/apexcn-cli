@@ -8,7 +8,7 @@
   "fixtureVersion": "M090-GA-FIXTURES-1",
   "taskPlan": {
     "path": "qualification/ga/task-plan-v1.jsonl",
-    "sha256": "cf883ad6ace14d4b685d9d4f8586a05d8ab1740fd59cd5e0bd92996d65013aed",
+    "sha256": "4eb080dbf16cb7d53370cb1b9434c40005390921d6e586ff3164d72c34d6b34f",
     "taskCount": 200,
     "firstTaskId": "M090-Q-001",
     "lastTaskId": "M090-Q-200",
@@ -967,7 +967,7 @@
     },
     "recorder": {
       "path": "scripts/ga-qualification-recorder.mjs",
-      "sha256": "e4a1fd8f703f4682d3ce33474f15f73a5b75de16df8bb423770ce70121aef033"
+      "sha256": "985dce00f484ecfb224bae181670ac8524f4e770a6fedc604d9aa16942ca99d2"
     },
     "scorer": {
       "path": "scripts/ga-qualification-score.mjs",
