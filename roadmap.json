@@ -4002,7 +4002,7 @@
       ],
       "status": "open",
       "blockingAt": "completion",
-      "description": "R6 证明独立验收器会因结构化脱敏破坏 JSON、遗漏 requestIds、混淆 request preview 与 durable preview、错误解释 review exit 1、缺失认证与 workflow 夹具以及在只读轮次使用 mutable fixture 而产生伪失败。修正后的独立验收器已通过 78/78 测试及 82/82 个适用 no-network 真实任务；多轮独立批判式审核进一步关闭了公开记录器的 OS 网络隔离、冻结 setup argv、绝对/内联/相对/symlink 路径逃逸、伪造 hash mismatch、额外未声明 body 篡改及人工误判问题，最终复审无 P0/P1/P2。风险保持 open，必须由冻结候选包和全新 R7 首次尝试证明未放宽产品门禁且所有适用场景 100% 通过。",
+      "description": "R7 首次尝试已验证候选、scope、harness 和 DEV 证据输入完整性，preflight、隐私与零残留清理均通过，但未达到发布验收：失效的公共帖子绑定 30549 造成 topic view/collection build 伪失败，synthetic bundle 与 DEV profile 的 base URL 不一致触发 collection sync 正确保护，旧 capability 聚合把非管理员 available=false/FORBIDDEN 声明误判为拥有能力。R7 report SHA-256 为 82cba8dae109d0b8c3be7dfc4805b211dfb567e9d083f4371b87856c159d2e8c；这些失败没有形成候选产品缺陷证据。验证器提交 94f808e 已增加普通用户公共帖子预检、精确权限语义、DEV bundle 绑定与完整哈希覆盖，83/83 测试通过且独立复审无 P0/P1/P2。风险保持 open，必须获得新授权并由冻结候选包和全新 R8 首次尝试证明所有适用场景 100% 通过。",
       "resolutionEvidenceIds": []
     }
   ]
