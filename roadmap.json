@@ -3171,16 +3171,16 @@
       "releaseLine": "1.1.x",
       "title": "管理员运营观测",
       "objective": "让社区管理员通过 apexcn-cli 安全查看 CLI 调用量、异常分布和查询关键词趋势，并能按时间与用户定位运营问题。",
-      "status": "in_progress",
+      "status": "completed",
       "activationGate": {
         "status": "approved",
         "previousMilestoneId": "1.0.11",
         "confirmationRef": "user-confirmed-admin-operations-20260731"
       },
       "completionReview": {
-        "status": "pending",
-        "summaryEvidenceId": null,
-        "confirmationRef": null
+        "status": "approved",
+        "summaryEvidenceId": "M110-E-RELEASE-1.1.0",
+        "confirmationRef": "automatic-v1.1.0-release-closure-20260801"
       },
       "capabilities": [
         {
@@ -3459,6 +3459,18 @@
           "path": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test/runs/M110-VAL-R9/report.json",
           "sha256": "52f8aaee9832913b3d15f6cd23a5f1a915b66e3941c4426684f9a284877f9c98",
           "firstAttemptLedgerSha256": "e1b909feb3261963035098067cea4615218fd84d67844a492c8ad93fabefe09b"
+        },
+        {
+          "id": "M110-E-RELEASE-1.1.0",
+          "kind": "release_closure",
+          "description": "GitHub Release v1.1.0 was published from the synchronized main branch with all 11 required assets. Remote tag, downloaded checksums, clean-tree provenance, independent installation, command help and online GA readiness were verified.",
+          "result": "pass",
+          "tag": "v1.1.0",
+          "commit": "baae15afd823c7d44ad33048ea5bc302021292b0",
+          "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.1.0",
+          "assetCount": 11,
+          "packageSha256": "25949f9b99fae18c5ae8c499de11c91007f84514c0a84eaadd7b9e4af3f62019",
+          "sourceTreeDirty": false
         }
       ],
       "userOutcome": "社区管理员可以在终端中可信地掌握 apexcn-cli 的使用规模、故障热点和检索需求，同时不暴露密钥或原始请求内容。",
