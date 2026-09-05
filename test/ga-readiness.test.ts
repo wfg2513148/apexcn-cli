@@ -19,7 +19,7 @@ function readTasks() {
 }
 
 function readReleaseTasks() {
-  return readFileSync(join(repoRoot, "qualification/releases/1.1.2/tasks-v1.jsonl"), "utf8")
+  return readFileSync(join(repoRoot, "qualification/releases/1.1.3/tasks-v1.jsonl"), "utf8")
     .trim()
     .split("\n")
     .map((line) => JSON.parse(line));
@@ -62,7 +62,7 @@ describe("GA readiness contracts", () => {
     const report = JSON.parse(result.stdout);
 
     expect(result.status, JSON.stringify(report.problems)).toBe(activeFindings.length === 0 ? 0 : 1);
-    expect(report.targetVersion).toBe("1.1.2");
+    expect(report.targetVersion).toBe("1.1.3");
     expect(report.problems).toEqual(activeFindings.length === 0
       ? []
       : ["1.1 readiness contains active validator findings"]);
@@ -81,11 +81,11 @@ describe("GA readiness contracts", () => {
     ]));
   });
 
-  test("freezes every 1.1.2 public command with schemas and API operations", () => {
-    const surface = readJson("qualification/releases/1.1.2/public-surface-v1.json");
+  test("freezes every 1.1.3 public command with schemas and API operations", () => {
+    const surface = readJson("qualification/releases/1.1.3/public-surface-v1.json");
     const commandIds = new Set(surface.commandManifest.commands.map((command: { id: string }) => command.id));
 
-    expect(surface.frozenForVersion).toBe("1.1.2");
+    expect(surface.frozenForVersion).toBe("1.1.3");
     expect(surface.baselineVersion).toBe("1.0.14");
     expect(surface.commandManifest.commands).toHaveLength(COMMAND_DESCRIPTORS.length);
     expect(Object.keys(surface.jsonSchemas)).toHaveLength(81);
