@@ -330,7 +330,7 @@ describe("content commands", () => {
       "https://oracleapex.cn/ords/test/api/v1/admin/operations?from=2026-07-01&to=2026-07-07&userId=42&limit=10",
       expect.objectContaining({
         headers: expect.objectContaining({
-          "X-APEXCN-Client": "apexcn-cli/1.1.4",
+          "X-APEXCN-Client": "apexcn-cli/1.1.5",
           "X-APEXCN-CLI-Operation": "admin_operations"
         })
       })

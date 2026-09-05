@@ -92,6 +92,8 @@ The AI should say when the available evidence is incomplete instead of inventing
 
 When you specify a personal scope, the AI should not silently expand the search to the full community.
 
+Use favorites and subscriptions as a personal APEX reading list: favorite a discussion you may reuse, and subscribe when you want to follow future replies. When a similar problem returns, ask the AI to search those personal items first before widening the search to the full community.
+
 ## 6. Draft and Publish a Topic
 
 > I receive a 401 when APEX calls a REST API. Search for similar discussions, then draft a support topic with my environment, steps, actual result, expected result, and attempted fixes. Do not publish it yet.

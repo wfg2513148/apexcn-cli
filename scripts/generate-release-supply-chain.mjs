@@ -146,8 +146,9 @@ function git(args) {
 }
 
 function hashSourceTree() {
-  const paths = git(["ls-files", "--cached", "--others", "--exclude-standard"])
-    .split("\n")
+  const paths = execFileSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], { cwd: repoRoot })
+    .toString("utf8")
+    .split("\0")
     .filter(Boolean)
     .sort();
   const hash = createHash("sha256");
