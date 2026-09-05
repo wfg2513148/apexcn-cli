@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "1.1.3",
+  "release": "1.1.4",
   "commandManifest": "apexcn commands --json",
   "policy": {
     "localTasksRequireAuthPreflight": false,

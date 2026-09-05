@@ -65,6 +65,16 @@ apexcn doctor --json
 
 阅读与搜索由 AI 在后台调用 `apexcn-cli` 完成。你不需要再输入命令行；发布、修改、删除、收藏、订阅和标记答案时，AI 仍会先显示预览，只有你明确确认后才会执行。
 
+### AI 工具中的实际效果
+
+下面的示例展示了 AI 从官方仓库完成安装、验证 `apexcn` 命令，然后查询最近更新话题的过程。结果包含可继续阅读的社区话题和更新时间。
+
+![AI 工具安装 apexcn-cli 并查询最近话题](docs/assets/readme/ai-install-and-recent-topics.png)
+
+当你询问 APEX 技术问题时，AI 会基于社区内容组织答案，并保留对应话题作为参考来源；社区证据不足时应明确说明限制，而不是编造答案。
+
+![AI 工具根据社区内容回答 Oracle APEX REST API 问题并提供参考](docs/assets/readme/ai-community-answer-with-sources.png)
+
 ### 备用：在终端手动安装和配置
 
 如果你明确希望自行使用终端，可以使用以下安装命令。
