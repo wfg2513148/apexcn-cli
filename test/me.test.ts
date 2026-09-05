@@ -1204,7 +1204,7 @@ describe("me command", () => {
           actions: [
             "Run `apexcn auth show --json` to inspect configured profiles.",
             "Run `apexcn auth use <profile>` to select an existing profile.",
-            "Run `apexcn auth set-token --token <token> --profile <profile>` to configure a profile."
+                "Run `apexcn auth set-token <token>` to configure the default production profile."
           ]
         }
       }

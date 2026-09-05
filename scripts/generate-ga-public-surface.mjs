@@ -5,9 +5,10 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const defaultOutput = join(repoRoot, "qualification/releases/1.1.0/public-surface-v1.json");
+const currentReleaseVersion = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")).version;
+const defaultOutput = join(repoRoot, `qualification/releases/${currentReleaseVersion}/public-surface-v1.json`);
 
-export async function buildGaPublicSurface() {
+export async function buildGaPublicSurface(releaseVersion = currentReleaseVersion) {
   const manifest = JSON.parse(execFileSync(process.execPath, [join(repoRoot, "dist/index.js"), "commands", "--json"], {
     cwd: repoRoot,
     encoding: "utf8",
@@ -19,7 +20,7 @@ export async function buildGaPublicSurface() {
   return {
     kind: "apexcn-ga-public-surface",
     schemaVersion: 1,
-    frozenForVersion: "1.1.0",
+    frozenForVersion: releaseVersion,
     baselineVersion: "1.0.14",
     compatibilityPolicy: {
       releaseLine: "1.x",

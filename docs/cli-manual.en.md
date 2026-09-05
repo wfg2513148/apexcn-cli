@@ -42,27 +42,19 @@ Save an API key:
 
 ```bash
 # Simplest default prod profile; ordinary alphanumeric keys need no quotes
-apexcn -apikey "YOUR_API_KEY"
-apexcn -apikey xxxxxx
+apexcn auth set-token "YOUR_API_KEY"
+apexcn auth set-token xxxxxx
 
 # Higher-security environment-variable configuration
+export APEXCN_API_KEY="YOUR_API_KEY"
 apexcn auth set-token \
-  --profile agent-env \
-  --base-url https://oracleapex.cn/ords/api \
   --token-env APEXCN_API_KEY
 
-# Advanced profile configuration
-apexcn auth set-token \
-  --profile agent-prod \
-  --base-url https://oracleapex.cn/ords/api \
-  --token "$APEXCN_API_KEY"
 ```
 
 The installer never accepts or configures an API key. Run these authentication commands only as a separate step after installation succeeds.
 
-`-apikey` stores the key in the default `prod` profile with `0600` file permissions, does not echo it, and makes no community API request. Quotes only protect shell-special characters. Command-line arguments may enter shell history and appear briefly in process listings; use `--token-env <name>` when that risk is unacceptable. Pass both `--token-env` and `--token` to use the environment credential first and the file credential as fallback. Invalid or missing environment credentials fall back to the file store; if neither backend supplies a usable token, API commands fail before making a request. Tokens must contain visible ASCII characters only, must not contain whitespace, and must not be example placeholders such as `YOUR_API_KEY`. `--base-url` must be an absolute `http` or `https` URL.
-Add `--no-switch` when you want to save a profile without making it current.
-
+`apexcn auth set-token <token>` stores the key in the default `prod` profile with `0600` file permissions, does not echo it, and makes no community API request. The legacy `-apikey <token>` alias remains available. Quotes only protect shell-special characters. Command-line arguments may enter shell history and appear briefly in process listings; use `--token-env <name>` when that risk is unacceptable. Pass both `--token-env` and a token argument or `--token` to use the environment credential first and the file credential as fallback. Invalid or missing environment credentials fall back to the file store; if neither backend supplies a usable token, API commands fail before making a request. Tokens must contain visible ASCII characters only, must not contain whitespace, and must not be example placeholders such as `YOUR_API_KEY`. `--base-url` must be an absolute `http` or `https` URL.
 Show current profile:
 
 ```bash
@@ -76,6 +68,15 @@ apexcn auth remove old-profile
 ```
 
 `auth audit` is a local-only configuration audit and does not call the API. It prints `auth-audit` and checks the active profile, profile references, base URLs, tokens, HTTP profiles, and duplicate base URLs. Full tokens are never printed.
+
+When the API returns 401 and says the token was rejected, copy or regenerate a key in the community, then run:
+
+```bash
+apexcn auth set-token "NEW_API_KEY"
+apexcn doctor --json
+```
+
+The first command updates the default `prod` profile. The second checks the account, category, and search APIs. A browser sign-in does not replace the CLI API key.
 
 Log out:
 

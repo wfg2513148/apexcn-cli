@@ -257,11 +257,11 @@ async function runMeApi(options: MeCommandOptions, commandOptions: { json?: bool
             ? [
                 "Run `apexcn auth show --json` to inspect configured profiles.",
                 "Run `apexcn auth use <profile>` to select an existing profile.",
-                "Run `apexcn auth set-token --token <token> --profile <profile>` to configure a profile."
+                "Run `apexcn auth set-token <token>` to configure the default production profile."
               ]
             : [
                 "Set the profile's configured token environment variable.",
-                "Run `apexcn auth set-token --token <token> --profile <profile>` to configure a file credential."
+                "Run `apexcn auth set-token <token>` to configure the default production profile."
               ]
         }
       }, undefined, commandOptions.json);

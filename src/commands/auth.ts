@@ -30,34 +30,41 @@ First-time API key setup:
     apexcn auth set-token --token-env APEXCN_API_KEY
 
   Simplest local setup:
-    apexcn -apikey "your-api-key"
+    apexcn auth set-token "your-api-key"
 
   Verify the setup:
     apexcn auth audit
 
-Security: run these commands in your own shell. A key passed with -apikey may remain in shell history.
+Security: run these commands in your own shell. A key passed on the command line may remain in shell history.
 `);
 
   auth
     .command("set-token")
     .description("register a file or environment API key profile")
+    .argument("[token]", "file credential for the default production profile")
     .option("--token <token>", "file credential used directly or as fallback")
     .option("--token-env <name>", "environment variable used before the file credential")
     .option("--base-url <url>", "ORDS base URL", DEFAULT_BASE_URL)
     .option("--profile <profile>", "profile name", "prod")
     .option("--no-switch", "save the profile without making it current")
-    .action(async (commandOptions: { token?: string; tokenEnv?: string; baseUrl: string; profile: string; switch?: boolean }) => {
-      if (commandOptions.token === undefined && commandOptions.tokenEnv === undefined) {
-        options.stderr("Provide --token, --token-env, or both\n");
+    .action(async (tokenArgument: string | undefined, commandOptions: { token?: string; tokenEnv?: string; baseUrl?: string; profile?: string; switch?: boolean }) => {
+      if (tokenArgument !== undefined && commandOptions.token !== undefined) {
+        options.stderr("Provide either a token argument or --token, not both\n");
         process.exitCode = 1;
         return;
       }
-      if (commandOptions.token !== undefined && commandOptions.token.trim().length === 0) {
+      const token = tokenArgument ?? commandOptions.token;
+      if (token === undefined && commandOptions.tokenEnv === undefined) {
+        options.stderr("Provide a token argument, --token, --token-env, or both options\n");
+        process.exitCode = 1;
+        return;
+      }
+      if (token !== undefined && token.trim().length === 0) {
         options.stderr("Token must not be blank\n");
         process.exitCode = 1;
         return;
       }
-      if (commandOptions.token !== undefined && !isUsableCredential(commandOptions.token)) {
+      if (token !== undefined && !isUsableCredential(token)) {
         options.stderr("Token must use visible ASCII characters and must not be an example placeholder\n");
         process.exitCode = 1;
         return;
@@ -67,26 +74,28 @@ Security: run these commands in your own shell. A key passed with -apikey may re
         process.exitCode = 1;
         return;
       }
-      if (commandOptions.profile.trim().length === 0) {
+      const profile = commandOptions.profile ?? "prod";
+      const baseUrl = commandOptions.baseUrl ?? DEFAULT_BASE_URL;
+      if (profile.trim().length === 0) {
         options.stderr("Profile must not be blank\n");
         process.exitCode = 1;
         return;
       }
-      if (commandOptions.baseUrl.trim().length === 0) {
+      if (baseUrl.trim().length === 0) {
         options.stderr("Base URL must not be blank\n");
         process.exitCode = 1;
         return;
       }
-      if (!isValidBaseUrl(commandOptions.baseUrl)) {
+      if (!isValidBaseUrl(baseUrl)) {
         options.stderr("Base URL must be an absolute http or https URL\n");
         process.exitCode = 1;
         return;
       }
       try {
-        let fileToken = commandOptions.token;
+        let fileToken = token;
         if (fileToken === undefined) {
           try {
-            fileToken = (await loadConfig(options.configPath)).profiles[commandOptions.profile]?.token ?? "";
+            fileToken = (await loadConfig(options.configPath)).profiles[profile]?.token ?? "";
           } catch (error) {
             if (!(error instanceof ConfigFileError)) {
               throw error;
@@ -95,8 +104,8 @@ Security: run these commands in your own shell. A key passed with -apikey may re
           }
         }
         await setProfile(
-          commandOptions.profile,
-          { baseUrl: commandOptions.baseUrl, token: fileToken, tokenEnv: commandOptions.tokenEnv },
+          profile,
+          { baseUrl, token: fileToken, tokenEnv: commandOptions.tokenEnv },
           options.configPath,
           { overwriteInvalid: true, switchCurrent: commandOptions.switch !== false }
         );
@@ -106,7 +115,7 @@ Security: run these commands in your own shell. A key passed with -apikey may re
         }
         throw error;
       }
-      options.stdout(`Saved profile ${commandOptions.profile}\n`);
+      options.stdout(`Saved profile ${profile}\n`);
     });
 
   auth

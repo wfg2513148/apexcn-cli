@@ -59,7 +59,7 @@ API Key 和密码一样重要。不要把它贴到帖子、聊天记录、GitHub
 如果你希望步骤最少，请在自己的终端中执行下面的命令，并把示例文字替换成刚刚复制的真实 Key：
 
 ```bash
-apexcn -apikey "YOUR_API_KEY"
+apexcn auth set-token "YOUR_API_KEY"
 apexcn auth audit
 ```
 
@@ -118,7 +118,15 @@ apexcn auth --help
 
 > 请在 APEX 中文社区搜索“ORDS 认证失败”，总结最相关的 5 篇话题，并显示完整标题、社区链接和原文链接。
 
-> 请告诉我最近 7 天有哪些新话题，按板块分类，并概括每篇适合解决什么问题。
+> 请告诉我最近 7 天有哪些最近更新的话题，按板块分类，并概括每篇适合解决什么问题。
+
+也可以直接在终端查看最近更新的话题：
+
+```bash
+apexcn topic recent --since-hours 168 --page-size 10 --json
+```
+
+`topic recent` 用于浏览最近更新的话题；不要把空关键词传给 `search` 来代替它。
 
 > 请根据社区现有内容回答“Oracle APEX 如何调用 REST API”，为关键结论附上对应话题标题和链接。
 
@@ -172,8 +180,11 @@ apexcn auth --help
 也可以在终端运行：
 
 ```bash
-apexcn doctor
+apexcn auth audit --json
+apexcn doctor --json
 ```
+
+`auth audit` 只检查本地配置；`doctor` 才会检查社区 API。若提示 API Key 被拒绝，请在社区重新复制或生成 Key 后运行 `apexcn auth set-token "NEW_API_KEY"`，再执行 `apexcn doctor --json` 验证。浏览器登录与 CLI 的 API Key 是两个独立会话。
 
 进一步资料：
 

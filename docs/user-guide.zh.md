@@ -22,11 +22,11 @@ API Key 必须由你登录 [APEX 中文社区](https://oracleapex.cn/) 后，在
 步骤最少的方式，是在自己的终端中执行：
 
 ```bash
-apexcn -apikey "YOUR_API_KEY"
+apexcn auth set-token "YOUR_API_KEY"
 apexcn auth audit
 ```
 
-请把 `YOUR_API_KEY` 替换成真实 Key，不要原样复制。这个方式可能被终端保留在命令历史中。
+请把 `YOUR_API_KEY` 替换成真实 Key，不要原样复制。该命令会使用默认的 `prod` 配置和社区 API 地址；这个方式可能被终端保留在命令历史中。
 
 公共电脑或更重视安全的场景，可以只让 CLI 记住环境变量名：
 
@@ -60,7 +60,15 @@ apexcn auth audit
 
 > 请查找“ORDS 认证失败”相关内容，按“优先阅读、补充阅读、仅供参考”分组。
 
-> 请告诉我最近 7 天有哪些新话题，按板块分类并概括内容。
+> 请告诉我最近 7 天有哪些最近更新的话题，按板块分类并概括内容。
+
+也可以直接运行：
+
+```bash
+apexcn topic recent --since-hours 168 --page-size 10 --json
+```
+
+`topic recent` 用于无关键词浏览最近更新的话题。不要用空关键词调用 `search`；搜索应始终包含你想找的主题。
 
 > 请阅读刚才选中的话题，总结关键步骤、适用条件和注意事项。
 
@@ -188,7 +196,7 @@ API Key 用于 CLI 访问接口，不会自动让浏览器也处于登录状态�
 常见情况：
 
 - **找不到 `apexcn`**：重启 AI 工具或终端，再检查安装是否完成；
-- **认证失败**：运行 `apexcn auth audit`，必要时重新绑定 Key；
+- **认证失败**：先运行 `apexcn auth audit --json` 检查本地配置；如果 API Key 被拒绝，在社区重新复制或生成 Key 后运行 `apexcn auth set-token "NEW_API_KEY"`，再执行 `apexcn doctor --json` 验证；
 - **网页要求登录**：在浏览器中登录社区，CLI 登录和浏览器登录是两个独立会话；
 - **链接无法打开**：保留完整输出并提交 issue，不要手工删除或修改链接参数；
 - **写操作没有执行**：检查是否只完成了预览，以及是否明确确认了当前预览。

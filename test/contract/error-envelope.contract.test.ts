@@ -50,7 +50,7 @@ describe("stable error envelope contract", () => {
         message: "A local API token is configured, but the server rejected it.",
         actions: expect.arrayContaining([
           "Run `apexcn auth show --json` to confirm the active profile and baseUrl.",
-          "Run `apexcn auth set-token --token <new-token> --profile <profile>` to refresh the token."
+          "Run `apexcn auth set-token <new-token>` to refresh the default production token."
         ])
       }
     }));

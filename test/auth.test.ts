@@ -35,9 +35,10 @@ describe("auth command", () => {
     expect(help).toContain("First-time API key setup:");
     expect(help).toContain('export APEXCN_API_KEY="your-api-key"');
     expect(help).toContain("apexcn auth set-token --token-env APEXCN_API_KEY");
-    expect(help).toContain('apexcn -apikey "your-api-key"');
+    expect(help).toContain('apexcn auth set-token "your-api-key"');
     expect(help).toContain("apexcn auth audit");
     expect(help).toContain("shell history");
+    expect(help).toContain("set-token [options] [token]");
     expect(help).toContain("register a file or environment API key profile");
   });
 
@@ -90,6 +91,74 @@ describe("auth command", () => {
     expect(fetch).not.toHaveBeenCalled();
     expect(program.opts().Apikey).toBeUndefined();
     expect(process.exitCode).toBeUndefined();
+  });
+
+  test("auth set-token accepts a token argument for the default production profile", async () => {
+    const configPath = await tempConfigPath();
+    const token = "abcdefghijklmnopqrstuvwxyz123456";
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text)
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", token]);
+
+    expect(JSON.parse(await readFile(configPath, "utf8"))).toEqual({
+      current: "prod",
+      profiles: {
+        prod: {
+          baseUrl: "https://oracleapex.cn/ords/api",
+          token
+        }
+      }
+    });
+    expect(stdout.join("")).toBe("Saved profile prod\n");
+    expect(stdout.join("")).not.toContain(token);
+    expect(stderr.join("")).toBe("");
+    expect(fetch).not.toHaveBeenCalled();
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  test("auth set-token uses the default production profile when given a token argument", async () => {
+    const configPath = await tempConfigPath();
+    const token = "abcdefghijklmnopqrstuvwxyz123456";
+    await writeConfig(configPath, {
+      current: "agent-prod",
+      profiles: {
+        "agent-prod": {
+          baseUrl: "https://example.test/ords/api",
+          token: "previous-token"
+        }
+      }
+    });
+    const stdout: string[] = [];
+    const program = createProgram({
+      configPath,
+      stdout: (text) => stdout.push(text),
+      stderr: () => undefined
+    });
+
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", token]);
+
+    expect(JSON.parse(await readFile(configPath, "utf8"))).toEqual({
+      current: "prod",
+      profiles: {
+        "agent-prod": {
+          baseUrl: "https://example.test/ords/api",
+          token: "previous-token"
+        },
+        prod: {
+          baseUrl: "https://oracleapex.cn/ords/api",
+          token
+        }
+      }
+    });
+    expect(stdout.join("")).toBe("Saved profile prod\n");
   });
 
   test("top-level -apikey rejects blank, placeholder, and non-header-safe values without writing config", async () => {

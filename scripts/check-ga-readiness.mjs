@@ -21,13 +21,15 @@ const qualificationContract = readJson("qualification/ga/qualification-contract-
 const frozenTasks = readJsonLines("eval/qualification/tasks.v2.jsonl");
 const frozenHarness = readJson("qualification/ga/harness-manifest-v1.json");
 const frozenTaskPlan = readJsonLines("qualification/ga/task-plan-v1.jsonl");
-const releaseContract = readJson("qualification/releases/1.1.0/qualification-contract-v1.json");
+const releaseVersion = readJson("package.json").version;
+const releaseContractPath = `qualification/releases/${releaseVersion}/qualification-contract-v1.json`;
+const releaseContract = readJson(releaseContractPath);
 const releaseSurface = readJson(releaseContract.current.surfacePath);
 const releaseTasks = readJsonLines(releaseContract.current.datasetPath);
 
 const generatedSurface = await buildGaPublicSurface();
 if (canonical(releaseSurface) !== canonical(generatedSurface)) {
-  problems.push("1.1.0 public surface drifted from its versioned release contract");
+  problems.push(`${releaseVersion} public surface drifted from its versioned release contract`);
 }
 validateSurface(frozenSurface);
 validateReleaseSurface(frozenSurface, releaseSurface, releaseContract);
@@ -79,7 +81,7 @@ const report = {
     gaQualificationDatasetSha256: sha256("eval/qualification/tasks.v2.jsonl"),
     harnessManifestSha256: sha256("qualification/ga/harness-manifest-v1.json"),
     taskPlanSha256: sha256("qualification/ga/task-plan-v1.jsonl"),
-    releaseContractSha256: sha256("qualification/releases/1.1.0/qualification-contract-v1.json"),
+    releaseContractSha256: sha256(releaseContractPath),
     releasePublicSurfaceSha256: sha256(releaseContract.current.surfacePath),
     releaseQualificationDatasetSha256: sha256(releaseContract.current.datasetPath)
   },
@@ -142,10 +144,10 @@ function validateReleaseSurface(baseline, surface, contract) {
   const problemCountBefore = problems.length;
   if (contract.kind !== "apexcn-release-qualification-contract"
     || contract.contractVersion !== "M110-QUALIFICATION-1"
-    || contract.targetVersion !== "1.1.0"
+    || contract.targetVersion !== releaseVersion
     || surface.frozenForVersion !== contract.targetVersion
     || surface.baselineVersion !== contract.baseline.version) {
-    problems.push("1.1.0 release qualification identity is invalid");
+    problems.push(`${releaseVersion} release qualification identity is invalid`);
   }
   const baselineCommandIds = new Set(baseline.commandManifest.commands.map((command) => command.id));
   const releaseCommands = surface.commandManifest.commands;
@@ -153,15 +155,15 @@ function validateReleaseSurface(baseline, surface, contract) {
   const additions = [...releaseCommandIds].filter((id) => !baselineCommandIds.has(id)).sort();
   const approvedAdditions = contract.approvedAdditions.map((item) => item.commandId).sort();
   if (canonical(additions) !== canonical(approvedAdditions)) {
-    problems.push(`1.1.0 command additions differ from the approved contract: ${additions.join(", ")}`);
+    problems.push(`${releaseVersion} command additions differ from the approved contract: ${additions.join(", ")}`);
   }
   for (const id of baselineCommandIds) {
-    if (!releaseCommandIds.has(id)) problems.push(`1.1.0 removed baseline command ${id}`);
+    if (!releaseCommandIds.has(id)) problems.push(`${releaseVersion} removed baseline command ${id}`);
   }
   if (releaseCommands.length !== contract.current.expectedCommandCount
     || Object.keys(surface.jsonSchemas).length !== contract.current.expectedSchemaCount
     || surface.api.supportedOperations.length !== contract.current.expectedApiOperationCount) {
-    problems.push("1.1.0 public surface denominator differs from the release contract");
+    problems.push(`${releaseVersion} public surface denominator differs from the release contract`);
   }
   for (const addition of contract.approvedAdditions) {
     const command = releaseCommands.find((item) => item.id === addition.commandId);
@@ -178,7 +180,7 @@ function validateReleaseSurface(baseline, surface, contract) {
     || contract.privacy.requestBodiesAllowed !== false
     || contract.privacy.askQuestionCaptureAllowed !== false
     || canonical(contract.privacy.keywordSources) !== canonical(["search", "me_search"])) {
-    problems.push("1.1.0 administrator operations privacy contract is unsafe");
+    problems.push(`${releaseVersion} administrator operations privacy contract is unsafe`);
   }
   evidence.push({
     id: "M110-QUALIFICATION-SURFACE",
@@ -262,36 +264,36 @@ async function validateReleaseQualification(surface, contract, tasks) {
   const problemCountBefore = problems.length;
   const current = contract.current;
   if (tasks.length !== current.exactTaskCount) {
-    problems.push(`1.1.0 qualification dataset must contain exactly ${current.exactTaskCount} tasks`);
+    problems.push(`${releaseVersion} qualification dataset must contain exactly ${current.exactTaskCount} tasks`);
   }
   const taskIds = new Set();
   const prompts = new Set();
   const coveredCommands = new Set();
   const roles = new Set();
   for (const task of tasks) {
-    if (task.datasetVersion !== current.datasetVersion) problems.push(`1.1.0 dataset version mismatch in ${task.taskId}`);
-    if (taskIds.has(task.taskId)) problems.push(`duplicate 1.1.0 qualification task ${task.taskId}`);
-    if (prompts.has(task.prompt)) problems.push(`duplicate 1.1.0 qualification prompt ${task.taskId}`);
+    if (task.datasetVersion !== current.datasetVersion) problems.push(`${releaseVersion} dataset version mismatch in ${task.taskId}`);
+    if (taskIds.has(task.taskId)) problems.push(`duplicate ${releaseVersion} qualification task ${task.taskId}`);
+    if (prompts.has(task.prompt)) problems.push(`duplicate ${releaseVersion} qualification prompt ${task.taskId}`);
     taskIds.add(task.taskId);
     prompts.add(task.prompt);
     roles.add(task.role);
     for (const commandId of task.expectedPublicCommandIds ?? []) coveredCommands.add(commandId);
   }
   for (const command of surface.commandManifest.commands) {
-    if (!coveredCommands.has(command.id)) problems.push(`1.1.0 qualification dataset does not cover ${command.id}`);
+    if (!coveredCommands.has(command.id)) problems.push(`${releaseVersion} qualification dataset does not cover ${command.id}`);
   }
   for (const role of contract.requiredRoles) {
-    if (!roles.has(role)) problems.push(`1.1.0 qualification role is missing: ${role}`);
+    if (!roles.has(role)) problems.push(`${releaseVersion} qualification role is missing: ${role}`);
   }
   const generatedTasks = await buildGaQualificationTasks();
   if (canonical(generatedTasks) !== canonical(tasks)) {
-    problems.push("1.1.0 qualification dataset drifted from its deterministic generator");
+    problems.push(`${releaseVersion} qualification dataset drifted from its deterministic generator`);
   }
   if (contract.independentValidation.freshUserVisibleTaskRequired !== true
     || contract.independentValidation.candidateChecksumRequired !== true
     || contract.independentValidation.productionWritesAllowed !== false
     || contract.independentValidation.candidateRepairAllowed !== false) {
-    problems.push("1.1.0 independent validation contract is incomplete or unsafe");
+    problems.push(`${releaseVersion} independent validation contract is incomplete or unsafe`);
   }
   evidence.push({
     id: "M110-QUALIFICATION-DATASET",

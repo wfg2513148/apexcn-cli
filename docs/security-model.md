@@ -6,7 +6,7 @@
 
 apexcn-cli 支持两种凭据来源：
 
-- `file`：使用 `apexcn -apikey` 或 `auth set-token --token` 保存到本地配置文件；
+- `file`：使用 `apexcn auth set-token <token>`（或兼容旧版的 `-apikey`）保存到本地配置文件；
 - `env`：使用 `auth set-token --token-env <name>` 只保存环境变量名，不保存环境变量值。
 
 同时配置两种来源时，运行时优先读取环境变量；环境变量不可用时才回退到文件凭据。两种来源都不可用时，命令会在发送 API 请求前停止。

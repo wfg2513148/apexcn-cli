@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const DATASET_VERSION = "M110-QUALIFICATION-TASKS-1";
-const defaultOutput = join(repoRoot, "qualification/releases/1.1.0/tasks-v1.jsonl");
+const currentReleaseVersion = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")).version;
+const defaultOutput = join(repoRoot, `qualification/releases/${currentReleaseVersion}/tasks-v1.jsonl`);
 const roles = [
   ["apex-developer", "Oracle APEX 开发者"],
   ["automation-engineer", "自动化工程师"],

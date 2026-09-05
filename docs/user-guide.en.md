@@ -22,11 +22,11 @@ Get your API key by signing in to [APEX Chinese Community](https://oracleapex.cn
 For the shortest setup, run this in your own terminal:
 
 ```bash
-apexcn -apikey "YOUR_API_KEY"
+apexcn auth set-token "YOUR_API_KEY"
 apexcn auth audit
 ```
 
-Replace `YOUR_API_KEY` with the real key. This method may leave the command in your shell history.
+Replace `YOUR_API_KEY` with the real key. The command uses the default `prod` profile and community API URL. This method may leave the command in your shell history.
 
 On a shared computer or when you prefer not to store the key in the CLI configuration, use an environment variable.
 
@@ -58,7 +58,15 @@ Then tell your AI:
 
 > Find discussions about “ORDS authentication failure” and group them into priority reading, extra reading, and background material.
 
-> Show me new topics from the last 7 days, grouped by category.
+> Show me topics updated in the last 7 days, grouped by category.
+
+You can also run:
+
+```bash
+apexcn topic recent --since-hours 168 --page-size 10 --json
+```
+
+Use `topic recent` to browse recently updated topics without a keyword. Do not use an empty keyword with `search`; searches should always name the subject you need.
 
 > Read the selected topic and summarize its key steps, prerequisites, and cautions.
 
@@ -172,7 +180,7 @@ Tell your AI:
 Common cases:
 
 - **`apexcn` not found**: restart the AI tool or terminal, then check the installation;
-- **authentication failed**: run `apexcn auth audit` and reconnect the key if needed;
+- **authentication failed**: first run `apexcn auth audit --json` to check the local configuration; if the API key is rejected, copy or regenerate a key in the community, run `apexcn auth set-token "NEW_API_KEY"`, then verify with `apexcn doctor --json`;
 - **browser asks for sign-in**: sign in through the browser because CLI and browser sessions are separate;
 - **a link does not open**: preserve the complete output and report an issue instead of editing the URL;
 - **a change did not happen**: check whether the flow stopped at preview and still needs your confirmation.

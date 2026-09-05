@@ -52,15 +52,13 @@ Run auth checks only when the selected route lists them. Never expose secrets:
 
 ```bash
 apexcn auth set-token \
-  --profile agent-prod \
-  --base-url https://oracleapex.cn/ords/api \
   --token-env APEXCN_API_KEY
 ```
 
 This stores only the environment variable name. Pass both `--token-env` and `--token` only when a file fallback is intentionally required.
 Never pass an API key to `install-agent.sh` or `install-agent.ps1`. Installation and authentication are separate operations; install first, then configure the environment-variable name with `auth set-token`.
 
-For a human who explicitly chooses the simplest file-backed setup, `apexcn -apikey "YOUR_API_KEY"` configures the default `prod` profile; ordinary alphanumeric keys work without quotes. The user should run this in their own shell because command-line secrets may remain in shell history or appear briefly in process listings. Never echo, log, or reconstruct the supplied key.
+For a human who explicitly chooses the simplest file-backed setup, `apexcn auth set-token "YOUR_API_KEY"` configures the default `prod` profile; ordinary alphanumeric keys work without quotes. The user should run this in their own shell because command-line secrets may remain in shell history or appear briefly in process listings. Never echo, log, or reconstruct the supplied key.
 
 ## Agent Rules
 

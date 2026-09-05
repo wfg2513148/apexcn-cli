@@ -27,7 +27,7 @@ describe("CLI entrypoint detection", () => {
 
     await expect(program.parseAsync(["node", "apexcn", "--version"])).rejects.toMatchObject({ code: "commander.version" });
 
-    expect(output.join("")).toBe("1.1.0\n");
+    expect(output.join("")).toBe("1.1.1\n");
   });
 
   test("rejects unknown top-level arguments instead of silently succeeding", async () => {
@@ -56,7 +56,7 @@ describe("CLI entrypoint detection", () => {
 
     const manifest = JSON.parse(output.join(""));
     expect(manifest.schemaVersion).toBe(1);
-    expect(manifest.version).toBe("1.1.0");
+    expect(manifest.version).toBe("1.1.1");
     expect(manifest.schema).toEqual({
       safetyEffects: ["read", "api-write", "destructive", "config-read", "config-write", "auth", "secret", "diagnostic", "manifest"],
       previewPolicies: ["required", "available", "none"],
@@ -248,7 +248,7 @@ describe("CLI entrypoint detection", () => {
         const parsed = commandFromExample(reference, example.command);
         expect(parsed.path).toBe(command.path);
         expect(example.mode).toMatch(/^(read|preview|execute)$/);
-        expect(positionalsFromExample(parsed.command, parsed.pathLength, example.command).length).toBe(argumentCount(parsed.command));
+        expect(positionalsFromExample(parsed.command, parsed.pathLength, example.command).length).toBe(requiredArgumentCount(parsed.command));
       }
     }
   });
@@ -416,8 +416,10 @@ function positionalsFromExample(command: Command, pathLength: number, example: s
   return positionals;
 }
 
-function argumentCount(command: Command): number {
-  return (command as unknown as { registeredArguments: unknown[] }).registeredArguments.length;
+function requiredArgumentCount(command: Command): number {
+  return (command as unknown as { registeredArguments: Array<{ required?: boolean }> }).registeredArguments
+    .filter((argument) => argument.required)
+    .length;
 }
 
 function tokenizeExample(example: string): string[] {

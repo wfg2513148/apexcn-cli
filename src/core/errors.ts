@@ -83,7 +83,7 @@ export function remediationForHttpError(error: HttpError, token?: string): Error
         : "The server requires a valid API token.",
       actions: [
         "Run `apexcn auth show --json` to confirm the active profile and baseUrl.",
-        "Run `apexcn auth set-token --token <new-token> --profile <profile>` to refresh the token.",
+        "Run `apexcn auth set-token <new-token>` to refresh the default production token.",
         "Check that the active profile points at the expected ORDS baseUrl.",
         "Retry the command and include requestId when asking for server-side support."
       ]
