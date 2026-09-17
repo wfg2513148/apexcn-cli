@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { runWithCliRequestContext } from "../src/core/request-context.js";
+import { errorBodyFrom, remediationForHttpError } from "../src/core/errors.js";
 import { HttpError, joinUrl, NetworkError, redactSecret, requestJson, TimeoutError } from "../src/http.js";
 
 describe("http", () => {
@@ -215,6 +216,40 @@ describe("http", () => {
       url: "https://oracleapex.cn/ords/apexcn/api/v1/me",
       timeoutMs: 5
     } satisfies Partial<TimeoutError>);
+  });
+
+  test.each(["AbortError", "TimeoutError"])("normalizes %s while reading the response body", async (name) => {
+    const response = new Response();
+    vi.spyOn(response, "text").mockRejectedValue(new DOMException("aborted", name));
+    vi.stubGlobal("fetch", vi.fn(async () => response));
+    await expect(requestJson("https://example.com", "/api/v1/search", {
+      token: "test", timeoutMs: 90000
+    })).rejects.toMatchObject({ name: "TimeoutError", timeoutMs: 90000 });
+  });
+
+  test("normalizes network failures while reading the response body", async () => {
+    const response = new Response();
+    vi.spyOn(response, "text").mockRejectedValue(new TypeError("terminated"));
+    vi.stubGlobal("fetch", vi.fn(async () => response));
+    await expect(requestJson("https://example.com", "/api/v1/search", {
+      token: "test"
+    })).rejects.toBeInstanceOf(NetworkError);
+  });
+
+  test("preserves non-JSON HTTP 555 status and request ID without suggesting a transient outage", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("<html>server failure</html>", {
+      status: 555, headers: { "x-request-id": "req-555" }
+    })));
+    const error = await requestJson("https://example.com", "/api/v1/search", {
+      token: "test"
+    }).catch((error: unknown) => error);
+    expect(error).toBeInstanceOf(HttpError);
+    expect(errorBodyFrom(error).error).toMatchObject({
+      status: 555, requestId: "req-555", retryable: false,
+      remediation: { code: "SERVER_REQUEST_FAILED" }
+    });
+    expect(remediationForHttpError(new HttpError("unavailable", 503, "", undefined, null))?.code)
+      .toBe("SERVER_TEMPORARILY_UNAVAILABLE");
   });
 
   test("redactSecret replaces exact secret values", () => {

@@ -122,7 +122,7 @@ For a human who explicitly chooses the simplest file-backed setup, `apexcn auth 
 - Do not infer an exact total from search results. If `page.hasMore` is true, report a lower bound such as "at least N results" and suggest narrowing by category or date.
 - Treat `401` as auth/token failure, `403` as permission/config denial, `409` as state conflict, and `429` as rate limiting. If stderr includes `retryAfterSeconds`, wait or report that exact retry window instead of retrying immediately.
 - Preserve stderr and `requestId` in logs for troubleshooting.
-- If community API calls hang or the network is unstable, set `APEXCN_HTTP_TIMEOUT_MS` to a positive millisecond value before rerunning.
+- The CLI has no built-in 20-second timeout. `APEXCN_HTTP_TIMEOUT_MS` sets a per-request timeout, including response-body reading, not a deadline for the complete multi-request retrieval. If the server's answer-processing limit is 60 seconds, use `APEXCN_HTTP_TIMEOUT_MS=90000` to allow transport overhead; do not introduce a 20-second override. `rag retrieve` calls search/topic APIs, while `ask` calls the server-side answer endpoint; their server timeout settings may differ.
 - For scripts that need parseable stderr, set `APEXCN_ERROR_FORMAT=json`.
 - Do not output full API key, local config file contents, or other secrets.
 

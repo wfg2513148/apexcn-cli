@@ -31,7 +31,7 @@ export function errorBodyFrom(error: unknown, token?: string): ApexcnErrorBody {
         message: redactSecretText(token ? error.message.split(token).join("[redacted]") : error.message),
         status: error.status,
         requestId: error.requestId,
-        retryable: error.status === 429 || error.status >= 500,
+        retryable: error.status === 429 || (error.status >= 500 && error.status !== 555),
         retryAfterSeconds: error.retryAfterSeconds,
         windowSeconds: error.windowSeconds,
         remediation: remediationForHttpError(error, token),
@@ -137,6 +137,17 @@ export function remediationForHttpError(error: HttpError, token?: string): Error
         "Reduce request frequency or page size for repeated automation.",
         "Avoid parallel retries while the rate-limit window is active.",
         "Use requestId and the reported window when escalating persistent throttling."
+      ]
+    };
+  }
+  if (error.status === 555) {
+    return {
+      code: "SERVER_REQUEST_FAILED",
+      message: "The server returned HTTP 555. This does not establish a transient outage or a client timeout.",
+      actions: [
+        "Record the failing command, HTTP status, and requestId for the community operator.",
+        "Ask the operator to inspect the corresponding ORDS and database errors before retrying.",
+        "Increasing APEXCN_HTTP_TIMEOUT_MS does not fix a server-returned HTTP 555."
       ]
     };
   }

@@ -108,15 +108,19 @@ export async function requestJson<T = unknown>(
 
   const url = addQuery(joinUrl(baseUrl, path), options.query);
   let response: Response;
+  let body: unknown;
   try {
     response = await fetch(url, init);
+    body = await parseJson(response);
   } catch (error) {
+    if (error instanceof HttpError) {
+      throw error;
+    }
     if (timeoutMs !== undefined && isAbortError(error)) {
       throw new TimeoutError(url, timeoutMs);
     }
     throw new NetworkError(url, error);
   }
-  const body = await parseJson(response);
 
   if (!response.ok) {
     const requestId = requestIdFrom(body) ?? response.headers.get("x-request-id") ?? undefined;
