@@ -12,7 +12,14 @@
       "owner": "cli",
       "status": "in_progress",
       "title": "Reject unsafe archive members before installer extraction",
-      "description": "Independent candidate testing found that a checksummed tar archive with an absolute-path member was accepted. Local installer guards and regression tests are implemented; independent candidate revalidation and release remain pending.",
+      "description": "Independent candidate testing found that a checksummed tar archive with an absolute-path member was accepted. Installer guards and regression tests are implemented and fresh scoped candidate revalidation passed; full release qualification and publication remain pending.",
+      "revalidation": {
+        "threadId": "01a0affa-0d10-7b52-b05c-5777298d7752",
+        "report": "/Users/kwang/apexcn-cli-test/runs/update-local-1.1.6-ab6a99af/results.json",
+        "candidateSha256": "3f8bd2b9eb231b65a365c9fde1f5798d2b65e1faef3694d922a2d243c13fcb18",
+        "scopedAcceptance": true,
+        "fullQualification": false
+      },
       "validatorRound": "1.1.6-full-qualification",
       "source": {
         "type": "independent-validator-thread",
@@ -36,6 +43,12 @@
       "targetVersion": "1.1.6",
       "status": "in_progress",
       "title": "Upgrade with apexcn update",
+      "scopedValidation": {
+        "threadId": "01a0affa-0d10-7b52-b05c-5777298d7752",
+        "report": "/Users/kwang/apexcn-cli-test/runs/update-local-1.1.6-ab6a99af/results.json",
+        "passed": true,
+        "remaining": "Full release qualification, Windows runtime validation, and publication."
+      },
       "currentBehavior": ["Users must locate and execute lifecycle-agent upgrade manually."],
       "requiredOutcomes": ["Apexcn update upgrades the current managed installation without API credentials.", "Checksum failures preserve the working installation and auth configuration.", "Unmanaged copies fail with actionable guidance."],
       "serverCapabilityAuditRequired": true,
