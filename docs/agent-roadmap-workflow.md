@@ -20,7 +20,7 @@ this document does not turn ordinary edits into an automatic release.
 ## Goal-Mode Patch Closure
 
 - Every completed small-version goal-mode iteration must bump the patch version, pass local quality gates, commit, push `main`, push the release tag, and publish a GitHub Release.
-- Do not activate GitHub Actions for this closure path. The release commit must end with `[skip ci]`, and the release must be created directly with `gh release create`; do not run `gh workflow run`.
+- The user authorized Windows GitHub Actions validation for current and future rounds on 2026-09-18. Manual Windows validation workflows may be dispatched without asking again. Do not activate unrelated jobs or the Release workflow for this closure path. The release commit must end with `[skip ci]`, and the release must be created directly with `gh release create`.
 - After release verification, run `npm run context:compact -- --summary <summary.json> --release-url <url>` to write `reports/iteration-context.json`.
 - The compact summary must include enhanced capabilities, unexpected problems, root causes, prevention actions, the next milestone goal, expected results, and major risks.
 - End the current goal after context compaction. The next main session must read `reports/iteration-context.json` when present, then re-read `roadmap.json` and `issues.json` before planning.

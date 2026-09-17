@@ -1,12 +1,25 @@
 name: CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Published candidate tag to verify on Windows
+        required: true
+        default: v1.1.6
+        type: string
+      archive_sha256:
+        description: Independently accepted candidate archive SHA-256
+        required: true
+        default: 3f8bd2b9eb231b65a365c9fde1f5798d2b65e1faef3694d922a2d243c13fcb18
+        type: string
   push:
     branches: [main]
   pull_request:
 
 jobs:
   test:
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +40,9 @@ jobs:
   windows-installer:
     name: Windows 2022 / ${{ matrix.name }}
     runs-on: windows-2022
+    timeout-minutes: 20
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -49,9 +65,20 @@ jobs:
         env:
           APEXCN_TEST_POWERSHELL: ${{ matrix.executable }}
           APEXCN_WINDOWS_REPORT_PATH: reports/${{ matrix.id }}-lifecycle.json
+      - name: Verify the published Windows installation and update command
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          gh release download $env:APEXCN_TEST_RELEASE_TAG --repo wfg2513148/apexcn-cli --dir release-assets
+          node scripts/validate-windows-release.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APEXCN_TEST_RELEASE_TAG: ${{ inputs.release_tag }}
+          APEXCN_TEST_ARCHIVE_SHA256: ${{ inputs.archive_sha256 }}
+          APEXCN_TEST_POWERSHELL: ${{ matrix.executable }}
+          APEXCN_WINDOWS_RELEASE_REPORT: reports/${{ matrix.id }}-release.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ${{ matrix.id }}-lifecycle
-          path: reports/${{ matrix.id }}-lifecycle.json
+          path: reports/${{ matrix.id }}-*.json
           if-no-files-found: warn
