@@ -1,8 +1,9 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
-import { renderIssues, renderRoadmap, validateRoadmap } from "../scripts/check-roadmap.mjs";
+import { readAgentGuidance, renderIssues, renderRoadmap, validateRoadmap, validatorReadiness } from "../scripts/check-roadmap.mjs";
 
 const repoRoot = join(__dirname, "..");
 
@@ -16,7 +17,7 @@ function validationInput(roadmap = loadJson("roadmap.json"), issues = loadJson("
     issues,
     roadmapMarkdown: renderRoadmap(roadmap, issues),
     issuesMarkdown: renderIssues(issues),
-    agentsText: readFileSync(join(repoRoot, "AGENTS.md"), "utf8")
+    agentsText: readAgentGuidance()
   };
 }
 
@@ -342,5 +343,33 @@ describe("roadmap contract", () => {
     expect(problems).toContain(
       "criterion M020-AC-001 references unknown measurement profile PROFILE-MISSING"
     );
+  });
+});
+
+describe("independent validator project readiness", () => {
+  test("unconfigured routing does not pretend to be ready", () => {
+    const roadmap = loadJson("roadmap.json");
+    roadmap.testingBindings.validator.project = null;
+    roadmap.testingBindings.validator.projectStatus = "unconfigured";
+    expect(validatorReadiness(roadmap)).toHaveLength(1);
+  });
+
+  test("allows a relocated independent directory and rejects builder overlap", () => {
+    const target = mkdtempSync(join(tmpdir(), "apexcn-validator-routing-"));
+    try {
+      const roadmap = loadJson("roadmap.json");
+      const issues = loadJson("issues.json");
+      roadmap.testingBindings.validator.project = target;
+      roadmap.testingBindings.validator.projectStatus = "configured";
+      issues.sourcePolicy.validatorProject = target;
+      expect(validateRoadmap(validationInput(roadmap, issues))).toEqual([]);
+      expect(validatorReadiness(roadmap)).toEqual([]);
+      roadmap.testingBindings.validator.project = roadmap.testingBindings.builder.repository;
+      expect(validatorReadiness(roadmap)).toHaveLength(1);
+      roadmap.testingBindings.validator.project = join(target, "missing");
+      expect(validatorReadiness(roadmap)).toHaveLength(1);
+    } finally {
+      rmSync(target, { recursive: true, force: true });
+    }
   });
 });

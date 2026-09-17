@@ -30,7 +30,7 @@ describe("http", () => {
       headers: {
         Authorization: "Bearer abc123",
         "X-APEXCN-API-Key": "abc123",
-        "X-APEXCN-Client": "apexcn-cli/1.1.5",
+        "X-APEXCN-Client": "apexcn-cli/1.1.6",
         "X-APEXCN-CLI-Operation": "me_search",
         "User-Agent": "apexcn-test"
       }
@@ -53,8 +53,8 @@ describe("http", () => {
       headers: {
         Authorization: "Bearer abc123",
         "X-APEXCN-API-Key": "abc123",
-        "X-APEXCN-Client": "apexcn-cli/1.1.5",
-        "User-Agent": "apexcn-cli/1.1.5",
+        "X-APEXCN-Client": "apexcn-cli/1.1.6",
+        "User-Agent": "apexcn-cli/1.1.6",
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ title: "Hello" })

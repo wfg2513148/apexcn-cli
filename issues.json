@@ -51,7 +51,7 @@
   },
   "sourcePolicy": {
     "allowedSource": "independent-validator-thread",
-    "validatorProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
+    "validatorProject": "/Users/kwang/apexcn-cli-test",
     "threadStrategy": "fresh-task-per-validation-round",
     "dynamicAssignmentRequired": true,
     "novicePersonaRequired": true,

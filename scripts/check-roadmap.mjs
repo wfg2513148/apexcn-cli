@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { readFileSync, realpathSync, statSync } from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -25,7 +25,7 @@ export function renderRoadmap(roadmap, issues) {
     "",
     "## 执行规则",
     "",
-    "- 每个主会话开始时必须读取 `roadmap.json` 与 `issues.json`。",
+    "- 执行用户指定的里程碑或正式发布时读取 `roadmap.json` 与 `issues.json`；普通局部修改不自动开启里程碑。",
     "- 只为当前里程碑生成即时执行计划，不预制后续里程碑实施计划。",
     "- 每个里程碑必须启动一个独立 Codex 目标模式，直至全部验收、独立复验、问题清零和发版闭环完成。",
     "- 每轮验证必须在固定测试项目中新建独立且无实现先验的任务线程；主会话按当前里程碑和实际风险动态下发结构化测试范围。",
@@ -34,7 +34,7 @@ export function renderRoadmap(roadmap, issues) {
     "- 同一时间最多一个里程碑为 `in_progress`。",
     "- 修复后的问题从活动 `issues.json` 删除，首次失败证据保留在验证历史。",
     "- 完成里程碑后必须归纳增强能力、意外问题、根因、规避措施和下一阶段预期。",
-    "- 发布验证和上下文压缩完成后，自动批准完成审查并激活下一个里程碑，无需再次等待用户确认。",
+    "- 在用户已授权的里程碑集合内，发布验证和交接完成后继续下一里程碑；不得自动扩大范围。",
     "- 每次目标模式小版本完成后必须 bump patch、通过本地门禁、提交、推送、打 tag，并直接创建 GitHub Release。",
     "- 发版提交以 `[skip ci]` 结尾；不得触发 GitHub Actions，正常发版使用 `gh release create`。",
     "- 发布验证后必须生成不超过 12 KiB 的 `reports/iteration-context.json`，并结束当前目标。",
@@ -43,7 +43,7 @@ export function renderRoadmap(roadmap, issues) {
     "",
     "| Role | Project | Thread policy | Model | Reasoning |",
     "|---|---|---|---|---|",
-    `| Validator | ${md(roadmap.testingBindings.validator.project)} | \`${roadmap.testingBindings.validator.threadStrategy}\` | \`${roadmap.testingBindings.validator.model}\` | \`${roadmap.testingBindings.validator.reasoningEffort}\` |`,
+    `| Validator | ${md(roadmap.testingBindings.validator.project ?? "未配置：实际验收前先恢复独立harness")} | \`${roadmap.testingBindings.validator.threadStrategy}\` | \`${roadmap.testingBindings.validator.model}\` | \`${roadmap.testingBindings.validator.reasoningEffort}\` |`,
     `| ORDS API | ${md(roadmap.testingBindings.server.repository)} | \`${roadmap.testingBindings.server.threadId}\` | \`${roadmap.testingBindings.server.model}\` | \`${roadmap.testingBindings.server.reasoningEffort}\` |`,
     "",
     `真实 API 验证可在 \`${roadmap.testingBindings.server.apiKeyEnvironment}\` 创建最小权限专用 API key；不得写入仓库、日志、fixture 或证据包，也不得用于生产社区写操作。`,
@@ -110,7 +110,7 @@ export function renderRoadmap(roadmap, issues) {
       `- Activation: \`${milestone.activationGate.status}\``,
       `- Completion review: \`${milestone.completionReview.status}\``,
       "- 完成后必须总结：增强能力、未预估问题、根因、规避措施、下一阶段目标、量化预期和主要风险。",
-      "- 发布验证和上下文压缩完成后，自动批准完成审查并启动下一里程碑。"
+      "- 在用户已授权的里程碑集合内，发布验证和交接完成后继续下一里程碑。"
     );
   }
 
@@ -255,7 +255,13 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
   check(patchClosure?.contextCompaction?.maxBytes === 12288, "iteration context maximum must be 12288 bytes", problems);
   check(patchClosure?.contextCompaction?.nextSessionMustRead === true, "next session must read compact context", problems);
   const validator = roadmap.testingBindings?.validator;
-  check(validator?.project === "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test", "validator project binding drifted", problems);
+  const configuredProject = validator?.project;
+  const unconfigured = configuredProject === null && validator?.projectStatus === "unconfigured";
+  check(unconfigured || (nonEmpty(configuredProject) && isAbsolute(configuredProject) && validator?.projectStatus === "configured"), "validator project must be an absolute configured path or explicitly unconfigured", problems);
+  if (nonEmpty(configuredProject)) {
+    const builder = roadmap.testingBindings?.builder?.repository;
+    check(nonEmpty(builder) && !isWithin(configuredProject, builder) && !isWithin(builder, configuredProject), "validator project must be independent of the builder repository", problems);
+  }
   check(validator?.threadVisibility === "user-visible-codex-desktop-task", "validator must be a user-visible Codex Desktop task", problems);
   check(validator?.sessionCwdMustEqualProject === true, "validator session cwd must equal the validator project", problems);
   check(validator?.hiddenSubagentAllowed === false, "hidden subagents cannot satisfy validator rounds", problems);
@@ -615,13 +621,47 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
+export function readAgentGuidance() {
+  return readFileSync(agentsPath, "utf8") + "\n" + readFileSync(join(repoRoot, "docs", "agent-roadmap-workflow.md"), "utf8");
+}
+
+function isWithin(candidate, root) {
+  const rel = relative(resolve(root), resolve(candidate));
+  return rel === "" || (rel !== ".." && !rel.startsWith("../") && !rel.startsWith("..\\") && !isAbsolute(rel));
+}
+
+export function validatorReadiness(roadmap) {
+  const validator = roadmap.testingBindings?.validator;
+  if (validator?.projectStatus !== "configured" || !nonEmpty(validator.project) || !isAbsolute(validator.project)) {
+    return ["Independent validator project is unconfigured; locate the actual harness before starting a round"];
+  }
+  try {
+    if (!statSync(validator.project).isDirectory()) return ["Independent validator path is not a directory"];
+    const target = realpathSync(validator.project);
+    const builder = realpathSync(roadmap.testingBindings.builder.repository);
+    if (isWithin(target, builder) || isWithin(builder, target)) return ["Independent validator must not overlap the builder repository"];
+  } catch {
+    return ["Independent validator or builder directory is missing or inaccessible"];
+  }
+  return [];
+}
+
 function main() {
   const roadmap = readJson(roadmapPath);
   const issues = readJson(issuesPath);
+  if (process.argv.includes("--validator-readiness")) {
+    const problems = validatorReadiness(roadmap);
+    if (problems.length > 0) {
+      for (const problem of problems) console.error(`- ${problem}`);
+      process.exit(1);
+    }
+    console.log("Validator directory readiness passed; verify harness and candidate contract before assigning a round");
+    return;
+  }
   const problems = validateRoadmap({
     roadmap,
     issues,
-    agentsText: readFileSync(agentsPath, "utf8")
+    agentsText: readAgentGuidance()
   });
   if (problems.length > 0) {
     for (const problem of problems) {

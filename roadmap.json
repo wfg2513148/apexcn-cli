@@ -70,7 +70,7 @@
       "requiredForEveryMilestone": true,
       "milestoneExecutionMode": "one-codex-goal-per-roadmap-milestone",
       "startsWhen": [
-        "上一里程碑完成发布、总结和上下文压缩后自动激活下一个 roadmap 里程碑",
+        "在用户已授权的里程碑集合内，上一里程碑完成发布、总结和交接后激活下一里程碑",
         "主会话为该里程碑创建一个独立 Codex 目标模式并承诺全部验收条件",
         "自 0.4 起为每个里程碑新建用户可见的 Codex Desktop 主实施任务，且 cwd 精确等于 builder repository"
       ],
@@ -90,7 +90,9 @@
         "context handoff 完成"
       ],
       "mayEndBeforeMilestoneCompletion": false
-    }
+    },
+    "appliesWhen": "user-requested-roadmap-milestone-or-formal-release",
+    "continuationScope": "user-authorized-milestones"
   },
   "testingBindings": {
     "builder": {
@@ -102,7 +104,7 @@
       "reusePredecessorTaskAllowed": false
     },
     "validator": {
-      "project": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
+      "project": "/Users/kwang/apexcn-cli-test",
       "threadVisibility": "user-visible-codex-desktop-task",
       "sessionCwdMustEqualProject": true,
       "hiddenSubagentAllowed": false,
@@ -206,7 +208,9 @@
             "threadId"
           ]
         }
-      }
+      },
+      "previousProject": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
+      "projectStatus": "configured"
     },
     "server": {
       "repository": "/Users/kwang/apexcn-forums",
