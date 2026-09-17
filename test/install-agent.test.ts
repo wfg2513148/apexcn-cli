@@ -13,6 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { gzipSync } from "node:zlib";
 import { describe, expect, test } from "vitest";
 
 const repoRoot = join(__dirname, "..");
@@ -20,6 +21,26 @@ const posixTest = process.platform === "win32" ? test.skip : test;
 
 function readRepoFile(path: string): string {
   return readFileSync(join(repoRoot, path), "utf8");
+}
+
+function prepareUnsafeArchive(root: string, name: string, type: string) {
+  const header = Buffer.alloc(512);
+  header.write(name, 0, 100, "utf8");
+  for (const offset of [100, 108, 116]) header.write("0000644\0", offset, 8, "ascii");
+  header.write("00000000000\0", 124, 12, "ascii");
+  header.write("00000000000\0", 136, 12, "ascii");
+  header.fill(32, 148, 156);
+  header.write(type, 156, 1, "ascii");
+  if (type === "1" || type === "2") header.write("../outside", 157, 100, "ascii");
+  header.write("ustar\0", 257, 6, "ascii");
+  header.write("00", 263, 2, "ascii");
+  const checksum = header.reduce((sum, byte) => sum + byte, 0);
+  header.write(`${checksum.toString(8).padStart(6, "0")}\0 `, 148, 8, "ascii");
+  const archive = join(root, "unsafe.tgz");
+  writeFileSync(archive, gzipSync(Buffer.concat([header, Buffer.alloc(1024)])));
+  const checksums = join(root, "checksums.txt");
+  writeFileSync(checksums, `${createHash("sha256").update(readFileSync(archive)).digest("hex")}  apexcn-cli.tgz\n`);
+  return { archive, checksums };
 }
 
 function execNpm(args: string[]): string {
@@ -84,6 +105,40 @@ function defaultInstallEnvironment(
 }
 
 describe("zero-argument one-click installers", () => {
+  posixTest.each([
+    ["/absolute.marker", "0", "path"],
+    ["../parent.marker", "0", "path"],
+    ["package/../../parent.marker", "0", "path"],
+    ["C:/drive.marker", "0", "path"],
+    ["package\\..\\windows.marker", "0", "path"],
+    ["package/symlink", "2", "entry type"],
+    ["package/hardlink", "1", "entry type"]
+  ])("rejects unsafe archive member %s before extraction", (name, type, reason) => {
+    const root = mkdtempSync(join(tmpdir(), "apexcn-unsafe-"));
+    try {
+      const packagePaths = prepareUnsafeArchive(root, name, type);
+      const env = installEnvironment(root, packagePaths);
+      const sentinel = join(root, "install", "sentinel");
+      mkdirSync(join(root, "install"));
+      writeFileSync(sentinel, "original installation");
+      const result = spawnSync("bash", ["scripts/install-agent.sh"], { cwd: repoRoot, env, encoding: "utf8" });
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain(`Unsafe package archive ${reason}`);
+      expect(readFileSync(sentinel, "utf8")).toBe("original installation");
+      expect(existsSync(join(root, "bin", "apexcn"))).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test.each(["scripts/install-agent.sh", "scripts/install-agent.ps1"])("%s checks member paths and types before extraction", (path) => {
+    const script = readRepoFile(path);
+    expect(script).toContain("Unsafe package archive path.");
+    expect(script).toContain("Unsafe package archive entry type.");
+    expect(script.indexOf("tar -tzPf")).toBeLessThan(script.indexOf("tar -xzf"));
+    expect(script.indexOf("tar -tvzPf")).toBeLessThan(script.indexOf("tar -xzf"));
+  });
+
   test("shell installer keeps a minimal public surface and mandatory checksum verification", () => {
     const script = readRepoFile("scripts/install-agent.sh");
 

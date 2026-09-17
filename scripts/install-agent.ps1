@@ -74,6 +74,17 @@ try {
   $Actual = Get-Sha256 $Archive
   if ($Actual -ne $Expected) { throw "Checksum verification failed for apexcn-cli.tgz." }
   Write-Step "Verified package checksum."
+  # Keep original names while listing, before extraction can normalize them.
+  $Members = @(& tar -tzPf $Archive)
+  if ($LASTEXITCODE -ne 0 -or $Members.Count -eq 0) { throw "Unable to inspect package archive." }
+  foreach ($Member in $Members) {
+    if ($Member -match '^/|\\|:|(^|/)\.\.(/|$)|[\x00-\x1f\x7f]') { throw "Unsafe package archive path." }
+  }
+  $Entries = @(& tar -tvzPf $Archive)
+  if ($LASTEXITCODE -ne 0) { throw "Unable to inspect package archive." }
+  foreach ($Entry in $Entries) {
+    if ($Entry -notmatch '^[-d]') { throw "Unsafe package archive entry type." }
+  }
 
   $InstallParent = Split-Path -Parent $InstallRoot
   New-Item -ItemType Directory -Force -Path $InstallParent | Out-Null

@@ -1,9 +1,35 @@
 {
   "schemaVersion": 1,
   "product": "apexcn-cli",
-  "updatedAt": "2026-08-01",
+  "updatedAt": "2026-09-17",
   "activeOnly": true,
-  "issues": [],
+  "issues": [
+    {
+      "id": "M110-VAL-ARCHIVE-ABSOLUTE",
+      "milestoneId": "1.1",
+      "targetVersion": "1.1.6",
+      "priority": "P1",
+      "owner": "cli",
+      "status": "in_progress",
+      "title": "Reject unsafe archive members before installer extraction",
+      "description": "Independent candidate testing found that a checksummed tar archive with an absolute-path member was accepted. Local installer guards and regression tests are implemented; independent candidate revalidation and release remain pending.",
+      "validatorRound": "1.1.6-full-qualification",
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "01a0afc9-8c27-7581-b61c-f2f63f0d727c",
+        "assignmentRef": "1.1.6-full-qualification",
+        "report": "/Users/kwang/apexcn-cli-test/runs/unsafe-archive-supplement-GoazQV/results.json",
+        "findingRefs": ["absolute"],
+        "scenarioOrExplorationRef": ["M110-Q-198"],
+        "observedCliVersion": "1.1.6",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "The candidate installer exited 0 and created installRoot for an absolute-path archive member; no outside marker was observed.",
+        "expectedUserOutcome": "Reject absolute paths before extraction and preserve any existing installation.",
+        "responsibilityAssessment": "cli"
+      }
+    }
+  ],
   "enhancementRequests": [],
   "developmentExtensionProtocol": {
     "schemaVersion": 1,

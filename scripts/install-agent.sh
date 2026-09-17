@@ -59,6 +59,14 @@ actual="$(sha256 "$archive" | tr '[:upper:]' '[:lower:]')"
 [[ "$actual" == "$expected" ]] || die "Checksum verification failed for apexcn-cli.tgz."
 log "Verified package checksum."
 
+# Inspect original member names before tar can normalize them during extraction.
+LC_ALL=C tar -tzPf "$archive" > "$tmp_dir/members" || die "Unable to inspect package archive."
+awk '/^\// || /\\/ || /:/ || /(^|\/)\.\.(\/|$)/ || /[[:cntrl:]]/ { exit 1 }
+  END { if (NR == 0) exit 1 }' "$tmp_dir/members" || die "Unsafe package archive path."
+LC_ALL=C tar -tvzPf "$archive" > "$tmp_dir/types" || die "Unable to inspect package archive."
+awk 'substr($0, 1, 1) != "-" && substr($0, 1, 1) != "d" { exit 1 }' \
+  "$tmp_dir/types" || die "Unsafe package archive entry type."
+
 install_parent="$(dirname "$install_root")"
 mkdir -p "$install_parent"
 stage_root="$(mktemp -d "$install_parent/.apexcn-cli-stage.XXXXXX")"
