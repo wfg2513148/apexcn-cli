@@ -1,62 +1,10 @@
 {
   "schemaVersion": 1,
   "product": "apexcn-cli",
-  "updatedAt": "2026-09-17",
+  "updatedAt": "2026-09-18",
   "activeOnly": true,
-  "issues": [
-    {
-      "id": "M110-VAL-ARCHIVE-ABSOLUTE",
-      "milestoneId": "1.1",
-      "targetVersion": "1.1.6",
-      "priority": "P1",
-      "owner": "cli",
-      "status": "in_progress",
-      "title": "Reject unsafe archive members before installer extraction",
-      "description": "Independent candidate testing found that a checksummed tar archive with an absolute-path member was accepted. Installer guards and regression tests are implemented and fresh scoped candidate revalidation passed; full release qualification and publication remain pending.",
-      "revalidation": {
-        "threadId": "01a0affa-0d10-7b52-b05c-5777298d7752",
-        "report": "/Users/kwang/apexcn-cli-test/runs/update-local-1.1.6-ab6a99af/results.json",
-        "candidateSha256": "3f8bd2b9eb231b65a365c9fde1f5798d2b65e1faef3694d922a2d243c13fcb18",
-        "scopedAcceptance": true,
-        "fullQualification": false
-      },
-      "validatorRound": "1.1.6-full-qualification",
-      "source": {
-        "type": "independent-validator-thread",
-        "threadId": "01a0afc9-8c27-7581-b61c-f2f63f0d727c",
-        "assignmentRef": "1.1.6-full-qualification",
-        "report": "/Users/kwang/apexcn-cli-test/runs/unsafe-archive-supplement-GoazQV/results.json",
-        "findingRefs": ["absolute"],
-        "scenarioOrExplorationRef": ["M110-Q-198"],
-        "observedCliVersion": "1.1.6",
-        "persona": "novice",
-        "firstAttemptEvidencePreserved": true,
-        "actualOutputSummary": "The candidate installer exited 0 and created installRoot for an absolute-path archive member; no outside marker was observed.",
-        "expectedUserOutcome": "Reject absolute paths before extraction and preserve any existing installation.",
-        "responsibilityAssessment": "cli"
-      }
-    }
-  ],
-  "enhancementRequests": [
-    {
-      "id": "CLI-SELF-UPDATE",
-      "targetVersion": "1.1.6",
-      "status": "in_progress",
-      "title": "Upgrade with apexcn update",
-      "scopedValidation": {
-        "threadId": "01a0affa-0d10-7b52-b05c-5777298d7752",
-        "report": "/Users/kwang/apexcn-cli-test/runs/update-local-1.1.6-ab6a99af/results.json",
-        "passed": true,
-        "remaining": "Full release qualification, Windows runtime validation, and publication."
-      },
-      "currentBehavior": ["Users must locate and execute lifecycle-agent upgrade manually."],
-      "requiredOutcomes": ["Apexcn update upgrades the current managed installation without API credentials.", "Checksum failures preserve the working installation and auth configuration.", "Unmanaged copies fail with actionable guidance."],
-      "serverCapabilityAuditRequired": true,
-      "serverCapabilityAudit": "Local lifecycle and GitHub release download only; no ORDS or APEX server changes required.",
-      "executionOrder": ["apexcn-forums-if-server-change-required", "apexcn-cli", "apexcn-cli-test"],
-      "promotionToActiveIssue": "only-after-fresh-independent-validator-finding"
-    }
-  ],
+  "issues": [],
+  "enhancementRequests": [],
   "developmentExtensionProtocol": {
     "schemaVersion": 1,
     "scope": "all-future-cli-capability-extensions",
