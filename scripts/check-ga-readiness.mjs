@@ -290,6 +290,7 @@ async function validateReleaseQualification(surface, contract, tasks) {
     problems.push(`${releaseVersion} qualification dataset drifted from its deterministic generator`);
   }
   if (contract.independentValidation.freshUserVisibleTaskRequired !== true
+    || contract.independentValidation.cwd !== roadmap.testingBindings.validator.project
     || contract.independentValidation.candidateChecksumRequired !== true
     || contract.independentValidation.productionWritesAllowed !== false
     || contract.independentValidation.candidateRepairAllowed !== false) {

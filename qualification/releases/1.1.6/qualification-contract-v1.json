@@ -46,7 +46,7 @@
   },
   "independentValidation": {
     "freshUserVisibleTaskRequired": true,
-    "cwd": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
+    "cwd": "/Users/kwang/apexcn-cli-test",
     "model": "gpt-5.6-luna",
     "reasoningEffort": "high",
     "candidateChecksumRequired": true,

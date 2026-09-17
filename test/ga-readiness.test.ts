@@ -53,6 +53,12 @@ function resultFor(task: ReturnType<typeof readTasks>[number], passed = true) {
 }
 
 describe("GA readiness contracts", () => {
+  test("current release uses the configured independent validator", () => {
+    const version = readJson("package.json").version;
+    const contract = readJson(`qualification/releases/${version}/qualification-contract-v1.json`);
+    expect(contract.independentValidation.cwd).toBe(readJson("roadmap.json").testingBindings.validator.project);
+  });
+
   test("accepts the current legal 1.1 milestone lifecycle state", () => {
     const activeFindings = readJson("issues.json").issues ?? [];
     const result = spawnSync("node", ["scripts/check-ga-readiness.mjs"], {

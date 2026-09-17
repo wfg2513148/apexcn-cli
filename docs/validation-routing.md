@@ -30,3 +30,17 @@ If no valid harness can be located, report the missing harness as a validation
 blocker. Continue independent source/document work, but do not mark release or
 independent validation complete. Routine `check:roadmap` verifies structural
 consistency; it is not live validator-readiness evidence.
+
+## Candidate and acceptance binding
+
+Validate the version and SHA-256 of the exact archive before running it. Read
+the current contract and dataset from that archive, not a hard-coded historical
+release directory. The current release contract's cwd must match the configured
+validator project; published historical contracts remain unchanged.
+
+Report scoped regression acceptance separately from full qualification. Passing
+version, HTTP 555, HTTP 503 and response-timeout scenarios proves those scenarios
+only. Full qualification requires evidence for every assigned baseline and dynamic
+scenario, plus applicable API, Chrome and cleanup checks. Missing, failed or
+unexecuted evidence must remain blocked or failed, never become a pass merely by
+changing an acceptance flag. Preserve first-attempt results when rerunning.
