@@ -24,6 +24,14 @@ manifest 还包含 additive 的 `manifestVersion === 2` 字段：`capability`、
 
 脚本需要解析失败原因时，优先在命令上加 `--json`；支持 JSON 的命令会把 Commander 参数解析、验证、配置、网络和 API 错误写成单行 JSON 到 stderr。也可设置 `APEXCN_ERROR_FORMAT=json` 强制结构化错误；默认仍输出人类可读文本。
 
+## update
+
+```bash
+apexcn update
+```
+
+从官方 GitHub Release 下载最新版，校验归档后升级当前安装；保留认证配置和回滚备份，升级失败时恢复旧安装。无需 API Key，也无需额外参数。仅适用于官方安装器管理的目录；源码检出或其他安装方式需要先使用官方安装器。该命令会下载文件并修改本地安装，不支持 `--json` 或 `--preview`，退出码非零表示升级失败。
+
 ## guide
 
 本地策展的入门任务路径，不读取认证配置、不调用 API、不执行部署或社区写操作：

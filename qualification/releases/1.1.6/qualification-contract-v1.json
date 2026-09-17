@@ -12,10 +12,10 @@
   "current": {
     "surfacePath": "qualification/releases/1.1.6/public-surface-v1.json",
     "datasetPath": "qualification/releases/1.1.6/tasks-v1.jsonl",
-    "expectedCommandCount": 84,
+    "expectedCommandCount": 85,
     "expectedSchemaCount": 81,
     "expectedApiOperationCount": 37,
-    "exactTaskCount": 200,
+    "exactTaskCount": 202,
     "datasetVersion": "M110-QUALIFICATION-TASKS-1"
   },
   "approvedAdditions": [
@@ -25,6 +25,11 @@
       "successSchemaId": "admin-operations-response-v1",
       "method": "GET",
       "apiPath": "/api/v1/admin/operations"
+    },
+    {
+      "commandId": "update",
+      "path": "update",
+      "kind": "release-lifecycle"
     }
   ],
   "requiredRoles": [

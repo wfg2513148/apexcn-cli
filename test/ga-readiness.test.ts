@@ -122,13 +122,13 @@ describe("GA readiness contracts", () => {
     expect(matrix.requiredStages).toHaveLength(5);
   });
 
-  test("freezes exactly 200 unique cross-role tasks with 100 percent command coverage", () => {
+  test("preserves 200 tasks and adds two update scenarios with full command coverage", () => {
     const tasks = readReleaseTasks();
     const commandCoverage = new Set(tasks.flatMap((task) => task.expectedPublicCommandIds));
 
-    expect(tasks).toHaveLength(200);
-    expect(new Set(tasks.map((task) => task.taskId))).toHaveLength(200);
-    expect(new Set(tasks.map((task) => task.prompt))).toHaveLength(200);
+    expect(tasks).toHaveLength(202);
+    expect(new Set(tasks.map((task) => task.taskId))).toHaveLength(202);
+    expect(new Set(tasks.map((task) => task.prompt))).toHaveLength(202);
     for (const descriptor of COMMAND_DESCRIPTORS) {
       expect(commandCoverage.has(descriptor.id)).toBe(true);
     }

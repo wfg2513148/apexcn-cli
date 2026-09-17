@@ -388,7 +388,9 @@ function validateRoadmapState(currentRoadmap, currentIssues) {
   } else {
     problems.push(`unexpected 1.1 status ${String(releaseMilestone?.status)}`);
   }
-  if (releaseEnhancements.some((item) => item.id !== "ENH-20260731-ADMIN-OPERATIONS")) {
+  if (releaseEnhancements.some((item) => item.id !== "ENH-20260731-ADMIN-OPERATIONS"
+    && !(item.id === "CLI-SELF-UPDATE" && item.targetVersion === releaseVersion
+      && releaseContract.approvedAdditions.some((addition) => addition.commandId === "update")))) {
     problems.push("1.1 readiness contains an unrelated enhancement request");
   }
   if ((currentIssues.issues ?? []).length !== 0) {

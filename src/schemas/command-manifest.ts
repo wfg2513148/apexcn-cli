@@ -1,7 +1,7 @@
 import { assertArray, assertNumber, assertRecord, assertString, isRecord } from "./common.js";
 
 const CAPABILITIES = new Set(["read", "write", "local", "workflow", "auth", "diagnostic"]);
-const API_EFFECTS = new Set(["no-network", "api-read", "api-write", "destructive"]);
+const API_EFFECTS = new Set(["no-network", "api-read", "api-write", "destructive", "release-download"]);
 const RISK_LEVELS = new Set(["low", "medium", "high", "destructive"]);
 
 export const COMMAND_MANIFEST_JSON_SCHEMA = {

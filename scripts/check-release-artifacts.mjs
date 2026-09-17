@@ -205,9 +205,10 @@ function verifyPackagedReleaseQualification(entries, archivePath, expectedVersio
     encoding: "utf8"
   }));
   if (contract.targetVersion !== expectedVersion
-    || contract.current?.exactTaskCount !== 200
-    || contract.approvedAdditions?.length !== 1
-    || contract.approvedAdditions[0]?.commandId !== "admin.operations") {
+    || contract.current?.exactTaskCount !== 202
+    || contract.approvedAdditions?.length !== 2
+    || contract.approvedAdditions[0]?.commandId !== "admin.operations"
+    || contract.approvedAdditions[1]?.commandId !== "update") {
     throw new Error("release package current qualification identity or denominator is invalid");
   }
   for (const path of [contract.current.surfacePath, contract.current.datasetPath]) {

@@ -273,6 +273,7 @@ const workflowScenarios: Scenario[] = [
 ];
 
 const COMMON_NATURAL_LANGUAGE_SCENARIOS = [
+  scenario("upgrade managed CLI", "帮我把 apexcn-cli 升级到官方最新版", "update", "execute", ["read", "config-write"], "none"),
   ...commonReadScenarios,
   ...draftAndReviewScenarios,
   ...confirmationScenarios,
@@ -283,6 +284,19 @@ const COMMON_NATURAL_LANGUAGE_SCENARIOS = [
 ];
 
 const EXECUTABLE_NATURAL_LANGUAGE_SCENARIOS: ExecutableNaturalLanguageScenario[] = [
+  {
+    name: "update refuses an unmanaged source checkout",
+    userSays: "升级这个源码目录，不要修改其他安装",
+    commandPath: "update",
+    argv: ["node", "apexcn", "update"],
+    configureAuth: false,
+    assertFeedback: ({ stdout, stderr, exitCode, fetch }) => {
+      expect(exitCode).toBe(1);
+      expect(stdout).toBe("");
+      expect(stderr).toContain("not managed by the official installer");
+      expect(fetch).not.toHaveBeenCalled();
+    }
+  },
   {
     name: "search ApexLang with spaced product name",
     userSays: "APEX Lang 有哪些文章？",

@@ -2952,6 +2952,36 @@
         ]
       },
       {
+        "path": "update",
+        "aliases": [],
+        "description": "upgrade this installation from the official GitHub release with backup and failure recovery",
+        "options": [],
+        "safety": {
+          "effects": [
+            "read",
+            "config-write"
+          ],
+          "preview": "none",
+          "confirmation": []
+        },
+        "id": "update",
+        "capability": "local",
+        "apiEffect": "release-download",
+        "riskLevel": "high",
+        "authRequired": false,
+        "supportsJson": false,
+        "supportsPreview": false,
+        "supportsDryRun": false,
+        "jsonContract": null,
+        "examples": [
+          {
+            "command": "apexcn update",
+            "mode": "execute",
+            "note": "Downloads the official release and replaces the managed installation; preserves auth configuration and keeps a rollback backup."
+          }
+        ]
+      },
+      {
         "path": "workflow approve",
         "aliases": [],
         "description": "approve a workflow preview for audited execution",
@@ -4799,7 +4829,8 @@
                   "no-network",
                   "api-read",
                   "api-write",
-                  "destructive"
+                  "destructive",
+                  "release-download"
                 ]
               },
               "riskLevel": {

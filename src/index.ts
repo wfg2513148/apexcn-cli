@@ -24,6 +24,7 @@ import { createMeCommand } from "./commands/me.js";
 import { createReviewCommand } from "./commands/review.js";
 import { createSchemaCommand } from "./commands/schema.js";
 import { createWorkflowCommand } from "./commands/workflow.js";
+import { createUpdateCommand } from "./commands/update.js";
 import { DEFAULT_BASE_URL, setProfile } from "./config.js";
 import { descriptorForPath } from "./core/command-registry.js";
 import { isUsableCredential } from "./core/credential-store.js";
@@ -85,6 +86,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
     io.stdout("API key configured for profile prod\n");
   });
   program.addCommand(createAuthCommand(commandOptions));
+  program.addCommand(createUpdateCommand(io));
   program.addCommand(createDoctorCommand(commandOptions));
   program.addCommand(createDraftCommand(commandOptions));
   program.addCommand(createGuideCommand(commandOptions));
@@ -259,6 +261,7 @@ function commandManifest(root: Command): CommandManifest {
 }
 
 const COMMAND_DESCRIPTIONS: Record<string, string> = {
+  "update": "upgrade this installation from the official GitHub release with backup and failure recovery",
   "ask": "answer a question using APEX Chinese Community content",
   "admin list": "list public community admins",
   "admin operations": "show administrator-only apexcn-cli operations aggregates",
@@ -346,6 +349,10 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
 };
 
 const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
+  "update": {
+    safety: { effects: ["read", "config-write"], preview: "none", confirmation: [] },
+    examples: [{ command: "apexcn update", mode: "execute", note: "Downloads the official release and replaces the managed installation; preserves auth configuration and keeps a rollback backup." }]
+  },
   "admin list": {
     safety: { effects: ["read"], preview: "none", confirmation: [] },
     examples: [{ command: "apexcn admin list --json", mode: "read" }]

@@ -30,7 +30,20 @@
       }
     }
   ],
-  "enhancementRequests": [],
+  "enhancementRequests": [
+    {
+      "id": "CLI-SELF-UPDATE",
+      "targetVersion": "1.1.6",
+      "status": "in_progress",
+      "title": "Upgrade with apexcn update",
+      "currentBehavior": ["Users must locate and execute lifecycle-agent upgrade manually."],
+      "requiredOutcomes": ["Apexcn update upgrades the current managed installation without API credentials.", "Checksum failures preserve the working installation and auth configuration.", "Unmanaged copies fail with actionable guidance."],
+      "serverCapabilityAuditRequired": true,
+      "serverCapabilityAudit": "Local lifecycle and GitHub release download only; no ORDS or APEX server changes required.",
+      "executionOrder": ["apexcn-forums-if-server-change-required", "apexcn-cli", "apexcn-cli-test"],
+      "promotionToActiveIssue": "only-after-fresh-independent-validator-finding"
+    }
+  ],
   "developmentExtensionProtocol": {
     "schemaVersion": 1,
     "scope": "all-future-cli-capability-extensions",

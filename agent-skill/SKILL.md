@@ -28,6 +28,10 @@ Do not use this skill for:
 - generic mentions of 中文社区, community, forum, 社区帖子, or RAG without APEX Chinese Community or oracleapex.cn context
 - Oracle APEX questions where the user explicitly asks for official documentation only or asks not to use community knowledge
 
+## Updating the CLI
+
+When the user asks to upgrade apexcn-cli, run `apexcn update`. It downloads the official GitHub release, verifies the package, keeps a rollback backup, and preserves authentication configuration. No API key is needed. This is a local installation change, not a community API call; do not run it as part of an unrelated read-only task. Source checkouts and older versions without this command must use the official installer at https://github.com/wfg2513148/apexcn-cli first. Report nonzero exit status as failure, not success.
+
 ## Intent Router
 
 Read `intent-routes.json` from this skill directory before choosing commands. It is the versioned routing catalog for common novice requests. Every referenced path must exist in `apexcn commands --json`; do not invent a command when no route matches.

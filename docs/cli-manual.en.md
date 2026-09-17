@@ -22,6 +22,14 @@ For unstable networks, set `APEXCN_HTTP_TIMEOUT_MS` to provide a default timeout
 
 When scripts need parseable failures, prefer passing `--json` to the command. JSON-capable commands write Commander argument parsing, validation, config, network, and API errors as one-line JSON to stderr. You can also set `APEXCN_ERROR_FORMAT=json` to force structured errors; default output remains human-readable text.
 
+## update
+
+```bash
+apexcn update
+```
+
+Downloads the latest official GitHub Release and verifies its archive before upgrading this managed installation. Authentication configuration is preserved, a rollback backup is kept, and a failed upgrade restores the old installation. No API key or extra arguments are needed. Source checkouts and installations not managed by the official installer must use that installer first. This command downloads files and modifies the local installation; it does not support `--json` or `--preview`. A nonzero exit code means the update failed.
+
 ## guide
 
 Curated local task paths for new users. These commands do not read auth, call the API, deploy applications, or write community content:

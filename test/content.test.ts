@@ -118,6 +118,7 @@ const apiDryRunCommands = [
 ].sort();
 
 const neverApiDryRunCommands = [
+  "update",
   "auth set-token",
   "auth list",
   "auth use",

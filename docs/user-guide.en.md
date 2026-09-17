@@ -17,6 +17,10 @@ If apexcn-cli is not installed, tell your AI:
 
 Get your API key by signing in to [APEX Chinese Community](https://oracleapex.cn/) and opening **API Key Management** from the account menu.
 
+### Keeping the CLI Up to Date
+
+Run `apexcn update`, or ask your AI to run it. It downloads the latest official GitHub release, keeps your API key configuration, backs up the old installation, and restores it if the upgrade fails. This requires an installation managed by the official installer. If your older CLI does not recognize `update`, rerun the installation from [the official repository](https://github.com/wfg2513148/apexcn-cli) once first.
+
 ## 2. Connect Your API Key
 
 For the shortest setup, run this in your own terminal:

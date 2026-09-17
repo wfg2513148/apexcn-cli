@@ -88,14 +88,28 @@ describe("cross-platform lifecycle assets", () => {
     })).toBe(`${version}\n`);
 
     const customBackupRoot = join(root, "fresh-backups");
-    const customUpgrade = spawnSync("bash", [
-      join(freshInstallRoot, "package", "scripts", "lifecycle-agent.sh"),
-      "upgrade",
-      "--backup-root", customBackupRoot
-    ], { ...common, env: environmentFor(freshBinDir) });
+    const customUpgrade = spawnSync(join(freshBinDir, "apexcn"), ["update"], {
+      ...common,
+      env: { ...environmentFor(freshBinDir), APEXCN_CLI_BACKUP_ROOT: customBackupRoot }
+    });
     expect(customUpgrade.status, customUpgrade.stderr).toBe(0);
     expect(customUpgrade.stdout).toContain("Upgrade complete");
     expect(lstatSync(join(freshBinDir, "apexcn")).isSymbolicLink()).toBe(true);
+
+    const badChecksums = join(root, "bad-update-checksums.txt");
+    writeFileSync(badChecksums, `${"0".repeat(64)}  apexcn-cli.tgz\n`);
+    const failedUpdate = spawnSync(join(freshBinDir, "apexcn"), ["update"], {
+      ...common,
+      env: {
+        ...environmentFor(freshBinDir),
+        APEXCN_CLI_CHECKSUMS_URL: pathToFileURL(badChecksums).href,
+        APEXCN_CLI_BACKUP_ROOT: join(root, "failed-update-backups")
+      }
+    });
+    expect(failedUpdate.status).toBe(1);
+    expect(failedUpdate.stderr).toContain("Checksum verification failed");
+    expect(failedUpdate.stderr).toContain("Upgrade failed; restoring");
+    expect(execFileSync(join(freshBinDir, "apexcn"), ["--version"], { encoding: "utf8" })).toBe(`${version}\n`);
 
     const downgradeBackupRoot = join(root, "downgrade-backups");
     const rejectedDowngrade = spawnSync("bash", [
