@@ -5,26 +5,88 @@
   "candidateSourceCommit": "461d3b77b6eb09e4ad140efd0d4e986c000c431e",
   "candidateSha256": "3f8bd2b9eb231b65a365c9fde1f5798d2b65e1faef3694d922a2d243c13fcb18",
   "validatorProject": "/Users/kwang/apexcn-cli-test",
-  "validatorThreads": ["01a0b005-f887-79f3-a8eb-8129472bdc67", "01a0b01d-f2b7-7812-8b53-97a5d937b365"],
+  "validatorThreads": [
+    "01a0b005-f887-79f3-a8eb-8129472bdc67",
+    "01a0b01d-f2b7-7812-8b53-97a5d937b365"
+  ],
   "contract": "M110-QUALIFICATION-1",
   "scope": "Versioned 202-task release suite and separate HTTP fault regression, not the historical cross-platform GA matrix.",
-  "qualification": {"required": 202, "passed": 202, "failures": 0, "independentAcceptance": true},
-  "localTests": {"filesPassed": 52, "testsPassed": 784, "testsSkipped": 1},
-  "httpFaults": ["555", "503", "timeout"],
+  "qualification": {
+    "required": 202,
+    "passed": 202,
+    "failures": 0,
+    "independentAcceptance": true
+  },
+  "localTests": {
+    "filesPassed": 52,
+    "testsPassed": 784,
+    "testsSkipped": 1
+  },
+  "httpFaults": [
+    "555",
+    "503",
+    "timeout"
+  ],
   "scoreReport": "runs/final-qualification-1.1.6-mabe2f/score.release.json",
   "results": "runs/final-qualification-1.1.6-mabe2f/results.json",
-  "closedFindings": ["M110-VAL-ARCHIVE-ABSOLUTE"],
-  "completedEnhancements": ["CLI-SELF-UPDATE"],
+  "closedFindings": [
+    "M110-VAL-ARCHIVE-ABSOLUTE"
+  ],
+  "completedEnhancements": [
+    "CLI-SELF-UPDATE"
+  ],
   "cleanup": {
-    "evidence": ["runs/independent-1.1.6-r6A8L9/server-cleanup.json", "runs/finalfix-1.1.6-nnSvZu/server-cleanup.json"],
+    "evidence": [
+      "runs/independent-1.1.6-r6A8L9/server-cleanup.json",
+      "runs/finalfix-1.1.6-nnSvZu/server-cleanup.json"
+    ],
     "scopedResidualCount": 0,
     "productionWrites": false,
     "permanentTestAccountsPreserved": true
   },
   "limitations": [
-    "Windows PowerShell native execution was not tested on this macOS host; the Windows-specific local test is skipped.",
+    "Initial publication did not include native Windows evidence; the windowsSupplement now covers both supported shells. This is not a claim that the historical nine-source-version GA matrix is complete.",
     "Required Chrome cases M110-Q-192/193/194/200 have same-record API and browser evidence. An extra Chrome observation of the later preview-only setup topic was not completed after the extension disconnected; those preview tasks do not require Chrome in the contract.",
     "Live ask retries used a 180-second HTTP timeout. Production read-only audit inspection observed slow successful responses, averaging about 84 seconds and peaking near 143 seconds during this run.",
     "Initial failures and validator fixture corrections remain in the independent evidence history; this report does not claim first-run perfection."
-  ]
+  ],
+  "windowsSupplement": {
+    "validatedAt": "2026-09-18",
+    "runUrl": "https://github.com/wfg2513148/apexcn-cli/actions/runs/35289121857",
+    "sourceCommit": "7028238f9bf35b8d121da9787fe63e7be36a5fba",
+    "initialFailedRun": "https://github.com/wfg2513148/apexcn-cli/actions/runs/35288832462",
+    "runner": "windows-2022",
+    "shells": [
+      "Windows PowerShell 5.1.20348.5499",
+      "PowerShell 7.6.6"
+    ],
+    "passed": true,
+    "publishedArchiveSha256": "3f8bd2b9eb231b65a365c9fde1f5798d2b65e1faef3694d922a2d243c13fcb18",
+    "stages": [
+      "install",
+      "upgrade",
+      "failed-upgrade-recovery",
+      "rollback",
+      "uninstall",
+      "published-archive-install",
+      "apexcn-update",
+      "checksum-failure-recovery",
+      "isolated-cleanup"
+    ],
+    "reviewerThread": "01a0b1cb-b1ba-7130-a0d5-9cfe07c2b146",
+    "reviewReport": "runs/windows-gha-1.1.6-20260918-rerun/independent-review.md",
+    "reportAssets": [
+      "windows-powershell-5-1-lifecycle.json",
+      "windows-powershell-5-1-release.json",
+      "powershell-7-lifecycle.json",
+      "powershell-7-release.json"
+    ],
+    "remediation": "Git attributes preserve LF text bytes during Windows checkout; frozen digests were not changed."
+  },
+  "postReleaseLocalTests": {
+    "filesPassed": 53,
+    "testsPassed": 785,
+    "testsSkipped": 1,
+    "skipReason": "Windows-only test is skipped on macOS and passed in both native Windows jobs."
+  }
 }
