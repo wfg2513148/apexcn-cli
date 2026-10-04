@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { ContentLanguage } from "../content-language.js";
 
 export type CanonicalTopicEntry = {
   id: number;
@@ -19,7 +20,12 @@ export function topicCanonicalHash(artifact: unknown): string {
   }
   const result = isRecord(artifact.result) ? artifact.result : {};
   const topic = isRecord(result.topic) ? result.topic : result;
+  const query = isRecord(artifact.request) && isRecord(artifact.request.query) ? artifact.request.query : {};
+  if (query.lang !== undefined && query.lang !== "zh-cn" && query.lang !== "en") {
+    throw new Error("Topic request language must be zh-cn or en.");
+  }
   return sha256Content(canonicalJson({
+    ...(query.lang !== undefined ? { requestedContentLanguage: query.lang, contentLanguage: result.contentLanguage } : {}),
     id: artifact.id,
     sources: Array.isArray(artifact.sources) ? artifact.sources : [],
     topic
@@ -51,4 +57,11 @@ function canonicalValue(value: unknown): unknown {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function topicLanguageMatches(artifact: unknown, requestedContentLanguage?: ContentLanguage): boolean {
+  const request = isRecord(artifact) && isRecord(artifact.request) ? artifact.request : {};
+  const query = isRecord(request.query) ? request.query : {};
+  if (requestedContentLanguage === undefined) return query.lang === undefined || query.lang === "zh-cn";
+  return query.lang === requestedContentLanguage;
 }

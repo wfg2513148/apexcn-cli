@@ -3,6 +3,7 @@ import { stdin as processStdin, stdout as processStdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { Command, InvalidArgumentError, Option } from "commander";
 import { ConfigFileError } from "../config.js";
+import { currentContentLanguage } from "../core/request-context.js";
 import { createApiClient } from "../core/api-client.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
@@ -399,6 +400,8 @@ export function createResearchCommand(options: ApiCommandOptions): Command {
         const data = withReadProvenance({
           kind: "research-bundle",
           schemaVersion: 1,
+          requestedContentLanguage: currentContentLanguage() ?? "zh-cn",
+          contentLanguage: isRecord(search) ? search.contentLanguage : undefined,
           query: compactBody({
             keyword,
             normalizedKeyword: normalizedKeyword === keyword ? undefined : normalizedKeyword,
@@ -1540,6 +1543,7 @@ async function retrieveRagEvidence(
   return {
     kind: "rag-evidence-bundle",
     schemaVersion: 1,
+    requestedContentLanguage: currentContentLanguage() ?? "zh-cn",
     question: input.question,
     context: input.context,
     queries: Array.from(new Set(attemptedQueries)),
@@ -1597,6 +1601,8 @@ function appendTopicEvidence(
   const originalUrl = fieldText(topic.originalUrl);
   evidence.push(compactBody({
     type: "topic",
+    contentLanguage: topic.contentLanguage ?? (isRecord(detail) ? detail.contentLanguage : undefined),
+    translationStatus: topic.translationStatus,
     topicId,
     title,
     content: blockText(topic.content ?? topic.body ?? topic.summary ?? topic.excerpt),
@@ -2322,6 +2328,8 @@ function researchTopicFromData(data: unknown, sourceItemIndex: number): Record<s
   const content = topic.content ?? topic.body;
   return compactBody({
     sourceItemIndex,
+    contentLanguage: topic.contentLanguage ?? (isRecord(data) ? data.contentLanguage : undefined),
+    translationStatus: topic.translationStatus,
     id: topic.id ?? topic.topicId ?? topic.threadId,
     title: topic.title ?? topic.topicTitle,
     url: topic.url ?? topic.threadUrl,
@@ -2342,6 +2350,8 @@ function recentTopicFromData(data: unknown, source: Record<string, unknown>, sou
     id: topic.id ?? source.id ?? source.topicId ?? source.threadId,
     categoryId: topic.categoryId ?? source.categoryId,
     categoryName: topic.categoryName ?? source.categoryName,
+    contentLanguage: topic.contentLanguage ?? (isRecord(data) ? data.contentLanguage : undefined),
+    translationStatus: topic.translationStatus ?? source.translationStatus,
     title: topic.title ?? source.title ?? source.topicTitle,
     url: topic.url ?? topic.threadUrl ?? source.url ?? source.threadUrl,
     threadUrl: topic.threadUrl ?? topic.url ?? source.threadUrl ?? source.url,

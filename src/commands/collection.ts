@@ -4,10 +4,12 @@ import { isAbsolute, join, normalize, parse, relative, resolve, sep } from "node
 import { Command, InvalidArgumentError } from "commander";
 import { ConfigFileError } from "../config.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
+import { currentContentLanguage } from "../core/request-context.js";
+import type { ContentLanguage } from "../core/content-language.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
 import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { buildIndexRecord, createIndexMeta, isCollectionIndexRecord, queryIndex, type CollectionIndexRecord } from "../core/knowledge/collection-index.js";
-import { bundleHash, collectionContentHash, topicCanonicalHash } from "../core/knowledge/collection-assets.js";
+import { bundleHash, collectionContentHash, topicCanonicalHash, topicLanguageMatches } from "../core/knowledge/collection-assets.js";
 import { fieldText, isRecord, itemsFromData, printData, printError } from "../output.js";
 import type { CommandIo } from "./auth.js";
 
@@ -304,6 +306,7 @@ export function createCollectionCommand(options: CollectionCommandOptions): Comm
 }
 
 async function buildCollection(io: CollectionCommandOptions, options: BuildOptions): Promise<void> {
+  const requestedContentLanguage = currentContentLanguage() ?? "zh-cn";
   const queries = (options.query ?? []).map((query) => query.trim()).filter(Boolean);
   const explicitTopicIds = options.topicId ?? [];
   if (queries.length === 0 && explicitTopicIds.length === 0) {
@@ -365,7 +368,7 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
         schemaVersion: 1,
         id,
         sources,
-        request: { method: "GET", path: `/api/v1/topics/${id}` },
+        request: { method: "GET", path: `/api/v1/topics/${id}`, query: { lang: requestedContentLanguage } },
         requestId,
         result
       };
@@ -404,6 +407,7 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
     source: {
       profile: session.profile,
       baseUrl: session.baseUrl,
+      requestedContentLanguage,
       queries,
       topicIds: explicitTopicIds,
       limit,
@@ -605,6 +609,7 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
     process.exitCode = 1;
     return;
   }
+  const requestedContentLanguage = loaded.collection.source.requestedContentLanguage ?? "zh-cn";
   const topicFiles = loaded.collection.files.topics.filter(isRecord);
   const fileById = new Map(topicFiles.filter((file) => typeof file.id === "number").map((file) => [file.id as number, file]));
   const topics: Array<Record<string, unknown>> = [];
@@ -620,7 +625,7 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
       continue;
     }
     try {
-      const result = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
+      const result = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token, query: { lang: requestedContentLanguage } });
       const requestId = requestIdFrom(result);
       if (requestId) requestIds.add(requestId);
       const sources = Array.isArray(topic.sources) ? topic.sources : [];
@@ -629,7 +634,7 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
         schemaVersion: 1,
         id,
         sources,
-        request: { method: "GET", path: `/api/v1/topics/${id}` },
+        request: { method: "GET", path: `/api/v1/topics/${id}`, query: { lang: requestedContentLanguage } },
         requestId,
         result
       };
@@ -666,6 +671,7 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
   const indexFile = { ...await writeTextWithEvidence(join(options.dir, "index.md"), indexText), path: "index.md" };
   const updated = {
     ...loaded.collection,
+    source: { ...loaded.collection.source, requestedContentLanguage },
     schemaVersion: 2,
     syncedAt: new Date().toISOString(),
     contentHash: collectionContentHash(topics.map((topic) => ({ id: Number(topic.id), canonicalHash: fieldText(topic.canonicalHash) }))),
@@ -689,12 +695,13 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
 }
 
 async function buildFavoritesCollection(io: CollectionCommandOptions, options: FavoritesOptions): Promise<void> {
+  const requestedContentLanguage = currentContentLanguage() ?? "zh-cn";
   const session = await loadSession(io);
   if (!session) {
     return;
   }
   const pageSize = options.pageSize ?? 50;
-  const items: Array<{ item: Record<string, unknown>; requestId?: string }> = [];
+  const items: Array<{ item: Record<string, unknown>; requestId?: string; contentLanguage?: unknown }> = [];
   const requestIds = new Set<string>();
   const seenCursors = new Set<string>();
   let cursor: string | undefined;
@@ -708,7 +715,7 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
     if (requestId) requestIds.add(requestId);
     pageCount += 1;
     for (const item of itemsFromData(data)) {
-      items.push({ item, requestId });
+      items.push({ item, requestId, contentLanguage: isRecord(data) ? data.contentLanguage : undefined });
     }
     const page = isRecord(data) && isRecord(data.page) ? data.page : {};
     const next = typeof page.nextCursor === "string" && page.nextCursor.length > 0 ? page.nextCursor : undefined;
@@ -726,7 +733,7 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
   const seenIds = new Set<number>();
   const errors: Array<Record<string, unknown>> = [];
   let excludedReplyCount = 0;
-  for (const { item, requestId } of items) {
+  for (const { item, requestId, contentLanguage } of items) {
     const targetType = favoriteTargetType(item);
     if (targetType === "POST") {
       excludedReplyCount += 1;
@@ -759,10 +766,13 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
     }];
     const result = {
       requestId,
+      contentLanguage,
       topic: {
         id,
         title: item.title,
         content: item.content ?? item.body,
+        contentLanguage: item.contentLanguage ?? contentLanguage,
+        translationStatus: item.translationStatus,
         url: item.url ?? item.threadUrl,
         originalUrl: item.originalUrl,
         relationCreatedDate: item.relationCreatedDate,
@@ -776,7 +786,7 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
       schemaVersion: 1,
       id,
       sources,
-      request: { method: "GET", path: "/api/v1/me/favorites/export" },
+      request: { method: "GET", path: "/api/v1/me/favorites/export", query: { lang: requestedContentLanguage } },
       requestId,
       result
     };
@@ -794,6 +804,7 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
     source: {
       profile: session.profile,
       baseUrl: session.baseUrl,
+      requestedContentLanguage,
       queries: [],
       topicIds: topics.map((topic) => topic.id),
       favoriteExport: true,
@@ -1007,6 +1018,9 @@ function verifyEmbeddedBundle(bundle: CollectionBundle, issues: Array<{ code: st
     if (path.startsWith("topics/")) {
       try {
         const artifact = JSON.parse(file.content) as unknown;
+        if (!topicLanguageMatches(artifact, collection.source.requestedContentLanguage)) {
+          issues.push({ code: "collection-language-mismatch", path });
+        }
         const canonicalHash = topicCanonicalHash(artifact);
         const id = isRecord(artifact) && typeof artifact.id === "number" ? artifact.id : undefined;
         if (id !== undefined) canonicalEntries.push({ id, canonicalHash });
@@ -1235,7 +1249,7 @@ async function collectionVerificationReport(dir: string, collection: unknown): P
   evidence.push(await verifyFileEvidence(dir, collection.files.index, "index", issues));
   for (const file of topicFiles) {
     evidence.push(await verifyFileEvidence(dir, file, "topic", issues));
-    const canonicalHash = await verifyTopicArtifact(dir, file, issues);
+    const canonicalHash = await verifyTopicArtifact(dir, file, issues, collection.source.requestedContentLanguage);
     if (canonicalHash && typeof file.id === "number") {
       canonicalEntries.push({ id: file.id, canonicalHash });
       if (collection.schemaVersion === 2 && file.canonicalHash !== canonicalHash) {
@@ -1369,7 +1383,7 @@ type ValidCollection = {
   schemaVersion: 1 | 2;
   createdAt: string;
   contentHash?: string;
-  source: { profile: string; baseUrl: string; queries: unknown[]; topicIds: unknown[] };
+  source: { profile: string; baseUrl: string; requestedContentLanguage?: ContentLanguage; queries: unknown[]; topicIds: unknown[] };
   topicCount: number;
   topics: unknown[];
   errors: unknown[];
@@ -1384,6 +1398,7 @@ function isValidCollectionSchema(value: unknown): value is ValidCollection {
     && isRecord(value.source)
     && typeof value.source.profile === "string"
     && typeof value.source.baseUrl === "string"
+    && (value.source.requestedContentLanguage === undefined || value.source.requestedContentLanguage === "zh-cn" || value.source.requestedContentLanguage === "en")
     && Array.isArray(value.source.queries)
     && Array.isArray(value.source.topicIds)
     && typeof value.topicCount === "number"
@@ -1461,7 +1476,7 @@ async function verifyFileEvidence(dir: string, file: Record<string, unknown>, ki
   }
 }
 
-async function verifyTopicArtifact(dir: string, file: Record<string, unknown>, issues: CollectionIssue[]): Promise<string | undefined> {
+async function verifyTopicArtifact(dir: string, file: Record<string, unknown>, issues: CollectionIssue[], requestedContentLanguage?: ContentLanguage): Promise<string | undefined> {
   const resolved = collectionFilePath(dir, file.path, "topic", issues);
   if (!resolved) {
     return undefined;
@@ -1470,6 +1485,10 @@ async function verifyTopicArtifact(dir: string, file: Record<string, unknown>, i
     const artifact = JSON.parse(await readFile(resolved.absolutePath, "utf8")) as unknown;
     if (!isRecord(artifact) || artifact.kind !== "collection-topic" || artifact.schemaVersion !== 1 || artifact.id !== file.id || !Array.isArray(artifact.sources) || !isRecord(artifact.request) || artifact.request.method !== "GET" || !isRecord(artifact.result)) {
       issues.push({ code: "invalid-topic-artifact", message: "Topic artifact schema is invalid.", path: resolved.relativePath });
+      return undefined;
+    }
+    if (!topicLanguageMatches(artifact, requestedContentLanguage)) {
+      issues.push({ code: "collection-language-mismatch", message: "Topic request language does not match the collection source.", path: resolved.relativePath });
       return undefined;
     }
     return topicCanonicalHash(artifact);

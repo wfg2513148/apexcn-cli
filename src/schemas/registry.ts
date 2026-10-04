@@ -25,6 +25,9 @@ export type PublicSchemaSummary = {
 const SCHEMA_BASE_URL = "https://github.com/wfg2513148/apexcn-cli/schemas";
 
 const COMMON_PROPERTIES = {
+  contentLanguage: { enum: ["zh-cn", "en"] },
+  requestedContentLanguage: { enum: ["zh-cn", "en"] },
+  translationStatus: { enum: ["CURRENT", "STALE", "MISSING"] },
   kind: { type: "string" },
   schemaVersion: { type: "integer", minimum: 1 },
   requestId: { type: "string" },
