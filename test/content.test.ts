@@ -2139,18 +2139,30 @@ describe("content commands", () => {
       operationId: expect.stringMatching(/^op_[a-f0-9]{16}$/),
       body: expect.objectContaining({ content: "Preview body", operationKey: expect.any(String), payloadHash: expect.any(String) })
     }));
-    expect(plans[1]).toEqual({
+    expect(plans[1]).toEqual(expect.objectContaining({
+        kind: "write-preview",
+        action: "favorite.add",
+        operationId: expect.stringMatching(/^op_[a-f0-9]{16}$/),
+        willExecute: false,
         dryRun: true,
         preview: true,
         mode: "preview",
         profile: "test@oci",
         baseUrl: "https://oracleapex.cn/ords/test",
         method: "POST",
-        path: "/api/v1/topics/42/favorite"
-      });
+        path: "/api/v1/topics/42/favorite",
+        request: {
+          method: "POST",
+          path: "/api/v1/topics/42/favorite",
+          body: {
+            operationKey: expect.stringMatching(/^op:[a-f0-9]{48}$/),
+            payloadHash: expect.stringMatching(/^[a-f0-9]{64}$/)
+          }
+        }
+      }));
   });
 
-  test("favorite and subscription previews exactly match the approved request", async () => {
+  test("favorite and subscription previews preserve the direct request method and path", async () => {
     for (const [relation, action, method] of [
       ["favorite", "add", "POST"],
       ["favorite", "remove", "DELETE"],
@@ -2175,15 +2187,28 @@ describe("content commands", () => {
         method: preview.method,
         path: preview.path
       });
-      expect(preview).toEqual({
+      expect(preview).toEqual(expect.objectContaining({
+        kind: "write-preview",
+        action: `${relation}.${action}`,
+        operationId: expect.stringMatching(/^op_[a-f0-9]{16}$/),
+        willExecute: false,
         dryRun: true,
         preview: true,
         mode: "preview",
         profile: "test@oci",
         baseUrl: "https://oracleapex.cn/ords/test",
         method,
-        path: `/api/v1/topics/42/${relation}`
-      });
+        path: `/api/v1/topics/42/${relation}`,
+        request: {
+          method,
+          path: `/api/v1/topics/42/${relation}`,
+          body: {
+            operationKey: expect.stringMatching(/^op:[a-f0-9]{48}$/),
+            payloadHash: expect.stringMatching(/^[a-f0-9]{64}$/)
+          }
+        }
+      }));
+      expect(request?.body).toBeUndefined();
       expect(executeRun.stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
       vi.unstubAllGlobals();
     }

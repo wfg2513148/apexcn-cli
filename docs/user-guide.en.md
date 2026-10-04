@@ -140,12 +140,14 @@ Only accounts with the required permission can mark or unmark a correct answer. 
 
 ## 10. Why Changes Require Confirmation
 
-Publishing, editing, deleting, favoriting, subscribing, and marking an answer use the same safety flow:
+When asking the AI to publish, edit, delete, favorite, subscribe, or mark an answer, use this preview-confirm flow:
 
 1. the AI reads the current target and shows a preview;
 2. the CLI creates a short operation id for that preview;
 3. you explicitly confirm;
 4. the AI uses that id to execute the exact action you reviewed.
+
+When using the CLI directly, topic `favorite add/remove` and `subscription add/remove` save an operation id only with explicit `--preview`; without that flag they execute directly. `--dry-run` only inspects the request and saves no id, including when combined with `--preview`.
 
 If the target, account, or state changes before confirmation, a new preview is required. You do not need to record or manage operation ids yourself.
 

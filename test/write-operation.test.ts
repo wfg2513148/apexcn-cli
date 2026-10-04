@@ -1,8 +1,10 @@
-import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import Ajv from "ajv";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createProgram } from "../src/index.js";
+import { publicSchemaForId } from "../src/schemas/registry.js";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -10,6 +12,123 @@ afterEach(() => {
 });
 
 describe("business write confirmation", () => {
+  describe("topic favorite and subscription modes", () => {
+    const cases = [
+      { name: "favorite", action: "add", method: "POST", path: "/api/v1/topics/42/favorite" },
+      { name: "favorite", action: "remove", method: "DELETE", path: "/api/v1/topics/42/favorite" },
+      { name: "subscription", action: "add", method: "POST", path: "/api/v1/topics/42/subscription" },
+      { name: "subscription", action: "remove", method: "DELETE", path: "/api/v1/topics/42/subscription" }
+    ];
+    const roots = new Set<string>();
+
+    afterEach(async () => {
+      await Promise.all([...roots].map(root => rm(root, { recursive: true, force: true })));
+      roots.clear();
+    });
+
+    test.each(cases)("$name.$action preview persists an exact confirmable request and writes once", async ({ name, action, method, path }) => {
+      const context = await testContext();
+      roots.add(dirname(dirname(context.configPath)));
+      await context.program.parseAsync(["node", "apexcn", name, action, "42", "--preview", "--json"]);
+
+      expect(context.fetch).not.toHaveBeenCalled();
+      expect(context.stderr).toEqual([]);
+      expect(process.exitCode).toBeUndefined();
+      const preview = JSON.parse(context.stdout.join(""));
+      expect(preview).toEqual(expect.objectContaining({
+        kind: "write-preview",
+        operationId: expect.stringMatching(/^op_[a-f0-9]{16}$/),
+        action: `${name}.${action}`,
+        willExecute: false,
+        request: {
+          method,
+          path,
+          body: {
+            operationKey: expect.stringMatching(/^op:[a-f0-9]{48}$/),
+            payloadHash: expect.stringMatching(/^[a-f0-9]{64}$/)
+          }
+        }
+      }));
+      expect(preview.body).toEqual(preview.request.body);
+      expect(preview.confirmation.command).toBe(`apexcn confirm ${preview.operationId} --yes`);
+      const operationPath = join(dirname(context.configPath), "operations", `${preview.operationId}.json`);
+      expect(JSON.parse(await readFile(operationPath, "utf8"))).toEqual(expect.objectContaining({
+        operationId: preview.operationId,
+        status: "pending",
+        action: `${name}.${action}`,
+        request: preview.request
+      }));
+
+      // Check the actual public manifest and validate the emitted preview, not a synthetic fixture.
+      const manifestIo = programFor(context.configPath, context.fetch);
+      await manifestIo.program.parseAsync(["node", "apexcn", "commands", "--json"]);
+      const descriptor = JSON.parse(manifestIo.stdout.join("")).commands.find((command: { id: string }) => command.id === `${name}.${action}`);
+      expect(descriptor).toEqual(expect.objectContaining({
+        supportsPreview: true,
+        supportsDryRun: true,
+        options: expect.arrayContaining(["--preview", "--dry-run"]),
+        safety: expect.objectContaining({ preview: "available" })
+      }));
+      const validate = new Ajv({ allErrors: true, strict: false }).compile(publicSchemaForId(descriptor.jsonContract.successSchemaId)!);
+      expect(validate(preview), JSON.stringify(validate.errors)).toBe(true);
+      expect(context.fetch).not.toHaveBeenCalled();
+
+      // A fresh program must consume the saved id; no preview state is shared in memory.
+      const confirmation = programFor(context.configPath, context.fetch);
+      await confirmation.program.parseAsync(["node", "apexcn", "confirm", preview.operationId, "--yes", "--json"]);
+      expect(context.fetch).toHaveBeenCalledOnce();
+      const [url, init] = context.fetch.mock.calls[0] as unknown as [string, RequestInit];
+      expect(url).toBe(`https://example.test/ords/api${path}`);
+      expect(init.method).toBe(method);
+      expect(JSON.parse(String(init.body))).toEqual(preview.request.body);
+      expect(confirmation.stderr).toEqual([]);
+      expect(JSON.parse(confirmation.stdout.join(""))).toEqual(expect.objectContaining({
+        kind: "write-result", operationId: preview.operationId, action: `${name}.${action}`, status: "completed"
+      }));
+      expect(JSON.parse(await readFile(operationPath, "utf8")).status).toBe("completed");
+
+      const repeat = programFor(context.configPath, context.fetch);
+      await repeat.program.parseAsync(["node", "apexcn", "confirm", preview.operationId, "--yes", "--json"]);
+      expect(context.fetch).toHaveBeenCalledOnce();
+      expect(repeat.stdout).toEqual([]);
+      expect(repeat.stderr.join("")).toContain("already completed");
+      expect(process.exitCode).toBe(1);
+    });
+
+    test.each(cases)("$name.$action dry-run takes precedence over preview and saves no operation", async ({ name, action, method, path }) => {
+      const context = await testContext();
+      roots.add(dirname(dirname(context.configPath)));
+      for (const flags of [["--dry-run"], ["--dry-run", "--preview"]]) {
+        const io = programFor(context.configPath, context.fetch);
+        await io.program.parseAsync(["node", "apexcn", name, action, "42", ...flags, "--json"]);
+        expect(context.fetch).not.toHaveBeenCalled();
+        expect(io.stderr).toEqual([]);
+        expect(process.exitCode).toBeUndefined();
+        const output = JSON.parse(io.stdout.join(""));
+        expect(output).toEqual(expect.objectContaining({ dryRun: true, preview: false, mode: "dry-run", method, path }));
+        expect(output.operationId).toBeUndefined();
+        expect(output.confirmation).toBeUndefined();
+        await expect(readdir(join(dirname(context.configPath), "operations"))).rejects.toMatchObject({ code: "ENOENT" });
+      }
+    });
+
+    test.each(cases)("$name.$action without preview preserves direct execution", async ({ name, action, method, path }) => {
+      const response = { ok: true, requestId: "req-direct-relation" };
+      const context = await testContext([Response.json(response)]);
+      roots.add(dirname(dirname(context.configPath)));
+      await context.program.parseAsync(["node", "apexcn", name, action, "42", "--json"]);
+      expect(context.fetch).toHaveBeenCalledOnce();
+      const [url, init] = context.fetch.mock.calls[0] as unknown as [string, RequestInit];
+      expect(url).toBe(`https://example.test/ords/api${path}`);
+      expect(init.method).toBe(method);
+      expect(init.body).toBeUndefined();
+      expect(context.stderr).toEqual([]);
+      expect(process.exitCode).toBeUndefined();
+      expect(JSON.parse(context.stdout.join(""))).toEqual(response);
+      await expect(readdir(join(dirname(context.configPath), "operations"))).rejects.toMatchObject({ code: "ENOENT" });
+    });
+  });
+
   test("correct-answer preview confirms only after the server advertises the exact capability endpoint", async () => {
     const context = await testContext([
       Response.json(replyActionCapabilities()),

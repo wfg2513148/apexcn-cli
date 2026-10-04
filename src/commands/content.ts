@@ -851,8 +851,16 @@ export function createRelationCommand(name: "favorite" | "subscription", options
           path: `/api/v1/topics/${targetId}/${name}`,
           method: action === "add" ? "POST" : "DELETE"
         };
-        if (isRequestPreview(commandOptions)) {
+        if (commandOptions.dryRun) {
           printDryRun(options, session, request, requestPreviewMode(commandOptions), commandOptions.json);
+          return;
+        }
+        if (commandOptions.preview) {
+          await printWritePreview(options, commandOptions, session, {
+            action: `${name}.${action}`,
+            summary: `${action === "add" ? "Add" : "Remove"} ${name} for topic ${targetId}`,
+            request: { ...request, body: {} }
+          });
           return;
         }
         const data = await requestJson(session.baseUrl, request.path, {

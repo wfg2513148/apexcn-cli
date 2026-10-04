@@ -125,6 +125,113 @@
         "responsibilityAssessment": "server",
         "responsibilityNotes": "Observed community browser route/rendering failure in DEV, not a CLI JSON serialization issue. Production scope and underlying cause remain unverified; no server change performed."
       }
+    },
+    {
+      "id": "COMMUNITY-CURSOR-20261005-004",
+      "milestoneId": "1.1",
+      "priority": "P1",
+      "status": "open",
+      "owner": "server",
+      "title": "历史空日期记录导致公开话题第一页 hasMore=true 却缺失 nextCursor",
+      "description": "固定 1.2.0 候选的独立新手实测首个中文分页响应缺少 nextCursor，无法执行同语言续页。服务端只读诊断确认历史行创建/更新日期均为空，正在修复稳定排序锚点。保留首次失败；服务端回归转绿仍不足以闭合，需新鲜验收、清理和发布证据。",
+      "validatorRound": "APEXCN-UPGRADE-1.2.0-R1",
+      "blockingMilestones": [],
+      "dependencies": [],
+      "acceptanceCriterionIds": [],
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "01a107fc-bf94-7b91-99b4-77b8956f6568",
+        "assignmentRef": "APEXCN-UPGRADE-1.2.0-R1",
+        "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-01/first-attempts.jsonl",
+        "findingRefs": [
+          "first-attempts.jsonl:taskId=UPG-012-cursor-same-language,label=cursor-zh-first",
+          "evidence/attempts/20261004T175350.418317000Z_cursor-zh-first.stdout",
+          "evidence/attempts/20261004T175350.418317000Z_cursor-zh-first.stderr"
+        ],
+        "scenarioOrExplorationRef": [
+          "UPG-012-cursor-same-language",
+          "UPG-013-cursor-cross-language",
+          "UPG-014-cursor-legacy-chinese"
+        ],
+        "observedCliVersion": "1.2.0",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "topic list --page-size 1 --lang zh-cn returned exitCode 0, page.hasMore=true and nextOffset=1, but no nextCursor. Subsequent null-cursor requests returned HTTP 400 cursor is invalid; they do not prove cross-language behavior.",
+        "expectedUserOutcome": "A nonterminal recent page must return a server-issued cursor with deterministic sorting; same-language continuation must be possible without duplicate records.",
+        "responsibilityAssessment": "server",
+        "responsibilityNotes": "The fixed CLI faithfully preserves the API page. Server runtime and SQL confirm the null-date ordering/anchor defect; no CLI fallback is authorized."
+      },
+      "firstAttemptArtifacts": [
+        {
+          "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-01/evidence/attempts/20261004T175350.418317000Z_cursor-zh-first.stdout",
+          "sha256": "dcd8045468588db05b7bfc81ca623fa76dc39593339f965bb7c5001d57d26297"
+        },
+        {
+          "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-01/evidence/attempts/20261004T175350.418317000Z_cursor-zh-first.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "validationRefs": [],
+      "serverThreadId": "01a107c0-9b1c-70b0-af4f-91579ef6871d",
+      "serverRoutingStatus": "assigned-in-progress"
+    },
+    {
+      "id": "CLI-SAFETY-20261005-005",
+      "milestoneId": "1.1",
+      "priority": "P1",
+      "status": "open",
+      "owner": "cli",
+      "title": "话题收藏和订阅显式 preview 未保存待确认操作",
+      "description": "独立新手在固定1.2.0候选发现话题收藏/订阅--preview没有operationId，与公开安全文档及subscription预览合同不一致。当前主工作树修复，旧候选与首次失败保留；需新C/H与新鲜验收，不将直接执行替代预览确认为PASS。",
+      "validatorRound": "APEXCN-UPGRADE-1.2.0-R2",
+      "blockingMilestones": [],
+      "dependencies": [],
+      "acceptanceCriterionIds": [],
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "01a10860-91ca-7543-9f03-db02ec607295",
+        "assignmentRef": "APEXCN-UPGRADE-1.2.0-R2",
+        "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-02/command-evidence.jsonl",
+        "findingRefs": [
+          "label=topic-favorite-preview",
+          "label=topic-subscription-preview",
+          "session-events.jsonl:item_130"
+        ],
+        "scenarioOrExplorationRef": [
+          "M110-Q-132",
+          "M110-Q-134",
+          "UPG-031-topic-favorite-subscription",
+          "UPG-043-schema-guide-workflow-local"
+        ],
+        "observedCliVersion": "1.2.0",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "Explicit previews printed the request but omitted operationId, so the novice could not confirm the advertised preview.",
+        "expectedUserOutcome": "Explicit preview persists a request-bound operation and returns an operationId; dry-run saves none; direct topic relations remain compatible.",
+        "responsibilityAssessment": "cli",
+        "responsibilityNotes": "Server relation endpoints already exist. CLI topic relation preview branch uses printDryRun instead of the existing saved-operation path."
+      },
+      "firstAttemptArtifacts": [
+        {
+          "label": "topic-favorite-preview",
+          "command": "bin/apexcn-dev favorite add 36773 --preview --json",
+          "stdoutPath": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-02/evidence/stdout/topic-favorite-preview-1791142540898.stdout",
+          "stdoutSha256": "1b4d35109b4b2b3365f223faddc39267dd7ccd9a5dffbab26978664c4e8fdccc",
+          "stderrPath": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-02/evidence/stderr/topic-favorite-preview-1791142540898.stderr",
+          "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "actual": "Preview prints request with no operationId or confirmation command; no confirmable saved operation."
+        },
+        {
+          "label": "topic-subscription-preview",
+          "command": "bin/apexcn-dev subscription add 36773 --preview --json",
+          "stdoutPath": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-02/evidence/stdout/topic-subscription-preview-1791142541120.stdout",
+          "stdoutSha256": "488d80d8f9f34cd5e0a2d053738a8672df2bebcbd17d400717f7c1e475a21abc",
+          "stderrPath": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-02/evidence/stderr/topic-subscription-preview-1791142541120.stderr",
+          "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "actual": "Preview prints request with no operationId or confirmation command; no confirmable saved operation."
+        }
+      ],
+      "validationRefs": []
     }
   ],
   "enhancementRequests": [],

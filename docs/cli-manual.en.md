@@ -528,6 +528,8 @@ apexcn reply unmark-answer 30549 201480 --if-version 3 --preview --json
 
 ## favorite
 
+For topic `favorite add/remove`, explicit `--preview` saves a preview and returns `operationId`; review it, then execute with `apexcn confirm <operation-id> --yes --json`. Omitting `--preview` retains direct execution. `--dry-run` only prints the request and saves no confirmable operation; `--dry-run --preview` also saves no id.
+
 Favorite a topic:
 
 ```bash
@@ -551,6 +553,8 @@ apexcn favorite remove 201480 --target reply --preview --json
 `me favorites`, `me dashboard`, and `me search --scope favorited` preserve reply favorite identity through `targetType`, `topicId`, `replyId`, `threadUrl`, and `replyUrl`.
 
 ## subscription
+
+`subscription add/remove --preview` saves a preview and returns a confirmable `operationId`; review it, then execute with `apexcn confirm <operation-id> --yes --json`. Omitting `--preview` retains direct execution. `--dry-run`, including when combined with `--preview`, only prints the request and saves no confirmable operation.
 
 Subscribe to a topic:
 
@@ -632,7 +636,7 @@ apexcn confirm <operation-id> --yes --json
 
 ## API write dry-run classification
 
-The one-click installer takes no arguments and has no dry-run mode. CLI API `--preview` creates a saved community-write preview with an operation id; `--dry-run` only prints a request and does not save a confirmable action. Write preview covers `topic create/update/edit/delete`, `reply create/update/edit/delete/mark-answer/unmark-answer`, reply-targeted `favorite add/remove`, and `subscription add/remove`; topic favorites keep their direct behavior and can also be previewed explicitly. Aliases `thread` and `post` inherit the same classification. `ask` uses POST but is read-only and is excluded. Topic creation requires `--category-id`; editing, deletion, and correct-answer changes require the freshly read `--if-version`; topic deletion also requires the exact `--confirm-title`.
+The one-click installer takes no arguments and has no dry-run mode. CLI API `--preview` creates a saved community-write preview with an operation id; `--dry-run` only prints a request and does not save a confirmable action; it takes precedence when both flags are supplied. Write preview covers `topic create/update/edit/delete`, `reply create/update/edit/delete/mark-answer/unmark-answer`, topic- or reply-targeted `favorite add/remove`, and `subscription add/remove`; topic favorites and subscriptions retain direct execution when `--preview` is omitted. Aliases `thread` and `post` inherit the same classification. `ask` uses POST but is read-only and is excluded. Topic creation requires `--category-id`; editing, deletion, and correct-answer changes require the freshly read `--if-version`; topic deletion also requires the exact `--confirm-title`.
 
 ## Content language
 
