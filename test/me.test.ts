@@ -1,4 +1,5 @@
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -1049,21 +1050,29 @@ describe("me command", () => {
     expect(process.exitCode).toBe(1);
   });
 
-  test("can print network errors as JSON", async () => {
+  test("connection-refused JSON errors recommend a local doctor snapshot", async () => {
     process.env.APEXCN_ERROR_FORMAT = "json";
+    const listener = createServer();
+    await new Promise<void>((resolve, reject) => {
+      listener.once("error", reject);
+      listener.listen(0, "127.0.0.1", resolve);
+    });
+    const address = listener.address();
+    if (!address || typeof address === "string") throw new Error("Expected local TCP address");
+    await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
+    const baseUrl = `http://127.0.0.1:${address.port}`;
     const configPath = await tempConfigPath();
     const stdout: string[] = [];
     const stderr: string[] = [];
-    vi.stubGlobal("fetch", vi.fn(async () => {
-      throw new TypeError("fetch failed");
-    }));
+    const fetchMock = vi.fn(globalThis.fetch);
+    vi.stubGlobal("fetch", fetchMock);
     const program = createProgram({
       configPath,
       stdout: (text) => stdout.push(text),
       stderr: (text) => stderr.push(text)
     });
 
-    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz"]);
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz", "--base-url", baseUrl]);
     stdout.length = 0;
     await program.parseAsync(["node", "apexcn", "me"]);
 
@@ -1072,10 +1081,16 @@ describe("me command", () => {
       ok: false,
       error: expect.objectContaining({
         type: "network",
-        message: "Network error: failed to reach https://oracleapex.cn/ords/api/api/v1/me"
+        code: "NETWORK_ERROR",
+        message: `Network error: failed to reach ${baseUrl}/api/v1/me`
       })
     });
     expect(JSON.parse(stderr.join("")).error.remediation.code).toBe("NETWORK_UNREACHABLE");
+    expect(JSON.parse(stderr.join("")).error.remediation.actions).toEqual(expect.arrayContaining([
+      expect.stringMatching(/apexcn doctor snapshot --json.*without.*API/)
+    ]));
+    expect(fetchMock).toHaveBeenCalledOnce();
+    await expect(fetchMock.mock.results[0].value).rejects.toMatchObject({ cause: expect.objectContaining({ code: "ECONNREFUSED" }) });
     expect(stderr.join("")).not.toContain("TypeError");
     expect(stderr.join("")).not.toContain("fetch failed");
     expect(process.exitCode).toBe(1);

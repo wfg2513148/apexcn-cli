@@ -232,6 +232,66 @@
         }
       ],
       "validationRefs": []
+    },
+    {
+      "id": "CLI-DIAGNOSTICS-20261005-006",
+      "milestoneId": "1.1",
+      "priority": "P1",
+      "status": "open",
+      "owner": "cli",
+      "title": "网络拒绝连接诊断未建议不调用 API 的 doctor snapshot",
+      "description": "独立R3新手在真实有效的本地ECONNREFUSED场景观察到NETWORK_ERROR/NETWORK_UNREACHABLE分类正确，但actions没有冻结Q178要求的doctor snapshot建议。核心transport remediation及doctor网络失败checks已最小修复；保持open，待新C/H、新鲜独立验收、清理和发布门闭合。",
+      "validatorRound": "APEXCN-UPGRADE-1.2.0-R3",
+      "blockingMilestones": [],
+      "dependencies": [],
+      "acceptanceCriterionIds": [],
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "01a108a5-c90d-7973-a251-5101c6d682f6",
+        "assignmentRef": "APEXCN-UPGRADE-1.2.0-R3",
+        "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-03/first-attempts.jsonl",
+        "findingRefs": [
+          "first-attempts.jsonl:taskId=M110-Q-178,label=finalcli-q178-network-refused-v2",
+          "evidence/commands/finalcli-q178-network-refused-v2.stderr.txt",
+          "evidence/commands/finalcli-q178-network-receipt-v2.json"
+        ],
+        "scenarioOrExplorationRef": [
+          "M110-Q-178"
+        ],
+        "observedCliVersion": "1.2.0",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "First valid refusal used a fake-credential configured profile against a closed loopback port, returned exitCode 1 and NETWORK_ERROR/NETWORK_UNREACHABLE with one request and zero retries. Actions mention auth show, doctor --json and network/DNS/proxy but omit doctor snapshot. A separately requested snapshot exits 0 with zero API requests; this does not supply the missing recommendation.",
+        "expectedUserOutcome": "On a genuine network failure, both structured transport remediation and doctor failed checks explicitly recommend apexcn doctor snapshot --json for local diagnostics without making API calls. Preserve network classification and request counts.",
+        "responsibilityAssessment": "cli",
+        "responsibilityNotes": "CLI-only support-guidance omission, not server capability, authentication or timeout failure. Earlier no-profile attempt was an invalid fixture for network behavior; retain its evidence without classifying it as a product defect.",
+        "testedCommit": "f3be76e524af44621e5ad6ce87b171c940d4d69e",
+        "artifactChecksum": "441047effeba25e54f0eeab9b75b8eb4ed992c35ca8060f520cc45340bb0570b",
+        "scopeContractSha256": "42528961e0e09248346251809e00d24d1159762b27270b787ac7cf135b9e474d"
+      },
+      "firstAttemptArtifacts": [
+        {
+          "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-03/evidence/commands/finalcli-q178-network-refused-v2.stdout.txt",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-03/evidence/commands/finalcli-q178-network-refused-v2.stderr.txt",
+          "sha256": "c90c438b198eb6e71fb4f34570fe763795aea6d235c9d8870896a43ea9de03e5"
+        },
+        {
+          "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-03/evidence/commands/finalcli-q178-network-receipt-v2.json",
+          "sha256": "5a4f5fa807a3012dea1926cf8b61bb90165ea84f4a57b12f55c724b6c91d3756"
+        }
+      ],
+      "invalidFixtureEvidencePreserved": [
+        "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-03/evidence/commands/finalcli-q178-network-refused.stderr.txt"
+      ],
+      "developmentRepair": {
+        "status": "implemented-awaiting-fresh-independent-validation",
+        "report": "/Users/kwang/apexcn-cli/output/upgrade-20261005/developer-network-snapshot-repair-results.json",
+        "doesNotCloseIssue": true
+      },
+      "validationRefs": []
     }
   ],
   "enhancementRequests": [],

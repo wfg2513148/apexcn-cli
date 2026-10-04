@@ -186,6 +186,7 @@ export function remediationForTransportError(error: NetworkError | TimeoutError)
       "Confirm that the device has network access and DNS resolution works.",
       "Run `apexcn auth show --json` to verify the active baseUrl.",
       "Run `apexcn doctor --json` to capture a redacted connectivity diagnosis.",
+      "Run `apexcn doctor snapshot --json` to collect local diagnostics without making API calls.",
       "Check proxy, VPN, firewall, and ORDS service availability before retrying."
     ]
   };

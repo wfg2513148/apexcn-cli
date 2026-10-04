@@ -168,7 +168,12 @@ async function checkApi(
       };
     }
     if (error instanceof NetworkError) {
-      return { name, ok: false, message: error.message };
+      return {
+        name,
+        ok: false,
+        message: error.message,
+        suggestions: ["Run apexcn doctor snapshot --json to collect local diagnostics without making API calls."]
+      };
     }
     if (error instanceof TimeoutError) {
       return { name, ok: false, message: error.message, suggestions: doctorTimeoutSuggestions(name) };

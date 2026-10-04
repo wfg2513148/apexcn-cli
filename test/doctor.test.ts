@@ -1,4 +1,5 @@
 import { mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -416,10 +417,20 @@ describe("doctor command", () => {
     expect(process.exitCode).toBe(1);
   });
 
-  test("reports network failures as failed checks without HTTP status", async () => {
-    const { program, stdout, stderr, fetch } = await configuredProgram(async () => {
-      throw new TypeError("fetch failed");
+  test("connection-refused checks recommend a local snapshot without HTTP status", async () => {
+    const listener = createServer();
+    await new Promise<void>((resolve, reject) => {
+      listener.once("error", reject);
+      listener.listen(0, "127.0.0.1", resolve);
     });
+    const address = listener.address();
+    if (!address || typeof address === "string") throw new Error("Expected local TCP address");
+    await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const realFetch = globalThis.fetch;
+    const { program, stdout, stderr, fetch } = await configuredProgram(realFetch);
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "abcdefghijklmnopqrstuvwxyz", "--base-url", baseUrl, "--profile", "test@oci"]);
+    stdout.length = 0;
 
     await program.parseAsync(["node", "apexcn", "doctor", "--json"]);
 
@@ -427,12 +438,20 @@ describe("doctor command", () => {
     expect(data.ok).toBe(false);
     expect(data.checks).toEqual([
       { name: "profile", ok: true },
-      { name: "me", ok: false, message: "Network error: failed to reach https://oracleapex.cn/ords/test/api/v1/me" },
-      { name: "categories", ok: false, message: "Network error: failed to reach https://oracleapex.cn/ords/test/api/v1/categories" },
-      { name: "search", ok: false, message: "Network error: failed to reach https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&pageSize=1" }
+      expect.objectContaining({ name: "me", ok: false, message: `Network error: failed to reach ${baseUrl}/api/v1/me` }),
+      expect.objectContaining({ name: "categories", ok: false, message: `Network error: failed to reach ${baseUrl}/api/v1/categories` }),
+      expect.objectContaining({ name: "search", ok: false, message: `Network error: failed to reach ${baseUrl}/api/v1/search?keyword=APEX&pageSize=1` })
     ]);
-    expect(data.checks).not.toEqual(expect.arrayContaining([expect.objectContaining({ status: 0 })]));
+    for (const check of data.checks.slice(1)) {
+      expect(check).not.toHaveProperty("status");
+      expect(check.suggestions).toEqual(expect.arrayContaining([
+        expect.stringMatching(/apexcn doctor snapshot --json.*without.*API/)
+      ]));
+    }
     expect(fetch).toHaveBeenCalledTimes(3);
+    for (const result of fetch.mock.results) {
+      await expect(result.value).rejects.toMatchObject({ cause: expect.objectContaining({ code: "ECONNREFUSED" }) });
+    }
     expect(stdout.join("")).not.toContain("TypeError");
     expect(stdout.join("")).not.toContain("fetch failed");
     expect(stderr.join("")).toBe("");
