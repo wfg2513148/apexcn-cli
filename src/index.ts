@@ -27,8 +27,9 @@ import { createWorkflowCommand } from "./commands/workflow.js";
 import { createUpdateCommand } from "./commands/update.js";
 import { DEFAULT_BASE_URL, setProfile } from "./config.js";
 import { descriptorForPath } from "./core/command-registry.js";
+import { CONTENT_LANGUAGE_COMMANDS, parseContentLanguage } from "./core/content-language.js";
 import { isUsableCredential } from "./core/credential-store.js";
-import { runWithCliRequestContext, setCurrentCliOperation } from "./core/request-context.js";
+import { runWithCliRequestContext, setCurrentCliOperation, setCurrentContentLanguage } from "./core/request-context.js";
 import { formatCliUsageError } from "./output.js";
 import { COMMAND_MANIFEST_JSON_SCHEMA } from "./schemas/command-manifest.js";
 import { CLI_VERSION } from "./version.js";
@@ -108,16 +109,28 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   program.addCommand(createRelationCommand("subscription", commandOptions));
   program.addCommand(createAskCommand(commandOptions));
   program.addCommand(createCommandsCommand(program, io));
+  const languageCommands: Command[] = [];
+  const registerLanguage = (command: Command): void => {
+    const descriptor = descriptorForPath(canonicalCommandPath(command));
+    if (descriptor && CONTENT_LANGUAGE_COMMANDS.has(descriptor.id)) {
+      command.option("--lang <language>", "content language: zh-cn or en (default zh-cn)", parseContentLanguage);
+      languageCommands.push(command);
+    }
+    command.commands.forEach(registerLanguage);
+  };
+  program.commands.forEach(registerLanguage);
   program.hook("preAction", (_hookCommand, actionCommand) => {
     const descriptor = descriptorForPath(canonicalCommandPath(actionCommand));
     if (descriptor) {
       setCurrentCliOperation(descriptor.id.replace(/[^a-z0-9]+/g, "_").slice(0, 64));
     }
+    setCurrentContentLanguage(actionCommand.opts().lang);
   });
   configureCommandOutput(program, io, () => activeJsonErrors);
   const parseAsync = program.parseAsync.bind(program);
   program.parseAsync = async (argv, parseOptions) => {
     resetTransientCommandOptions(program);
+    languageCommands.forEach(command => command.setOptionValue("lang", undefined));
     activeCliConfigPath = configPathFromArgv(argv, parseOptions);
     activeJsonErrors = jsonErrorsFromArgv(argv, parseOptions);
     try {

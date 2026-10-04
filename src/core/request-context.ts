@@ -1,7 +1,9 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import type { ContentLanguage } from "./content-language.js";
 
 type CliRequestContext = {
   operation?: string;
+  language?: ContentLanguage;
 };
 
 const cliRequestContext = new AsyncLocalStorage<CliRequestContext>();
@@ -20,4 +22,16 @@ export function setCurrentCliOperation(operation: string): void {
 
 export function currentCliOperation(): string | undefined {
   return cliRequestContext.getStore()?.operation;
+}
+
+export function setCurrentContentLanguage(language: ContentLanguage | undefined): void {
+  const context = cliRequestContext.getStore();
+  if (!context) {
+    throw new Error("CLI request context is not active");
+  }
+  context.language = language;
+}
+
+export function currentContentLanguage(): ContentLanguage | undefined {
+  return cliRequestContext.getStore()?.language;
 }

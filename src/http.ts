@@ -1,4 +1,5 @@
 import { currentCliOperation } from "./core/request-context.js";
+import { contentLanguageQuery } from "./core/content-language.js";
 import { DEFAULT_USER_AGENT } from "./version.js";
 
 export type RequestJsonOptions = {
@@ -106,7 +107,7 @@ export async function requestJson<T = unknown>(
     init.body = JSON.stringify(options.body);
   }
 
-  const url = addQuery(joinUrl(baseUrl, path), options.query);
+  const url = addQuery(joinUrl(baseUrl, path), contentLanguageQuery(path, options.method, options.query));
   let response: Response;
   let body: unknown;
   try {
