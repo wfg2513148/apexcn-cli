@@ -271,7 +271,7 @@ describe("roadmap contract", () => {
       sessionCwdMustEqualRepository: true
     }));
     expect(protocol.validator).toEqual(expect.objectContaining({
-      repository: "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
+      repository: roadmap.testingBindings.validator.project,
       freshTaskRequired: true,
       realScenarioSimulationRequired: true,
       backendAndBrowserEvidenceRequired: true,
@@ -362,6 +362,7 @@ describe("independent validator project readiness", () => {
       roadmap.testingBindings.validator.project = target;
       roadmap.testingBindings.validator.projectStatus = "configured";
       issues.sourcePolicy.validatorProject = target;
+      issues.developmentExtensionProtocol.validator.repository = target;
       expect(validateRoadmap(validationInput(roadmap, issues))).toEqual([]);
       expect(validatorReadiness(roadmap)).toEqual([]);
       roadmap.testingBindings.validator.project = roadmap.testingBindings.builder.repository;

@@ -68,7 +68,7 @@ describe("GA readiness contracts", () => {
     const report = JSON.parse(result.stdout);
 
     expect(result.status, JSON.stringify(report.problems)).toBe(activeFindings.length === 0 ? 0 : 1);
-    expect(report.targetVersion).toBe("1.1.6");
+    expect(report.targetVersion).toBe("1.2.0");
     expect(report.problems).toEqual(activeFindings.length === 0
       ? []
       : ["1.1 readiness contains active validator findings"]);
@@ -85,6 +85,17 @@ describe("GA readiness contracts", () => {
     expect(surface.commandManifest.commands).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "admin.operations" })
     ]));
+  });
+
+  test("candidate audit exposes unresolved findings without claiming release readiness", () => {
+    const result = spawnSync("node", ["scripts/check-ga-readiness.mjs", "--candidate"], {
+      cwd: repoRoot, encoding: "utf8"
+    });
+    const report = JSON.parse(result.stdout);
+    expect(result.status, JSON.stringify(report.problems)).toBe(0);
+    expect(report.candidateOnly).toBe(true);
+    expect(report.unresolvedIssueIds).toEqual((readJson("issues.json").issues ?? []).map((issue: { id: string }) => issue.id));
+    expect(report.problems).toEqual([]);
   });
 
   test("freezes every 1.1.6 public command with schemas and API operations", () => {

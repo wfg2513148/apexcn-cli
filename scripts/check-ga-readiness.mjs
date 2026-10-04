@@ -52,6 +52,8 @@ const report = {
   kind: "apexcn-ga-activation-readiness-audit",
   schemaVersion: 1,
   ok: problems.length === 0,
+  candidateOnly: Boolean(args.candidate),
+  unresolvedIssueIds: (issues.issues ?? []).map((issue) => issue.id),
   auditedAt: new Date().toISOString(),
   targetVersion: releaseContract.targetVersion,
   repository: {
@@ -143,7 +145,7 @@ function validateSurface(surface) {
 function validateReleaseSurface(baseline, surface, contract) {
   const problemCountBefore = problems.length;
   if (contract.kind !== "apexcn-release-qualification-contract"
-    || contract.contractVersion !== "M110-QUALIFICATION-1"
+    || contract.contractVersion !== (releaseVersion === "1.2.0" ? "COMMUNITY-I18N-QUALIFICATION-1" : "M110-QUALIFICATION-1")
     || contract.targetVersion !== releaseVersion
     || surface.frozenForVersion !== contract.targetVersion
     || surface.baselineVersion !== contract.baseline.version) {
@@ -393,7 +395,7 @@ function validateRoadmapState(currentRoadmap, currentIssues) {
       && releaseContract.approvedAdditions.some((addition) => addition.commandId === "update")))) {
     problems.push("1.1 readiness contains an unrelated enhancement request");
   }
-  if ((currentIssues.issues ?? []).length !== 0) {
+  if (!args.candidate && (currentIssues.issues ?? []).length !== 0) {
     problems.push("1.1 readiness contains active validator findings");
   }
 }
@@ -465,6 +467,7 @@ function parseArgs(values) {
   const parsed = { online: false };
   for (let index = 0; index < values.length; index += 1) {
     if (values[index] === "--online") parsed.online = true;
+    else if (values[index] === "--candidate") parsed.candidate = true;
     else if (values[index] === "--supply-chain-dir") parsed.supplyChainDir = values[++index];
     else if (values[index] === "--output") parsed.output = values[++index];
     else throw new Error(`Unknown option: ${values[index]}`);

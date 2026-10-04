@@ -1672,7 +1672,7 @@ function collectionFetch(url: string): Response {
   if (url.includes("/api/v1/search")) {
     return Response.json({ requestId: "req-search", items: [{ id: 1, title: "REST API" }] });
   }
-  if (url.endsWith("/api/v1/topics/1")) {
+  if (new URL(url).pathname.endsWith("/api/v1/topics/1")) {
     return Response.json({
       requestId: "req-topic-1",
       topic: { id: 1, title: "REST API", url: "https://oracleapex.cn/t/1", content: "REST API content" }

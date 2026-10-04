@@ -105,6 +105,15 @@ describe("release checksums", () => {
       expect(readFileSync(join(dir, "install-agent.ps1.sha256"), "utf8")).toContain("install-agent.ps1");
       expect(readFileSync(join(dir, "apexcn-cli.spdx.json.sha256"), "utf8")).toContain("apexcn-cli.spdx.json");
       expect(readFileSync(join(dir, "release-provenance.json.sha256"), "utf8")).toContain("release-provenance.json");
+      const archiveBefore = readFileSync(join(dir, "apexcn-cli.tgz"));
+      const provenanceBefore = readFileSync(join(dir, "release-provenance.json"));
+      execFileSync("node", ["scripts/check-release-artifacts.mjs", "--verify-only", "--artifacts-dir", dir], { cwd: repoRoot, encoding: "utf8" });
+      expect(readFileSync(join(dir, "apexcn-cli.tgz"))).toEqual(archiveBefore);
+      expect(readFileSync(join(dir, "release-provenance.json"))).toEqual(provenanceBefore);
+      writeFileSync(join(dir, "checksums.txt"), `${"0".repeat(64)}  apexcn-cli.tgz\n`);
+      const rejected = spawnSync("node", ["scripts/check-release-artifacts.mjs", "--verify-only", "--artifacts-dir", dir], { cwd: repoRoot, encoding: "utf8" });
+      expect(rejected.status).toBe(1);
+      expect(readFileSync(join(dir, "apexcn-cli.tgz"))).toEqual(archiveBefore);
     } finally {
       spawnSync("rm", ["-rf", dir]);
     }

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync, realpathSync, statSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -200,7 +200,7 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
   check(extensionProtocol?.cli?.repository === "/Users/kwang/apexcn-cli", "CLI extension repository binding drifted", problems);
   check(extensionProtocol?.cli?.startsAfterRequiredServerEvidence === true, "CLI extension must wait for required server evidence", problems);
   check(extensionProtocol?.cli?.mustNotMaskServerGap === true, "CLI extension must not mask a server gap", problems);
-  check(extensionProtocol?.validator?.repository === "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test", "extension validator repository binding drifted", problems);
+  check(extensionProtocol?.validator?.repository === roadmap.testingBindings?.validator?.project, "extension validator repository binding drifted", problems);
   check(extensionProtocol?.validator?.taskVisibility === "user-visible-codex-desktop-task", "extension validation must use a user-visible Codex Desktop task", problems);
   check(extensionProtocol?.validator?.freshTaskRequired === true, "extension validation must use a fresh task", problems);
   check(extensionProtocol?.validator?.sessionCwdMustEqualRepository === true, "extension validator task cwd must equal its repository", problems);
@@ -337,7 +337,8 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
       const allowedServerThreadIds = new Set([
         roadmap.testingBindings.server.threadId,
         roadmap.testingBindings.server.replacementThreadId,
-        roadmap.testingBindings.server.activeTaskThreadId
+        roadmap.testingBindings.server.activeTaskThreadId,
+        roadmap.testingBindings.server.previousActiveTaskThreadId
       ]);
       check(allowedServerThreadIds.has(dependency.resolutionThreadId), `server dependency ${dependency.id} must route to a registered server thread`, problems);
     }
@@ -549,7 +550,8 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
       const allowedServerThreadIds = new Set([
         roadmap.testingBindings.server.threadId,
         roadmap.testingBindings.server.replacementThreadId,
-        roadmap.testingBindings.server.activeTaskThreadId
+        roadmap.testingBindings.server.activeTaskThreadId,
+        roadmap.testingBindings.server.previousActiveTaskThreadId
       ]);
       check(allowedServerThreadIds.has(issue.serverThreadId), `server routing drift for ${issue.id}`, problems);
     }
@@ -577,7 +579,7 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
   check(agentsText.includes("existing dedicated test account"), "AGENTS.md must require test account reuse", problems);
   check(agentsText.includes("CLI Capability Extension Protocol") && agentsText.includes("issues.json.enhancementRequests"), "AGENTS.md must define the CLI capability extension protocol", problems);
   check(agentsText.includes("/Users/kwang/apexcn-forums") && agentsText.includes("server-capability audit"), "AGENTS.md must route server extensions to apexcn-forums", problems);
-  check(agentsText.includes("freeze an immutable candidate artifact") && agentsText.includes("/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test"), "AGENTS.md must require frozen-candidate validation in apexcn-cli-test", problems);
+  check(agentsText.includes("freeze an immutable candidate artifact") && (agentsText.includes(roadmap.testingBindings?.validator?.project ?? "<unconfigured-validator>") || agentsText.includes("resolved independent validation project")), "AGENTS.md must require frozen-candidate validation in apexcn-cli-test", problems);
   check(agentsText.includes("replying to an existing reply") && agentsText.includes("deleting a reply owned by the authenticated test account"), "AGENTS.md must cover nested-reply and own-reply deletion scenarios", problems);
   return problems;
 }
@@ -622,7 +624,9 @@ function readJson(path) {
 }
 
 export function readAgentGuidance() {
-  return readFileSync(agentsPath, "utf8") + "\n" + readFileSync(join(repoRoot, "docs", "agent-roadmap-workflow.md"), "utf8");
+  const splitGuidance = join(repoRoot, "docs", "agents", "independent-validation.md");
+  return readFileSync(agentsPath, "utf8") + "\n" + readFileSync(join(repoRoot, "docs", "agent-roadmap-workflow.md"), "utf8")
+    + (existsSync(splitGuidance) ? "\n" + readFileSync(splitGuidance, "utf8") : "");
 }
 
 function isWithin(candidate, root) {

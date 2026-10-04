@@ -12,7 +12,7 @@ const expectedVersion = args.expectedVersion ?? readJson("package.json").version
 const artifactsDir = args.artifactsDir ? resolveArtifactsDir(args.artifactsDir) : join(repoRoot, "artifacts");
 const archivePath = join(artifactsDir, "apexcn-cli.tgz");
 
-buildArtifacts();
+if (!args.verifyOnly) buildArtifacts();
 verifyArtifacts();
 
 console.log(`Release artifact check passed for ${expectedVersion}`);
@@ -21,6 +21,10 @@ function parseArgs(values) {
   const parsed = {};
   for (let index = 0; index < values.length; index += 1) {
     const value = values[index];
+    if (value === "--verify-only") {
+      parsed.verifyOnly = true;
+      continue;
+    }
     if (value === "--expected-version") {
       parsed.expectedVersion = values[index + 1];
       index += 1;
@@ -31,7 +35,7 @@ function parseArgs(values) {
       index += 1;
       continue;
     }
-    console.error("Usage: node scripts/check-release-artifacts.mjs [--expected-version <version>] [--artifacts-dir <path>]");
+    console.error("Usage: node scripts/check-release-artifacts.mjs [--verify-only] [--expected-version <version>] [--artifacts-dir <path>]");
     process.exit(2);
   }
   return parsed;
