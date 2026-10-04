@@ -208,3 +208,20 @@ API Key 用于 CLI 访问接口，不会自动让浏览器也处于登录状态�
 - **写操作没有执行**：检查是否只完成了预览，以及是否明确确认了当前预览。
 
 需要自行查看命令时，可阅读 [命令行终端手册](cli-manual.zh.md)。安全细节见 [安全说明](security-model.md)。
+
+## 内容语言
+
+支持内容读取命令的 `--lang zh-cn|en`；省略时保持中文默认。文章使用服务器保存的语言版本，缺失译文回退原稿，STALE 表示保存译文待刷新；用户话题原稿和回复不被CLI翻译。UI语言、内容选择与ask回答语言分别处理。续页必须使用同一语言及过滤参数，跨语言游标返回INVALID_CURSOR_LANGUAGE。
+
+```sh
+apexcn category list --lang en --json
+apexcn search "APEX" --lang en --json
+apexcn topic view 42 --lang en --json
+apexcn me search "APEX" --scope created,favorited --lang en --json
+apexcn research "APEX" --lang en --json
+apexcn rag retrieve "APEX" --query "APEX" --lang en --json
+apexcn collection build --topic-id 42 --lang en --output-dir ./apex-en --json
+apexcn collection sync --dir ./apex-en --json
+```
+
+`collection build/favorites` 保存请求语言与服务器返回的contentLanguage及translationStatus；sync自动重放源语言。旧集合无语言元数据时保持中文默认。`ask`、写入、认证、管理员、升级和本地诊断命令没有内容语言选项。

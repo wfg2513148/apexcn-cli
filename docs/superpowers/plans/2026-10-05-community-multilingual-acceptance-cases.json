@@ -1,0 +1,1018 @@
+{
+  "schemaVersion": 1,
+  "status": "planned-not-frozen",
+  "planVersion": "v2",
+  "candidateCommit": null,
+  "candidateArchiveSha256": null,
+  "freezePolicy": "Classification is immutable after scope freeze. Excluded is not PASS. Admin positive requires actual preflight usable-role evidence before required freeze.",
+  "cases": [
+    {
+      "caseId": "UPG-001-scope-server-contract",
+      "parentGate": "A01",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "当前OpenAPI与部署能力窗/语言端点一致，缺口归属清晰",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "server",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-002-cap-live-dev",
+      "parentGate": "A02",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "DEV能力0.10兼容且required capability/endpoint可用",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-003-cap-live-prod-readonly",
+      "parentGate": "A02",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "生产只读能力0.10兼容",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-004-cap-legacy-unknown-malformed",
+      "parentGate": "A02",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "旧版本兼容、未知拒绝、坏结构与缺能力拒绝",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-005-lang-public-surface",
+      "parentGate": "A03",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "16个lang命令及禁用命令表、manifest/help、thread别名一致",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-006-lang-invalid-before-network",
+      "parentGate": "A03",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "fr/空/大小写非契约值发请求前拒绝",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-007-lang-default-repeat-concurrent",
+      "parentGate": "A03",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "缺省中文，重复parse和并发调用不串语言",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-008-category-bilingual",
+      "parentGate": "A04",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "分类列表和分类统计zh-cn/en及元数据正确",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-009-language-api-invalid",
+      "parentGate": "A04",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "只读API非法语言400 INVALID_LANGUAGE",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "server",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-010-search-bilingual",
+      "parentGate": "A05",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "全局中英搜索匹配选择正文并保留来源",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-011-topic-read-bilingual",
+      "parentGate": "A05",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "list/recent/view选择语言，原文代码表格emoji完整",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-012-cursor-same-language",
+      "parentGate": "A06",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "同语言续页重放过滤，无重复",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "server",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-013-cursor-cross-language",
+      "parentGate": "A06",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "跨语言续页400 INVALID_CURSOR_LANGUAGE",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "server",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-014-cursor-legacy-chinese",
+      "parentGate": "A06",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "旧游标仅中文可用，英文拒绝",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "server",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-015-personal-topics-replies",
+      "parentGate": "A07",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "非空自有话题/回复列表、语言选择与权限字段正确",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-016-personal-favorites-subscriptions",
+      "parentGate": "A07",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "非空收藏/订阅列表与回复/话题身份不混淆",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-017-personal-dashboard",
+      "parentGate": "A07",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "dashboard聚合保持语言与隐私",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-018-personal-search-scopes",
+      "parentGate": "A07",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "created/replied/favorited/subscribed逐scope非空检索正确",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-019-research-language-provenance",
+      "parentGate": "A08",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "每个search/detail同语言，顶层响应语言、topic状态与来源保留",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-020-rag-language-provenance",
+      "parentGate": "A08",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "检索不调用app ask，引用内容语言保留、回复原文不改",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-021-collection-build-language",
+      "parentGate": "A09",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "build保存请求语言、响应语言和翻译状态",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-022-collection-favorites-language",
+      "parentGate": "A09",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "favorites继承export响应顶层语言，回复收藏明确排除",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-023-collection-sync-language",
+      "parentGate": "A09",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "英文sync重放en，不被中文默认覆盖",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-024-collection-source-language-tamper",
+      "parentGate": "A09",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "清单语言正反篡改均在网络前拒绝",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-025-collection-legacy-sync",
+      "parentGate": "A09",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "旧无语言集合旧hash有效，默认中文，sync自然升级元数据",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-026-collection-offline-bundle",
+      "parentGate": "A09",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "verify/index/query/stats/export/import/restore/automation保留语言与完整性",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-027-write-own-topic",
+      "parentGate": "A10",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "话题create/update/delete预览确认、版本API读回与Chrome同样本识别",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-028-write-own-reply-nested",
+      "parentGate": "A10",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "回复create/update/delete及嵌套回复API和Chrome同样本识别",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-029-reply-answer-roundtrip",
+      "parentGate": "A11",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "答案mark/unmark公共预览确认及读回",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-030-reply-favorite-roundtrip",
+      "parentGate": "A11",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "回复收藏add/remove公共预览确认及读回",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-031-topic-favorite-subscription",
+      "parentGate": "A12",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "话题收藏订阅add/remove、非空个人列表和导出正确",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-032-write-version-conflict",
+      "parentGate": "A13",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "陈旧version确认409且正文不被覆盖",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-033-write-other-owner-denial",
+      "parentGate": "A13",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "其他所有者变更拒绝，无越权修改",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "server",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-034-write-approval-integrity",
+      "parentGate": "A13",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "过期/篡改operation与bundle按公开安全合同拒绝，不把未执行观察当绕过",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-035-page-same-topic-switch",
+      "parentGate": "A14",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "DEV同话题zh/en/zh保留ID/正文/原文回复",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "server",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-036-page-original-fallback",
+      "parentGate": "A14",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "缺译文新样本English仍显示原稿与原文回复",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "server",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-037-page-existing-bilingual",
+      "parentGate": "A14",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "既有双语文章显示对应存储版本及状态",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "server",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-038-page-auth-edited-content",
+      "parentGate": "A15",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "登录后修改真实Chrome识别同样本正文代码表格回复",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "server",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-039-page-public-access",
+      "parentGate": "A15",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "公开内容未登录实际可见，不能把登录空壳算通过",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "server",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-040-page-production-readonly",
+      "parentGate": "A15",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "代表性生产中英页面只读可见",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "server",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-041-auth-doctor-local",
+      "parentGate": "A16",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "认证隔离/优先级/脱敏、doctor有效与坏JSON预期正确",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-042-draft-review-local",
+      "parentGate": "A16",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "本地草稿/清单/恢复/导出导入/review合同正确",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-043-schema-guide-workflow-local",
+      "parentGate": "A16",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "81Schemas与指南语言说明一致，workflow本地预览批准恢复正确",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-044-ask-existing-contract",
+      "parentGate": "A17",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "ask实际成功、引用可追溯，不新增回答语言或性能SLA",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "server",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-045-privacy-rules-advertised",
+      "parentGate": "A17",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "privacy/rules与advertised可用性一致，unavailable原因公开可理解",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "server",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-046-stats-existing-contract",
+      "parentGate": "A17",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "现有公开统计读取回归成功",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-047-admin-ordinary-denial",
+      "parentGate": "A17",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "普通身份管理员端点拒绝与privacy/最小权限正确",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "server",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-048-admin-controlled-positive",
+      "parentGate": "A17",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Confirm existing controlled DEV admin role and token before freeze; otherwise excluded with explicit no-positive-coverage statement.",
+      "assertion": "仅已有受控DEV管理员只读身份被预先确认可用时正向聚合required",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "server",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-049-fresh-validator-intake",
+      "parentGate": "A18",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "新可见任务cwd/model/effort/novice/候选hash/scope身份齐全",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "validator",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-050-baseline-applicable-complete",
+      "parentGate": "A18",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "固定202基线所有适用case有语义证据，排除项冻结前明确",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "validator",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-051-first-attempt-integrity",
+      "parentGate": "A18",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "原始首尝试stdout/stderr hash及重试身份不可改写",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "validator",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-052-cleanup-owned-data",
+      "parentGate": "A19",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "本轮topic/reply/favorite/subscription清理，marker与个人样本列表0",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "validator",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-053-cleanup-local-browser",
+      "parentGate": "A19",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "Chrome关闭/临时配置删除/原账号与原配置保留",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "validator",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-054-local-quality-gates",
+      "parentGate": "A20",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "build/npm test/check:release适用门全部通过",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-055-release-candidate-identity",
+      "parentGate": "A20",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "tag指C、GitHub上传原H_C、供应链sourceCommit/hash一致",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    },
+    {
+      "caseId": "UPG-056-issue-closure-metadata",
+      "parentGate": "A20",
+      "classification": "required",
+      "freezeReason": "Existing supported community capability or confirmed compatibility repair; no new product behavior.",
+      "preconditionPolicy": "Prepare valid isolated fixtures before business attempts.",
+      "assertion": "M只审计元数据、不pack/tag，问题闭合与roadmap治理门通过",
+      "artifactUnderTest": {
+        "candidateCommit": null,
+        "candidateArchiveSha256": null,
+        "serverCommit": null
+      },
+      "firstAttemptEvidence": [],
+      "finalEvidence": [],
+      "cleanupEvidence": [],
+      "responsibility": "cli",
+      "status": "NOT_VERIFIED"
+    }
+  ]
+}

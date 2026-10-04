@@ -635,3 +635,20 @@ apexcn confirm <operation-id> --yes --json
 ## API 写操作 dry-run 分类
 
 一键安装脚本不接收参数，也没有 dry-run。CLI API `--preview` 用于创建带操作编号的社区写入预览，`--dry-run` 只打印请求但不保存待确认操作。预览覆盖 `topic create/update/edit/delete`、`reply create/update/edit/delete/mark-answer/unmark-answer`、回复目标的 `favorite add/remove` 和 `subscription add/remove`；话题收藏保持直接执行，也可显式预览。别名 `thread` 和 `post` 继承同样分类。`ask` 虽然使用 POST，但属于只读问答，不纳入写操作预览。创建话题必须显式传 `--category-id`；编辑、删除和正确答案操作必须使用刚读取的 `--if-version`；删除话题还必须传精确的 `--confirm-title`。
+
+## 内容语言
+
+支持内容读取命令的 `--lang zh-cn|en`；省略时保持中文默认。文章使用服务器保存的语言版本，缺失译文回退原稿，STALE 表示保存译文待刷新；用户话题原稿和回复不被CLI翻译。UI语言、内容选择与ask回答语言分别处理。续页必须使用同一语言及过滤参数，跨语言游标返回INVALID_CURSOR_LANGUAGE。
+
+```sh
+apexcn category list --lang en --json
+apexcn search "APEX" --lang en --json
+apexcn topic view 42 --lang en --json
+apexcn me search "APEX" --scope created,favorited --lang en --json
+apexcn research "APEX" --lang en --json
+apexcn rag retrieve "APEX" --query "APEX" --lang en --json
+apexcn collection build --topic-id 42 --lang en --output-dir ./apex-en --json
+apexcn collection sync --dir ./apex-en --json
+```
+
+`collection build/favorites` 保存请求语言与服务器返回的contentLanguage及translationStatus；sync自动重放源语言。旧集合无语言元数据时保持中文默认。`ask`、写入、认证、管理员、升级和本地诊断命令没有内容语言选项。

@@ -1,9 +1,132 @@
 {
   "schemaVersion": 1,
   "product": "apexcn-cli",
-  "updatedAt": "2026-09-18",
+  "updatedAt": "2026-10-05",
   "activeOnly": true,
-  "issues": [],
+  "issues": [
+    {
+      "id": "CLI-COMPAT-20261004-001",
+      "milestoneId": "1.1",
+      "priority": "P1",
+      "validatorPriority": "P0",
+      "status": "open",
+      "owner": "cli",
+      "title": "CLI 1.1.6 拒绝社区已部署的 0.10.0-candidate 契约",
+      "description": "社区服务器明确支持旧 0.9.1 契约，但 CLI 按当前 contractVersion 白名单拒绝 0.10.0。独立会话在生产和 DEV 复现 capabilities 非零退出；部分读取仍成功，影响须按命令评估。P1 为本会话影响评估；原 validator P0 记录保留。",
+      "validatorRound": "APEXCN-COMPAT-20261004-R3",
+      "blockingMilestones": [],
+      "dependencies": [],
+      "acceptanceCriterionIds": [],
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "01a1074c-9e15-7241-8919-5152c68dd1d2",
+        "assignmentRef": "APEXCN-COMPAT-20261004-R3",
+        "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r3/findings.json",
+        "findingRefs": [
+          "first-attempts.jsonl:scenario=PROD-ME-CAPABILITIES",
+          "first-attempts.jsonl:scenario=DEV-CONFIG-ME-CAPABILITIES",
+          "evidence/attempts/stdout/1791124023384-PROD-ME-CAPABILITIES.txt",
+          "evidence/attempts/stdout/1791124176976-DEV-CONFIG-ME-CAPABILITIES.txt"
+        ],
+        "scenarioOrExplorationRef": [
+          "I18N-11-auth-capabilities-ords-upgrade-http"
+        ],
+        "observedCliVersion": "1.1.6",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "Valid production and explicit --config DEV capability calls both reached server contractVersion 0.10.0-candidate and returned exitCode 1 with clientCompatibility.ok=false/status=unsupported and no missing capabilities. Profile-only DEV attempts used a misspelled validator environment variable and are excluded.",
+        "expectedUserOutcome": "CLI 1.1.6 should recognize the live 0.10.0-candidate contract supported by server 3.0.1, or clearly gate only unsupported operations without falsely blocking compatible capabilities.",
+        "responsibilityAssessment": "cli",
+        "responsibilityNotes": "Confirmed CLI compatibility-window defect or stale client contract support; not an environment timeout/auth failure. Category/search/topic/recent read-only calls still completed, so impact is command-specific and must be mapped rather than generalized."
+      },
+      "validationRefs": [
+        {
+          "threadId": "01a1078c-c5f4-7a00-8ec4-547779eb4c35",
+          "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/report.md",
+          "scenarios": [
+            "SUP-04-favorite-subscription-personal-scopes-collection",
+            "SUP-05-reply-answer-favorite-contract-gates"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CLI-I18N-20261004-002",
+      "milestoneId": "1.1",
+      "priority": "P1",
+      "status": "open",
+      "owner": "cli",
+      "title": "CLI 无法选择社区已支持的中英文内容语言",
+      "description": "独立新手调用 search/topic recent --lang en 被 UNKNOWN_OPTION 拒绝；直接只读 API 支持 lang=en、非法语言拒绝及语言游标。CLI 当前没有完整语言上下文，需要适配适用读取与衍生内容路径。",
+      "validatorRound": "APEXCN-COMPAT-20261004-R3",
+      "blockingMilestones": [],
+      "dependencies": [],
+      "acceptanceCriterionIds": [],
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "01a1074c-9e15-7241-8919-5152c68dd1d2",
+        "assignmentRef": "APEXCN-COMPAT-20261004-R3",
+        "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r3/findings.json",
+        "findingRefs": [
+          "first-attempts.jsonl:scenario=PROD-CLI-LANG-SEARCH",
+          "first-attempts.jsonl:scenario=PROD-CLI-LANG-RECENT",
+          "http-read-evidence.jsonl:HTTP-CATEGORIES-EN",
+          "http-read-evidence.jsonl:HTTP-SEARCH-ORDS-EN",
+          "http-read-evidence.jsonl:HTTP-CATEGORIES-LITERAL-INVALID-LANGUAGE"
+        ],
+        "scenarioOrExplorationRef": [
+          "I18N-01-language-option-discovery",
+          "I18N-02-category-default-en-api",
+          "I18N-03-global-search-zh-en-unicode"
+        ],
+        "observedCliVersion": "1.1.6",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "Live API accepts omitted zh-cn, lang=en and rejects unsupported values with INVALID_LANGUAGE; search/category content changes to English as expected. CLI 1.1.6 has no --lang option: search and topic recent both returned UNKNOWN_OPTION.",
+        "expectedUserOutcome": "A novice using the CLI should be able to select the supported language and receive the server's language behavior, or the CLI should clearly expose the limitation before language-specific tasks are attempted.",
+        "responsibilityAssessment": "cli",
+        "responsibilityNotes": "Confirmed CLI feature gap against the live 0.10.0-candidate content-language contract; server-side language API behavior itself was observed working."
+      }
+    },
+    {
+      "id": "COMMUNITY-I18N-20261004-003",
+      "milestoneId": "1.1",
+      "priority": "P1",
+      "status": "open",
+      "owner": "server",
+      "title": "DEV 话题页面切换 English 后正文和回复消失",
+      "description": "独立会话在本轮自己创建的 DEV 话题36673中，中文页面显示标题、代码、表格与回复；切到English后仅见空回复区域，切回中文恢复。记录页面侧故障，尚未推广为生产全部页面同样失败；既有文章API语言证据不能替代同样本直接API对照。",
+      "validatorRound": "APEXCN-COMPAT-20261004-R4",
+      "serverThreadId": "01a107c0-9b1c-70b0-af4f-91579ef6871d",
+      "serverRoutingStatus": "assigned-in-progress",
+      "blockingMilestones": [],
+      "dependencies": [],
+      "acceptanceCriterionIds": [],
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "01a1075f-7d73-7eb1-9fe7-09b2c5f49790",
+        "assignmentRef": "APEXCN-COMPAT-20261004-R4",
+        "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r4/findings.json",
+        "findingRefs": [
+          "F-002",
+          "artifacts/chrome-topic-36673.png",
+          "artifacts/chrome-topic-36673-en.png",
+          "artifacts/chrome-topic-36673-zh-recovered.png",
+          "artifacts/chrome-language-en-snapshot.txt"
+        ],
+        "scenarioOrExplorationRef": [
+          "I18N-10-real-chrome-rendering-and-language-switch"
+        ],
+        "observedCliVersion": "1.1.6",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "Same run-owned DEV App102 topic renders its original heading/body/code/table/replies in Chinese. After UI language switch English, real Chrome screenshot and snapshot show empty breadcrumb and Replies shell. Returning to Chinese restores the topic. API English reads for other existing articles work; no same-fixture API-English assertion.",
+        "expectedUserOutcome": "Switching UI language preserves the selected topic and safely renders its translated or original content and original replies.",
+        "responsibilityAssessment": "server",
+        "responsibilityNotes": "Observed community browser route/rendering failure in DEV, not a CLI JSON serialization issue. Production scope and underlying cause remain unverified; no server change performed."
+      }
+    }
+  ],
   "enhancementRequests": [],
   "developmentExtensionProtocol": {
     "schemaVersion": 1,
@@ -32,7 +155,7 @@
       ]
     },
     "validator": {
-      "repository": "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
+      "repository": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5",
       "taskVisibility": "user-visible-codex-desktop-task",
       "freshTaskRequired": true,
       "sessionCwdMustEqualRepository": true,
@@ -51,7 +174,7 @@
   },
   "sourcePolicy": {
     "allowedSource": "independent-validator-thread",
-    "validatorProject": "/Users/kwang/apexcn-cli-test",
+    "validatorProject": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5",
     "threadStrategy": "fresh-task-per-validation-round",
     "dynamicAssignmentRequired": true,
     "novicePersonaRequired": true,

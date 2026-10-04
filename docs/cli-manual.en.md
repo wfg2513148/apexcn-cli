@@ -633,3 +633,20 @@ apexcn confirm <operation-id> --yes --json
 ## API write dry-run classification
 
 The one-click installer takes no arguments and has no dry-run mode. CLI API `--preview` creates a saved community-write preview with an operation id; `--dry-run` only prints a request and does not save a confirmable action. Write preview covers `topic create/update/edit/delete`, `reply create/update/edit/delete/mark-answer/unmark-answer`, reply-targeted `favorite add/remove`, and `subscription add/remove`; topic favorites keep their direct behavior and can also be previewed explicitly. Aliases `thread` and `post` inherit the same classification. `ask` uses POST but is read-only and is excluded. Topic creation requires `--category-id`; editing, deletion, and correct-answer changes require the freshly read `--if-version`; topic deletion also requires the exact `--confirm-title`.
+
+## Content language
+
+Content read commands accept `--lang zh-cn|en`; omission retains the Chinese default. Articles use stored server editions, with original fallback for missing translations and STALE for saved editions awaiting refresh. The CLI does not translate user originals or replies. UI preferences, content selection and ask answer language are separate. Replay the same language and filters with pagination cursors; a crossed-language cursor returns INVALID_CURSOR_LANGUAGE.
+
+```sh
+apexcn category list --lang en --json
+apexcn search "APEX" --lang en --json
+apexcn topic view 42 --lang en --json
+apexcn me search "APEX" --scope created,favorited --lang en --json
+apexcn research "APEX" --lang en --json
+apexcn rag retrieve "APEX" --query "APEX" --lang en --json
+apexcn collection build --topic-id 42 --lang en --output-dir ./apex-en --json
+apexcn collection sync --dir ./apex-en --json
+```
+
+Collection build/favorites preserve requested language and response contentLanguage/translationStatus. Sync replays the source language. Legacy collections default to Chinese. ask, writes, authentication, admin, update and local diagnostics have no content-language option.

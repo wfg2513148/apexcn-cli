@@ -9,6 +9,16 @@ The previous project `/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test`
 was absent when inspected on 2026-09-06. Preserve its historical evidence paths.
 Do not recreate an empty directory and call it a recovered harness.
 
+For the 2026-10-04 compatibility audit, the main visible validation task ran in
+`/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r4`. The frozen 1.1.6
+archive, current and historical public datasets, fixtures, recorder and scorer
+were copied there with a separate scope contract and input digests. This is a
+new audit workspace, not recovery of the missing historical evidence. Current
+routing fields now point to the fresh supplement workspace
+`/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5`; published historical contracts retain their original
+paths. A preceding preparation round was disqualified for reading materials
+outside its novice scope and provides no acceptance evidence.
+
 Before a real validation round:
 
 1. Resolve a suitable existing independent project from the saved project list or

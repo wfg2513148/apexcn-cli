@@ -71,7 +71,8 @@ export function buildGuide(view: GuideView, options: Pick<GuideOptions, "apexVer
     limitations: [
       "This guide is a curated task path, not an Oracle support statement or compatibility certification.",
       "Verify version-specific behavior against official Oracle documentation and the target environment.",
-      "Commands that read community content may require an authenticated apexcn profile."
+      "Commands that read community content may require an authenticated apexcn profile.",
+      "Supported content reads accept --lang zh-cn|en; omitted language defaults to zh-cn. Stored editions and original fallback are server-owned; replies remain original. Collection sync replays the saved language. ask answer language is separate."
     ],
     nextActions: base.nextActions
   };
@@ -97,6 +98,8 @@ function guideContent(
         ], ["活动 profile 正确", "token 仅显示脱敏结果"]),
         step("discover", "检索与阅读", "找到相关帖子并保留真实来源。", [
           "apexcn search \"ORDS 401\" --page-size 5 --json",
+          "apexcn category list --lang en --json",
+          "apexcn search \"ORDS 401\" --lang en --page-size 5 --json",
           "apexcn topic view <topic-id> --json"
         ], ["结果包含真实 topic URL", "分页信息可继续使用"]),
         step("answer", "证据化问答", "基于社区引用回答问题并识别资料不足。", [

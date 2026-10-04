@@ -104,7 +104,7 @@
       "reusePredecessorTaskAllowed": false
     },
     "validator": {
-      "project": "/Users/kwang/apexcn-cli-test",
+      "project": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5",
       "threadVisibility": "user-visible-codex-desktop-task",
       "sessionCwdMustEqualProject": true,
       "hiddenSubagentAllowed": false,
@@ -217,7 +217,7 @@
       "threadId": "019f2888-ef40-7b20-9af7-e4495f3a1091",
       "replacementThreadId": "019f7d08-d733-74a2-9178-3a87d60b22be",
       "replacementReason": "The original fixed task is absent from the local session store; the replacement task was externally verified for cwd, model, and reasoning effort before use.",
-      "activeTaskThreadId": "019fb8a0-12dd-77f0-affd-cc31453f934a",
+      "activeTaskThreadId": "01a107c0-9b1c-70b0-af4f-91579ef6871d",
       "activeTaskReason": "This fresh user-visible 1.1 server task audits and implements privacy-preserving administrator operations analytics for apexcn-cli calls in dev@oci.",
       "model": "gpt-5.6-terra",
       "reasoningEffort": "high",
@@ -228,7 +228,8 @@
         "persistInRepository": false,
         "includeInEvidence": false,
         "rotateOrRevokeAfterUse": true
-      }
+      },
+      "previousActiveTaskThreadId": "019fb8a0-12dd-77f0-affd-cc31453f934a"
     }
   },
   "statusDefinitions": {

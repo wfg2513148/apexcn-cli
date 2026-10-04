@@ -1,0 +1,1271 @@
+diff --git a/README.md b/README.md
+index fc33682..42ce431 100644
+--- a/README.md
++++ b/README.md
+@@ -251,3 +251,20 @@ apexcn doctor --json
+ - [命令行终端手册](docs/cli-manual.zh.md)
+ - [Terminal Manual (English)](docs/cli-manual.en.md)
+ - [安全说明](docs/security-model.md)
++
++## Content language
++
++Content read commands accept `--lang zh-cn|en`; omission retains the Chinese default. Articles use stored server editions, with original fallback for missing translations and STALE for saved editions awaiting refresh. The CLI does not translate user originals or replies. UI preferences, content selection and ask answer language are separate. Replay the same language and filters with pagination cursors; a crossed-language cursor returns INVALID_CURSOR_LANGUAGE.
++
++```sh
++apexcn category list --lang en --json
++apexcn search "APEX" --lang en --json
++apexcn topic view 42 --lang en --json
++apexcn me search "APEX" --scope created,favorited --lang en --json
++apexcn research "APEX" --lang en --json
++apexcn rag retrieve "APEX" --query "APEX" --lang en --json
++apexcn collection build --topic-id 42 --lang en --output-dir ./apex-en --json
++apexcn collection sync --dir ./apex-en --json
++```
++
++Collection build/favorites preserve requested language and response contentLanguage/translationStatus. Sync replays the source language. Legacy collections default to Chinese. ask, writes, authentication, admin, update and local diagnostics have no content-language option.
+diff --git a/agent-skill/SKILL.md b/agent-skill/SKILL.md
+index 5be5cdc..dc09c07 100644
+--- a/agent-skill/SKILL.md
++++ b/agent-skill/SKILL.md
+@@ -184,3 +184,20 @@ apexcn reply unmark-answer 30549 201480 --if-version 2 --preview --json
+ apexcn favorite add 201480 --target reply --preview --json
+ apexcn favorite remove 201480 --target reply --preview --json
+ ```
++
++## Content language
++
++Content read commands accept `--lang zh-cn|en`; omission retains the Chinese default. Articles use stored server editions, with original fallback for missing translations and STALE for saved editions awaiting refresh. The CLI does not translate user originals or replies. UI preferences, content selection and ask answer language are separate. Replay the same language and filters with pagination cursors; a crossed-language cursor returns INVALID_CURSOR_LANGUAGE.
++
++```sh
++apexcn category list --lang en --json
++apexcn search "APEX" --lang en --json
++apexcn topic view 42 --lang en --json
++apexcn me search "APEX" --scope created,favorited --lang en --json
++apexcn research "APEX" --lang en --json
++apexcn rag retrieve "APEX" --query "APEX" --lang en --json
++apexcn collection build --topic-id 42 --lang en --output-dir ./apex-en --json
++apexcn collection sync --dir ./apex-en --json
++```
++
++Collection build/favorites preserve requested language and response contentLanguage/translationStatus. Sync replays the source language. Legacy collections default to Chinese. ask, writes, authentication, admin, update and local diagnostics have no content-language option.
+diff --git a/docs/cli-manual.en.md b/docs/cli-manual.en.md
+index 1d510ce..97d3cbd 100644
+--- a/docs/cli-manual.en.md
++++ b/docs/cli-manual.en.md
+@@ -633,3 +633,20 @@ apexcn confirm <operation-id> --yes --json
+ ## API write dry-run classification
+ 
+ The one-click installer takes no arguments and has no dry-run mode. CLI API `--preview` creates a saved community-write preview with an operation id; `--dry-run` only prints a request and does not save a confirmable action. Write preview covers `topic create/update/edit/delete`, `reply create/update/edit/delete/mark-answer/unmark-answer`, reply-targeted `favorite add/remove`, and `subscription add/remove`; topic favorites keep their direct behavior and can also be previewed explicitly. Aliases `thread` and `post` inherit the same classification. `ask` uses POST but is read-only and is excluded. Topic creation requires `--category-id`; editing, deletion, and correct-answer changes require the freshly read `--if-version`; topic deletion also requires the exact `--confirm-title`.
++
++## Content language
++
++Content read commands accept `--lang zh-cn|en`; omission retains the Chinese default. Articles use stored server editions, with original fallback for missing translations and STALE for saved editions awaiting refresh. The CLI does not translate user originals or replies. UI preferences, content selection and ask answer language are separate. Replay the same language and filters with pagination cursors; a crossed-language cursor returns INVALID_CURSOR_LANGUAGE.
++
++```sh
++apexcn category list --lang en --json
++apexcn search "APEX" --lang en --json
++apexcn topic view 42 --lang en --json
++apexcn me search "APEX" --scope created,favorited --lang en --json
++apexcn research "APEX" --lang en --json
++apexcn rag retrieve "APEX" --query "APEX" --lang en --json
++apexcn collection build --topic-id 42 --lang en --output-dir ./apex-en --json
++apexcn collection sync --dir ./apex-en --json
++```
++
++Collection build/favorites preserve requested language and response contentLanguage/translationStatus. Sync replays the source language. Legacy collections default to Chinese. ask, writes, authentication, admin, update and local diagnostics have no content-language option.
+diff --git a/docs/cli-manual.zh.md b/docs/cli-manual.zh.md
+index 14b36bd..e9a586e 100644
+--- a/docs/cli-manual.zh.md
++++ b/docs/cli-manual.zh.md
+@@ -635,3 +635,20 @@ apexcn confirm <operation-id> --yes --json
+ ## API 写操作 dry-run 分类
+ 
+ 一键安装脚本不接收参数，也没有 dry-run。CLI API `--preview` 用于创建带操作编号的社区写入预览，`--dry-run` 只打印请求但不保存待确认操作。预览覆盖 `topic create/update/edit/delete`、`reply create/update/edit/delete/mark-answer/unmark-answer`、回复目标的 `favorite add/remove` 和 `subscription add/remove`；话题收藏保持直接执行，也可显式预览。别名 `thread` 和 `post` 继承同样分类。`ask` 虽然使用 POST，但属于只读问答，不纳入写操作预览。创建话题必须显式传 `--category-id`；编辑、删除和正确答案操作必须使用刚读取的 `--if-version`；删除话题还必须传精确的 `--confirm-title`。
++
++## 内容语言
++
++支持内容读取命令的 `--lang zh-cn|en`；省略时保持中文默认。文章使用服务器保存的语言版本，缺失译文回退原稿，STALE 表示保存译文待刷新；用户话题原稿和回复不被CLI翻译。UI语言、内容选择与ask回答语言分别处理。续页必须使用同一语言及过滤参数，跨语言游标返回INVALID_CURSOR_LANGUAGE。
++
++```sh
++apexcn category list --lang en --json
++apexcn search "APEX" --lang en --json
++apexcn topic view 42 --lang en --json
++apexcn me search "APEX" --scope created,favorited --lang en --json
++apexcn research "APEX" --lang en --json
++apexcn rag retrieve "APEX" --query "APEX" --lang en --json
++apexcn collection build --topic-id 42 --lang en --output-dir ./apex-en --json
++apexcn collection sync --dir ./apex-en --json
++```
++
++`collection build/favorites` 保存请求语言与服务器返回的contentLanguage及translationStatus；sync自动重放源语言。旧集合无语言元数据时保持中文默认。`ask`、写入、认证、管理员、升级和本地诊断命令没有内容语言选项。
+diff --git a/docs/user-guide.en.md b/docs/user-guide.en.md
+index 8cac305..7c3319c 100644
+--- a/docs/user-guide.en.md
++++ b/docs/user-guide.en.md
+@@ -192,3 +192,20 @@ Common cases:
+ - **a change did not happen**: check whether the flow stopped at preview and still needs your confirmation.
+ 
+ For direct command usage, see the [Terminal Manual](cli-manual.en.md). For security details, see the [Security Model](security-model.md).
++
++## Content language
++
++Content read commands accept `--lang zh-cn|en`; omission retains the Chinese default. Articles use stored server editions, with original fallback for missing translations and STALE for saved editions awaiting refresh. The CLI does not translate user originals or replies. UI preferences, content selection and ask answer language are separate. Replay the same language and filters with pagination cursors; a crossed-language cursor returns INVALID_CURSOR_LANGUAGE.
++
++```sh
++apexcn category list --lang en --json
++apexcn search "APEX" --lang en --json
++apexcn topic view 42 --lang en --json
++apexcn me search "APEX" --scope created,favorited --lang en --json
++apexcn research "APEX" --lang en --json
++apexcn rag retrieve "APEX" --query "APEX" --lang en --json
++apexcn collection build --topic-id 42 --lang en --output-dir ./apex-en --json
++apexcn collection sync --dir ./apex-en --json
++```
++
++Collection build/favorites preserve requested language and response contentLanguage/translationStatus. Sync replays the source language. Legacy collections default to Chinese. ask, writes, authentication, admin, update and local diagnostics have no content-language option.
+diff --git a/docs/user-guide.zh.md b/docs/user-guide.zh.md
+index 36400f1..a23ce6c 100644
+--- a/docs/user-guide.zh.md
++++ b/docs/user-guide.zh.md
+@@ -208,3 +208,20 @@ API Key 用于 CLI 访问接口，不会自动让浏览器也处于登录状态
+ - **写操作没有执行**：检查是否只完成了预览，以及是否明确确认了当前预览。
+ 
+ 需要自行查看命令时，可阅读 [命令行终端手册](cli-manual.zh.md)。安全细节见 [安全说明](security-model.md)。
++
++## 内容语言
++
++支持内容读取命令的 `--lang zh-cn|en`；省略时保持中文默认。文章使用服务器保存的语言版本，缺失译文回退原稿，STALE 表示保存译文待刷新；用户话题原稿和回复不被CLI翻译。UI语言、内容选择与ask回答语言分别处理。续页必须使用同一语言及过滤参数，跨语言游标返回INVALID_CURSOR_LANGUAGE。
++
++```sh
++apexcn category list --lang en --json
++apexcn search "APEX" --lang en --json
++apexcn topic view 42 --lang en --json
++apexcn me search "APEX" --scope created,favorited --lang en --json
++apexcn research "APEX" --lang en --json
++apexcn rag retrieve "APEX" --query "APEX" --lang en --json
++apexcn collection build --topic-id 42 --lang en --output-dir ./apex-en --json
++apexcn collection sync --dir ./apex-en --json
++```
++
++`collection build/favorites` 保存请求语言与服务器返回的contentLanguage及translationStatus；sync自动重放源语言。旧集合无语言元数据时保持中文默认。`ask`、写入、认证、管理员、升级和本地诊断命令没有内容语言选项。
+diff --git a/package-lock.json b/package-lock.json
+index 5300c96..2215f0b 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1,12 +1,12 @@
+ {
+   "name": "apexcn-cli",
+-  "version": "1.1.6",
++  "version": "1.2.0",
+   "lockfileVersion": 3,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "apexcn-cli",
+-      "version": "1.1.6",
++      "version": "1.2.0",
+       "bundleDependencies": [
+         "commander"
+       ],
+diff --git a/package.json b/package.json
+index c174f40..b5ed1a0 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "apexcn-cli",
+-  "version": "1.1.6",
++  "version": "1.2.0",
+   "type": "module",
+   "bin": {
+     "apexcn": "./dist/index.js"
+diff --git a/scripts/check-ga-readiness.mjs b/scripts/check-ga-readiness.mjs
+index c9a335e..ee7de67 100644
+--- a/scripts/check-ga-readiness.mjs
++++ b/scripts/check-ga-readiness.mjs
+@@ -52,6 +52,8 @@ const report = {
+   kind: "apexcn-ga-activation-readiness-audit",
+   schemaVersion: 1,
+   ok: problems.length === 0,
++  candidateOnly: Boolean(args.candidate),
++  unresolvedIssueIds: (issues.issues ?? []).map((issue) => issue.id),
+   auditedAt: new Date().toISOString(),
+   targetVersion: releaseContract.targetVersion,
+   repository: {
+@@ -143,7 +145,7 @@ function validateSurface(surface) {
+ function validateReleaseSurface(baseline, surface, contract) {
+   const problemCountBefore = problems.length;
+   if (contract.kind !== "apexcn-release-qualification-contract"
+-    || contract.contractVersion !== "M110-QUALIFICATION-1"
++    || contract.contractVersion !== (releaseVersion === "1.2.0" ? "COMMUNITY-I18N-QUALIFICATION-1" : "M110-QUALIFICATION-1")
+     || contract.targetVersion !== releaseVersion
+     || surface.frozenForVersion !== contract.targetVersion
+     || surface.baselineVersion !== contract.baseline.version) {
+@@ -393,7 +395,7 @@ function validateRoadmapState(currentRoadmap, currentIssues) {
+       && releaseContract.approvedAdditions.some((addition) => addition.commandId === "update")))) {
+     problems.push("1.1 readiness contains an unrelated enhancement request");
+   }
+-  if ((currentIssues.issues ?? []).length !== 0) {
++  if (!args.candidate && (currentIssues.issues ?? []).length !== 0) {
+     problems.push("1.1 readiness contains active validator findings");
+   }
+ }
+@@ -465,6 +467,7 @@ function parseArgs(values) {
+   const parsed = { online: false };
+   for (let index = 0; index < values.length; index += 1) {
+     if (values[index] === "--online") parsed.online = true;
++    else if (values[index] === "--candidate") parsed.candidate = true;
+     else if (values[index] === "--supply-chain-dir") parsed.supplyChainDir = values[++index];
+     else if (values[index] === "--output") parsed.output = values[++index];
+     else throw new Error(`Unknown option: ${values[index]}`);
+diff --git a/scripts/check-release-artifacts.mjs b/scripts/check-release-artifacts.mjs
+index 4c5656d..6b63fa9 100644
+--- a/scripts/check-release-artifacts.mjs
++++ b/scripts/check-release-artifacts.mjs
+@@ -12,7 +12,7 @@ const expectedVersion = args.expectedVersion ?? readJson("package.json").version
+ const artifactsDir = args.artifactsDir ? resolveArtifactsDir(args.artifactsDir) : join(repoRoot, "artifacts");
+ const archivePath = join(artifactsDir, "apexcn-cli.tgz");
+ 
+-buildArtifacts();
++if (!args.verifyOnly) buildArtifacts();
+ verifyArtifacts();
+ 
+ console.log(`Release artifact check passed for ${expectedVersion}`);
+@@ -21,6 +21,10 @@ function parseArgs(values) {
+   const parsed = {};
+   for (let index = 0; index < values.length; index += 1) {
+     const value = values[index];
++    if (value === "--verify-only") {
++      parsed.verifyOnly = true;
++      continue;
++    }
+     if (value === "--expected-version") {
+       parsed.expectedVersion = values[index + 1];
+       index += 1;
+@@ -31,7 +35,7 @@ function parseArgs(values) {
+       index += 1;
+       continue;
+     }
+-    console.error("Usage: node scripts/check-release-artifacts.mjs [--expected-version <version>] [--artifacts-dir <path>]");
++    console.error("Usage: node scripts/check-release-artifacts.mjs [--verify-only] [--expected-version <version>] [--artifacts-dir <path>]");
+     process.exit(2);
+   }
+   return parsed;
+diff --git a/scripts/check-roadmap.mjs b/scripts/check-roadmap.mjs
+index 1acb2ab..e036f67 100644
+--- a/scripts/check-roadmap.mjs
++++ b/scripts/check-roadmap.mjs
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env node
+-import { readFileSync, realpathSync, statSync } from "node:fs";
++import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
+ import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+ import { fileURLToPath } from "node:url";
+ 
+@@ -200,7 +200,7 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
+   check(extensionProtocol?.cli?.repository === "/Users/kwang/apexcn-cli", "CLI extension repository binding drifted", problems);
+   check(extensionProtocol?.cli?.startsAfterRequiredServerEvidence === true, "CLI extension must wait for required server evidence", problems);
+   check(extensionProtocol?.cli?.mustNotMaskServerGap === true, "CLI extension must not mask a server gap", problems);
+-  check(extensionProtocol?.validator?.repository === "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test", "extension validator repository binding drifted", problems);
++  check(extensionProtocol?.validator?.repository === roadmap.testingBindings?.validator?.project, "extension validator repository binding drifted", problems);
+   check(extensionProtocol?.validator?.taskVisibility === "user-visible-codex-desktop-task", "extension validation must use a user-visible Codex Desktop task", problems);
+   check(extensionProtocol?.validator?.freshTaskRequired === true, "extension validation must use a fresh task", problems);
+   check(extensionProtocol?.validator?.sessionCwdMustEqualRepository === true, "extension validator task cwd must equal its repository", problems);
+@@ -337,7 +337,8 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
+       const allowedServerThreadIds = new Set([
+         roadmap.testingBindings.server.threadId,
+         roadmap.testingBindings.server.replacementThreadId,
+-        roadmap.testingBindings.server.activeTaskThreadId
++        roadmap.testingBindings.server.activeTaskThreadId,
++        roadmap.testingBindings.server.previousActiveTaskThreadId
+       ]);
+       check(allowedServerThreadIds.has(dependency.resolutionThreadId), `server dependency ${dependency.id} must route to a registered server thread`, problems);
+     }
+@@ -549,7 +550,8 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
+       const allowedServerThreadIds = new Set([
+         roadmap.testingBindings.server.threadId,
+         roadmap.testingBindings.server.replacementThreadId,
+-        roadmap.testingBindings.server.activeTaskThreadId
++        roadmap.testingBindings.server.activeTaskThreadId,
++        roadmap.testingBindings.server.previousActiveTaskThreadId
+       ]);
+       check(allowedServerThreadIds.has(issue.serverThreadId), `server routing drift for ${issue.id}`, problems);
+     }
+@@ -577,7 +579,7 @@ export function validateRoadmap({ roadmap, issues, agentsText }) {
+   check(agentsText.includes("existing dedicated test account"), "AGENTS.md must require test account reuse", problems);
+   check(agentsText.includes("CLI Capability Extension Protocol") && agentsText.includes("issues.json.enhancementRequests"), "AGENTS.md must define the CLI capability extension protocol", problems);
+   check(agentsText.includes("/Users/kwang/apexcn-forums") && agentsText.includes("server-capability audit"), "AGENTS.md must route server extensions to apexcn-forums", problems);
+-  check(agentsText.includes("freeze an immutable candidate artifact") && agentsText.includes("/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test"), "AGENTS.md must require frozen-candidate validation in apexcn-cli-test", problems);
++  check(agentsText.includes("freeze an immutable candidate artifact") && (agentsText.includes(roadmap.testingBindings?.validator?.project ?? "<unconfigured-validator>") || agentsText.includes("resolved independent validation project")), "AGENTS.md must require frozen-candidate validation in apexcn-cli-test", problems);
+   check(agentsText.includes("replying to an existing reply") && agentsText.includes("deleting a reply owned by the authenticated test account"), "AGENTS.md must cover nested-reply and own-reply deletion scenarios", problems);
+   return problems;
+ }
+@@ -622,7 +624,9 @@ function readJson(path) {
+ }
+ 
+ export function readAgentGuidance() {
+-  return readFileSync(agentsPath, "utf8") + "\n" + readFileSync(join(repoRoot, "docs", "agent-roadmap-workflow.md"), "utf8");
++  const splitGuidance = join(repoRoot, "docs", "agents", "independent-validation.md");
++  return readFileSync(agentsPath, "utf8") + "\n" + readFileSync(join(repoRoot, "docs", "agent-roadmap-workflow.md"), "utf8")
++    + (existsSync(splitGuidance) ? "\n" + readFileSync(splitGuidance, "utf8") : "");
+ }
+ 
+ function isWithin(candidate, root) {
+diff --git a/src/commands/collection.ts b/src/commands/collection.ts
+index de58c25..1b2b2f8 100644
+--- a/src/commands/collection.ts
++++ b/src/commands/collection.ts
+@@ -4,10 +4,12 @@ import { isAbsolute, join, normalize, parse, relative, resolve, sep } from "node
+ import { Command, InvalidArgumentError } from "commander";
+ import { ConfigFileError } from "../config.js";
+ import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
++import { currentContentLanguage } from "../core/request-context.js";
++import type { ContentLanguage } from "../core/content-language.js";
+ import { loadRuntimeSession } from "../core/runtime-session.js";
+ import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
+ import { buildIndexRecord, createIndexMeta, isCollectionIndexRecord, queryIndex, type CollectionIndexRecord } from "../core/knowledge/collection-index.js";
+-import { bundleHash, collectionContentHash, topicCanonicalHash } from "../core/knowledge/collection-assets.js";
++import { bundleHash, collectionContentHash, topicCanonicalHash, topicLanguageMatches } from "../core/knowledge/collection-assets.js";
+ import { fieldText, isRecord, itemsFromData, printData, printError } from "../output.js";
+ import type { CommandIo } from "./auth.js";
+ 
+@@ -304,6 +306,7 @@ export function createCollectionCommand(options: CollectionCommandOptions): Comm
+ }
+ 
+ async function buildCollection(io: CollectionCommandOptions, options: BuildOptions): Promise<void> {
++  const requestedContentLanguage = currentContentLanguage() ?? "zh-cn";
+   const queries = (options.query ?? []).map((query) => query.trim()).filter(Boolean);
+   const explicitTopicIds = options.topicId ?? [];
+   if (queries.length === 0 && explicitTopicIds.length === 0) {
+@@ -365,7 +368,7 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
+         schemaVersion: 1,
+         id,
+         sources,
+-        request: { method: "GET", path: `/api/v1/topics/${id}` },
++        request: { method: "GET", path: `/api/v1/topics/${id}`, query: { lang: requestedContentLanguage } },
+         requestId,
+         result
+       };
+@@ -404,6 +407,7 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
+     source: {
+       profile: session.profile,
+       baseUrl: session.baseUrl,
++      requestedContentLanguage,
+       queries,
+       topicIds: explicitTopicIds,
+       limit,
+@@ -605,6 +609,7 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
+     process.exitCode = 1;
+     return;
+   }
++  const requestedContentLanguage = loaded.collection.source.requestedContentLanguage ?? "zh-cn";
+   const topicFiles = loaded.collection.files.topics.filter(isRecord);
+   const fileById = new Map(topicFiles.filter((file) => typeof file.id === "number").map((file) => [file.id as number, file]));
+   const topics: Array<Record<string, unknown>> = [];
+@@ -620,7 +625,7 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
+       continue;
+     }
+     try {
+-      const result = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
++      const result = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token, query: { lang: requestedContentLanguage } });
+       const requestId = requestIdFrom(result);
+       if (requestId) requestIds.add(requestId);
+       const sources = Array.isArray(topic.sources) ? topic.sources : [];
+@@ -629,7 +634,7 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
+         schemaVersion: 1,
+         id,
+         sources,
+-        request: { method: "GET", path: `/api/v1/topics/${id}` },
++        request: { method: "GET", path: `/api/v1/topics/${id}`, query: { lang: requestedContentLanguage } },
+         requestId,
+         result
+       };
+@@ -666,6 +671,7 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
+   const indexFile = { ...await writeTextWithEvidence(join(options.dir, "index.md"), indexText), path: "index.md" };
+   const updated = {
+     ...loaded.collection,
++    source: { ...loaded.collection.source, requestedContentLanguage },
+     schemaVersion: 2,
+     syncedAt: new Date().toISOString(),
+     contentHash: collectionContentHash(topics.map((topic) => ({ id: Number(topic.id), canonicalHash: fieldText(topic.canonicalHash) }))),
+@@ -689,12 +695,13 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
+ }
+ 
+ async function buildFavoritesCollection(io: CollectionCommandOptions, options: FavoritesOptions): Promise<void> {
++  const requestedContentLanguage = currentContentLanguage() ?? "zh-cn";
+   const session = await loadSession(io);
+   if (!session) {
+     return;
+   }
+   const pageSize = options.pageSize ?? 50;
+-  const items: Array<{ item: Record<string, unknown>; requestId?: string }> = [];
++  const items: Array<{ item: Record<string, unknown>; requestId?: string; contentLanguage?: unknown }> = [];
+   const requestIds = new Set<string>();
+   const seenCursors = new Set<string>();
+   let cursor: string | undefined;
+@@ -708,7 +715,7 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
+     if (requestId) requestIds.add(requestId);
+     pageCount += 1;
+     for (const item of itemsFromData(data)) {
+-      items.push({ item, requestId });
++      items.push({ item, requestId, contentLanguage: isRecord(data) ? data.contentLanguage : undefined });
+     }
+     const page = isRecord(data) && isRecord(data.page) ? data.page : {};
+     const next = typeof page.nextCursor === "string" && page.nextCursor.length > 0 ? page.nextCursor : undefined;
+@@ -726,7 +733,7 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
+   const seenIds = new Set<number>();
+   const errors: Array<Record<string, unknown>> = [];
+   let excludedReplyCount = 0;
+-  for (const { item, requestId } of items) {
++  for (const { item, requestId, contentLanguage } of items) {
+     const targetType = favoriteTargetType(item);
+     if (targetType === "POST") {
+       excludedReplyCount += 1;
+@@ -759,10 +766,13 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
+     }];
+     const result = {
+       requestId,
++      contentLanguage,
+       topic: {
+         id,
+         title: item.title,
+         content: item.content ?? item.body,
++        contentLanguage: item.contentLanguage ?? contentLanguage,
++        translationStatus: item.translationStatus,
+         url: item.url ?? item.threadUrl,
+         originalUrl: item.originalUrl,
+         relationCreatedDate: item.relationCreatedDate,
+@@ -776,7 +786,7 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
+       schemaVersion: 1,
+       id,
+       sources,
+-      request: { method: "GET", path: "/api/v1/me/favorites/export" },
++      request: { method: "GET", path: "/api/v1/me/favorites/export", query: { lang: requestedContentLanguage } },
+       requestId,
+       result
+     };
+@@ -794,6 +804,7 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
+     source: {
+       profile: session.profile,
+       baseUrl: session.baseUrl,
++      requestedContentLanguage,
+       queries: [],
+       topicIds: topics.map((topic) => topic.id),
+       favoriteExport: true,
+@@ -1007,6 +1018,9 @@ function verifyEmbeddedBundle(bundle: CollectionBundle, issues: Array<{ code: st
+     if (path.startsWith("topics/")) {
+       try {
+         const artifact = JSON.parse(file.content) as unknown;
++        if (!topicLanguageMatches(artifact, collection.source.requestedContentLanguage)) {
++          issues.push({ code: "collection-language-mismatch", path });
++        }
+         const canonicalHash = topicCanonicalHash(artifact);
+         const id = isRecord(artifact) && typeof artifact.id === "number" ? artifact.id : undefined;
+         if (id !== undefined) canonicalEntries.push({ id, canonicalHash });
+@@ -1235,7 +1249,7 @@ async function collectionVerificationReport(dir: string, collection: unknown): P
+   evidence.push(await verifyFileEvidence(dir, collection.files.index, "index", issues));
+   for (const file of topicFiles) {
+     evidence.push(await verifyFileEvidence(dir, file, "topic", issues));
+-    const canonicalHash = await verifyTopicArtifact(dir, file, issues);
++    const canonicalHash = await verifyTopicArtifact(dir, file, issues, collection.source.requestedContentLanguage);
+     if (canonicalHash && typeof file.id === "number") {
+       canonicalEntries.push({ id: file.id, canonicalHash });
+       if (collection.schemaVersion === 2 && file.canonicalHash !== canonicalHash) {
+@@ -1369,7 +1383,7 @@ type ValidCollection = {
+   schemaVersion: 1 | 2;
+   createdAt: string;
+   contentHash?: string;
+-  source: { profile: string; baseUrl: string; queries: unknown[]; topicIds: unknown[] };
++  source: { profile: string; baseUrl: string; requestedContentLanguage?: ContentLanguage; queries: unknown[]; topicIds: unknown[] };
+   topicCount: number;
+   topics: unknown[];
+   errors: unknown[];
+@@ -1384,6 +1398,7 @@ function isValidCollectionSchema(value: unknown): value is ValidCollection {
+     && isRecord(value.source)
+     && typeof value.source.profile === "string"
+     && typeof value.source.baseUrl === "string"
++    && (value.source.requestedContentLanguage === undefined || value.source.requestedContentLanguage === "zh-cn" || value.source.requestedContentLanguage === "en")
+     && Array.isArray(value.source.queries)
+     && Array.isArray(value.source.topicIds)
+     && typeof value.topicCount === "number"
+@@ -1461,7 +1476,7 @@ async function verifyFileEvidence(dir: string, file: Record<string, unknown>, ki
+   }
+ }
+ 
+-async function verifyTopicArtifact(dir: string, file: Record<string, unknown>, issues: CollectionIssue[]): Promise<string | undefined> {
++async function verifyTopicArtifact(dir: string, file: Record<string, unknown>, issues: CollectionIssue[], requestedContentLanguage?: ContentLanguage): Promise<string | undefined> {
+   const resolved = collectionFilePath(dir, file.path, "topic", issues);
+   if (!resolved) {
+     return undefined;
+@@ -1472,6 +1487,10 @@ async function verifyTopicArtifact(dir: string, file: Record<string, unknown>, i
+       issues.push({ code: "invalid-topic-artifact", message: "Topic artifact schema is invalid.", path: resolved.relativePath });
+       return undefined;
+     }
++    if (!topicLanguageMatches(artifact, requestedContentLanguage)) {
++      issues.push({ code: "collection-language-mismatch", message: "Topic request language does not match the collection source.", path: resolved.relativePath });
++      return undefined;
++    }
+     return topicCanonicalHash(artifact);
+   } catch (error) {
+     issues.push({ code: "invalid-topic-artifact", message: `Topic artifact is invalid JSON: ${errorMessage(error)}`, path: resolved.relativePath });
+diff --git a/src/commands/content.ts b/src/commands/content.ts
+index 900efed..fb8f41d 100644
+--- a/src/commands/content.ts
++++ b/src/commands/content.ts
+@@ -3,6 +3,7 @@ import { stdin as processStdin, stdout as processStdout } from "node:process";
+ import { createInterface } from "node:readline/promises";
+ import { Command, InvalidArgumentError, Option } from "commander";
+ import { ConfigFileError } from "../config.js";
++import { currentContentLanguage } from "../core/request-context.js";
+ import { createApiClient } from "../core/api-client.js";
+ import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
+ import { loadRuntimeSession } from "../core/runtime-session.js";
+@@ -399,6 +400,8 @@ export function createResearchCommand(options: ApiCommandOptions): Command {
+         const data = withReadProvenance({
+           kind: "research-bundle",
+           schemaVersion: 1,
++          requestedContentLanguage: currentContentLanguage() ?? "zh-cn",
++          contentLanguage: isRecord(search) ? search.contentLanguage : undefined,
+           query: compactBody({
+             keyword,
+             normalizedKeyword: normalizedKeyword === keyword ? undefined : normalizedKeyword,
+@@ -1540,6 +1543,7 @@ async function retrieveRagEvidence(
+   return {
+     kind: "rag-evidence-bundle",
+     schemaVersion: 1,
++    requestedContentLanguage: currentContentLanguage() ?? "zh-cn",
+     question: input.question,
+     context: input.context,
+     queries: Array.from(new Set(attemptedQueries)),
+@@ -1597,6 +1601,8 @@ function appendTopicEvidence(
+   const originalUrl = fieldText(topic.originalUrl);
+   evidence.push(compactBody({
+     type: "topic",
++    contentLanguage: topic.contentLanguage ?? (isRecord(detail) ? detail.contentLanguage : undefined),
++    translationStatus: topic.translationStatus,
+     topicId,
+     title,
+     content: blockText(topic.content ?? topic.body ?? topic.summary ?? topic.excerpt),
+@@ -2322,6 +2328,8 @@ function researchTopicFromData(data: unknown, sourceItemIndex: number): Record<s
+   const content = topic.content ?? topic.body;
+   return compactBody({
+     sourceItemIndex,
++    contentLanguage: topic.contentLanguage ?? (isRecord(data) ? data.contentLanguage : undefined),
++    translationStatus: topic.translationStatus,
+     id: topic.id ?? topic.topicId ?? topic.threadId,
+     title: topic.title ?? topic.topicTitle,
+     url: topic.url ?? topic.threadUrl,
+@@ -2342,6 +2350,8 @@ function recentTopicFromData(data: unknown, source: Record<string, unknown>, sou
+     id: topic.id ?? source.id ?? source.topicId ?? source.threadId,
+     categoryId: topic.categoryId ?? source.categoryId,
+     categoryName: topic.categoryName ?? source.categoryName,
++    contentLanguage: topic.contentLanguage ?? (isRecord(data) ? data.contentLanguage : undefined),
++    translationStatus: topic.translationStatus ?? source.translationStatus,
+     title: topic.title ?? source.title ?? source.topicTitle,
+     url: topic.url ?? topic.threadUrl ?? source.url ?? source.threadUrl,
+     threadUrl: topic.threadUrl ?? topic.url ?? source.threadUrl ?? source.url,
+diff --git a/src/commands/guide.ts b/src/commands/guide.ts
+index 844c924..e274bb3 100644
+--- a/src/commands/guide.ts
++++ b/src/commands/guide.ts
+@@ -71,7 +71,8 @@ export function buildGuide(view: GuideView, options: Pick<GuideOptions, "apexVer
+     limitations: [
+       "This guide is a curated task path, not an Oracle support statement or compatibility certification.",
+       "Verify version-specific behavior against official Oracle documentation and the target environment.",
+-      "Commands that read community content may require an authenticated apexcn profile."
++      "Commands that read community content may require an authenticated apexcn profile.",
++      "Supported content reads accept --lang zh-cn|en; omitted language defaults to zh-cn. Stored editions and original fallback are server-owned; replies remain original. Collection sync replays the saved language. ask answer language is separate."
+     ],
+     nextActions: base.nextActions
+   };
+@@ -97,6 +98,8 @@ function guideContent(
+         ], ["活动 profile 正确", "token 仅显示脱敏结果"]),
+         step("discover", "检索与阅读", "找到相关帖子并保留真实来源。", [
+           "apexcn search \"ORDS 401\" --page-size 5 --json",
++          "apexcn category list --lang en --json",
++          "apexcn search \"ORDS 401\" --lang en --page-size 5 --json",
+           "apexcn topic view <topic-id> --json"
+         ], ["结果包含真实 topic URL", "分页信息可继续使用"]),
+         step("answer", "证据化问答", "基于社区引用回答问题并识别资料不足。", [
+diff --git a/src/core/capability-compatibility.ts b/src/core/capability-compatibility.ts
+index 8f91603..4a69896 100644
+--- a/src/core/capability-compatibility.ts
++++ b/src/core/capability-compatibility.ts
+@@ -1,6 +1,7 @@
+ import { isRecord } from "../output.js";
+ 
+ export const SUPPORTED_API_CONTRACT_VERSIONS = [
++  "0.10.0-candidate",
+   "0.9.1-candidate",
+   "0.9.0-candidate",
+   "0.8.3-candidate",
+@@ -37,7 +38,7 @@ export function assessCapabilityCompatibility(
+   }
+   if (!SUPPORTED_API_CONTRACT_VERSIONS.includes(contractVersion as typeof SUPPORTED_API_CONTRACT_VERSIONS[number])) {
+     return result(false, "unsupported", contractVersion, requiredCapabilities, [
+-      { code: "unsupported-contract-version", message: `API contract ${contractVersion} is outside the supported 0.9.1/0.9/0.8.3/0.8/0.7/0.6 window.` }
++      { code: "unsupported-contract-version", message: `API contract ${contractVersion} is outside the supported 0.10/0.9.1/0.9/0.8.3/0.8/0.7/0.6 window.` }
+     ]);
+   }
+   if (typeof value.requestId !== "string" || value.requestId.trim().length === 0) {
+diff --git a/src/core/content-language.ts b/src/core/content-language.ts
+new file mode 100644
+index 0000000..cfeaec8
+--- /dev/null
++++ b/src/core/content-language.ts
+@@ -0,0 +1,32 @@
++import { InvalidArgumentError } from "commander";
++import type { RequestJsonOptions } from "../http.js";
++import { currentContentLanguage } from "./request-context.js";
++
++export type ContentLanguage = "zh-cn" | "en";
++
++export const CONTENT_LANGUAGE_COMMANDS = new Set([
++  "category.list", "stats.category", "search", "topic.list", "topic.recent", "topic.view",
++  "me.dashboard", "me.search", "me.topics", "me.replies", "me.favorites", "me.subscriptions",
++  "research", "rag.retrieve", "collection.build", "collection.favorites"
++]);
++
++const CONTENT_LANGUAGE_PATH = /^\/api\/v1\/(?:categories|category-stats|search|topics(?:\/\d+(?:\/visual)?)?|me\/(?:topics|replies|favorites(?:\/export)?|subscriptions|search))$/;
++
++export function parseContentLanguage(value: string): ContentLanguage {
++  if (value !== "zh-cn" && value !== "en") {
++    throw new InvalidArgumentError("Content language must be zh-cn or en.");
++  }
++  return value;
++}
++
++export function contentLanguageQuery(
++  path: string,
++  method: string | undefined,
++  query?: RequestJsonOptions["query"]
++): RequestJsonOptions["query"] {
++  const language = currentContentLanguage();
++  if (!language || (method ?? "GET").toUpperCase() !== "GET" || !CONTENT_LANGUAGE_PATH.test(path)) {
++    return query;
++  }
++  return { lang: language, ...query };
++}
+diff --git a/src/core/knowledge/collection-assets.ts b/src/core/knowledge/collection-assets.ts
+index eda7fe7..8f1bb26 100644
+--- a/src/core/knowledge/collection-assets.ts
++++ b/src/core/knowledge/collection-assets.ts
+@@ -1,4 +1,5 @@
+ import { createHash } from "node:crypto";
++import type { ContentLanguage } from "../content-language.js";
+ 
+ export type CanonicalTopicEntry = {
+   id: number;
+@@ -19,7 +20,12 @@ export function topicCanonicalHash(artifact: unknown): string {
+   }
+   const result = isRecord(artifact.result) ? artifact.result : {};
+   const topic = isRecord(result.topic) ? result.topic : result;
++  const query = isRecord(artifact.request) && isRecord(artifact.request.query) ? artifact.request.query : {};
++  if (query.lang !== undefined && query.lang !== "zh-cn" && query.lang !== "en") {
++    throw new Error("Topic request language must be zh-cn or en.");
++  }
+   return sha256Content(canonicalJson({
++    ...(query.lang !== undefined ? { requestedContentLanguage: query.lang, contentLanguage: result.contentLanguage } : {}),
+     id: artifact.id,
+     sources: Array.isArray(artifact.sources) ? artifact.sources : [],
+     topic
+@@ -52,3 +58,10 @@ function canonicalValue(value: unknown): unknown {
+ function isRecord(value: unknown): value is Record<string, unknown> {
+   return typeof value === "object" && value !== null && !Array.isArray(value);
+ }
++
++export function topicLanguageMatches(artifact: unknown, requestedContentLanguage?: ContentLanguage): boolean {
++  const request = isRecord(artifact) && isRecord(artifact.request) ? artifact.request : {};
++  const query = isRecord(request.query) ? request.query : {};
++  if (requestedContentLanguage === undefined) return query.lang === undefined || query.lang === "zh-cn";
++  return query.lang === requestedContentLanguage;
++}
+diff --git a/src/core/request-context.ts b/src/core/request-context.ts
+index 00cb37f..61141f9 100644
+--- a/src/core/request-context.ts
++++ b/src/core/request-context.ts
+@@ -1,7 +1,9 @@
+ import { AsyncLocalStorage } from "node:async_hooks";
++import type { ContentLanguage } from "./content-language.js";
+ 
+ type CliRequestContext = {
+   operation?: string;
++  language?: ContentLanguage;
+ };
+ 
+ const cliRequestContext = new AsyncLocalStorage<CliRequestContext>();
+@@ -21,3 +23,15 @@ export function setCurrentCliOperation(operation: string): void {
+ export function currentCliOperation(): string | undefined {
+   return cliRequestContext.getStore()?.operation;
+ }
++
++export function setCurrentContentLanguage(language: ContentLanguage | undefined): void {
++  const context = cliRequestContext.getStore();
++  if (!context) {
++    throw new Error("CLI request context is not active");
++  }
++  context.language = language;
++}
++
++export function currentContentLanguage(): ContentLanguage | undefined {
++  return cliRequestContext.getStore()?.language;
++}
+diff --git a/src/http.ts b/src/http.ts
+index d019723..b7c5deb 100644
+--- a/src/http.ts
++++ b/src/http.ts
+@@ -1,4 +1,5 @@
+ import { currentCliOperation } from "./core/request-context.js";
++import { contentLanguageQuery } from "./core/content-language.js";
+ import { DEFAULT_USER_AGENT } from "./version.js";
+ 
+ export type RequestJsonOptions = {
+@@ -106,7 +107,7 @@ export async function requestJson<T = unknown>(
+     init.body = JSON.stringify(options.body);
+   }
+ 
+-  const url = addQuery(joinUrl(baseUrl, path), options.query);
++  const url = addQuery(joinUrl(baseUrl, path), contentLanguageQuery(path, options.method, options.query));
+   let response: Response;
+   let body: unknown;
+   try {
+diff --git a/src/index.ts b/src/index.ts
+index 122a854..55c8881 100644
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -27,8 +27,9 @@ import { createWorkflowCommand } from "./commands/workflow.js";
+ import { createUpdateCommand } from "./commands/update.js";
+ import { DEFAULT_BASE_URL, setProfile } from "./config.js";
+ import { descriptorForPath } from "./core/command-registry.js";
++import { CONTENT_LANGUAGE_COMMANDS, parseContentLanguage } from "./core/content-language.js";
+ import { isUsableCredential } from "./core/credential-store.js";
+-import { runWithCliRequestContext, setCurrentCliOperation } from "./core/request-context.js";
++import { runWithCliRequestContext, setCurrentCliOperation, setCurrentContentLanguage } from "./core/request-context.js";
+ import { formatCliUsageError } from "./output.js";
+ import { COMMAND_MANIFEST_JSON_SCHEMA } from "./schemas/command-manifest.js";
+ import { CLI_VERSION } from "./version.js";
+@@ -108,16 +109,28 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
+   program.addCommand(createRelationCommand("subscription", commandOptions));
+   program.addCommand(createAskCommand(commandOptions));
+   program.addCommand(createCommandsCommand(program, io));
++  const languageCommands: Command[] = [];
++  const registerLanguage = (command: Command): void => {
++    const descriptor = descriptorForPath(canonicalCommandPath(command));
++    if (descriptor && CONTENT_LANGUAGE_COMMANDS.has(descriptor.id)) {
++      command.option("--lang <language>", "content language: zh-cn or en (default zh-cn)", parseContentLanguage);
++      languageCommands.push(command);
++    }
++    command.commands.forEach(registerLanguage);
++  };
++  program.commands.forEach(registerLanguage);
+   program.hook("preAction", (_hookCommand, actionCommand) => {
+     const descriptor = descriptorForPath(canonicalCommandPath(actionCommand));
+     if (descriptor) {
+       setCurrentCliOperation(descriptor.id.replace(/[^a-z0-9]+/g, "_").slice(0, 64));
+     }
++    setCurrentContentLanguage(actionCommand.opts().lang);
+   });
+   configureCommandOutput(program, io, () => activeJsonErrors);
+   const parseAsync = program.parseAsync.bind(program);
+   program.parseAsync = async (argv, parseOptions) => {
+     resetTransientCommandOptions(program);
++    languageCommands.forEach(command => command.setOptionValue("lang", undefined));
+     activeCliConfigPath = configPathFromArgv(argv, parseOptions);
+     activeJsonErrors = jsonErrorsFromArgv(argv, parseOptions);
+     try {
+diff --git a/src/schemas/registry.ts b/src/schemas/registry.ts
+index 85f309c..3a54300 100644
+--- a/src/schemas/registry.ts
++++ b/src/schemas/registry.ts
+@@ -25,6 +25,9 @@ export type PublicSchemaSummary = {
+ const SCHEMA_BASE_URL = "https://github.com/wfg2513148/apexcn-cli/schemas";
+ 
+ const COMMON_PROPERTIES = {
++  contentLanguage: { enum: ["zh-cn", "en"] },
++  requestedContentLanguage: { enum: ["zh-cn", "en"] },
++  translationStatus: { enum: ["CURRENT", "STALE", "MISSING"] },
+   kind: { type: "string" },
+   schemaVersion: { type: "integer", minimum: 1 },
+   requestId: { type: "string" },
+diff --git a/src/version.ts b/src/version.ts
+index 0106a24..d3049ec 100644
+--- a/src/version.ts
++++ b/src/version.ts
+@@ -1,2 +1,2 @@
+-export const CLI_VERSION = "1.1.6";
+-export const DEFAULT_USER_AGENT = "apexcn-cli/1.1.6";
++export const CLI_VERSION = "1.2.0";
++export const DEFAULT_USER_AGENT = "apexcn-cli/1.2.0";
+diff --git a/test/capability-compatibility.test.ts b/test/capability-compatibility.test.ts
+index 7a546f6..768b35d 100644
+--- a/test/capability-compatibility.test.ts
++++ b/test/capability-compatibility.test.ts
+@@ -18,6 +18,12 @@ function inventory(contractVersion: string, current = false) {
+ }
+ 
+ describe("API capability compatibility window", () => {
++  test("accepts the deployed multilingual contract", () => {
++    const value = { ...inventory("0.10.0-candidate"), supportedContractVersions: ["0.10.0-candidate", ...SUPPORTED_API_CONTRACT_VERSIONS] };
++    expect(assessCapabilityCompatibility(value, ["personal-community"]).ok).toBe(true);
++    expect(assessCapabilityCompatibility(value, ["notifications"]).status).toBe("missing-capability");
++  });
++
+   test("accepts the server 0.9.1 contract used by administrator operations", () => {
+     const result = assessCapabilityCompatibility({
+       ...inventory("0.9.1-candidate"),
+@@ -32,14 +38,14 @@ describe("API capability compatibility window", () => {
+     }));
+   });
+ 
+-  test("accepts current and five previous contracts", () => {
++  test("accepts current and six previous contracts", () => {
+     const results = SUPPORTED_API_CONTRACT_VERSIONS.map((version, index) =>
+       assessCapabilityCompatibility(inventory(version, index === 0))
+     );
+ 
+-    expect(results).toHaveLength(6);
++    expect(results).toHaveLength(7);
+     expect(results.every((result) => result.ok && result.status === "compatible")).toBe(true);
+-    expect(results.map((result) => result.negotiationMode)).toEqual(["versioned", "legacy", "legacy", "legacy", "legacy", "legacy"]);
++    expect(results.map((result) => result.negotiationMode)).toEqual(["versioned", "legacy", "legacy", "legacy", "legacy", "legacy", "legacy"]);
+   });
+ 
+   test("rejects future, too-old, malformed, and missing required capabilities", () => {
+diff --git a/test/content-language-collections.test.ts b/test/content-language-collections.test.ts
+new file mode 100644
+index 0000000..aea1a2b
+--- /dev/null
++++ b/test/content-language-collections.test.ts
+@@ -0,0 +1,95 @@
++import { mkdtemp, readFile, writeFile } from "node:fs/promises";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++import { afterEach, expect, test, vi } from "vitest";
++import { createProgram } from "../src/index.js";
++import { topicCanonicalHash } from "../src/core/knowledge/collection-assets.js";
++
++afterEach(() => { vi.unstubAllGlobals(); process.exitCode = undefined; });
++
++async function fixture() {
++  const root = await mkdtemp(join(tmpdir(), "apexcn-language-collection-"));
++  const dir = join(root, "collection");
++  const configPath = join(root, "config.json");
++  await writeFile(configPath, JSON.stringify({ current: "test", profiles: {
++    test: { baseUrl: "https://community.invalid/ords/dev", token: "abcdefghijklmnopqrstuvwxyz" }
++  }}));
++  const calls: URL[] = [];
++  vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
++    const url = new URL(String(input)); calls.push(url);
++    const lang = url.searchParams.get("lang") ?? "zh-cn";
++    const topic = { id: 42, topicId: 42, targetType: "THREAD", title: `${lang} APEX`,
++      content: `${lang} original code and table`, contentLanguage: lang,
++      translationStatus: "CURRENT", url: "https://oracleapex.cn/t/42" };
++    if (url.pathname.endsWith("/export")) return Response.json({ requestId: "req_favorite", contentLanguage: lang,
++      items: [topic], page: { hasMore: false } });
++    return Response.json({ requestId: "req_topic", contentLanguage: lang, topic });
++  }));
++  const out: string[] = [];
++  const errors: string[] = [];
++  const program = createProgram({ configPath, stdout: t => out.push(t), stderr: t => errors.push(t) });
++  const run = async (args: string[]) => {
++    out.length = 0; errors.length = 0; process.exitCode = undefined;
++    await program.parseAsync(args, { from: "user" });
++    const result = out.join("").trim();
++    return result ? JSON.parse(result) : undefined;
++  };
++  const manifest = async () => JSON.parse(await readFile(join(dir, "collection.json"), "utf8"));
++  return { dir, root, run, calls, manifest, errors };
++}
++
++test.each(["build", "favorites"])("%s saves language and sync replays it", async (action) => {
++  const { dir, root, run, calls, manifest } = await fixture();
++  await run(["collection", action, ...(action === "build" ? ["--topic-id", "42"] : []), "--lang", "en", "--output-dir", dir, "--json"]);
++  expect((await manifest()).source.requestedContentLanguage).toBe("en");
++  expect(JSON.parse(await readFile(join(dir, "topics/42.json"), "utf8")).result.topic).toMatchObject({ contentLanguage: "en", translationStatus: "CURRENT" });
++  calls.length = 0;
++  await run(["collection", "sync", "--dir", dir, "--json"]);
++  expect(calls.every(u => u.searchParams.get("lang") === "en")).toBe(true);
++  expect(JSON.parse(await readFile(join(dir, "topics/42.json"), "utf8")).result.topic.content).toBe("en original code and table");
++  const bundle = join(root, "bundle.json");
++  const restored = join(root, "restored");
++  await run(["collection", "export", "--dir", dir, "--output", bundle, "--json"]);
++  expect((await run(["collection", "verify-bundle", "--bundle", bundle, "--json"])).ok).toBe(true);
++  await run(["collection", "import", "--bundle", bundle, "--output-dir", restored, "--json"]);
++  expect(JSON.parse(await readFile(join(restored, "collection.json"), "utf8")).source.requestedContentLanguage).toBe("en");
++});
++
++test("legacy collections retain Chinese default and malformed language is rejected before network", async () => {
++  const { dir, run, calls, manifest, errors } = await fixture();
++  await run(["collection", "build", "--topic-id", "42", "--output-dir", dir, "--json"]);
++  const data = await manifest(); delete data.source.requestedContentLanguage;
++  await writeFile(join(dir, "collection.json"), JSON.stringify(data));
++  calls.length = 0;
++  await run(["collection", "sync", "--dir", dir, "--json"]);
++  expect(calls.length).toBeGreaterThan(0);
++  expect(calls.every(u => (u.searchParams.get("lang") ?? "zh-cn") === "zh-cn")).toBe(true);
++  const invalid = await manifest(); invalid.source.requestedContentLanguage = "fr";
++  await writeFile(join(dir, "collection.json"), JSON.stringify(invalid));
++  calls.length = 0;
++  await run(["collection", "sync", "--dir", dir, "--json"]);
++  expect(process.exitCode).toBe(1);
++  expect(calls).toHaveLength(0);
++  expect(JSON.parse(errors.join("")).error).toMatchObject({ type: "validation", message: "collection.json has an invalid schema." });
++});
++
++
++test("legacy canonical hash remains byte-identical without request language", () => {
++  const artifact = { id: 42, sources: [{ type: "explicit" }], request: { method: "GET", path: "/api/v1/topics/42" },
++    result: { requestId: "req_legacy", topic: { id: 42, title: "Legacy APEX", content: "Original body" } } };
++  expect(topicCanonicalHash(artifact)).toBe("sha256:59b92bebaabc7b6a30928b5407887177dbbf9c96ab83c9f9f15cceeb4f7210c9");
++});
++
++
++test.each(["en", "zh-cn"] as const)("manifest language tampering from %s fails before sync network", async language => {
++  const { dir, run, calls, manifest, errors } = await fixture();
++  await run(["collection", "build", "--topic-id", "42", "--lang", language, "--output-dir", dir, "--json"]);
++  const data = await manifest(); data.source.requestedContentLanguage = language === "en" ? "zh-cn" : "en";
++  await writeFile(join(dir, "collection.json"), JSON.stringify(data)); calls.length = 0;
++  const report = await run(["collection", "verify", "--dir", dir, "--json"]);
++  expect(report.ok).toBe(false);
++  expect(report.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "collection-language-mismatch" })]));
++  await run(["collection", "sync", "--dir", dir, "--json"]);
++  expect(process.exitCode).toBe(1); expect(calls).toHaveLength(0);
++  expect(JSON.parse(errors.join("")).error).toMatchObject({ type: "validation", message: "Collection verification failed before sync." });
++});
+diff --git a/test/content-language-commands.test.ts b/test/content-language-commands.test.ts
+new file mode 100644
+index 0000000..c0107b0
+--- /dev/null
++++ b/test/content-language-commands.test.ts
+@@ -0,0 +1,88 @@
++import { mkdtemp, writeFile } from "node:fs/promises";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++import { afterEach, expect, test, vi } from "vitest";
++import { createProgram } from "../src/index.js";
++import { SUPPORTED_API_CONTRACT_VERSIONS } from "../src/core/capability-compatibility.js";
++
++afterEach(() => { vi.unstubAllGlobals(); process.exitCode = undefined; });
++
++async function fixture() {
++  const root = await mkdtemp(join(tmpdir(), "apexcn-language-"));
++  const configPath = join(root, "config.json");
++  await writeFile(configPath, JSON.stringify({ current: "test", profiles: {
++    test: { baseUrl: "https://community.invalid/ords/dev", token: "abcdefghijklmnopqrstuvwxyz" }
++  }}));
++  const calls: URL[] = [];
++  vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
++    const url = new URL(String(input)); calls.push(url);
++    const lang = url.searchParams.get("lang") ?? "zh-cn";
++    if (url.pathname.endsWith("/capabilities")) return Response.json({
++      kind: "capabilities", contractVersion: "0.10.0-candidate",
++      supportedContractVersions: [...SUPPORTED_API_CONTRACT_VERSIONS], requestId: "req_cap",
++      capabilities: [{ id: "personal-community", available: true, endpoints: ["/me/search"] }]
++    });
++    if (url.pathname.endsWith("/me")) return Response.json({ user: { id: 1 }, requestId: "req_me" });
++    if (url.pathname.endsWith("/topics/42")) return Response.json({ requestId: "req_detail", contentLanguage: lang,
++      topic: { id: 42, createdBy: 1, title: lang === "en" ? "English APEX" : "中文 APEX",
++        content: "Original ```code``` | table | 😀", translationStatus: "STALE",
++        url: "https://oracleapex.cn/t/42", canonicalUrl: "https://oracleapex.cn/t/42" },
++      replies: [{ id: 12, content: "原文回复", isUseful: true }]
++    });
++    return Response.json({ requestId: "req_list", contentLanguage: lang,
++      items: [{ id: 42, topicId: 42, title: "APEX", url: "https://oracleapex.cn/t/42" }], page: { hasMore: false } });
++  }));
++  const output: string[] = [];
++  const program = createProgram({ configPath, stdout: t => output.push(t), stderr: () => undefined });
++  const override = (command: typeof program): void => { command.exitOverride(); command.commands.forEach(override); };
++  override(program);
++  const run = async (args: string[]) => { output.length = 0; await program.parseAsync(args, { from: "user" }); return JSON.parse(output.join("")); };
++  return { program, run, calls };
++}
++
++test.each([
++  ["category", "list"], ["stats", "category"], ["search", "APEX"],
++  ["topic", "list"], ["topic", "recent"], ["topic", "view", "42"],
++  ["me", "topics"], ["me", "replies"], ["me", "favorites"], ["me", "subscriptions"],
++  ["me", "dashboard"], ["me", "search", "APEX"],
++  ["research", "APEX"], ["rag", "retrieve", "APEX", "--query", "APEX"]
++])("public language selection reaches every content request: %s", async (...args: string[]) => {
++  const { run, calls } = await fixture();
++  await run([...args, "--lang", "en", "--json"]);
++  const reads = calls.filter(u => !u.pathname.endsWith("/me") && !u.pathname.endsWith("/capabilities") && !u.pathname.endsWith("/me/stats"));
++  expect(reads.length).toBeGreaterThan(0);
++  expect(reads.every(u => u.searchParams.get("lang") === "en")).toBe(true);
++  expect(calls.filter(u => u.pathname.endsWith("/me") || u.pathname.endsWith("/capabilities")).every(u => !u.searchParams.has("lang"))).toBe(true);
++});
++
++test("a second parse returns to default language and invalid language sends no request", async () => {
++  const { run, calls } = await fixture();
++  await run(["category", "list", "--lang", "en", "--json"]);
++  await run(["category", "list", "--json"]);
++  expect(calls.at(-1)?.searchParams.has("lang")).toBe(false);
++  calls.length = 0;
++  await expect(run(["category", "list", "--lang", "fr", "--json"])).rejects.toThrow();
++  expect(calls).toHaveLength(0);
++});
++
++test("manifest and derived evidence expose language without translating replies", async () => {
++  const { run } = await fixture();
++  const manifest = await run(["commands", "--json"]);
++  expect(manifest.commands.find((c: { path: string }) => c.path === "topic view").options.join(" ")).toContain("--lang");
++  const research = await run(["research", "APEX", "--lang", "en", "--json"]);
++  expect(research.topics[0]).toMatchObject({ contentLanguage: "en", translationStatus: "STALE" });
++  const rag = await run(["rag", "retrieve", "APEX", "--query", "APEX", "--lang", "en", "--json"]);
++  expect(rag.evidence.find((e: { type: string }) => e.type === "topic")).toMatchObject({ contentLanguage: "en", translationStatus: "STALE" });
++  expect(rag.evidence.find((e: { type: string }) => e.type === "correct-answer").content).toBe("原文回复");
++});
++
++
++test("all sixteen language commands and their topic alias have the documented option", async () => {
++  const { run, calls } = await fixture(); const manifest = await run(["commands", "--json"]);
++  const ids = new Set(["category.list", "stats.category", "search", "topic.list", "topic.recent", "topic.view", "me.dashboard", "me.search", "me.topics", "me.replies", "me.favorites", "me.subscriptions", "research", "rag.retrieve", "collection.build", "collection.favorites"]);
++  const actual = manifest.commands.filter((c: { options: string[] }) => c.options.some(o => o.startsWith("--lang"))).map((c: { id: string }) => c.id);
++  expect(new Set(actual)).toEqual(ids);
++  await run(["thread", "view", "42", "--lang", "en", "--json"]);
++  expect(calls.filter(u => u.pathname.endsWith("/topics/42")).length).toBeGreaterThan(0);
++  expect(calls.filter(u => u.pathname.endsWith("/topics/42")).every(u => u.searchParams.get("lang") === "en")).toBe(true);
++});
+diff --git a/test/content-language.test.ts b/test/content-language.test.ts
+new file mode 100644
+index 0000000..2dc65af
+--- /dev/null
++++ b/test/content-language.test.ts
+@@ -0,0 +1,27 @@
++import { expect, test } from "vitest";
++import { parseContentLanguage, contentLanguageQuery } from "../src/core/content-language.js";
++import { runWithCliRequestContext, setCurrentContentLanguage } from "../src/core/request-context.js";
++
++test("language is scoped to supported content reads", () => {
++  runWithCliRequestContext(undefined, () => {
++    setCurrentContentLanguage("en");
++    expect(contentLanguageQuery("/api/v1/search", undefined, { keyword: "APEX" })).toEqual({ keyword: "APEX", lang: "en" });
++    expect(contentLanguageQuery("/api/v1/me", undefined)).toBeUndefined();
++    expect(contentLanguageQuery("/api/v1/ask", "POST")).toBeUndefined();
++    expect(contentLanguageQuery("/api/v1/topics/42", "DELETE")).toBeUndefined();
++    expect(contentLanguageQuery("/api/v1/topics/42", undefined, { lang: "zh-cn" })).toEqual({ lang: "zh-cn" });
++  });
++  expect(contentLanguageQuery("/api/v1/search", undefined)).toBeUndefined();
++  expect(() => parseContentLanguage("fr")).toThrow();
++});
++
++test("parallel command contexts cannot exchange languages", async () => {
++  const languages = await Promise.all((["en", "zh-cn"] as const).map(language =>
++    runWithCliRequestContext(undefined, async () => {
++      setCurrentContentLanguage(language);
++      await new Promise(resolve => setTimeout(resolve, language === "en" ? 5 : 1));
++      return contentLanguageQuery("/api/v1/topics/42", undefined)?.lang;
++    })
++  ));
++  expect(languages).toEqual(["en", "zh-cn"]);
++});
+diff --git a/test/content.test.ts b/test/content.test.ts
+index 34bcb9e..9ce0388 100644
+--- a/test/content.test.ts
++++ b/test/content.test.ts
+@@ -331,7 +331,7 @@ describe("content commands", () => {
+       "https://oracleapex.cn/ords/test/api/v1/admin/operations?from=2026-07-01&to=2026-07-07&userId=42&limit=10",
+       expect.objectContaining({
+         headers: expect.objectContaining({
+-          "X-APEXCN-Client": "apexcn-cli/1.1.6",
++          "X-APEXCN-Client": "apexcn-cli/1.2.0",
+           "X-APEXCN-CLI-Operation": "admin_operations"
+         })
+       })
+diff --git a/test/doctor.test.ts b/test/doctor.test.ts
+index 6fb5dbd..1015443 100644
+--- a/test/doctor.test.ts
++++ b/test/doctor.test.ts
+@@ -70,8 +70,8 @@ describe("doctor command", () => {
+     const data = JSON.parse(stdout.join(""));
+     expect(data.ok).toBe(true);
+     expect(data.diagnostics).toEqual(expect.objectContaining({
+-      cliVersion: "1.1.6",
+-      userAgent: "apexcn-cli/1.1.6",
++      cliVersion: "1.2.0",
++      userAgent: "apexcn-cli/1.2.0",
+       configPath: expect.stringContaining("config.json"),
+       nodeVersion: expect.stringMatching(/^v\d+/),
+       platform: process.platform,
+@@ -271,8 +271,8 @@ describe("doctor command", () => {
+     await program.parseAsync(["node", "apexcn", "doctor", "--format", "text"]);
+ 
+     expect(stdout.join("")).toContain("apexcn doctor: ok\n");
+-    expect(stdout.join("")).toContain("CLI Version: 1.1.6\n");
+-    expect(stdout.join("")).toContain("User Agent: apexcn-cli/1.1.6\n");
++    expect(stdout.join("")).toContain("CLI Version: 1.2.0\n");
++    expect(stdout.join("")).toContain("User Agent: apexcn-cli/1.2.0\n");
+     expect(stdout.join("")).toContain("Config Path: ");
+     expect(stdout.join("")).toContain("OK search requestId=req-search\n");
+   });
+@@ -294,7 +294,7 @@ describe("doctor command", () => {
+       await program.parseAsync(argv);
+ 
+       expect(stdout.join("")).toContain("apexcn doctor: ok\n");
+-      expect(stdout.join("")).toContain("CLI Version: 1.1.6\n");
++      expect(stdout.join("")).toContain("CLI Version: 1.2.0\n");
+       expect(() => JSON.parse(stdout.join(""))).toThrow();
+       vi.unstubAllGlobals();
+     }
+diff --git a/test/ga-readiness.test.ts b/test/ga-readiness.test.ts
+index e82b2d7..0c97e72 100644
+--- a/test/ga-readiness.test.ts
++++ b/test/ga-readiness.test.ts
+@@ -68,7 +68,7 @@ describe("GA readiness contracts", () => {
+     const report = JSON.parse(result.stdout);
+ 
+     expect(result.status, JSON.stringify(report.problems)).toBe(activeFindings.length === 0 ? 0 : 1);
+-    expect(report.targetVersion).toBe("1.1.6");
++    expect(report.targetVersion).toBe("1.2.0");
+     expect(report.problems).toEqual(activeFindings.length === 0
+       ? []
+       : ["1.1 readiness contains active validator findings"]);
+@@ -87,6 +87,17 @@ describe("GA readiness contracts", () => {
+     ]));
+   });
+ 
++  test("candidate audit exposes unresolved findings without claiming release readiness", () => {
++    const result = spawnSync("node", ["scripts/check-ga-readiness.mjs", "--candidate"], {
++      cwd: repoRoot, encoding: "utf8"
++    });
++    const report = JSON.parse(result.stdout);
++    expect(result.status, JSON.stringify(report.problems)).toBe(0);
++    expect(report.candidateOnly).toBe(true);
++    expect(report.unresolvedIssueIds).toEqual((readJson("issues.json").issues ?? []).map((issue: { id: string }) => issue.id));
++    expect(report.problems).toEqual([]);
++  });
++
+   test("freezes every 1.1.6 public command with schemas and API operations", () => {
+     const surface = readJson("qualification/releases/1.1.6/public-surface-v1.json");
+     const commandIds = new Set(surface.commandManifest.commands.map((command: { id: string }) => command.id));
+diff --git a/test/http.test.ts b/test/http.test.ts
+index e5226d4..3f5af1f 100644
+--- a/test/http.test.ts
++++ b/test/http.test.ts
+@@ -30,7 +30,7 @@ describe("http", () => {
+       headers: {
+         Authorization: "Bearer abc123",
+         "X-APEXCN-API-Key": "abc123",
+-        "X-APEXCN-Client": "apexcn-cli/1.1.6",
++        "X-APEXCN-Client": "apexcn-cli/1.2.0",
+         "X-APEXCN-CLI-Operation": "me_search",
+         "User-Agent": "apexcn-test"
+       }
+@@ -53,8 +53,8 @@ describe("http", () => {
+       headers: {
+         Authorization: "Bearer abc123",
+         "X-APEXCN-API-Key": "abc123",
+-        "X-APEXCN-Client": "apexcn-cli/1.1.6",
+-        "User-Agent": "apexcn-cli/1.1.6",
++        "X-APEXCN-Client": "apexcn-cli/1.2.0",
++        "User-Agent": "apexcn-cli/1.2.0",
+         "Content-Type": "application/json"
+       },
+       body: JSON.stringify({ title: "Hello" })
+diff --git a/test/index.test.ts b/test/index.test.ts
+index 96f90d3..42b55b5 100644
+--- a/test/index.test.ts
++++ b/test/index.test.ts
+@@ -27,7 +27,7 @@ describe("CLI entrypoint detection", () => {
+ 
+     await expect(program.parseAsync(["node", "apexcn", "--version"])).rejects.toMatchObject({ code: "commander.version" });
+ 
+-    expect(output.join("")).toBe("1.1.6\n");
++    expect(output.join("")).toBe("1.2.0\n");
+   });
+ 
+   test("rejects unknown top-level arguments instead of silently succeeding", async () => {
+@@ -56,7 +56,7 @@ describe("CLI entrypoint detection", () => {
+ 
+     const manifest = JSON.parse(output.join(""));
+     expect(manifest.schemaVersion).toBe(1);
+-    expect(manifest.version).toBe("1.1.6");
++    expect(manifest.version).toBe("1.2.0");
+     expect(manifest.schema).toEqual({
+       safetyEffects: ["read", "api-write", "destructive", "config-read", "config-write", "auth", "secret", "diagnostic", "manifest"],
+       previewPolicies: ["required", "available", "none"],
+diff --git a/test/install-agent.test.ts b/test/install-agent.test.ts
+index 1ad428b..6db387a 100644
+--- a/test/install-agent.test.ts
++++ b/test/install-agent.test.ts
+@@ -214,7 +214,7 @@ describe("zero-argument one-click installers", () => {
+       expect(execFileSync(join(root, "bin", "apexcn"), ["--version"], {
+         env,
+         encoding: "utf8"
+-      })).toBe("1.1.6\n");
++      })).toBe("1.2.0\n");
+       expect(existsSync(join(root, "home", ".apexcn", "config.json"))).toBe(false);
+       expect(existsSync(join(root, "home", ".agents", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
+       expect(existsSync(join(root, "home", ".codex", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
+@@ -345,7 +345,7 @@ exit 0
+ 
+       expect(result.status, result.stderr).toBe(0);
+       expect(result.stdout).toContain("Updated shell-resolved launcher");
+-      expect(execFileSync(shadow, ["--version"], { env, encoding: "utf8" })).toBe("1.1.6\n");
++      expect(execFileSync(shadow, ["--version"], { env, encoding: "utf8" })).toBe("1.2.0\n");
+     } finally {
+       rmSync(root, { recursive: true, force: true });
+     }
+@@ -378,7 +378,7 @@ printf 'external launcher\\n'
+       expect(result.stdout).not.toContain("Updated shell-resolved launcher");
+       expect(readFileSync(externalLauncher, "utf8")).toBe(originalLauncher);
+       expect(execFileSync(join(root, "bin", "apexcn"), ["--version"], { env, encoding: "utf8" }))
+-        .toBe("1.1.6\n");
++        .toBe("1.2.0\n");
+     } finally {
+       rmSync(root, { recursive: true, force: true });
+     }
+diff --git a/test/natural-language-scenarios.test.ts b/test/natural-language-scenarios.test.ts
+index a953d0e..00c3b65 100644
+--- a/test/natural-language-scenarios.test.ts
++++ b/test/natural-language-scenarios.test.ts
+@@ -1672,7 +1672,7 @@ function collectionFetch(url: string): Response {
+   if (url.includes("/api/v1/search")) {
+     return Response.json({ requestId: "req-search", items: [{ id: 1, title: "REST API" }] });
+   }
+-  if (url.endsWith("/api/v1/topics/1")) {
++  if (new URL(url).pathname.endsWith("/api/v1/topics/1")) {
+     return Response.json({
+       requestId: "req-topic-1",
+       topic: { id: 1, title: "REST API", url: "https://oracleapex.cn/t/1", content: "REST API content" }
+diff --git a/test/release-checksums.test.ts b/test/release-checksums.test.ts
+index 61985bf..6b6b7c2 100644
+--- a/test/release-checksums.test.ts
++++ b/test/release-checksums.test.ts
+@@ -105,6 +105,15 @@ describe("release checksums", () => {
+       expect(readFileSync(join(dir, "install-agent.ps1.sha256"), "utf8")).toContain("install-agent.ps1");
+       expect(readFileSync(join(dir, "apexcn-cli.spdx.json.sha256"), "utf8")).toContain("apexcn-cli.spdx.json");
+       expect(readFileSync(join(dir, "release-provenance.json.sha256"), "utf8")).toContain("release-provenance.json");
++      const archiveBefore = readFileSync(join(dir, "apexcn-cli.tgz"));
++      const provenanceBefore = readFileSync(join(dir, "release-provenance.json"));
++      execFileSync("node", ["scripts/check-release-artifacts.mjs", "--verify-only", "--artifacts-dir", dir], { cwd: repoRoot, encoding: "utf8" });
++      expect(readFileSync(join(dir, "apexcn-cli.tgz"))).toEqual(archiveBefore);
++      expect(readFileSync(join(dir, "release-provenance.json"))).toEqual(provenanceBefore);
++      writeFileSync(join(dir, "checksums.txt"), `${"0".repeat(64)}  apexcn-cli.tgz\n`);
++      const rejected = spawnSync("node", ["scripts/check-release-artifacts.mjs", "--verify-only", "--artifacts-dir", dir], { cwd: repoRoot, encoding: "utf8" });
++      expect(rejected.status).toBe(1);
++      expect(readFileSync(join(dir, "apexcn-cli.tgz"))).toEqual(archiveBefore);
+     } finally {
+       spawnSync("rm", ["-rf", dir]);
+     }
+diff --git a/test/roadmap.test.ts b/test/roadmap.test.ts
+index b64f62c..2f9a277 100644
+--- a/test/roadmap.test.ts
++++ b/test/roadmap.test.ts
+@@ -271,7 +271,7 @@ describe("roadmap contract", () => {
+       sessionCwdMustEqualRepository: true
+     }));
+     expect(protocol.validator).toEqual(expect.objectContaining({
+-      repository: "/Users/kwang/Downloads/Works/66.Projects/apexcn-cli-test",
++      repository: roadmap.testingBindings.validator.project,
+       freshTaskRequired: true,
+       realScenarioSimulationRequired: true,
+       backendAndBrowserEvidenceRequired: true,
+@@ -362,6 +362,7 @@ describe("independent validator project readiness", () => {
+       roadmap.testingBindings.validator.project = target;
+       roadmap.testingBindings.validator.projectStatus = "configured";
+       issues.sourcePolicy.validatorProject = target;
++      issues.developmentExtensionProtocol.validator.repository = target;
+       expect(validateRoadmap(validationInput(roadmap, issues))).toEqual([]);
+       expect(validatorReadiness(roadmap)).toEqual([]);
+       roadmap.testingBindings.validator.project = roadmap.testingBindings.builder.repository;
