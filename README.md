@@ -136,13 +136,17 @@ apexcn me search "ORDS" --scope created,favorited --lang en --json
 
 The write workflow uses a preview followed by explicit confirmation. Publishing, editing, deleting, favoriting, subscribing, and marking an answer require the relevant account permissions. If the target, account, or content changes after preview, preview again.
 
-### See an AI-assisted workflow
+### See the CLI in action
 
-These screenshots show a Chinese-language AI session; they illustrate installation, recent-topic discovery, and answers with community references. You can give the equivalent prompts in English.
+These English screenshots show rendered transcripts of real CLI runs captured on October 6, 2026, using **v1.2.1**, the latest official release at capture time. They show selected output, not an AI chat interface; omitted sections are labeled.
 
-![Chinese-language AI session installing apexcn-cli and finding recent topics](docs/assets/readme/ai-install-and-recent-topics.png)
+Check the installed version and discover the English search options:
 
-![Chinese-language AI answer to an APEX REST API question with community references](docs/assets/readme/ai-community-answer-with-sources.png)
+![apexcn-cli v1.2.1 version and English search help](docs/assets/readme/cli-version-and-search-en.jpg)
+
+Retrieve English evidence with community and original-source links. The actual `partial` answerability status is preserved: retrieved evidence may not fully answer the question.
+
+![apexcn-cli v1.2.1 English evidence retrieval with two cited sources](docs/assets/readme/cli-evidence-and-sources-en.jpg)
 
 ## Chinese and English content
 
