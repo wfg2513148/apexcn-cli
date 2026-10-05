@@ -33,11 +33,12 @@ async function fixture(emptyReads = false) {
       items: emptyReads ? [] : [{ id: 42, topicId: 42, title: "APEX", url: "https://oracleapex.cn/t/42" }], page: { hasMore: false } });
   }));
   const output: string[] = [];
-  const program = createProgram({ configPath, stdout: t => output.push(t), stderr: () => undefined });
+  const errors: string[] = [];
+  const program = createProgram({ configPath, stdout: t => output.push(t), stderr: t => errors.push(t) });
   const override = (command: typeof program): void => { command.exitOverride(); command.commands.forEach(override); };
   override(program);
   const run = async (args: string[]) => { output.length = 0; await program.parseAsync(args, { from: "user" }); return JSON.parse(output.join("")); };
-  return { program, run, calls };
+  return { program, run, calls, errors };
 }
 
 test.each([
@@ -135,4 +136,19 @@ test("all seventeen language commands and their topic alias have the documented 
   await run(["thread", "view", "42", "--lang", "en", "--json"]);
   expect(calls.filter(u => u.pathname.endsWith("/topics/42")).length).toBeGreaterThan(0);
   expect(calls.filter(u => u.pathname.endsWith("/topics/42")).every(u => u.searchParams.get("lang") === "en")).toBe(true);
+});
+
+test.each([
+  ["INVALID_CURSOR_LANGUAGE", "INVALID_CURSOR_LANGUAGE"],
+  ["INVALID_CURSOR", "HTTP_400"]
+])("search preserves cursor-language rejection without changing other HTTP codes: %s", async (serverCode, expectedCode) => {
+  const { program, errors } = await fixture();
+  vi.stubGlobal("fetch", vi.fn(async () => Response.json({ error: {
+    code: serverCode, message: "cursor language differs from request", requestId: "req_cursor_language"
+  } }, { status: 400 })));
+  await program.parseAsync(["search", "APEX", "--lang", "zh-cn", "--cursor", "english-cursor", "--json"], { from: "user" });
+  expect(process.exitCode).toBe(1);
+  expect(JSON.parse(errors.join("")).error).toMatchObject({
+    code: expectedCode, status: 400, requestId: "req_cursor_language"
+  });
 });

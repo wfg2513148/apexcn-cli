@@ -27,7 +27,7 @@ export function errorBodyFrom(error: unknown, token?: string): ApexcnErrorBody {
     return {
       ok: false,
       error: {
-        code: httpCode(error.status),
+        code: stableErrorCode(error),
         message: redactSecretText(token ? error.message.split(token).join("[redacted]") : error.message),
         status: error.status,
         requestId: error.requestId,
@@ -69,6 +69,13 @@ export function errorBodyFrom(error: unknown, token?: string): ApexcnErrorBody {
 
 export function stableErrorCode(error: HttpError | NetworkError | TimeoutError): string {
   if (error instanceof HttpError) {
+    // Preserve the language-specific cursor rejection introduced by the API.
+    // Other HTTP failures retain their existing compatibility codes.
+    if (error.status === 400 && typeof error.body === "object" && error.body !== null
+      && "error" in error.body && typeof error.body.error === "object" && error.body.error !== null
+      && "code" in error.body.error && error.body.error.code === "INVALID_CURSOR_LANGUAGE") {
+      return "INVALID_CURSOR_LANGUAGE";
+    }
     return httpCode(error.status);
   }
   return error instanceof TimeoutError ? "TIMEOUT" : "NETWORK_ERROR";
