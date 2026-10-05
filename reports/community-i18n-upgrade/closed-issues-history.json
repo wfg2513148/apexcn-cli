@@ -1,0 +1,1766 @@
+{
+  "activeOnlySourcePolicyPreserved": true,
+  "sourceActiveIssuesBefore": 6,
+  "sourceActiveIssuesAfter": 0,
+  "records": [
+    {
+      "id": "CLI-COMPAT-20261004-001",
+      "milestoneId": "1.1",
+      "priority": "P1",
+      "validatorPriority": "P0",
+      "status": "closed",
+      "owner": "cli",
+      "title": "CLI 1.1.6 拒绝社区已部署的 0.10.0-candidate 契约",
+      "description": "社区服务器明确支持旧 0.9.1 契约，但 CLI 按当前 contractVersion 白名单拒绝 0.10.0。独立会话在生产和 DEV 复现 capabilities 非零退出；部分读取仍成功，影响须按命令评估。P1 为本会话影响评估；原 validator P0 记录保留。",
+      "validatorRound": "APEXCN-COMPAT-20261004-R3",
+      "blockingMilestones": [],
+      "dependencies": [],
+      "acceptanceCriterionIds": [],
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "01a1074c-9e15-7241-8919-5152c68dd1d2",
+        "assignmentRef": "APEXCN-COMPAT-20261004-R3",
+        "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r3/findings.json",
+        "findingRefs": [
+          "first-attempts.jsonl:scenario=PROD-ME-CAPABILITIES",
+          "first-attempts.jsonl:scenario=DEV-CONFIG-ME-CAPABILITIES",
+          "evidence/attempts/stdout/1791124023384-PROD-ME-CAPABILITIES.txt",
+          "evidence/attempts/stdout/1791124176976-DEV-CONFIG-ME-CAPABILITIES.txt"
+        ],
+        "scenarioOrExplorationRef": [
+          "I18N-11-auth-capabilities-ords-upgrade-http"
+        ],
+        "observedCliVersion": "1.1.6",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "Valid production and explicit --config DEV capability calls both reached server contractVersion 0.10.0-candidate and returned exitCode 1 with clientCompatibility.ok=false/status=unsupported and no missing capabilities. Profile-only DEV attempts used a misspelled validator environment variable and are excluded.",
+        "expectedUserOutcome": "CLI 1.1.6 should recognize the live 0.10.0-candidate contract supported by server 3.0.1, or clearly gate only unsupported operations without falsely blocking compatible capabilities.",
+        "responsibilityAssessment": "cli",
+        "responsibilityNotes": "Confirmed CLI compatibility-window defect or stale client contract support; not an environment timeout/auth failure. Category/search/topic/recent read-only calls still completed, so impact is command-specific and must be mapped rather than generalized."
+      },
+      "validationRefs": [
+        {
+          "threadId": "01a1078c-c5f4-7a00-8ec4-547779eb4c35",
+          "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/report.md",
+          "scenarios": [
+            "SUP-04-favorite-subscription-personal-scopes-collection",
+            "SUP-05-reply-answer-favorite-contract-gates"
+          ]
+        }
+      ],
+      "closedAt": "2026-10-05T03:14:54.317882+00:00",
+      "originalFinding": {
+        "id": "CLI-COMPAT-20261004-001",
+        "milestoneId": "1.1",
+        "priority": "P1",
+        "validatorPriority": "P0",
+        "status": "open",
+        "owner": "cli",
+        "title": "CLI 1.1.6 拒绝社区已部署的 0.10.0-candidate 契约",
+        "description": "社区服务器明确支持旧 0.9.1 契约，但 CLI 按当前 contractVersion 白名单拒绝 0.10.0。独立会话在生产和 DEV 复现 capabilities 非零退出；部分读取仍成功，影响须按命令评估。P1 为本会话影响评估；原 validator P0 记录保留。",
+        "validatorRound": "APEXCN-COMPAT-20261004-R3",
+        "blockingMilestones": [],
+        "dependencies": [],
+        "acceptanceCriterionIds": [],
+        "source": {
+          "type": "independent-validator-thread",
+          "threadId": "01a1074c-9e15-7241-8919-5152c68dd1d2",
+          "assignmentRef": "APEXCN-COMPAT-20261004-R3",
+          "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r3/findings.json",
+          "findingRefs": [
+            "first-attempts.jsonl:scenario=PROD-ME-CAPABILITIES",
+            "first-attempts.jsonl:scenario=DEV-CONFIG-ME-CAPABILITIES",
+            "evidence/attempts/stdout/1791124023384-PROD-ME-CAPABILITIES.txt",
+            "evidence/attempts/stdout/1791124176976-DEV-CONFIG-ME-CAPABILITIES.txt"
+          ],
+          "scenarioOrExplorationRef": [
+            "I18N-11-auth-capabilities-ords-upgrade-http"
+          ],
+          "observedCliVersion": "1.1.6",
+          "persona": "novice",
+          "firstAttemptEvidencePreserved": true,
+          "actualOutputSummary": "Valid production and explicit --config DEV capability calls both reached server contractVersion 0.10.0-candidate and returned exitCode 1 with clientCompatibility.ok=false/status=unsupported and no missing capabilities. Profile-only DEV attempts used a misspelled validator environment variable and are excluded.",
+          "expectedUserOutcome": "CLI 1.1.6 should recognize the live 0.10.0-candidate contract supported by server 3.0.1, or clearly gate only unsupported operations without falsely blocking compatible capabilities.",
+          "responsibilityAssessment": "cli",
+          "responsibilityNotes": "Confirmed CLI compatibility-window defect or stale client contract support; not an environment timeout/auth failure. Category/search/topic/recent read-only calls still completed, so impact is command-specific and must be mapped rather than generalized."
+        },
+        "validationRefs": [
+          {
+            "threadId": "01a1078c-c5f4-7a00-8ec4-547779eb4c35",
+            "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/report.md",
+            "scenarios": [
+              "SUP-04-favorite-subscription-personal-scopes-collection",
+              "SUP-05-reply-answer-favorite-contract-gates"
+            ]
+          }
+        ]
+      },
+      "resolution": {
+        "releaseURL": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.2.0",
+        "productSourceCommit": "14ff3bb5c79e9af6e5d8c6c161fc3a5ae02aae1b",
+        "originalArchiveSha256": "1a370947025fd2e801ba2d12afa5fcf210df3dd3365fa150cd1efc7ce4a1a1b2",
+        "acceptedCases": [
+          "UPG-001-scope-server-contract",
+          "UPG-002-cap-live-dev",
+          "UPG-003-cap-live-prod-readonly",
+          "UPG-004-cap-legacy-unknown-malformed"
+        ],
+        "actualAcceptedEvidence": [
+          {
+            "caseId": "UPG-001-scope-server-contract",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-c3-owner-applicability-critical-review.json",
+                "sha256": "d17320c39d77fe2403183d226def866a269049edad7ea26f05d7c79a8773d0fd"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-c3-owner-integrity-audit.json",
+                "sha256": "ff369c61f4d9bf3e9adea0ffdf7c3f9d361c7efd7195b57ddb55aabbecb2cada"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/developer-round4-owner-applicability-results.json",
+                "sha256": "a365473c2b7b9a780b699b6536d7aad4f767fab3f3a4b4eee48dc608ee8fc74c"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-server-owner-applicability-audit.json",
+                "sha256": "f394b6ecf532c451296503630c12afe7b9af5df256a4a57d1faecf6d45d6d4e4"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round3-server-owner-contract-results.json",
+                "sha256": "03b8c877f82c7098dcdbda0b9564a2e3d4b2a12c4476d836b5292b218505b368"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round3-server-owner-contract-critical-review.json",
+                "sha256": "e5c1486629f1dbb862114cb967459940145f6e438c4717a65d835c7d569d4f5f"
+              }
+            ],
+            "boundary": "Accepted independent server/developer owner-only condition; explicit C3 source/runtime applicability and critic review. Historical owner execution is stated as such; no old novice PASS or fresh R5 user execution claimed."
+          },
+          {
+            "caseId": "UPG-002-cap-live-dev",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/f7dea965d8b073f49b8b01c4a72be1f346690cd5e6e469c3ab9ae81c4b7e1ad1.stream",
+                "sha256": "f7dea965d8b073f49b8b01c4a72be1f346690cd5e6e469c3ab9ae81c4b7e1ad1",
+                "recordedSourcePath": "evidence/attempts/preflight-capabilities.stdout.txt",
+                "label": "preflight-capabilities",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/preflight-capabilities.stderr.txt",
+                "label": "preflight-capabilities",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-remaining-baseline-dynamic-semantic-decision-matrix.json",
+                "sha256": "f9915545b84fb9aa3650ecf88a5b36ee01dbc0ecf80153403f899cf164afc228"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-persona-and-report-archive.json",
+                "sha256": "216331eba55050e452775ad73e5fbe319de714c0d7c601f0eba0aba715b9ea8c"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-session-binding-audit.json",
+                "sha256": "c751bda897ff0cd42910af49c2e042432ec20c14cf2674c5a808a01e9bf6a8b9"
+              }
+            ],
+            "boundary": "Accepted for the stated dynamic publicOutcome with listed concrete final evidence labels; no broader completion inferred."
+          },
+          {
+            "caseId": "UPG-003-cap-live-prod-readonly",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/24add77b6566cc7d9c2d7709c4b85e498c8c75d60a7246dfb8aa910576b233b0.stream",
+                "sha256": "24add77b6566cc7d9c2d7709c4b85e498c8c75d60a7246dfb8aa910576b233b0",
+                "recordedSourcePath": "evidence/attempts/prod-readonly-capabilities.stdout.txt",
+                "label": "prod-readonly-capabilities",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/prod-readonly-capabilities.stderr.txt",
+                "label": "prod-readonly-capabilities",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-remaining-baseline-dynamic-semantic-decision-matrix.json",
+                "sha256": "f9915545b84fb9aa3650ecf88a5b36ee01dbc0ecf80153403f899cf164afc228"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-persona-and-report-archive.json",
+                "sha256": "216331eba55050e452775ad73e5fbe319de714c0d7c601f0eba0aba715b9ea8c"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-session-binding-audit.json",
+                "sha256": "c751bda897ff0cd42910af49c2e042432ec20c14cf2674c5a808a01e9bf6a8b9"
+              }
+            ],
+            "boundary": "Accepted for the stated dynamic publicOutcome with listed concrete final evidence labels; no broader completion inferred."
+          },
+          {
+            "caseId": "UPG-004-cap-legacy-unknown-malformed",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-c3-owner-applicability-critical-review.json",
+                "sha256": "d17320c39d77fe2403183d226def866a269049edad7ea26f05d7c79a8773d0fd"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-c3-owner-integrity-audit.json",
+                "sha256": "ff369c61f4d9bf3e9adea0ffdf7c3f9d361c7efd7195b57ddb55aabbecb2cada"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/developer-round4-owner-applicability-results.json",
+                "sha256": "a365473c2b7b9a780b699b6536d7aad4f767fab3f3a4b4eee48dc608ee8fc74c"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-server-owner-applicability-audit.json",
+                "sha256": "f394b6ecf532c451296503630c12afe7b9af5df256a4a57d1faecf6d45d6d4e4"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round3-server-owner-contract-results.json",
+                "sha256": "03b8c877f82c7098dcdbda0b9564a2e3d4b2a12c4476d836b5292b218505b368"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round3-server-owner-contract-critical-review.json",
+                "sha256": "e5c1486629f1dbb862114cb967459940145f6e438c4717a65d835c7d569d4f5f"
+              }
+            ],
+            "boundary": "Accepted independent server/developer owner-only condition; explicit C3 source/runtime applicability and critic review. Historical owner execution is stated as such; no old novice PASS or fresh R5 user execution claimed."
+          }
+        ],
+        "basis": "All mapped frozen functional assertions passed independent R5 semantic review; real C3/H3 release assets downloaded and verified. Post-M governance gates remain separate required conditions."
+      }
+    },
+    {
+      "id": "CLI-I18N-20261004-002",
+      "milestoneId": "1.1",
+      "priority": "P1",
+      "status": "closed",
+      "owner": "cli",
+      "title": "CLI 无法选择社区已支持的中英文内容语言",
+      "description": "独立新手调用 search/topic recent --lang en 被 UNKNOWN_OPTION 拒绝；直接只读 API 支持 lang=en、非法语言拒绝及语言游标。CLI 当前没有完整语言上下文，需要适配适用读取与衍生内容路径。",
+      "validatorRound": "APEXCN-COMPAT-20261004-R3",
+      "blockingMilestones": [],
+      "dependencies": [],
+      "acceptanceCriterionIds": [],
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "01a1074c-9e15-7241-8919-5152c68dd1d2",
+        "assignmentRef": "APEXCN-COMPAT-20261004-R3",
+        "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r3/findings.json",
+        "findingRefs": [
+          "first-attempts.jsonl:scenario=PROD-CLI-LANG-SEARCH",
+          "first-attempts.jsonl:scenario=PROD-CLI-LANG-RECENT",
+          "http-read-evidence.jsonl:HTTP-CATEGORIES-EN",
+          "http-read-evidence.jsonl:HTTP-SEARCH-ORDS-EN",
+          "http-read-evidence.jsonl:HTTP-CATEGORIES-LITERAL-INVALID-LANGUAGE"
+        ],
+        "scenarioOrExplorationRef": [
+          "I18N-01-language-option-discovery",
+          "I18N-02-category-default-en-api",
+          "I18N-03-global-search-zh-en-unicode"
+        ],
+        "observedCliVersion": "1.1.6",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "Live API accepts omitted zh-cn, lang=en and rejects unsupported values with INVALID_LANGUAGE; search/category content changes to English as expected. CLI 1.1.6 has no --lang option: search and topic recent both returned UNKNOWN_OPTION.",
+        "expectedUserOutcome": "A novice using the CLI should be able to select the supported language and receive the server's language behavior, or the CLI should clearly expose the limitation before language-specific tasks are attempted.",
+        "responsibilityAssessment": "cli",
+        "responsibilityNotes": "Confirmed CLI feature gap against the live 0.10.0-candidate content-language contract; server-side language API behavior itself was observed working."
+      },
+      "closedAt": "2026-10-05T03:14:54.317882+00:00",
+      "originalFinding": {
+        "id": "CLI-I18N-20261004-002",
+        "milestoneId": "1.1",
+        "priority": "P1",
+        "status": "open",
+        "owner": "cli",
+        "title": "CLI 无法选择社区已支持的中英文内容语言",
+        "description": "独立新手调用 search/topic recent --lang en 被 UNKNOWN_OPTION 拒绝；直接只读 API 支持 lang=en、非法语言拒绝及语言游标。CLI 当前没有完整语言上下文，需要适配适用读取与衍生内容路径。",
+        "validatorRound": "APEXCN-COMPAT-20261004-R3",
+        "blockingMilestones": [],
+        "dependencies": [],
+        "acceptanceCriterionIds": [],
+        "source": {
+          "type": "independent-validator-thread",
+          "threadId": "01a1074c-9e15-7241-8919-5152c68dd1d2",
+          "assignmentRef": "APEXCN-COMPAT-20261004-R3",
+          "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r3/findings.json",
+          "findingRefs": [
+            "first-attempts.jsonl:scenario=PROD-CLI-LANG-SEARCH",
+            "first-attempts.jsonl:scenario=PROD-CLI-LANG-RECENT",
+            "http-read-evidence.jsonl:HTTP-CATEGORIES-EN",
+            "http-read-evidence.jsonl:HTTP-SEARCH-ORDS-EN",
+            "http-read-evidence.jsonl:HTTP-CATEGORIES-LITERAL-INVALID-LANGUAGE"
+          ],
+          "scenarioOrExplorationRef": [
+            "I18N-01-language-option-discovery",
+            "I18N-02-category-default-en-api",
+            "I18N-03-global-search-zh-en-unicode"
+          ],
+          "observedCliVersion": "1.1.6",
+          "persona": "novice",
+          "firstAttemptEvidencePreserved": true,
+          "actualOutputSummary": "Live API accepts omitted zh-cn, lang=en and rejects unsupported values with INVALID_LANGUAGE; search/category content changes to English as expected. CLI 1.1.6 has no --lang option: search and topic recent both returned UNKNOWN_OPTION.",
+          "expectedUserOutcome": "A novice using the CLI should be able to select the supported language and receive the server's language behavior, or the CLI should clearly expose the limitation before language-specific tasks are attempted.",
+          "responsibilityAssessment": "cli",
+          "responsibilityNotes": "Confirmed CLI feature gap against the live 0.10.0-candidate content-language contract; server-side language API behavior itself was observed working."
+        }
+      },
+      "resolution": {
+        "releaseURL": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.2.0",
+        "productSourceCommit": "14ff3bb5c79e9af6e5d8c6c161fc3a5ae02aae1b",
+        "originalArchiveSha256": "1a370947025fd2e801ba2d12afa5fcf210df3dd3365fa150cd1efc7ce4a1a1b2",
+        "acceptedCases": [
+          "UPG-005-lang-public-surface",
+          "UPG-006-lang-invalid-before-network",
+          "UPG-007-lang-default-repeat-concurrent",
+          "UPG-008-category-bilingual",
+          "UPG-019-research-language-provenance",
+          "UPG-021-collection-build-language",
+          "UPG-023-collection-sync-language",
+          "UPG-024-collection-source-language-tamper",
+          "UPG-025-collection-legacy-sync",
+          "UPG-026-collection-offline-bundle",
+          "UPG-035-page-same-topic-switch",
+          "UPG-036-page-original-fallback",
+          "UPG-037-page-existing-bilingual"
+        ],
+        "actualAcceptedEvidence": [
+          {
+            "caseId": "UPG-005-lang-public-surface",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/289be26992421c8681e410de797690cc1d39e1cb79d1beef48fec497c54e326c.stream",
+                "sha256": "289be26992421c8681e410de797690cc1d39e1cb79d1beef48fec497c54e326c",
+                "recordedSourcePath": "evidence/attempts/live-category-list-en.stdout.txt",
+                "label": "live-category-list-en",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/live-category-list-en.stderr.txt",
+                "label": "live-category-list-en",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/fb202d1b678d44ab77241729a8aff15ce8368087ea7f341b3003e3a2ccdcfcdc.stream",
+                "sha256": "fb202d1b678d44ab77241729a8aff15ce8368087ea7f341b3003e3a2ccdcfcdc",
+                "recordedSourcePath": "evidence/attempts/lang-default-repeat.stdout.txt",
+                "label": "lang-default-repeat",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/lang-default-repeat.stderr.txt",
+                "label": "lang-default-repeat",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-remaining-baseline-dynamic-semantic-decision-matrix.json",
+                "sha256": "f9915545b84fb9aa3650ecf88a5b36ee01dbc0ecf80153403f899cf164afc228"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-persona-and-report-archive.json",
+                "sha256": "216331eba55050e452775ad73e5fbe319de714c0d7c601f0eba0aba715b9ea8c"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-session-binding-audit.json",
+                "sha256": "c751bda897ff0cd42910af49c2e042432ec20c14cf2674c5a808a01e9bf6a8b9"
+              }
+            ],
+            "boundary": "Accepted for the stated dynamic publicOutcome with listed concrete final evidence labels; no broader completion inferred."
+          },
+          {
+            "caseId": "UPG-006-lang-invalid-before-network",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/lang-invalid-fr.stdout.txt",
+                "label": "lang-invalid-fr",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/a1b236eeb64295050c5834da18ea8feef08fbf9348eeb76ea5c78f50baec6bd1.stream",
+                "sha256": "a1b236eeb64295050c5834da18ea8feef08fbf9348eeb76ea5c78f50baec6bd1",
+                "recordedSourcePath": "evidence/attempts/lang-invalid-fr.stderr.txt",
+                "label": "lang-invalid-fr",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/lang-invalid-uppercase.stdout.txt",
+                "label": "lang-invalid-uppercase",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/5794109844b6414299ad7a777a16fabeda9f7ad07057bc7e99d8fd109cd56e49.stream",
+                "sha256": "5794109844b6414299ad7a777a16fabeda9f7ad07057bc7e99d8fd109cd56e49",
+                "recordedSourcePath": "evidence/attempts/lang-invalid-uppercase.stderr.txt",
+                "label": "lang-invalid-uppercase",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-remaining-baseline-dynamic-semantic-decision-matrix.json",
+                "sha256": "f9915545b84fb9aa3650ecf88a5b36ee01dbc0ecf80153403f899cf164afc228"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-persona-and-report-archive.json",
+                "sha256": "216331eba55050e452775ad73e5fbe319de714c0d7c601f0eba0aba715b9ea8c"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-session-binding-audit.json",
+                "sha256": "c751bda897ff0cd42910af49c2e042432ec20c14cf2674c5a808a01e9bf6a8b9"
+              }
+            ],
+            "boundary": "Accepted for the stated dynamic publicOutcome with listed concrete final evidence labels; no broader completion inferred."
+          },
+          {
+            "caseId": "UPG-007-lang-default-repeat-concurrent",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/62150404c51a6d6bc9ce6cbb0c60359f05faa2a10e2d7c36dd722e176885631a.stream",
+                "sha256": "62150404c51a6d6bc9ce6cbb0c60359f05faa2a10e2d7c36dd722e176885631a",
+                "recordedSourcePath": "focused-supplement/last-language-integrity/attempts/upg007-explicit-en-1.stdout.txt",
+                "label": "upg007-explicit-en",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "focused-supplement/last-language-integrity/attempts/upg007-explicit-en-1.stderr.txt",
+                "label": "upg007-explicit-en",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/13d12e45afbc9a2102c7fde7e4ae0ef3698d0a57f35b5953a5ea8e03ba937d24.stream",
+                "sha256": "13d12e45afbc9a2102c7fde7e4ae0ef3698d0a57f35b5953a5ea8e03ba937d24",
+                "recordedSourcePath": "focused-supplement/last-language-integrity/attempts/upg007-default-zh-repeat-1.stdout.txt",
+                "label": "upg007-default-zh-repeat",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "focused-supplement/last-language-integrity/attempts/upg007-default-zh-repeat-1.stderr.txt",
+                "label": "upg007-default-zh-repeat",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-last-language-terminal-report-archive/focused-supplement/last-language-integrity/last-language-integrity-supplement-results.json",
+                "sha256": "1c4e78443abf760b2e1db4313f2e902222c9d18363a1e60366c1e030c7a3b77b"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-language-static-route-and-path-safety-critical-consensus.json",
+                "sha256": "6ca62317297db45e749951d6e7e3c9256be9fd9a0c36732bec9ed34259244029"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-last-language-terminal-report-archive.json",
+                "sha256": "eec67897f19501fc7f02df1c66a20403e874d568371ebeac93d2e0b1637902f8"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-last-language-captured-output-integrity-observation.json",
+                "sha256": "789ddd487191c7c0464dc06545685d896c5d977d6b4c65f7109236377bf00867"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-c3-owner-applicability-critical-review.json",
+                "sha256": "d17320c39d77fe2403183d226def866a269049edad7ea26f05d7c79a8773d0fd"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/developer-round4-owner-applicability-results.json",
+                "sha256": "a365473c2b7b9a780b699b6536d7aad4f767fab3f3a4b4eee48dc608ee8fc74c"
+              }
+            ],
+            "boundary": "Fresh R5 public CLI sequence or real selector bidirectional tamper; historical failed samples preserved. Reused parse/concurrency only explicit unchanged-source owner join, never claimed fresh novice execution."
+          },
+          {
+            "caseId": "UPG-008-category-bilingual",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/289be26992421c8681e410de797690cc1d39e1cb79d1beef48fec497c54e326c.stream",
+                "sha256": "289be26992421c8681e410de797690cc1d39e1cb79d1beef48fec497c54e326c",
+                "recordedSourcePath": "evidence/attempts/live-category-list-en.stdout.txt",
+                "label": "live-category-list-en",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/live-category-list-en.stderr.txt",
+                "label": "live-category-list-en",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/b5a7bc825de1def925048ccf6ef53ab982106f3503deaba8461e20addd7789b2.stream",
+                "sha256": "b5a7bc825de1def925048ccf6ef53ab982106f3503deaba8461e20addd7789b2",
+                "recordedSourcePath": "evidence/attempts/preflight-category.stdout.txt",
+                "label": "preflight-category",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/preflight-category.stderr.txt",
+                "label": "preflight-category",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-remaining-baseline-dynamic-semantic-decision-matrix.json",
+                "sha256": "f9915545b84fb9aa3650ecf88a5b36ee01dbc0ecf80153403f899cf164afc228"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-persona-and-report-archive.json",
+                "sha256": "216331eba55050e452775ad73e5fbe319de714c0d7c601f0eba0aba715b9ea8c"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-session-binding-audit.json",
+                "sha256": "c751bda897ff0cd42910af49c2e042432ec20c14cf2674c5a808a01e9bf6a8b9"
+              }
+            ],
+            "boundary": "Accepted for the stated dynamic publicOutcome with listed concrete final evidence labels; no broader completion inferred."
+          },
+          {
+            "caseId": "UPG-019-research-language-provenance",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/d9832164254c2d216af31362b28f4e5a0058d30b794bce60b4d2493a15fdf9cf.stream",
+                "sha256": "d9832164254c2d216af31362b28f4e5a0058d30b794bce60b4d2493a15fdf9cf",
+                "recordedSourcePath": "evidence/attempts/live-research-corrected-retry.stdout.txt",
+                "label": "live-research-corrected-retry",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/live-research-corrected-retry.stderr.txt",
+                "label": "live-research-corrected-retry",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-remaining-baseline-dynamic-semantic-decision-matrix.json",
+                "sha256": "f9915545b84fb9aa3650ecf88a5b36ee01dbc0ecf80153403f899cf164afc228"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-persona-and-report-archive.json",
+                "sha256": "216331eba55050e452775ad73e5fbe319de714c0d7c601f0eba0aba715b9ea8c"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-session-binding-audit.json",
+                "sha256": "c751bda897ff0cd42910af49c2e042432ec20c14cf2674c5a808a01e9bf6a8b9"
+              }
+            ],
+            "boundary": "Accepted for the stated dynamic publicOutcome with listed concrete final evidence labels; no broader completion inferred."
+          },
+          {
+            "caseId": "UPG-021-collection-build-language",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/6da9c32d8dfc3edcc2aa98903e37e941f1f158751c44b64cf29656c31fa0eb58.stream",
+                "sha256": "6da9c32d8dfc3edcc2aa98903e37e941f1f158751c44b64cf29656c31fa0eb58",
+                "recordedSourcePath": "evidence/attempts/collection-build.stdout.txt",
+                "label": "collection-build",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/collection-build.stderr.txt",
+                "label": "collection-build",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-remaining-baseline-dynamic-semantic-decision-matrix.json",
+                "sha256": "f9915545b84fb9aa3650ecf88a5b36ee01dbc0ecf80153403f899cf164afc228"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-persona-and-report-archive.json",
+                "sha256": "216331eba55050e452775ad73e5fbe319de714c0d7c601f0eba0aba715b9ea8c"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-session-binding-audit.json",
+                "sha256": "c751bda897ff0cd42910af49c2e042432ec20c14cf2674c5a808a01e9bf6a8b9"
+              }
+            ],
+            "boundary": "Accepted for the stated dynamic publicOutcome with listed concrete final evidence labels; no broader completion inferred."
+          },
+          {
+            "caseId": "UPG-023-collection-sync-language",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/2dee47e2b0a3c59bfd322aa718b21dbd9d31a00ae000f2d881af1b4f5d04c555.stream",
+                "sha256": "2dee47e2b0a3c59bfd322aa718b21dbd9d31a00ae000f2d881af1b4f5d04c555",
+                "recordedSourcePath": "evidence/attempts/collection-sync.stdout.txt",
+                "label": "collection-sync",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/collection-sync.stderr.txt",
+                "label": "collection-sync",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-remaining-baseline-dynamic-semantic-decision-matrix.json",
+                "sha256": "f9915545b84fb9aa3650ecf88a5b36ee01dbc0ecf80153403f899cf164afc228"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-persona-and-report-archive.json",
+                "sha256": "216331eba55050e452775ad73e5fbe319de714c0d7c601f0eba0aba715b9ea8c"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-session-binding-audit.json",
+                "sha256": "c751bda897ff0cd42910af49c2e042432ec20c14cf2674c5a808a01e9bf6a8b9"
+              }
+            ],
+            "boundary": "Accepted for the stated dynamic publicOutcome with listed concrete final evidence labels; no broader completion inferred."
+          },
+          {
+            "caseId": "UPG-024-collection-source-language-tamper",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/3b51c2f5a33cd1572bab90e49b08f8c47daaedcc834d4142d839c39be65ad9d2.stream",
+                "sha256": "3b51c2f5a33cd1572bab90e49b08f8c47daaedcc834d4142d839c39be65ad9d2",
+                "recordedSourcePath": "focused-supplement/last-language-integrity/attempts/upg024-v2-verify-zh-to-en-tampered-1.stdout.txt",
+                "label": "upg024-v2-verify-zh-to-en-tampered",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "focused-supplement/last-language-integrity/attempts/upg024-v2-verify-zh-to-en-tampered-1.stderr.txt",
+                "label": "upg024-v2-verify-zh-to-en-tampered",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/585ec07ab0c4aff1a3130c5004c659fa5f358b7ad904e4f5385329c25926a82d.stream",
+                "sha256": "585ec07ab0c4aff1a3130c5004c659fa5f358b7ad904e4f5385329c25926a82d",
+                "recordedSourcePath": "focused-supplement/last-language-integrity/attempts/upg024-v2-verify-en-to-zh-tampered-1.stdout.txt",
+                "label": "upg024-v2-verify-en-to-zh-tampered",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "focused-supplement/last-language-integrity/attempts/upg024-v2-verify-en-to-zh-tampered-1.stderr.txt",
+                "label": "upg024-v2-verify-en-to-zh-tampered",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "focused-supplement/last-language-integrity/attempts/upg024-v2-sync-zh-to-en-fake-profile-1.stdout.txt",
+                "label": "upg024-v2-sync-zh-to-en-fake-profile",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/b54f80136998ade5ae23a5c97ab31eacd7420b646094da0da70de2476514f104.stream",
+                "sha256": "b54f80136998ade5ae23a5c97ab31eacd7420b646094da0da70de2476514f104",
+                "recordedSourcePath": "focused-supplement/last-language-integrity/attempts/upg024-v2-sync-zh-to-en-fake-profile-1.stderr.txt",
+                "label": "upg024-v2-sync-zh-to-en-fake-profile",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "focused-supplement/last-language-integrity/attempts/upg024-v2-sync-en-to-zh-fake-profile-1.stdout.txt",
+                "label": "upg024-v2-sync-en-to-zh-fake-profile",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/b54f80136998ade5ae23a5c97ab31eacd7420b646094da0da70de2476514f104.stream",
+                "sha256": "b54f80136998ade5ae23a5c97ab31eacd7420b646094da0da70de2476514f104",
+                "recordedSourcePath": "focused-supplement/last-language-integrity/attempts/upg024-v2-sync-en-to-zh-fake-profile-1.stderr.txt",
+                "label": "upg024-v2-sync-en-to-zh-fake-profile",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-last-language-terminal-report-archive/focused-supplement/last-language-integrity/last-language-integrity-supplement-results.json",
+                "sha256": "1c4e78443abf760b2e1db4313f2e902222c9d18363a1e60366c1e030c7a3b77b"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-language-static-route-and-path-safety-critical-consensus.json",
+                "sha256": "6ca62317297db45e749951d6e7e3c9256be9fd9a0c36732bec9ed34259244029"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-last-language-terminal-report-archive.json",
+                "sha256": "eec67897f19501fc7f02df1c66a20403e874d568371ebeac93d2e0b1637902f8"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-last-language-captured-output-integrity-observation.json",
+                "sha256": "789ddd487191c7c0464dc06545685d896c5d977d6b4c65f7109236377bf00867"
+              }
+            ],
+            "boundary": "Fresh valid collections positively verified, only source.requestedContentLanguage changed in both allowed-value directions; verify rejected and sync failed before API with counter0. Old fr schema failure and unknown-field attempt retained."
+          },
+          {
+            "caseId": "UPG-025-collection-legacy-sync",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-c3-owner-applicability-critical-review.json",
+                "sha256": "d17320c39d77fe2403183d226def866a269049edad7ea26f05d7c79a8773d0fd"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-c3-owner-integrity-audit.json",
+                "sha256": "ff369c61f4d9bf3e9adea0ffdf7c3f9d361c7efd7195b57ddb55aabbecb2cada"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/developer-round4-owner-applicability-results.json",
+                "sha256": "a365473c2b7b9a780b699b6536d7aad4f767fab3f3a4b4eee48dc608ee8fc74c"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-server-owner-applicability-audit.json",
+                "sha256": "f394b6ecf532c451296503630c12afe7b9af5df256a4a57d1faecf6d45d6d4e4"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round3-server-owner-contract-results.json",
+                "sha256": "03b8c877f82c7098dcdbda0b9564a2e3d4b2a12c4476d836b5292b218505b368"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round3-server-owner-contract-critical-review.json",
+                "sha256": "e5c1486629f1dbb862114cb967459940145f6e438c4717a65d835c7d569d4f5f"
+              }
+            ],
+            "boundary": "Accepted independent server/developer owner-only condition; explicit C3 source/runtime applicability and critic review. Historical owner execution is stated as such; no old novice PASS or fresh R5 user execution claimed."
+          },
+          {
+            "caseId": "UPG-026-collection-offline-bundle",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/96f078be3ec814d978093e178f98dc5088d4808ae226ca86836947ac1705ca6d.stream",
+                "sha256": "96f078be3ec814d978093e178f98dc5088d4808ae226ca86836947ac1705ca6d",
+                "recordedSourcePath": "evidence/attempts/collection-export.stdout.txt",
+                "label": "collection-export",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/collection-export.stderr.txt",
+                "label": "collection-export",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/9848c0741861a73532d4536192b820090902cd1a84a651a1d1ffb4d08ac4a4c5.stream",
+                "sha256": "9848c0741861a73532d4536192b820090902cd1a84a651a1d1ffb4d08ac4a4c5",
+                "recordedSourcePath": "evidence/attempts/collection-verify-bundle.stdout.txt",
+                "label": "collection-verify-bundle",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/collection-verify-bundle.stderr.txt",
+                "label": "collection-verify-bundle",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/02fc33731b6217b282830f0a15b06700510db01cf73272ce255f0bc7f0881fea.stream",
+                "sha256": "02fc33731b6217b282830f0a15b06700510db01cf73272ce255f0bc7f0881fea",
+                "recordedSourcePath": "evidence/attempts/collection-import.stdout.txt",
+                "label": "collection-import",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/collection-import.stderr.txt",
+                "label": "collection-import",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/23e3cf50199c4e64edab72120de81218c695d9fd4d3e7932e9116c920cc05d26.stream",
+                "sha256": "23e3cf50199c4e64edab72120de81218c695d9fd4d3e7932e9116c920cc05d26",
+                "recordedSourcePath": "evidence/attempts/collection-query.stdout.txt",
+                "label": "collection-query",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/collection-query.stderr.txt",
+                "label": "collection-query",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-remaining-baseline-dynamic-semantic-decision-matrix.json",
+                "sha256": "f9915545b84fb9aa3650ecf88a5b36ee01dbc0ecf80153403f899cf164afc228"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-persona-and-report-archive.json",
+                "sha256": "216331eba55050e452775ad73e5fbe319de714c0d7c601f0eba0aba715b9ea8c"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-session-binding-audit.json",
+                "sha256": "c751bda897ff0cd42910af49c2e042432ec20c14cf2674c5a808a01e9bf6a8b9"
+              }
+            ],
+            "boundary": "Accepted for the stated dynamic publicOutcome with listed concrete final evidence labels; no broader completion inferred."
+          },
+          {
+            "caseId": "UPG-035-page-same-topic-switch",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-v3-corrected-critical-semantic-decision.json",
+                "sha256": "cbb4776d76841b636641d0dcdd12e2d85e21edf0bb8b564607c18a6a14ebdfec"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-business-v3-terminal-report-archive/chrome-business-v3-results.json",
+                "sha256": "c863d2b5be9deff29792ae6f725d840b428e793c4144a3efc4489b61c48b9456"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-business-v3-terminal-report-archive/chrome-business-v3-attempts.jsonl",
+                "sha256": "a14f9c8d819f5219047efc908ed096d9ca76ed6b5ff781f91fbd0fd6ba0a5b55"
+              }
+            ],
+            "boundary": "Actual same fresh v3 topic/API/Chrome content reviewed independently. Authentication helper close failure and child exit 1 preserved; browser/private cleanup is separate UPG053."
+          },
+          {
+            "caseId": "UPG-036-page-original-fallback",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-v3-corrected-critical-semantic-decision.json",
+                "sha256": "cbb4776d76841b636641d0dcdd12e2d85e21edf0bb8b564607c18a6a14ebdfec"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-business-v3-terminal-report-archive/chrome-business-v3-results.json",
+                "sha256": "c863d2b5be9deff29792ae6f725d840b428e793c4144a3efc4489b61c48b9456"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-business-v3-terminal-report-archive/chrome-business-v3-attempts.jsonl",
+                "sha256": "a14f9c8d819f5219047efc908ed096d9ca76ed6b5ff781f91fbd0fd6ba0a5b55"
+              }
+            ],
+            "boundary": "Actual same fresh v3 topic/API/Chrome content reviewed independently. Authentication helper close failure and child exit 1 preserved; browser/private cleanup is separate UPG053."
+          },
+          {
+            "caseId": "UPG-037-page-existing-bilingual",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-c3-owner-applicability-critical-review.json",
+                "sha256": "d17320c39d77fe2403183d226def866a269049edad7ea26f05d7c79a8773d0fd"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-c3-owner-integrity-audit.json",
+                "sha256": "ff369c61f4d9bf3e9adea0ffdf7c3f9d361c7efd7195b57ddb55aabbecb2cada"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/developer-round4-owner-applicability-results.json",
+                "sha256": "a365473c2b7b9a780b699b6536d7aad4f767fab3f3a4b4eee48dc608ee8fc74c"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-server-owner-applicability-audit.json",
+                "sha256": "f394b6ecf532c451296503630c12afe7b9af5df256a4a57d1faecf6d45d6d4e4"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round3-server-owner-contract-results.json",
+                "sha256": "03b8c877f82c7098dcdbda0b9564a2e3d4b2a12c4476d836b5292b218505b368"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round3-server-owner-contract-critical-review.json",
+                "sha256": "e5c1486629f1dbb862114cb967459940145f6e438c4717a65d835c7d569d4f5f"
+              }
+            ],
+            "boundary": "Accepted independent server/developer owner-only condition; explicit C3 source/runtime applicability and critic review. Historical owner execution is stated as such; no old novice PASS or fresh R5 user execution claimed."
+          }
+        ],
+        "basis": "All mapped frozen functional assertions passed independent R5 semantic review; real C3/H3 release assets downloaded and verified. Post-M governance gates remain separate required conditions."
+      }
+    },
+    {
+      "id": "COMMUNITY-I18N-20261004-003",
+      "milestoneId": "1.1",
+      "priority": "P1",
+      "status": "closed",
+      "owner": "server",
+      "title": "DEV 话题页面切换 English 后正文和回复消失",
+      "description": "独立会话在本轮自己创建的 DEV 话题36673中，中文页面显示标题、代码、表格与回复；切到English后仅见空回复区域，切回中文恢复。记录页面侧故障，尚未推广为生产全部页面同样失败；既有文章API语言证据不能替代同样本直接API对照。",
+      "validatorRound": "APEXCN-COMPAT-20261004-R4",
+      "serverThreadId": "01a107c0-9b1c-70b0-af4f-91579ef6871d",
+      "serverRoutingStatus": "assigned-in-progress",
+      "blockingMilestones": [],
+      "dependencies": [],
+      "acceptanceCriterionIds": [],
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "01a1075f-7d73-7eb1-9fe7-09b2c5f49790",
+        "assignmentRef": "APEXCN-COMPAT-20261004-R4",
+        "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r4/findings.json",
+        "findingRefs": [
+          "F-002",
+          "artifacts/chrome-topic-36673.png",
+          "artifacts/chrome-topic-36673-en.png",
+          "artifacts/chrome-topic-36673-zh-recovered.png",
+          "artifacts/chrome-language-en-snapshot.txt"
+        ],
+        "scenarioOrExplorationRef": [
+          "I18N-10-real-chrome-rendering-and-language-switch"
+        ],
+        "observedCliVersion": "1.1.6",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "Same run-owned DEV App102 topic renders its original heading/body/code/table/replies in Chinese. After UI language switch English, real Chrome screenshot and snapshot show empty breadcrumb and Replies shell. Returning to Chinese restores the topic. API English reads for other existing articles work; no same-fixture API-English assertion.",
+        "expectedUserOutcome": "Switching UI language preserves the selected topic and safely renders its translated or original content and original replies.",
+        "responsibilityAssessment": "server",
+        "responsibilityNotes": "Observed community browser route/rendering failure in DEV, not a CLI JSON serialization issue. Production scope and underlying cause remain unverified; no server change performed."
+      },
+      "closedAt": "2026-10-05T03:14:54.317882+00:00",
+      "originalFinding": {
+        "id": "COMMUNITY-I18N-20261004-003",
+        "milestoneId": "1.1",
+        "priority": "P1",
+        "status": "open",
+        "owner": "server",
+        "title": "DEV 话题页面切换 English 后正文和回复消失",
+        "description": "独立会话在本轮自己创建的 DEV 话题36673中，中文页面显示标题、代码、表格与回复；切到English后仅见空回复区域，切回中文恢复。记录页面侧故障，尚未推广为生产全部页面同样失败；既有文章API语言证据不能替代同样本直接API对照。",
+        "validatorRound": "APEXCN-COMPAT-20261004-R4",
+        "serverThreadId": "01a107c0-9b1c-70b0-af4f-91579ef6871d",
+        "serverRoutingStatus": "assigned-in-progress",
+        "blockingMilestones": [],
+        "dependencies": [],
+        "acceptanceCriterionIds": [],
+        "source": {
+          "type": "independent-validator-thread",
+          "threadId": "01a1075f-7d73-7eb1-9fe7-09b2c5f49790",
+          "assignmentRef": "APEXCN-COMPAT-20261004-R4",
+          "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r4/findings.json",
+          "findingRefs": [
+            "F-002",
+            "artifacts/chrome-topic-36673.png",
+            "artifacts/chrome-topic-36673-en.png",
+            "artifacts/chrome-topic-36673-zh-recovered.png",
+            "artifacts/chrome-language-en-snapshot.txt"
+          ],
+          "scenarioOrExplorationRef": [
+            "I18N-10-real-chrome-rendering-and-language-switch"
+          ],
+          "observedCliVersion": "1.1.6",
+          "persona": "novice",
+          "firstAttemptEvidencePreserved": true,
+          "actualOutputSummary": "Same run-owned DEV App102 topic renders its original heading/body/code/table/replies in Chinese. After UI language switch English, real Chrome screenshot and snapshot show empty breadcrumb and Replies shell. Returning to Chinese restores the topic. API English reads for other existing articles work; no same-fixture API-English assertion.",
+          "expectedUserOutcome": "Switching UI language preserves the selected topic and safely renders its translated or original content and original replies.",
+          "responsibilityAssessment": "server",
+          "responsibilityNotes": "Observed community browser route/rendering failure in DEV, not a CLI JSON serialization issue. Production scope and underlying cause remain unverified; no server change performed."
+        }
+      },
+      "resolution": {
+        "releaseURL": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.2.0",
+        "productSourceCommit": "14ff3bb5c79e9af6e5d8c6c161fc3a5ae02aae1b",
+        "originalArchiveSha256": "1a370947025fd2e801ba2d12afa5fcf210df3dd3365fa150cd1efc7ce4a1a1b2",
+        "acceptedCases": [
+          "UPG-001-scope-server-contract",
+          "UPG-035-page-same-topic-switch",
+          "UPG-036-page-original-fallback",
+          "UPG-038-page-auth-edited-content",
+          "UPG-039-page-public-access"
+        ],
+        "actualAcceptedEvidence": [
+          {
+            "caseId": "UPG-001-scope-server-contract",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-c3-owner-applicability-critical-review.json",
+                "sha256": "d17320c39d77fe2403183d226def866a269049edad7ea26f05d7c79a8773d0fd"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-c3-owner-integrity-audit.json",
+                "sha256": "ff369c61f4d9bf3e9adea0ffdf7c3f9d361c7efd7195b57ddb55aabbecb2cada"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/developer-round4-owner-applicability-results.json",
+                "sha256": "a365473c2b7b9a780b699b6536d7aad4f767fab3f3a4b4eee48dc608ee8fc74c"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-server-owner-applicability-audit.json",
+                "sha256": "f394b6ecf532c451296503630c12afe7b9af5df256a4a57d1faecf6d45d6d4e4"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round3-server-owner-contract-results.json",
+                "sha256": "03b8c877f82c7098dcdbda0b9564a2e3d4b2a12c4476d836b5292b218505b368"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round3-server-owner-contract-critical-review.json",
+                "sha256": "e5c1486629f1dbb862114cb967459940145f6e438c4717a65d835c7d569d4f5f"
+              }
+            ],
+            "boundary": "Accepted independent server/developer owner-only condition; explicit C3 source/runtime applicability and critic review. Historical owner execution is stated as such; no old novice PASS or fresh R5 user execution claimed."
+          },
+          {
+            "caseId": "UPG-035-page-same-topic-switch",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-v3-corrected-critical-semantic-decision.json",
+                "sha256": "cbb4776d76841b636641d0dcdd12e2d85e21edf0bb8b564607c18a6a14ebdfec"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-business-v3-terminal-report-archive/chrome-business-v3-results.json",
+                "sha256": "c863d2b5be9deff29792ae6f725d840b428e793c4144a3efc4489b61c48b9456"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-business-v3-terminal-report-archive/chrome-business-v3-attempts.jsonl",
+                "sha256": "a14f9c8d819f5219047efc908ed096d9ca76ed6b5ff781f91fbd0fd6ba0a5b55"
+              }
+            ],
+            "boundary": "Actual same fresh v3 topic/API/Chrome content reviewed independently. Authentication helper close failure and child exit 1 preserved; browser/private cleanup is separate UPG053."
+          },
+          {
+            "caseId": "UPG-036-page-original-fallback",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-v3-corrected-critical-semantic-decision.json",
+                "sha256": "cbb4776d76841b636641d0dcdd12e2d85e21edf0bb8b564607c18a6a14ebdfec"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-business-v3-terminal-report-archive/chrome-business-v3-results.json",
+                "sha256": "c863d2b5be9deff29792ae6f725d840b428e793c4144a3efc4489b61c48b9456"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-business-v3-terminal-report-archive/chrome-business-v3-attempts.jsonl",
+                "sha256": "a14f9c8d819f5219047efc908ed096d9ca76ed6b5ff781f91fbd0fd6ba0a5b55"
+              }
+            ],
+            "boundary": "Actual same fresh v3 topic/API/Chrome content reviewed independently. Authentication helper close failure and child exit 1 preserved; browser/private cleanup is separate UPG053."
+          },
+          {
+            "caseId": "UPG-038-page-auth-edited-content",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-v3-corrected-critical-semantic-decision.json",
+                "sha256": "cbb4776d76841b636641d0dcdd12e2d85e21edf0bb8b564607c18a6a14ebdfec"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-business-v3-terminal-report-archive/chrome-business-v3-results.json",
+                "sha256": "c863d2b5be9deff29792ae6f725d840b428e793c4144a3efc4489b61c48b9456"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-business-v3-terminal-report-archive/chrome-business-v3-attempts.jsonl",
+                "sha256": "a14f9c8d819f5219047efc908ed096d9ca76ed6b5ff781f91fbd0fd6ba0a5b55"
+              }
+            ],
+            "boundary": "Actual same fresh v3 topic/API/Chrome content reviewed independently. Authentication helper close failure and child exit 1 preserved; browser/private cleanup is separate UPG053."
+          },
+          {
+            "caseId": "UPG-039-page-public-access",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-v3-corrected-critical-semantic-decision.json",
+                "sha256": "cbb4776d76841b636641d0dcdd12e2d85e21edf0bb8b564607c18a6a14ebdfec"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-business-v3-terminal-report-archive/chrome-business-v3-results.json",
+                "sha256": "c863d2b5be9deff29792ae6f725d840b428e793c4144a3efc4489b61c48b9456"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-chrome-business-v3-terminal-report-archive/chrome-business-v3-attempts.jsonl",
+                "sha256": "a14f9c8d819f5219047efc908ed096d9ca76ed6b5ff781f91fbd0fd6ba0a5b55"
+              }
+            ],
+            "boundary": "Actual same fresh v3 topic/API/Chrome content reviewed independently. Authentication helper close failure and child exit 1 preserved; browser/private cleanup is separate UPG053."
+          }
+        ],
+        "basis": "All mapped frozen functional assertions passed independent R5 semantic review; real C3/H3 release assets downloaded and verified. Post-M governance gates remain separate required conditions.",
+        "historicalBlankBoundary": "Old blank observation retained; current same-sample native Chrome/API zh/en/zh original content/replies proven. No unsupported assertion that historical blank root cause was reproduced or fixed."
+      }
+    },
+    {
+      "id": "COMMUNITY-CURSOR-20261005-004",
+      "milestoneId": "1.1",
+      "priority": "P1",
+      "status": "closed",
+      "owner": "server",
+      "title": "历史空日期记录导致公开话题第一页 hasMore=true 却缺失 nextCursor",
+      "description": "固定 1.2.0 候选的独立新手实测首个中文分页响应缺少 nextCursor，无法执行同语言续页。服务端只读诊断确认历史行创建/更新日期均为空，正在修复稳定排序锚点。保留首次失败；服务端回归转绿仍不足以闭合，需新鲜验收、清理和发布证据。",
+      "validatorRound": "APEXCN-UPGRADE-1.2.0-R1",
+      "blockingMilestones": [],
+      "dependencies": [],
+      "acceptanceCriterionIds": [],
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "01a107fc-bf94-7b91-99b4-77b8956f6568",
+        "assignmentRef": "APEXCN-UPGRADE-1.2.0-R1",
+        "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-01/first-attempts.jsonl",
+        "findingRefs": [
+          "first-attempts.jsonl:taskId=UPG-012-cursor-same-language,label=cursor-zh-first",
+          "evidence/attempts/20261004T175350.418317000Z_cursor-zh-first.stdout",
+          "evidence/attempts/20261004T175350.418317000Z_cursor-zh-first.stderr"
+        ],
+        "scenarioOrExplorationRef": [
+          "UPG-012-cursor-same-language",
+          "UPG-013-cursor-cross-language",
+          "UPG-014-cursor-legacy-chinese"
+        ],
+        "observedCliVersion": "1.2.0",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "topic list --page-size 1 --lang zh-cn returned exitCode 0, page.hasMore=true and nextOffset=1, but no nextCursor. Subsequent null-cursor requests returned HTTP 400 cursor is invalid; they do not prove cross-language behavior.",
+        "expectedUserOutcome": "A nonterminal recent page must return a server-issued cursor with deterministic sorting; same-language continuation must be possible without duplicate records.",
+        "responsibilityAssessment": "server",
+        "responsibilityNotes": "The fixed CLI faithfully preserves the API page. Server runtime and SQL confirm the null-date ordering/anchor defect; no CLI fallback is authorized."
+      },
+      "firstAttemptArtifacts": [
+        {
+          "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-01/evidence/attempts/20261004T175350.418317000Z_cursor-zh-first.stdout",
+          "sha256": "dcd8045468588db05b7bfc81ca623fa76dc39593339f965bb7c5001d57d26297"
+        },
+        {
+          "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-01/evidence/attempts/20261004T175350.418317000Z_cursor-zh-first.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "validationRefs": [],
+      "serverThreadId": "01a107c0-9b1c-70b0-af4f-91579ef6871d",
+      "serverRoutingStatus": "assigned-in-progress",
+      "closedAt": "2026-10-05T03:14:54.317882+00:00",
+      "originalFinding": {
+        "id": "COMMUNITY-CURSOR-20261005-004",
+        "milestoneId": "1.1",
+        "priority": "P1",
+        "status": "open",
+        "owner": "server",
+        "title": "历史空日期记录导致公开话题第一页 hasMore=true 却缺失 nextCursor",
+        "description": "固定 1.2.0 候选的独立新手实测首个中文分页响应缺少 nextCursor，无法执行同语言续页。服务端只读诊断确认历史行创建/更新日期均为空，正在修复稳定排序锚点。保留首次失败；服务端回归转绿仍不足以闭合，需新鲜验收、清理和发布证据。",
+        "validatorRound": "APEXCN-UPGRADE-1.2.0-R1",
+        "blockingMilestones": [],
+        "dependencies": [],
+        "acceptanceCriterionIds": [],
+        "source": {
+          "type": "independent-validator-thread",
+          "threadId": "01a107fc-bf94-7b91-99b4-77b8956f6568",
+          "assignmentRef": "APEXCN-UPGRADE-1.2.0-R1",
+          "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-01/first-attempts.jsonl",
+          "findingRefs": [
+            "first-attempts.jsonl:taskId=UPG-012-cursor-same-language,label=cursor-zh-first",
+            "evidence/attempts/20261004T175350.418317000Z_cursor-zh-first.stdout",
+            "evidence/attempts/20261004T175350.418317000Z_cursor-zh-first.stderr"
+          ],
+          "scenarioOrExplorationRef": [
+            "UPG-012-cursor-same-language",
+            "UPG-013-cursor-cross-language",
+            "UPG-014-cursor-legacy-chinese"
+          ],
+          "observedCliVersion": "1.2.0",
+          "persona": "novice",
+          "firstAttemptEvidencePreserved": true,
+          "actualOutputSummary": "topic list --page-size 1 --lang zh-cn returned exitCode 0, page.hasMore=true and nextOffset=1, but no nextCursor. Subsequent null-cursor requests returned HTTP 400 cursor is invalid; they do not prove cross-language behavior.",
+          "expectedUserOutcome": "A nonterminal recent page must return a server-issued cursor with deterministic sorting; same-language continuation must be possible without duplicate records.",
+          "responsibilityAssessment": "server",
+          "responsibilityNotes": "The fixed CLI faithfully preserves the API page. Server runtime and SQL confirm the null-date ordering/anchor defect; no CLI fallback is authorized."
+        },
+        "firstAttemptArtifacts": [
+          {
+            "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-01/evidence/attempts/20261004T175350.418317000Z_cursor-zh-first.stdout",
+            "sha256": "dcd8045468588db05b7bfc81ca623fa76dc39593339f965bb7c5001d57d26297"
+          },
+          {
+            "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-01/evidence/attempts/20261004T175350.418317000Z_cursor-zh-first.stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "validationRefs": [],
+        "serverThreadId": "01a107c0-9b1c-70b0-af4f-91579ef6871d",
+        "serverRoutingStatus": "assigned-in-progress"
+      },
+      "resolution": {
+        "releaseURL": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.2.0",
+        "productSourceCommit": "14ff3bb5c79e9af6e5d8c6c161fc3a5ae02aae1b",
+        "originalArchiveSha256": "1a370947025fd2e801ba2d12afa5fcf210df3dd3365fa150cd1efc7ce4a1a1b2",
+        "acceptedCases": [
+          "UPG-012-cursor-same-language",
+          "UPG-013-cursor-cross-language",
+          "UPG-014-cursor-legacy-chinese"
+        ],
+        "actualAcceptedEvidence": [
+          {
+            "caseId": "UPG-012-cursor-same-language",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-05/focused-supplement/attempts/upg012-same-language-cursor-continuation-1.stdout.txt",
+                "sha256": "e528e5ae5b538d65f27fc48fbbbca0be1db2f6b83a4ccabe76cc5da125a7631c",
+                "label": "upg012-same-language-cursor-continuation",
+                "stream": "stdout",
+                "firstCaptureArchive": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e528e5ae5b538d65f27fc48fbbbca0be1db2f6b83a4ccabe76cc5da125a7631c.stream"
+              },
+              {
+                "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-05/focused-supplement/attempts/upg012-same-language-cursor-continuation-1.stderr.txt",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "label": "upg012-same-language-cursor-continuation",
+                "stream": "stderr",
+                "firstCaptureArchive": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-focused-terminal-semantic-acceptance-review.json",
+                "sha256": "dab044c4675dee99fd9de8794f739663945700ac367dbfb1331470a4185995f7"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-focused-terminal-report-archive.json",
+                "sha256": "e5346d446b0c46ea96d1c1e0e253747a1d7f83c544ec3c94e0196eaee807d174"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-focused-captured-output-integrity-observation.json",
+                "sha256": "093b6fb5fe9130ace259957c78776f03cc8ec7ca8ac531871ac045d156d0dca5"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-c3-owner-applicability-critical-review.json",
+                "sha256": "d17320c39d77fe2403183d226def866a269049edad7ea26f05d7c79a8773d0fd"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-server-owner-applicability-audit.json",
+                "sha256": "f394b6ecf532c451296503630c12afe7b9af5df256a4a57d1faecf6d45d6d4e4"
+              }
+            ],
+            "boundary": "R5 actual zh-cn cursor first/continue/replay and no duplicates, as individually accepted by critic."
+          },
+          {
+            "caseId": "UPG-013-cursor-cross-language",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-05/focused-supplement/attempts/upg013-cross-language-cursor-400-1.stdout.txt",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "label": "upg013-cross-language-cursor-400",
+                "stream": "stdout",
+                "firstCaptureArchive": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream"
+              },
+              {
+                "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-05/focused-supplement/attempts/upg013-cross-language-cursor-400-1.stderr.txt",
+                "sha256": "3d551a2995c90389070d5f79e4fbf66f9d3d6cedc1e1af7684bf234c331acfcd",
+                "label": "upg013-cross-language-cursor-400",
+                "stream": "stderr",
+                "firstCaptureArchive": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/3d551a2995c90389070d5f79e4fbf66f9d3d6cedc1e1af7684bf234c331acfcd.stream"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-focused-terminal-semantic-acceptance-review.json",
+                "sha256": "dab044c4675dee99fd9de8794f739663945700ac367dbfb1331470a4185995f7"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-focused-terminal-report-archive.json",
+                "sha256": "e5346d446b0c46ea96d1c1e0e253747a1d7f83c544ec3c94e0196eaee807d174"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-focused-captured-output-integrity-observation.json",
+                "sha256": "093b6fb5fe9130ace259957c78776f03cc8ec7ca8ac531871ac045d156d0dca5"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-c3-owner-applicability-critical-review.json",
+                "sha256": "d17320c39d77fe2403183d226def866a269049edad7ea26f05d7c79a8773d0fd"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-server-owner-applicability-audit.json",
+                "sha256": "f394b6ecf532c451296503630c12afe7b9af5df256a4a57d1faecf6d45d6d4e4"
+              }
+            ],
+            "boundary": "R5 actualHTTP_400 status400 cursor language differs, joined with current server literal INVALID_CURSOR_LANGUAGE owner evidence."
+          },
+          {
+            "caseId": "UPG-014-cursor-legacy-chinese",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-c3-owner-applicability-critical-review.json",
+                "sha256": "d17320c39d77fe2403183d226def866a269049edad7ea26f05d7c79a8773d0fd"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-c3-owner-integrity-audit.json",
+                "sha256": "ff369c61f4d9bf3e9adea0ffdf7c3f9d361c7efd7195b57ddb55aabbecb2cada"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/developer-round4-owner-applicability-results.json",
+                "sha256": "a365473c2b7b9a780b699b6536d7aad4f767fab3f3a4b4eee48dc608ee8fc74c"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-server-owner-applicability-audit.json",
+                "sha256": "f394b6ecf532c451296503630c12afe7b9af5df256a4a57d1faecf6d45d6d4e4"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round3-server-owner-contract-results.json",
+                "sha256": "03b8c877f82c7098dcdbda0b9564a2e3d4b2a12c4476d836b5292b218505b368"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round3-server-owner-contract-critical-review.json",
+                "sha256": "e5c1486629f1dbb862114cb967459940145f6e438c4717a65d835c7d569d4f5f"
+              }
+            ],
+            "boundary": "Accepted independent server/developer owner-only condition; explicit C3 source/runtime applicability and critic review. Historical owner execution is stated as such; no old novice PASS or fresh R5 user execution claimed."
+          }
+        ],
+        "basis": "All mapped frozen functional assertions passed independent R5 semantic review; real C3/H3 release assets downloaded and verified. Post-M governance gates remain separate required conditions.",
+        "deploymentBoundary": "Server owner DEV/TEST source/compile and real DEV cursor proof; production scope remained read-only."
+      }
+    },
+    {
+      "id": "CLI-SAFETY-20261005-005",
+      "milestoneId": "1.1",
+      "priority": "P1",
+      "status": "closed",
+      "owner": "cli",
+      "title": "话题收藏和订阅显式 preview 未保存待确认操作",
+      "description": "独立新手在固定1.2.0候选发现话题收藏/订阅--preview没有operationId，与公开安全文档及subscription预览合同不一致。当前主工作树修复，旧候选与首次失败保留；需新C/H与新鲜验收，不将直接执行替代预览确认为PASS。",
+      "validatorRound": "APEXCN-UPGRADE-1.2.0-R2",
+      "blockingMilestones": [],
+      "dependencies": [],
+      "acceptanceCriterionIds": [],
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "01a10860-91ca-7543-9f03-db02ec607295",
+        "assignmentRef": "APEXCN-UPGRADE-1.2.0-R2",
+        "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-02/command-evidence.jsonl",
+        "findingRefs": [
+          "label=topic-favorite-preview",
+          "label=topic-subscription-preview",
+          "session-events.jsonl:item_130"
+        ],
+        "scenarioOrExplorationRef": [
+          "M110-Q-132",
+          "M110-Q-134",
+          "UPG-031-topic-favorite-subscription",
+          "UPG-043-schema-guide-workflow-local"
+        ],
+        "observedCliVersion": "1.2.0",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "Explicit previews printed the request but omitted operationId, so the novice could not confirm the advertised preview.",
+        "expectedUserOutcome": "Explicit preview persists a request-bound operation and returns an operationId; dry-run saves none; direct topic relations remain compatible.",
+        "responsibilityAssessment": "cli",
+        "responsibilityNotes": "Server relation endpoints already exist. CLI topic relation preview branch uses printDryRun instead of the existing saved-operation path."
+      },
+      "firstAttemptArtifacts": [
+        {
+          "label": "topic-favorite-preview",
+          "command": "bin/apexcn-dev favorite add 36773 --preview --json",
+          "stdoutPath": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-02/evidence/stdout/topic-favorite-preview-1791142540898.stdout",
+          "stdoutSha256": "1b4d35109b4b2b3365f223faddc39267dd7ccd9a5dffbab26978664c4e8fdccc",
+          "stderrPath": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-02/evidence/stderr/topic-favorite-preview-1791142540898.stderr",
+          "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "actual": "Preview prints request with no operationId or confirmation command; no confirmable saved operation."
+        },
+        {
+          "label": "topic-subscription-preview",
+          "command": "bin/apexcn-dev subscription add 36773 --preview --json",
+          "stdoutPath": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-02/evidence/stdout/topic-subscription-preview-1791142541120.stdout",
+          "stdoutSha256": "488d80d8f9f34cd5e0a2d053738a8672df2bebcbd17d400717f7c1e475a21abc",
+          "stderrPath": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-02/evidence/stderr/topic-subscription-preview-1791142541120.stderr",
+          "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "actual": "Preview prints request with no operationId or confirmation command; no confirmable saved operation."
+        }
+      ],
+      "validationRefs": [],
+      "closedAt": "2026-10-05T03:14:54.317882+00:00",
+      "originalFinding": {
+        "id": "CLI-SAFETY-20261005-005",
+        "milestoneId": "1.1",
+        "priority": "P1",
+        "status": "open",
+        "owner": "cli",
+        "title": "话题收藏和订阅显式 preview 未保存待确认操作",
+        "description": "独立新手在固定1.2.0候选发现话题收藏/订阅--preview没有operationId，与公开安全文档及subscription预览合同不一致。当前主工作树修复，旧候选与首次失败保留；需新C/H与新鲜验收，不将直接执行替代预览确认为PASS。",
+        "validatorRound": "APEXCN-UPGRADE-1.2.0-R2",
+        "blockingMilestones": [],
+        "dependencies": [],
+        "acceptanceCriterionIds": [],
+        "source": {
+          "type": "independent-validator-thread",
+          "threadId": "01a10860-91ca-7543-9f03-db02ec607295",
+          "assignmentRef": "APEXCN-UPGRADE-1.2.0-R2",
+          "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-02/command-evidence.jsonl",
+          "findingRefs": [
+            "label=topic-favorite-preview",
+            "label=topic-subscription-preview",
+            "session-events.jsonl:item_130"
+          ],
+          "scenarioOrExplorationRef": [
+            "M110-Q-132",
+            "M110-Q-134",
+            "UPG-031-topic-favorite-subscription",
+            "UPG-043-schema-guide-workflow-local"
+          ],
+          "observedCliVersion": "1.2.0",
+          "persona": "novice",
+          "firstAttemptEvidencePreserved": true,
+          "actualOutputSummary": "Explicit previews printed the request but omitted operationId, so the novice could not confirm the advertised preview.",
+          "expectedUserOutcome": "Explicit preview persists a request-bound operation and returns an operationId; dry-run saves none; direct topic relations remain compatible.",
+          "responsibilityAssessment": "cli",
+          "responsibilityNotes": "Server relation endpoints already exist. CLI topic relation preview branch uses printDryRun instead of the existing saved-operation path."
+        },
+        "firstAttemptArtifacts": [
+          {
+            "label": "topic-favorite-preview",
+            "command": "bin/apexcn-dev favorite add 36773 --preview --json",
+            "stdoutPath": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-02/evidence/stdout/topic-favorite-preview-1791142540898.stdout",
+            "stdoutSha256": "1b4d35109b4b2b3365f223faddc39267dd7ccd9a5dffbab26978664c4e8fdccc",
+            "stderrPath": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-02/evidence/stderr/topic-favorite-preview-1791142540898.stderr",
+            "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "actual": "Preview prints request with no operationId or confirmation command; no confirmable saved operation."
+          },
+          {
+            "label": "topic-subscription-preview",
+            "command": "bin/apexcn-dev subscription add 36773 --preview --json",
+            "stdoutPath": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-02/evidence/stdout/topic-subscription-preview-1791142541120.stdout",
+            "stdoutSha256": "488d80d8f9f34cd5e0a2d053738a8672df2bebcbd17d400717f7c1e475a21abc",
+            "stderrPath": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-02/evidence/stderr/topic-subscription-preview-1791142541120.stderr",
+            "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "actual": "Preview prints request with no operationId or confirmation command; no confirmable saved operation."
+          }
+        ],
+        "validationRefs": []
+      },
+      "resolution": {
+        "releaseURL": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.2.0",
+        "productSourceCommit": "14ff3bb5c79e9af6e5d8c6c161fc3a5ae02aae1b",
+        "originalArchiveSha256": "1a370947025fd2e801ba2d12afa5fcf210df3dd3365fa150cd1efc7ce4a1a1b2",
+        "acceptedCases": [
+          "UPG-031-topic-favorite-subscription"
+        ],
+        "actualAcceptedEvidence": [
+          {
+            "caseId": "UPG-031-topic-favorite-subscription",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/411117fc933678daebe498669a9dd769d2ab427f99fdb958081ee88809a7fd36.stream",
+                "sha256": "411117fc933678daebe498669a9dd769d2ab427f99fdb958081ee88809a7fd36",
+                "recordedSourcePath": "evidence/attempts/favorite-add-preview.stdout.txt",
+                "label": "favorite-add-preview",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/favorite-add-preview.stderr.txt",
+                "label": "favorite-add-preview",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/7ddb233c466914b2c388fbefcf5bed4fec13c6fed967ffa6f4da160ed75665f1.stream",
+                "sha256": "7ddb233c466914b2c388fbefcf5bed4fec13c6fed967ffa6f4da160ed75665f1",
+                "recordedSourcePath": "evidence/attempts/favorite-add-confirm.stdout.txt",
+                "label": "favorite-add-confirm",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/favorite-add-confirm.stderr.txt",
+                "label": "favorite-add-confirm",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/230a5a8241f84ad872e633c70ccbb90ccf05b60b142ddffb8512c36591eab61d.stream",
+                "sha256": "230a5a8241f84ad872e633c70ccbb90ccf05b60b142ddffb8512c36591eab61d",
+                "recordedSourcePath": "evidence/attempts/favorite-add-dry-run.stdout.txt",
+                "label": "favorite-add-dry-run",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/favorite-add-dry-run.stderr.txt",
+                "label": "favorite-add-dry-run",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/b61663c297f80f6601f1a070c0cfce50a257dc4ec4f5c0a1f675c6d1afa14e50.stream",
+                "sha256": "b61663c297f80f6601f1a070c0cfce50a257dc4ec4f5c0a1f675c6d1afa14e50",
+                "recordedSourcePath": "evidence/attempts/subscription-add-preview.stdout.txt",
+                "label": "subscription-add-preview",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/subscription-add-preview.stderr.txt",
+                "label": "subscription-add-preview",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/c224f5d352a89abf5c154eb7fd1ec118f84811f90bb5d3b7e982c83ecb88ff30.stream",
+                "sha256": "c224f5d352a89abf5c154eb7fd1ec118f84811f90bb5d3b7e982c83ecb88ff30",
+                "recordedSourcePath": "evidence/attempts/subscription-add-confirm.stdout.txt",
+                "label": "subscription-add-confirm",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/subscription-add-confirm.stderr.txt",
+                "label": "subscription-add-confirm",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/da020a0198e7a09dd3c9efc047f1783fe8cb44e40d1c13deeb532967264d2542.stream",
+                "sha256": "da020a0198e7a09dd3c9efc047f1783fe8cb44e40d1c13deeb532967264d2542",
+                "recordedSourcePath": "evidence/attempts/subscription-add-dry-run.stdout.txt",
+                "label": "subscription-add-dry-run",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/subscription-add-dry-run.stderr.txt",
+                "label": "subscription-add-dry-run",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/da631b5c9df21346a7d31dbb35f28bba41344a87fe25278c0a5155ca1806b9fe.stream",
+                "sha256": "da631b5c9df21346a7d31dbb35f28bba41344a87fe25278c0a5155ca1806b9fe",
+                "recordedSourcePath": "evidence/attempts/live-me-favorites.stdout.txt",
+                "label": "live-me-favorites",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/live-me-favorites.stderr.txt",
+                "label": "live-me-favorites",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/5d55b8afd0b9a235d1dee405095dc3a66746e666f0c088a8dc61c152f143a01c.stream",
+                "sha256": "5d55b8afd0b9a235d1dee405095dc3a66746e666f0c088a8dc61c152f143a01c",
+                "recordedSourcePath": "evidence/attempts/live-me-subscriptions.stdout.txt",
+                "label": "live-me-subscriptions",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/live-me-subscriptions.stderr.txt",
+                "label": "live-me-subscriptions",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-remaining-baseline-dynamic-semantic-decision-matrix.json",
+                "sha256": "f9915545b84fb9aa3650ecf88a5b36ee01dbc0ecf80153403f899cf164afc228"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-persona-and-report-archive.json",
+                "sha256": "216331eba55050e452775ad73e5fbe319de714c0d7c601f0eba0aba715b9ea8c"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-session-binding-audit.json",
+                "sha256": "c751bda897ff0cd42910af49c2e042432ec20c14cf2674c5a808a01e9bf6a8b9"
+              }
+            ],
+            "boundary": "Accepted for the stated dynamic publicOutcome with listed concrete final evidence labels; no broader completion inferred."
+          }
+        ],
+        "basis": "All mapped frozen functional assertions passed independent R5 semantic review; real C3/H3 release assets downloaded and verified. Post-M governance gates remain separate required conditions."
+      }
+    },
+    {
+      "id": "CLI-DIAGNOSTICS-20261005-006",
+      "milestoneId": "1.1",
+      "priority": "P1",
+      "status": "closed",
+      "owner": "cli",
+      "title": "网络拒绝连接诊断未建议不调用 API 的 doctor snapshot",
+      "description": "独立R3新手在真实有效的本地ECONNREFUSED场景观察到NETWORK_ERROR/NETWORK_UNREACHABLE分类正确，但actions没有冻结Q178要求的doctor snapshot建议。核心transport remediation及doctor网络失败checks已最小修复；保持open，待新C/H、新鲜独立验收、清理和发布门闭合。",
+      "validatorRound": "APEXCN-UPGRADE-1.2.0-R3",
+      "blockingMilestones": [],
+      "dependencies": [],
+      "acceptanceCriterionIds": [],
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "01a108a5-c90d-7973-a251-5101c6d682f6",
+        "assignmentRef": "APEXCN-UPGRADE-1.2.0-R3",
+        "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-03/first-attempts.jsonl",
+        "findingRefs": [
+          "first-attempts.jsonl:taskId=M110-Q-178,label=finalcli-q178-network-refused-v2",
+          "evidence/commands/finalcli-q178-network-refused-v2.stderr.txt",
+          "evidence/commands/finalcli-q178-network-receipt-v2.json"
+        ],
+        "scenarioOrExplorationRef": [
+          "M110-Q-178"
+        ],
+        "observedCliVersion": "1.2.0",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "First valid refusal used a fake-credential configured profile against a closed loopback port, returned exitCode 1 and NETWORK_ERROR/NETWORK_UNREACHABLE with one request and zero retries. Actions mention auth show, doctor --json and network/DNS/proxy but omit doctor snapshot. A separately requested snapshot exits 0 with zero API requests; this does not supply the missing recommendation.",
+        "expectedUserOutcome": "On a genuine network failure, both structured transport remediation and doctor failed checks explicitly recommend apexcn doctor snapshot --json for local diagnostics without making API calls. Preserve network classification and request counts.",
+        "responsibilityAssessment": "cli",
+        "responsibilityNotes": "CLI-only support-guidance omission, not server capability, authentication or timeout failure. Earlier no-profile attempt was an invalid fixture for network behavior; retain its evidence without classifying it as a product defect.",
+        "testedCommit": "f3be76e524af44621e5ad6ce87b171c940d4d69e",
+        "artifactChecksum": "441047effeba25e54f0eeab9b75b8eb4ed992c35ca8060f520cc45340bb0570b",
+        "scopeContractSha256": "42528961e0e09248346251809e00d24d1159762b27270b787ac7cf135b9e474d"
+      },
+      "firstAttemptArtifacts": [
+        {
+          "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-03/evidence/commands/finalcli-q178-network-refused-v2.stdout.txt",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-03/evidence/commands/finalcli-q178-network-refused-v2.stderr.txt",
+          "sha256": "c90c438b198eb6e71fb4f34570fe763795aea6d235c9d8870896a43ea9de03e5"
+        },
+        {
+          "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-03/evidence/commands/finalcli-q178-network-receipt-v2.json",
+          "sha256": "5a4f5fa807a3012dea1926cf8b61bb90165ea84f4a57b12f55c724b6c91d3756"
+        }
+      ],
+      "invalidFixtureEvidencePreserved": [
+        "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-03/evidence/commands/finalcli-q178-network-refused.stderr.txt"
+      ],
+      "developmentRepair": {
+        "status": "implemented-awaiting-fresh-independent-validation",
+        "report": "/Users/kwang/apexcn-cli/output/upgrade-20261005/developer-network-snapshot-repair-results.json",
+        "doesNotCloseIssue": true
+      },
+      "validationRefs": [],
+      "closedAt": "2026-10-05T03:14:54.317882+00:00",
+      "originalFinding": {
+        "id": "CLI-DIAGNOSTICS-20261005-006",
+        "milestoneId": "1.1",
+        "priority": "P1",
+        "status": "open",
+        "owner": "cli",
+        "title": "网络拒绝连接诊断未建议不调用 API 的 doctor snapshot",
+        "description": "独立R3新手在真实有效的本地ECONNREFUSED场景观察到NETWORK_ERROR/NETWORK_UNREACHABLE分类正确，但actions没有冻结Q178要求的doctor snapshot建议。核心transport remediation及doctor网络失败checks已最小修复；保持open，待新C/H、新鲜独立验收、清理和发布门闭合。",
+        "validatorRound": "APEXCN-UPGRADE-1.2.0-R3",
+        "blockingMilestones": [],
+        "dependencies": [],
+        "acceptanceCriterionIds": [],
+        "source": {
+          "type": "independent-validator-thread",
+          "threadId": "01a108a5-c90d-7973-a251-5101c6d682f6",
+          "assignmentRef": "APEXCN-UPGRADE-1.2.0-R3",
+          "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-03/first-attempts.jsonl",
+          "findingRefs": [
+            "first-attempts.jsonl:taskId=M110-Q-178,label=finalcli-q178-network-refused-v2",
+            "evidence/commands/finalcli-q178-network-refused-v2.stderr.txt",
+            "evidence/commands/finalcli-q178-network-receipt-v2.json"
+          ],
+          "scenarioOrExplorationRef": [
+            "M110-Q-178"
+          ],
+          "observedCliVersion": "1.2.0",
+          "persona": "novice",
+          "firstAttemptEvidencePreserved": true,
+          "actualOutputSummary": "First valid refusal used a fake-credential configured profile against a closed loopback port, returned exitCode 1 and NETWORK_ERROR/NETWORK_UNREACHABLE with one request and zero retries. Actions mention auth show, doctor --json and network/DNS/proxy but omit doctor snapshot. A separately requested snapshot exits 0 with zero API requests; this does not supply the missing recommendation.",
+          "expectedUserOutcome": "On a genuine network failure, both structured transport remediation and doctor failed checks explicitly recommend apexcn doctor snapshot --json for local diagnostics without making API calls. Preserve network classification and request counts.",
+          "responsibilityAssessment": "cli",
+          "responsibilityNotes": "CLI-only support-guidance omission, not server capability, authentication or timeout failure. Earlier no-profile attempt was an invalid fixture for network behavior; retain its evidence without classifying it as a product defect.",
+          "testedCommit": "f3be76e524af44621e5ad6ce87b171c940d4d69e",
+          "artifactChecksum": "441047effeba25e54f0eeab9b75b8eb4ed992c35ca8060f520cc45340bb0570b",
+          "scopeContractSha256": "42528961e0e09248346251809e00d24d1159762b27270b787ac7cf135b9e474d"
+        },
+        "firstAttemptArtifacts": [
+          {
+            "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-03/evidence/commands/finalcli-q178-network-refused-v2.stdout.txt",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-03/evidence/commands/finalcli-q178-network-refused-v2.stderr.txt",
+            "sha256": "c90c438b198eb6e71fb4f34570fe763795aea6d235c9d8870896a43ea9de03e5"
+          },
+          {
+            "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-03/evidence/commands/finalcli-q178-network-receipt-v2.json",
+            "sha256": "5a4f5fa807a3012dea1926cf8b61bb90165ea84f4a57b12f55c724b6c91d3756"
+          }
+        ],
+        "invalidFixtureEvidencePreserved": [
+          "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-03/evidence/commands/finalcli-q178-network-refused.stderr.txt"
+        ],
+        "developmentRepair": {
+          "status": "implemented-awaiting-fresh-independent-validation",
+          "report": "/Users/kwang/apexcn-cli/output/upgrade-20261005/developer-network-snapshot-repair-results.json",
+          "doesNotCloseIssue": true
+        },
+        "validationRefs": []
+      },
+      "resolution": {
+        "releaseURL": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.2.0",
+        "productSourceCommit": "14ff3bb5c79e9af6e5d8c6c161fc3a5ae02aae1b",
+        "originalArchiveSha256": "1a370947025fd2e801ba2d12afa5fcf210df3dd3365fa150cd1efc7ce4a1a1b2",
+        "acceptedCases": [
+          "UPG-041-auth-doctor-local"
+        ],
+        "actualAcceptedEvidence": [
+          {
+            "caseId": "UPG-041-auth-doctor-local",
+            "finalEvidence": [
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/4861bd0e3d80c33ceae4fb188d1db8e9fc21f0fdedcd10967344fcc9b9d3ac78.stream",
+                "sha256": "4861bd0e3d80c33ceae4fb188d1db8e9fc21f0fdedcd10967344fcc9b9d3ac78",
+                "recordedSourcePath": "evidence/attempts/local-auth-audit.stdout.txt",
+                "label": "local-auth-audit",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/local-auth-audit.stderr.txt",
+                "label": "local-auth-audit",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/74ab24915b98612ce92f1e4f5d52f39f502dd6c2172319b2738c41eca2ada384.stream",
+                "sha256": "74ab24915b98612ce92f1e4f5d52f39f502dd6c2172319b2738c41eca2ada384",
+                "recordedSourcePath": "evidence/attempts/local-auth-list.stdout.txt",
+                "label": "local-auth-list",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/local-auth-list.stderr.txt",
+                "label": "local-auth-list",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/465da2b07134a112540b109086829fe8632ab24a6340a0294b3912fe22b71416.stream",
+                "sha256": "465da2b07134a112540b109086829fe8632ab24a6340a0294b3912fe22b71416",
+                "recordedSourcePath": "evidence/attempts/local-auth-set-token-env.stdout.txt",
+                "label": "local-auth-set-token-env",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/local-auth-set-token-env.stderr.txt",
+                "label": "local-auth-set-token-env",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/42502b7cfe17f6d0af6a24929a7ba462ca1e90c40429c53aa8b183891cbf1042.stream",
+                "sha256": "42502b7cfe17f6d0af6a24929a7ba462ca1e90c40429c53aa8b183891cbf1042",
+                "recordedSourcePath": "evidence/attempts/local-doctor-snapshot-retry2.stdout.txt",
+                "label": "local-doctor-snapshot-retry2",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-completed-output-archive/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.stream",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "recordedSourcePath": "evidence/attempts/local-doctor-snapshot-retry2.stderr.txt",
+                "label": "local-doctor-snapshot-retry2",
+                "captureBoundary": "Exact first captured bytes; recorder sanitation is separate from CLI direct-output proof."
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-remaining-baseline-dynamic-semantic-decision-matrix.json",
+                "sha256": "f9915545b84fb9aa3650ecf88a5b36ee01dbc0ecf80153403f899cf164afc228"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-persona-and-report-archive.json",
+                "sha256": "216331eba55050e452775ad73e5fbe319de714c0d7c601f0eba0aba715b9ea8c"
+              },
+              {
+                "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/round5-initial-terminal-session-binding-audit.json",
+                "sha256": "c751bda897ff0cd42910af49c2e042432ec20c14cf2674c5a808a01e9bf6a8b9"
+              }
+            ],
+            "boundary": "Accepted for the stated dynamic publicOutcome with listed concrete final evidence labels; no broader completion inferred."
+          }
+        ],
+        "basis": "All mapped frozen functional assertions passed independent R5 semantic review; real C3/H3 release assets downloaded and verified. Post-M governance gates remain separate required conditions."
+      }
+    }
+  ],
+  "closedAt": "2026-10-05T03:14:54.317882+00:00",
+  "remainingNonFunctionalAcceptance": [
+    "UPG054 final default GA",
+    "UPG055 final release gate join",
+    "UPG056 audit metadata closure"
+  ]
+}

@@ -1,0 +1,288 @@
+{
+  "kind": "Actual_remote_tag_and_downloaded_original_C3_H3_verification",
+  "verifiedAt": "2026-10-05T03:14:54.162253+00:00",
+  "release": {
+    "assets": [
+      {
+        "apiUrl": "https://api.github.com/repos/wfg2513148/apexcn-cli/releases/assets/611314003",
+        "contentType": "application/json",
+        "createdAt": "2026-10-05T02:59:39Z",
+        "digest": "sha256:0a747328858788f3a277ad8c1503bc66dde0addd11c2d0966d2e3ca9705f1004",
+        "downloadCount": 0,
+        "id": "RA_kwDOTLBlnM4kb-lT",
+        "label": "",
+        "name": "apexcn-cli.spdx.json",
+        "size": 2139,
+        "state": "uploaded",
+        "updatedAt": "2026-10-05T02:59:40Z",
+        "url": "https://github.com/wfg2513148/apexcn-cli/releases/download/v1.2.0/apexcn-cli.spdx.json"
+      },
+      {
+        "apiUrl": "https://api.github.com/repos/wfg2513148/apexcn-cli/releases/assets/611314008",
+        "contentType": "application/octet-stream",
+        "createdAt": "2026-10-05T02:59:39Z",
+        "digest": "sha256:910d8512945cf8a53e1123b86229a5339408f392fed557fa264a061c44d9b2a6",
+        "downloadCount": 0,
+        "id": "RA_kwDOTLBlnM4kb-lY",
+        "label": "",
+        "name": "apexcn-cli.spdx.json.sha256",
+        "size": 87,
+        "state": "uploaded",
+        "updatedAt": "2026-10-05T02:59:40Z",
+        "url": "https://github.com/wfg2513148/apexcn-cli/releases/download/v1.2.0/apexcn-cli.spdx.json.sha256"
+      },
+      {
+        "apiUrl": "https://api.github.com/repos/wfg2513148/apexcn-cli/releases/assets/611314005",
+        "contentType": "application/x-gtar",
+        "createdAt": "2026-10-05T02:59:39Z",
+        "digest": "sha256:1a370947025fd2e801ba2d12afa5fcf210df3dd3365fa150cd1efc7ce4a1a1b2",
+        "downloadCount": 0,
+        "id": "RA_kwDOTLBlnM4kb-lV",
+        "label": "",
+        "name": "apexcn-cli.tgz",
+        "size": 2469105,
+        "state": "uploaded",
+        "updatedAt": "2026-10-05T02:59:40Z",
+        "url": "https://github.com/wfg2513148/apexcn-cli/releases/download/v1.2.0/apexcn-cli.tgz"
+      },
+      {
+        "apiUrl": "https://api.github.com/repos/wfg2513148/apexcn-cli/releases/assets/611314009",
+        "contentType": "application/octet-stream",
+        "createdAt": "2026-10-05T02:59:39Z",
+        "digest": "sha256:b15312cbcfd1702c0d93f69673459b15dab6586e538f9f67daef050322772dea",
+        "downloadCount": 0,
+        "id": "RA_kwDOTLBlnM4kb-lZ",
+        "label": "",
+        "name": "apexcn-cli.tgz.sha256",
+        "size": 81,
+        "state": "uploaded",
+        "updatedAt": "2026-10-05T02:59:40Z",
+        "url": "https://github.com/wfg2513148/apexcn-cli/releases/download/v1.2.0/apexcn-cli.tgz.sha256"
+      },
+      {
+        "apiUrl": "https://api.github.com/repos/wfg2513148/apexcn-cli/releases/assets/611314007",
+        "contentType": "text/plain; charset=utf-8",
+        "createdAt": "2026-10-05T02:59:39Z",
+        "digest": "sha256:20040a2a91894ed69c9d1d0dca42b59209b1604a53f30919d6dbcb0fde9a8390",
+        "downloadCount": 0,
+        "id": "RA_kwDOTLBlnM4kb-lX",
+        "label": "",
+        "name": "checksums.txt",
+        "size": 425,
+        "state": "uploaded",
+        "updatedAt": "2026-10-05T02:59:40Z",
+        "url": "https://github.com/wfg2513148/apexcn-cli/releases/download/v1.2.0/checksums.txt"
+      },
+      {
+        "apiUrl": "https://api.github.com/repos/wfg2513148/apexcn-cli/releases/assets/611314023",
+        "contentType": "application/octet-stream",
+        "createdAt": "2026-10-05T02:59:40Z",
+        "digest": "sha256:e47c129de80e00b371dd892fff8ef27fb23c3acfd35c122885f161f3f49f3de5",
+        "downloadCount": 0,
+        "id": "RA_kwDOTLBlnM4kb-ln",
+        "label": "",
+        "name": "install-agent.ps1",
+        "size": 8145,
+        "state": "uploaded",
+        "updatedAt": "2026-10-05T02:59:40Z",
+        "url": "https://github.com/wfg2513148/apexcn-cli/releases/download/v1.2.0/install-agent.ps1"
+      },
+      {
+        "apiUrl": "https://api.github.com/repos/wfg2513148/apexcn-cli/releases/assets/611314026",
+        "contentType": "application/octet-stream",
+        "createdAt": "2026-10-05T02:59:40Z",
+        "digest": "sha256:571136304959328aac98bdca39d39f1b54821e84a52ef7f265b5cd840174d4c6",
+        "downloadCount": 0,
+        "id": "RA_kwDOTLBlnM4kb-lq",
+        "label": "",
+        "name": "install-agent.ps1.sha256",
+        "size": 84,
+        "state": "uploaded",
+        "updatedAt": "2026-10-05T02:59:40Z",
+        "url": "https://github.com/wfg2513148/apexcn-cli/releases/download/v1.2.0/install-agent.ps1.sha256"
+      },
+      {
+        "apiUrl": "https://api.github.com/repos/wfg2513148/apexcn-cli/releases/assets/611314029",
+        "contentType": "application/x-sh",
+        "createdAt": "2026-10-05T02:59:40Z",
+        "digest": "sha256:1fa26f69bb66c3da5c300b5254b7e49b8fc30b8d2f0596871fed9fa88cd5d8e7",
+        "downloadCount": 0,
+        "id": "RA_kwDOTLBlnM4kb-lt",
+        "label": "",
+        "name": "install-agent.sh",
+        "size": 6855,
+        "state": "uploaded",
+        "updatedAt": "2026-10-05T02:59:40Z",
+        "url": "https://github.com/wfg2513148/apexcn-cli/releases/download/v1.2.0/install-agent.sh"
+      },
+      {
+        "apiUrl": "https://api.github.com/repos/wfg2513148/apexcn-cli/releases/assets/611314028",
+        "contentType": "application/octet-stream",
+        "createdAt": "2026-10-05T02:59:40Z",
+        "digest": "sha256:fb533509cd0597e5063fe819a6cec05ffa02639fd8e304ac561850f8def2d295",
+        "downloadCount": 0,
+        "id": "RA_kwDOTLBlnM4kb-ls",
+        "label": "",
+        "name": "install-agent.sh.sha256",
+        "size": 83,
+        "state": "uploaded",
+        "updatedAt": "2026-10-05T02:59:40Z",
+        "url": "https://github.com/wfg2513148/apexcn-cli/releases/download/v1.2.0/install-agent.sh.sha256"
+      },
+      {
+        "apiUrl": "https://api.github.com/repos/wfg2513148/apexcn-cli/releases/assets/611314182",
+        "contentType": "application/json",
+        "createdAt": "2026-10-05T02:59:41Z",
+        "digest": "sha256:74471bfa0fff9d11d4267a8ae2dafa1bd3a7aaf30db6105cf8b01929e1ca04ab",
+        "downloadCount": 0,
+        "id": "RA_kwDOTLBlnM4kb-oG",
+        "label": "",
+        "name": "release-provenance.json",
+        "size": 2001,
+        "state": "uploaded",
+        "updatedAt": "2026-10-05T02:59:41Z",
+        "url": "https://github.com/wfg2513148/apexcn-cli/releases/download/v1.2.0/release-provenance.json"
+      },
+      {
+        "apiUrl": "https://api.github.com/repos/wfg2513148/apexcn-cli/releases/assets/611314178",
+        "contentType": "application/octet-stream",
+        "createdAt": "2026-10-05T02:59:41Z",
+        "digest": "sha256:de02a4708342bcf7099e24365e8c72f9a994eea97af1a80860b7fe18170648ba",
+        "downloadCount": 0,
+        "id": "RA_kwDOTLBlnM4kb-oC",
+        "label": "",
+        "name": "release-provenance.json.sha256",
+        "size": 90,
+        "state": "uploaded",
+        "updatedAt": "2026-10-05T02:59:41Z",
+        "url": "https://github.com/wfg2513148/apexcn-cli/releases/download/v1.2.0/release-provenance.json.sha256"
+      }
+    ],
+    "isDraft": false,
+    "isPrerelease": false,
+    "publishedAt": "2026-10-05T02:59:42Z",
+    "tagName": "v1.2.0",
+    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.2.0"
+  },
+  "remoteTag": {
+    "ref": "refs/tags/v1.2.0",
+    "node_id": "REF_kwDOTLBlnLByZWZzL3RhZ3MvdjEuMi4w",
+    "url": "https://api.github.com/repos/wfg2513148/apexcn-cli/git/refs/tags/v1.2.0",
+    "object": {
+      "sha": "14ff3bb5c79e9af6e5d8c6c161fc3a5ae02aae1b",
+      "type": "commit",
+      "url": "https://api.github.com/repos/wfg2513148/apexcn-cli/git/commits/14ff3bb5c79e9af6e5d8c6c161fc3a5ae02aae1b"
+    }
+  },
+  "productSourceCommit": "14ff3bb5c79e9af6e5d8c6c161fc3a5ae02aae1b",
+  "originalArchiveH": "1a370947025fd2e801ba2d12afa5fcf210df3dd3365fa150cd1efc7ce4a1a1b2",
+  "assets": [
+    {
+      "name": "apexcn-cli.spdx.json",
+      "alreadyValidDownloadedFile": true,
+      "sha256": "0a747328858788f3a277ad8c1503bc66dde0addd11c2d0966d2e3ca9705f1004",
+      "expectedOriginalSHA256": "0a747328858788f3a277ad8c1503bc66dde0addd11c2d0966d2e3ca9705f1004",
+      "matches": true
+    },
+    {
+      "name": "apexcn-cli.spdx.json.sha256",
+      "alreadyValidDownloadedFile": true,
+      "sha256": "910d8512945cf8a53e1123b86229a5339408f392fed557fa264a061c44d9b2a6",
+      "expectedOriginalSHA256": "910d8512945cf8a53e1123b86229a5339408f392fed557fa264a061c44d9b2a6",
+      "matches": true
+    },
+    {
+      "name": "apexcn-cli.tgz",
+      "alreadyValidDownloadedFile": true,
+      "sha256": "1a370947025fd2e801ba2d12afa5fcf210df3dd3365fa150cd1efc7ce4a1a1b2",
+      "expectedOriginalSHA256": "1a370947025fd2e801ba2d12afa5fcf210df3dd3365fa150cd1efc7ce4a1a1b2",
+      "matches": true
+    },
+    {
+      "name": "apexcn-cli.tgz.sha256",
+      "alreadyValidDownloadedFile": true,
+      "sha256": "b15312cbcfd1702c0d93f69673459b15dab6586e538f9f67daef050322772dea",
+      "expectedOriginalSHA256": "b15312cbcfd1702c0d93f69673459b15dab6586e538f9f67daef050322772dea",
+      "matches": true
+    },
+    {
+      "name": "checksums.txt",
+      "alreadyValidDownloadedFile": true,
+      "sha256": "20040a2a91894ed69c9d1d0dca42b59209b1604a53f30919d6dbcb0fde9a8390",
+      "expectedOriginalSHA256": "20040a2a91894ed69c9d1d0dca42b59209b1604a53f30919d6dbcb0fde9a8390",
+      "matches": true
+    },
+    {
+      "name": "install-agent.ps1",
+      "alreadyValidDownloadedFile": true,
+      "sha256": "e47c129de80e00b371dd892fff8ef27fb23c3acfd35c122885f161f3f49f3de5",
+      "expectedOriginalSHA256": "e47c129de80e00b371dd892fff8ef27fb23c3acfd35c122885f161f3f49f3de5",
+      "matches": true
+    },
+    {
+      "name": "install-agent.ps1.sha256",
+      "alreadyValidDownloadedFile": true,
+      "sha256": "571136304959328aac98bdca39d39f1b54821e84a52ef7f265b5cd840174d4c6",
+      "expectedOriginalSHA256": "571136304959328aac98bdca39d39f1b54821e84a52ef7f265b5cd840174d4c6",
+      "matches": true
+    },
+    {
+      "name": "install-agent.sh",
+      "alreadyValidDownloadedFile": true,
+      "sha256": "1fa26f69bb66c3da5c300b5254b7e49b8fc30b8d2f0596871fed9fa88cd5d8e7",
+      "expectedOriginalSHA256": "1fa26f69bb66c3da5c300b5254b7e49b8fc30b8d2f0596871fed9fa88cd5d8e7",
+      "matches": true
+    },
+    {
+      "name": "install-agent.sh.sha256",
+      "alreadyValidDownloadedFile": true,
+      "sha256": "fb533509cd0597e5063fe819a6cec05ffa02639fd8e304ac561850f8def2d295",
+      "expectedOriginalSHA256": "fb533509cd0597e5063fe819a6cec05ffa02639fd8e304ac561850f8def2d295",
+      "matches": true
+    },
+    {
+      "name": "release-provenance.json",
+      "alreadyValidDownloadedFile": true,
+      "sha256": "74471bfa0fff9d11d4267a8ae2dafa1bd3a7aaf30db6105cf8b01929e1ca04ab",
+      "expectedOriginalSHA256": "74471bfa0fff9d11d4267a8ae2dafa1bd3a7aaf30db6105cf8b01929e1ca04ab",
+      "matches": true
+    },
+    {
+      "name": "release-provenance.json.sha256",
+      "alreadyValidDownloadedFile": true,
+      "sha256": "de02a4708342bcf7099e24365e8c72f9a994eea97af1a80860b7fe18170648ba",
+      "expectedOriginalSHA256": "de02a4708342bcf7099e24365e8c72f9a994eea97af1a80860b7fe18170648ba",
+      "matches": true
+    }
+  ],
+  "all11OriginalAssetsDownloadedAndSHA256Match": true,
+  "tagExactlyC3": true,
+  "provenanceSourceExactlyC3": true,
+  "repackPerformed": false,
+  "downloadTransportReceipt": {
+    "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/original-release-remaining-download-receipt.json",
+    "sha256": "cceb0a16193ea872d6d7a9b1de0afb82395f24053dadc158175107a6bd71fdc8"
+  },
+  "initialTransportFailuresPreserved": {
+    "ghDownloadActualExitCode": 1,
+    "curlProxyActualExitCode": 35,
+    "rawGhReceiptMode0600": true,
+    "boundary": "Raw signed redirect URL remains restricted local failure receipt; normalized shared evidence only."
+  },
+  "postMDefaultGAPending": true,
+  "actualNetworkTransportEvidence": [
+    {
+      "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/original-release-go-api-download-receipt.json",
+      "sha256": "d531494303edfdd58820810f7b16535ff7d8f765a4fdd14b82bb52f03abf46d4"
+    },
+    {
+      "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/original-release-go-api-one-download-receipt.json",
+      "sha256": "a7787a6231a404538a702f76c81eaa21355b2f40b59ac8a4339e90c72886c59b"
+    },
+    {
+      "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/release-asset-direct-route-one-receipt.json",
+      "sha256": "48626d4f7587f985d9d2faaf7f837f8318774747e06a8d87e800b8d10ff00751"
+    }
+  ],
+  "finalDownloadVerificationBoundary": "All11 actual GitHub downloaded files matched original C3 asset hashes. Go API GET verified TLS and remote release-assets host; three prior downloaded files independently retained. No local candidate bytes copied to download directory."
+}
