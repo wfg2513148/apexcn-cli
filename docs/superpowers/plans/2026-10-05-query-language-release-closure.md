@@ -199,14 +199,14 @@ gh release create v1.2.1 /Users/kwang/apexcn-cli/reports/query-language/goal-202
 - [x] **Step 3: 下载验证。** `gh release download v1.2.1 --repo wfg2513148/apexcn-cli --dir reports/query-language/goal-20261005/downloaded-release`；逐文件对照 candidate SHA、provenance sourceCommit与远端tag，运行 `node scripts/check-release-artifacts.mjs --verify-only --expected-version 1.2.1 --artifacts-dir reports/query-language/goal-20261005/downloaded-release`，必须退出0。
 - [x] **Step 4: 实际升级。** 先对现有用户配置做私密备份/哈希，执行现有官方 `apexcn update`，再 `apexcn --version`；真实 PROD `search` 英文问题、中文问题和文章详情/打开URL各一次，确认新安装实际使用1.2.1且配置未被覆盖。记录安装路径/版本/请求/截图；不以测试目录运行冒充用户安装完成。
 - [x] **Step 5: 问题关闭。** G1–G8证据齐全后，将两条活动问题完整归档到本轮历史记录，再从 issues 活动集移出，enhancement改completed并指向实际独立报告和release证据；保留最初失败文件。
-- [ ] **Step 6: 最终质量与交接。** `npm run check:roadmap`、`node scripts/check-ga-readiness.mjs` 和资产 verify-only 均通过；不得重新打包已验收资产。交接输入必须有 `milestoneId:"1.1"` 及 enhancedCapabilities/unexpectedProblems/rootCauses/preventionActions/expectedResults/majorRisks 六个非空字符串数组和 nextMilestoneGoal字符串，内容取实际事实；nextMilestoneGoal明确“本补丁闭环，不激活后续里程碑”。
+- [x] **Step 6: 最终质量与交接。** `npm run check:roadmap`、`node scripts/check-ga-readiness.mjs` 和资产 verify-only 均通过；不得重新打包已验收资产。交接输入必须有 `milestoneId:"1.1"` 及 enhancedCapabilities/unexpectedProblems/rootCauses/preventionActions/expectedResults/majorRisks 六个非空字符串数组和 nextMilestoneGoal字符串，内容取实际事实；nextMilestoneGoal明确“本补丁闭环，不激活后续里程碑”。
 
 ```bash
 npm run context:compact -- --summary reports/query-language/goal-20261005/iteration-summary.json --release-url https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.2.1 --offline
 ```
 
 这里 offline 仅用于元数据审计提交晚于已验收tag的既有分离流程；Step3真实在线发布校验不可省略。在独立干净审计checkout生成交接，明确 releaseCommit与metadataCommit，不把 offline称在线核验。只提交本轮收口/交接文件，提交消息以 `[skip ci]` 结尾并非强推main；tag仍指验收源码。
-- [ ] **Step 7: 完成目标。** 读取所有G1–G9，检查每个证据文件和实际语义、远端main/发行资产；未完成任一项禁止 `update_goal complete`。确实全部完成才更新目标完成并汇报真实版本、链接、验收和清理结果。
+- [x] **Step 7: 完成目标。** 读取所有G1–G9，检查每个证据文件和实际语义、远端main/发行资产；未完成任一项禁止 `update_goal complete`。确实全部完成才更新目标完成并汇报真实版本、链接、验收和清理结果。
 
 ## 执行与阻断规则
 
@@ -226,3 +226,5 @@ npm run context:compact -- --summary reports/query-language/goal-20261005/iterat
 执行记录（2026-10-06）：R4 业务补验后77/77基线、20/20动态通过。原始phase台账被报告脚本覆盖；已从原生工具输出恢复74条初始completed收据，另12项保留原生执行前调用、原始首次输出和哈希，不补造child时间戳。此差异及首证替代恢复依据见 `round4-controller-final-review.json`。G2/G4通过，G6生产、G7清理、G8发布安装、G9交接仍未完成。
 
 执行记录（2026-10-06 收口）：G1–G8通过，CLI1.2.1已发布并从用户1.2.0安装升级；226安装文件与下载资产一致，6次PROD调用及两种真实Chrome页面通过，所有自建状态已精确清理。部署前即时导出失败的偏差保留；较早正式PROD四对象导出已恢复并逐字节匹配当时SHA，恢复依据见prechange-formal-export-recovery.json。剩余G9最终检查与元数据交接。
+
+最终交接记录：G1–G8已完成；活动问题0，最终GA/roadmap通过。在干净审计提交42d3f542生成1.2.1交接，online发布、11下载资产和用户真实安装已分别验证。此交接提交推送并完成最终远端核对后，主会话将写入G9及原生目标完成状态；实际最终状态以goal-20261005/acceptance.json与原生目标为准。不激活其他里程碑。

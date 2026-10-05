@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "recordedAt": "2026-10-05T18:40:44.806985+00:00",
-  "status": "RELEASE_INSTALLATION_AND_CLEANUP_PASS",
+  "status": "PASS",
   "version": "1.2.1",
   "releaseUrl": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.2.1",
   "releaseCommit": "b96289a746c701c3a5c9f7a31d63ee3418c594e4",
@@ -66,8 +66,12 @@
     "evidence": "installed-production-semantic-review.json"
   },
   "recoveryQualification": "Four earlier formal PROD exports recovered byte-exact against original SHA256 values. Immediate predeployment capture failed; historical sequencing deviation preserved.",
-  "remaining": [
-    "Final GA/roadmap and pushed context metadata"
-  ],
-  "cleanupEvidence": "cleanup.json"
+  "remaining": [],
+  "cleanupEvidence": "cleanup.json",
+  "metadataHandoff": {
+    "generationCommit": "42d3f542e1b75fa7426f5f656c1c4d50bfc09e95",
+    "contextFile": "reports/iteration-context.json",
+    "method": "offline context generation in clean audit checkout; real online release/download verification separately passed",
+    "releaseTagUnchanged": true
+  }
 }
