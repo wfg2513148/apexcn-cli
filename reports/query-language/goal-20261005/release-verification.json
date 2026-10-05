@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-05T18:40:44.806985+00:00",
+  "status": "RELEASE_INSTALLATION_AND_CLEANUP_PASS",
+  "version": "1.2.1",
+  "releaseUrl": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.2.1",
+  "releaseCommit": "b96289a746c701c3a5c9f7a31d63ee3418c594e4",
+  "archiveSha256": "7804d0f65f0aff908afe37c95675f87e316537be4c0dde9cfb60903f3526a286",
+  "downloadedAssetHashes": {
+    "install-agent.ps1": "e47c129de80e00b371dd892fff8ef27fb23c3acfd35c122885f161f3f49f3de5",
+    "release-provenance.json.sha256": "d566b5f4346bc22e08a178c0b4ff069b3f961ad127657d6558f6584b924bd734",
+    "apexcn-cli.tgz.sha256": "b8210835d0686203123a784b1c926f66e8c17695e8fb154d3848443924b06a4c",
+    "checksums.txt": "e746c4b3a241982169e98c29edd86a52382cd5bc1cdf8e5d91f6f31f8f466a72",
+    "install-agent.ps1.sha256": "571136304959328aac98bdca39d39f1b54821e84a52ef7f265b5cd840174d4c6",
+    "apexcn-cli.spdx.json": "20eabc4359271b7f23769ef8f5d45c72ff35dae5e9b77da1a19a6f6159e47359",
+    "install-agent.sh": "1fa26f69bb66c3da5c300b5254b7e49b8fc30b8d2f0596871fed9fa88cd5d8e7",
+    "apexcn-cli.tgz": "7804d0f65f0aff908afe37c95675f87e316537be4c0dde9cfb60903f3526a286",
+    "release-provenance.json": "11846302c2d3e61524c8a35fa644268a4660cf37c09e351c1ea587786c234f89",
+    "install-agent.sh.sha256": "fb533509cd0597e5063fe819a6cec05ffa02639fd8e304ac561850f8def2d295",
+    "apexcn-cli.spdx.json.sha256": "4fd5e1f10de1a4a4ea39ea100312195e71acec91ff499f8a5d5e9335b9972d51"
+  },
+  "server": {
+    "application": 100,
+    "version": "3.0.2",
+    "branch": "fix/community-i18n-20261005",
+    "commits": [
+      "a9de499ee679ef99dac987c3ba7b1b8a66ef65db",
+      "c578286e778d586925e2e0bb25c5760142b0b6bd"
+    ]
+  },
+  "independentValidation": {
+    "threadId": "01a10cf1-f48c-7b12-b4dc-9818a5ba2c47",
+    "baselinePassed": 77,
+    "baselineRequired": 77,
+    "baselineExcluded": 125,
+    "languageScenariosPassed": 20,
+    "languageScenariosRequired": 20,
+    "qualification": "First outputs retained. Original phase ledger overwritten by validator report script; immutable native invocation evidence recovered. Twelve child precise timestamps unavailable, not fabricated."
+  },
+  "localTests": {
+    "passed": 861,
+    "existingSkipped": 1,
+    "evidenceReuse": "Runtime source and dependencies unchanged from tested frozen candidate; all226 installed files equal downloaded release."
+  },
+  "installation": {
+    "beforeVersion": "1.2.0",
+    "afterVersion": "1.2.1",
+    "installedEntrypoint": "/Users/kwang/.apexcn/tools/apexcn-cli/package/dist/index.js",
+    "verifiedFileCount": 226,
+    "differingFiles": [],
+    "configUnchanged": true
+  },
+  "productionSmoke": {
+    "commands": 6,
+    "passed": 6,
+    "askQueryIds": [
+      2752,
+      2753
+    ],
+    "browserLanguages": [
+      "en",
+      "zh-cn"
+    ],
+    "oppositeBrowserLocalesVerified": true,
+    "realChromeScreenshotsInspected": true,
+    "evidence": "installed-production-semantic-review.json"
+  },
+  "recoveryQualification": "Four earlier formal PROD exports recovered byte-exact against original SHA256 values. Immediate predeployment capture failed; historical sequencing deviation preserved.",
+  "remaining": [
+    "Final GA/roadmap and pushed context metadata"
+  ],
+  "cleanupEvidence": "cleanup.json"
+}

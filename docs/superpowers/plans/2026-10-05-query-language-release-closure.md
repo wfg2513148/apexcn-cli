@@ -68,7 +68,7 @@
 
 **Interfaces:** Consumes 第三轮真实失败及受控连接引用；Produces G1 实际健康证据、旧残留精确清理结果及新根因记录。根因未证明时不产生假想 SQL 修复。
 
-- [ ] **Step 1: 刷新一次当前状态。** 读取原生服务端任务状态；经既有受控配置执行以下只读检查，每条连接设置限时，失败保留到本轮新路径：
+- [x] **Step 1: 刷新一次当前状态。** 读取原生服务端任务状态；经既有受控配置执行以下只读检查，每条连接设置限时，失败保留到本轮新路径：
 
 ```bash
 cd /Users/kwang/.codex/worktrees/community-i18n-server-20261005
@@ -79,7 +79,7 @@ APEX_CONN_JSON_FILE=/Users/kwang/apexcn-forums/.conn.json tools/oci_docker_exec.
 
 预期分别确认 DEV/TEST 实际主体和可用连接；命令失败只能记失败，不用名称推断环境。不得打印 `.conn.json`。
 
-- [ ] **Step 2: 诊断 TEST 原始 ORA-00604/00942。** 用已授权维护连接执行已有 `/tmp/query-language-controller-ords-context-readonly.sql`；若临时文件不存在，服务端任务按以下完整 SQL 重建在本轮报告目录再执行：
+- [x] **Step 2: 诊断 TEST 原始 ORA-00604/00942。** 用已授权维护连接执行已有 `/tmp/query-language-controller-ords-context-readonly.sql`；若临时文件不存在，服务端任务按以下完整 SQL 重建在本轮报告目录再执行：
 
 ```sql
 set define off
@@ -100,10 +100,13 @@ exit
 
 关联原始 ECID `3ZA4z9m8K4NgkxIkpFfVaA` 的 ORDS 日志，查失败 SQL 的实际主体/代理上下文；对照能进入 handler 的 DEV 请求。把结果写为事实/尚未证明两部分。
 
-- [ ] **Step 3: 根据实证修复连接或 TEST 前置。** 修改前把确切目标、现值、恢复文件、最小修改命令、回滚命令写入 `runtime-readiness.json` 的 `repair` 对象，由主会话核对后在现有授权内执行。若涉及产品源码，先向本计划追加含完整差异和失败回归的独立修复任务，再实现；不能将未知根因写成确定 grant。相同连接失败一次有据复试后转另一既有安全路线或独立工作。
-- [ ] **Step 4: 精确清理旧主题。** 由服务端任务重读 36975 的 zh-cn、36976 的 en，断言 `createdBy=3848` 及第三轮唯一 marker；重放 `reports/query-language/apexcn-dev-r3-api-cleanup-results.json` 保存的原 operationKey/payloadHash，DELETE 后原可读语言须为真实 `404 NOT_FOUND`。语言不可用 404 不算删除证明。
-- [ ] **Step 5: 清理两精确会话。** 主会话仅在 `round-1.2.1-03/private/browser-sessions/` 读取对应保护引用；使用既有 `cleanup-round2-sessions.py` 的身份/workspace guard 方法，绑定本轮实际两引用执行 `apex_session.delete_session` 并查询 remaining=0，再移除引用。私密 SQL 0600、进程内传入、结果仅输出数量；不得把 SID 写到报告或工具参数。服务端查询对应自有审计/幂等残留并精确清理，不删除业务审计全集。
-- [ ] **Step 6: 复测实际服务。** 使用既有 opaque DEV bridge 在新报告路径执行 `search APEX --lang en --page-size 1 --json`；TEST 由服务端用受控身份执行对应 API；补一次真实 DEV `ask "How do I use APEX_AI.GENERATE in Oracle APEX 26.1?" --top-k 3 --json`，单进程 `APEXCN_HTTP_TIMEOUT_MS=180000`。必须有有用英文答案和真实英文来源，180秒 HTTP000 不能通过。登录真实 Chrome 读取文章，确认正文后截图，关闭并清理自身会话。达到 G1 后结束本任务。
+- [x] **Step 3: 根据实证修复连接或 TEST 前置。** 修改前把确切目标、现值、恢复文件、最小修改命令、回滚命令写入 `runtime-readiness.json` 的 `repair` 对象，由主会话核对后在现有授权内执行。若涉及产品源码，先向本计划追加含完整差异和失败回归的独立修复任务，再实现；不能将未知根因写成确定 grant。相同连接失败一次有据复试后转另一既有安全路线或独立工作。
+- [x] **Step 4: 精确清理旧主题。** 由服务端任务重读 36975 的 zh-cn、36976 的 en，断言 `createdBy=3848` 及第三轮唯一 marker；重放 `reports/query-language/apexcn-dev-r3-api-cleanup-results.json` 保存的原 operationKey/payloadHash，DELETE 后原可读语言须为真实 `404 NOT_FOUND`。语言不可用 404 不算删除证明。
+- [x] **Step 5: 清理两精确会话。** 主会话仅在 `round-1.2.1-03/private/browser-sessions/` 读取对应保护引用；使用既有 `cleanup-round2-sessions.py` 的身份/workspace guard 方法，绑定本轮实际两引用执行 `apex_session.delete_session` 并查询 remaining=0，再移除引用。私密 SQL 0600、进程内传入、结果仅输出数量；不得把 SID 写到报告或工具参数。服务端查询对应自有审计/幂等残留并精确清理，不删除业务审计全集。
+- [x] **Step 6: 复测实际服务。** 使用既有 opaque DEV bridge 在新报告路径执行 `search APEX --lang en --page-size 1 --json`；TEST 由服务端用受控身份执行对应 API；补一次真实 DEV `ask "How do I use APEX_AI.GENERATE in Oracle APEX 26.1?" --top-k 3 --json`，单进程 `APEXCN_HTTP_TIMEOUT_MS=180000`。必须有有用英文答案和真实英文来源，180秒 HTTP000 不能通过。登录真实 Chrome 读取文章，确认正文后截图，关闭并清理自身会话。达到 G1 后结束本任务。
+
+
+执行记录（2026-10-05）：G1 已通过，实际证据见 `reports/query-language/goal-20261005/acceptance.json`。ORDS 仅 TEST 代理登录会话规避修复后，原鉴权搜索 200；真实 Chrome 已登录并在中文浏览器偏好下原样打开英文 canonical 链接，公开文章标题与正文英文。公开页面的身份状态独立保留，不据此声称目标页仍为认证会话或 LANG-16 完成。两次自建认证会话及 ORDS 临时用户/key/该请求日志均清零；更广泛 G7 审计清理仍待完成。
 
 ### Task 2: 完成服务端合同与 TEST 验证
 
@@ -111,11 +114,11 @@ exit
 
 **Interfaces:** Consumes G1、原始中文/英文规则；Produces 实际合同、同一服务端源码 SHA 和 G2/G5 证明。
 
-- [ ] **Step 1: 对照实际源版本。** 核对第三轮 FORUM SHA `a546db4319114323d2d72352234817e67a9d150d53c040ad3983dcbda7c778c4`、RAG SHA `6f81641d0ac0d3dd9a9b256bd69359abf0997485b7f0638a6643cee802c48582` 与工作树及数据库；有漂移就先说明归属，不覆盖他人版本。
-- [ ] **Step 2: 完成实际合同矩阵。** 用 `dynamic-cases-round3-draft.json` 的全部20场景核对：自动语言/覆盖、研究重试、历史上下文、游标、CURRENT/STALE/缺版、收藏 THREAD/POST。有用问答至少包括英文、中文、英文问题加中文历史三例，正文与引用逐项检查。缺版列表不能先分页再丢弃；详情返回明示不可用。
-- [ ] **Step 3: 修复仅实证缺陷。** 若存在新产品缺陷，服务端先记录失败请求和责任；为确切 SQL/代码差异补充完整代码计划及失败回归，再改最小实现。CLI 侧不加翻译兜底；代码变化使旧冻结失效，后续重新冻结。
-- [ ] **Step 4: TEST 范围部署并真页测试。** 服务端按仓库原生部署流程只部署实际改变对象；记录前后对象/源码、USER_ERRORS 和实际环境主体。使用 App900 真实接口及 Chrome：英文 URL 在中文偏好下标题/正文仍英文；中文 URL 在英文偏好下仍中文；保留完整 cs 与 lang。两方向均有正文和截图才记 G5 pass。
-- [ ] **Step 5: 新 DEV 验收夹具一次准备齐全。** 同一专用账号，独立新 marker：CURRENT、STALE、缺英文、英文原文缺中文，加双语主题/原文回复和 THREAD/POST 两种收藏；精确记录 ID、语言状态、来源 hash、清理脚本。不得让独立验收从空收藏推断成功。准备完再冻结环境。
+- [x] **Step 1: 对照实际源版本。** 核对第三轮 FORUM SHA `a546db4319114323d2d72352234817e67a9d150d53c040ad3983dcbda7c778c4`、RAG SHA `6f81641d0ac0d3dd9a9b256bd69359abf0997485b7f0638a6643cee802c48582` 与工作树及数据库；有漂移就先说明归属，不覆盖他人版本。
+- [x] **Step 2: 完成实际合同矩阵。** 用 `dynamic-cases-round3-draft.json` 的全部20场景核对：自动语言/覆盖、研究重试、历史上下文、游标、CURRENT/STALE/缺版、收藏 THREAD/POST。有用问答至少包括英文、中文、英文问题加中文历史三例，正文与引用逐项检查。缺版列表不能先分页再丢弃；详情返回明示不可用。
+- [x] **Step 3: 修复仅实证缺陷。** 若存在新产品缺陷，服务端先记录失败请求和责任；为确切 SQL/代码差异补充完整代码计划及失败回归，再改最小实现。CLI 侧不加翻译兜底；代码变化使旧冻结失效，后续重新冻结。
+- [x] **Step 4: TEST 范围部署并真页测试。** 服务端按仓库原生部署流程只部署实际改变对象；记录前后对象/源码、USER_ERRORS 和实际环境主体。使用 App900 真实接口及 Chrome：英文 URL 在中文偏好下标题/正文仍英文；中文 URL 在英文偏好下仍中文；保留完整 cs 与 lang。两方向均有正文和截图才记 G5 pass。
+- [x] **Step 5: 新 DEV 验收夹具一次准备齐全。** 同一专用账号，独立新 marker：CURRENT、STALE、缺英文、英文原文缺中文，加双语主题/原文回复和 THREAD/POST 两种收藏；精确记录 ID、语言状态、来源 hash、清理脚本。不得让独立验收从空收藏推断成功。准备完再冻结环境。
 
 ### Task 3: 准备符合目标模式的发布提交与新冻结候选
 
@@ -123,7 +126,7 @@ exit
 
 **Interfaces:** Consumes G2/G5 合同及 CLI 已有实现；Produces G3，供新验收精确绑定的提交、资产和环境身份。
 
-- [ ] **Step 1: 核实版本占用和远端。** 读取 `gh release view v1.2.1 --repo wfg2513148/apexcn-cli` 及远端 main；仅“tag不存在”算未发布，网络失败不能算不存在。若未发布继续1.2.1；如已被他人占用，核对再选下一个补丁号并用 `npm version --no-git-tag-version` 同步锁文件，不覆盖 tag。
+- [x] **Step 1: 核实版本占用和远端。** 读取 `gh release view v1.2.1 --repo wfg2513148/apexcn-cli` 及远端 main；仅“tag不存在”算未发布，网络失败不能算不存在。若未发布继续1.2.1；如已被他人占用，核对再选下一个补丁号并用 `npm version --no-git-tag-version` 同步锁文件，不覆盖 tag。
 - [x] **Step 2: 准备发布提交。** 在当前 CLI checkout 建任务分支（已有同名则先核对，不重置），保留他人工作区。提交仅本次计划和问题进度，确有新增实现则逐个加入其源/测试文件。命令：
 
 ```bash
@@ -136,7 +139,7 @@ npm run check:roadmap
 
 预期受控提交消息以 `[skip ci]` 结尾，问题仍开放；不 amend 第三轮提交。
 - [x] **Step 3: 验证源码变化范围。** 对比旧测试提交的 `src/`、`test/`、依赖及 tsconfig；均未变化可沿用已核对的861项记录。任何运行代码/依赖修改则先跑新增失败回归，再运行 `npm test` 和 `npm run build`；失败必须归因并修复，不能把既有 skip 改 PASS。
-- [ ] **Step 4: 从新提交干净构建。** 用独立干净构建 checkout，checkout 本任务实际发布提交。执行：
+- [x] **Step 4: 从新提交干净构建。** 用独立干净构建 checkout，checkout 本任务实际发布提交。执行：
 
 ```bash
 npm ci --ignore-scripts --prefer-offline
@@ -150,7 +153,7 @@ node scripts/check-ga-readiness.mjs --candidate
 ```
 
 若 Step1 实际版本变化，所有命令和文件中的版本一次同步后再执行。复制生成的完整11资产到 `reports/query-language/goal-20261005/frozen-release-assets/`，逐个 SHA；`release-provenance.json` 必须指实际干净提交。candidate 模式只允许尚未完成验收的已登记问题，不等于最终 GA 通过。
-- [ ] **Step 5: 冻结新作用域。** 新编号目录保存 candidate、77 required/125 excluded 的202基线归类、20LANG场景、数据集/评分器版本、环境/服务器 SHA、新 fixture、公共材料和禁止动作；记录全部 SHA。桥接启动器 ROOT 必须绑定自身新轮路径，`--bridge-info` 与包 SHA一致。新冻结后不得原地覆盖。
+- [x] **Step 5: 冻结新作用域。** 新编号目录保存 candidate、77 required/125 excluded 的202基线归类、20LANG场景、数据集/评分器版本、环境/服务器 SHA、新 fixture、公共材料和禁止动作；记录全部 SHA。桥接启动器 ROOT 必须绑定自身新轮路径，`--bridge-info` 与包 SHA一致。新冻结后不得原地覆盖。
 
 ### Task 4: 全新独立新手验收
 
@@ -158,11 +161,11 @@ node scripts/check-ga-readiness.mjs --candidate
 
 **Interfaces:** Consumes G3 不可变候选和 G1/G2/G5 前置；Produces G4 与新发现的可追溯证据。
 
-- [ ] **Step 1: 原生新建可见任务。** 使用已登记的验收 project；实际任务 cwd 必须精确为测试项目，model `gpt-5.6-luna`、thinking `high`。主会话读取运行身份而非只信提示词。任务只读公开 CLI/help/schema/允许资料，不读实现、旧轮报告、记忆或内部技能，不自行修复。
-- [ ] **Step 2: 验收开始前 intake。** 独立记录版本、source commit、包 SHA、scope SHA、environment SHA、身份和材料清单；任一不符先修复设施再开始，已有尝试保留。
-- [ ] **Step 3: 完整运行并逐项判定。** 全部77 required和LANG01..20开始前先写 recorder；成功需要实际用户结果而非命令0。中文、英文、其他语种及上下文对照；有用问答必须核对真实引用标题/正文/URL；个人范围必须有正例。
-- [ ] **Step 4: 真实 Chrome 语义验收。** 独立打开 CLI 返回完整URL，两种语言各在相反偏好下确认标题、可读正文、菜单切换与重新打开；真实像素截图和页面文本对照。只到登录/等待正文/无截图不得 PASS。操作设施需改时保留失败并冻结新设施；若候选改变，结束本轮并新建下一轮。
-- [ ] **Step 5: 审查与修复循环。** 主会话核对全部77+20、排除125和首证覆盖；真实新发现才入 issues。修复后新候选和新可见新手任务，不能把自测替换独立通过。最终 report 必须零 fail/blocked/not_verified/not_run，G4 才 pass。
+- [x] **Step 1: 原生新建可见任务。** 使用已登记的验收 project；实际任务 cwd 必须精确为测试项目，model `gpt-5.6-luna`、thinking `high`。主会话读取运行身份而非只信提示词。任务只读公开 CLI/help/schema/允许资料，不读实现、旧轮报告、记忆或内部技能，不自行修复。
+- [x] **Step 2: 验收开始前 intake。** 独立记录版本、source commit、包 SHA、scope SHA、environment SHA、身份和材料清单；任一不符先修复设施再开始，已有尝试保留。
+- [x] **Step 3: 完整运行并逐项判定。** 全部77 required和LANG01..20开始前先写 recorder；成功需要实际用户结果而非命令0。中文、英文、其他语种及上下文对照；有用问答必须核对真实引用标题/正文/URL；个人范围必须有正例。
+- [x] **Step 4: 真实 Chrome 语义验收。** 独立打开 CLI 返回完整URL，两种语言各在相反偏好下确认标题、可读正文、菜单切换与重新打开；真实像素截图和页面文本对照。只到登录/等待正文/无截图不得 PASS。操作设施需改时保留失败并冻结新设施；若候选改变，结束本轮并新建下一轮。
+- [x] **Step 5: 审查与修复循环。** 主会话核对全部77+20、排除125和首证覆盖；真实新发现才入 issues。修复后新候选和新可见新手任务，不能把自测替换独立通过。最终 report 必须零 fail/blocked/not_verified/not_run，G4 才 pass。
 
 ### Task 5: 生产验证与所有自建状态清理
 
@@ -170,11 +173,11 @@ node scripts/check-ga-readiness.mjs --candidate
 
 **Interfaces:** Consumes G4+G5 pass；Produces G6+G7、服务端正式 commit/push/release。
 
-- [ ] **Step 1: 部署前确认。** 核对最新 PROD 基线、仅本次改变对象与 TEST 验证源码同一 SHA；准备现有正式备份和精确回滚，不把 SELECT 输出当备份。
-- [ ] **Step 2: 服务端范围部署。** 原服务端任务按生产 bugfix 流程部署并立即核对 App100 `ALL_OBJECTS OWNER='APEXCN'`、编译错误及实际 API。
-- [ ] **Step 3: PROD 实际端到端。** 真实 Chrome 读现有文章；中文/英文 CLI 问题和有用问答均对应标题、正文、引用及打开页面；相反浏览器/账号偏好不覆盖 URL 指定语言。生产不写社区测试帖子。
-- [ ] **Step 4: 精确 cleanup。** 关闭自身 Chrome，核对并删除自己新旧临时主题、回复、收藏、订阅、保护会话、临时API密钥及协议要求的自有审计/幂等记录；DB和API对应证明0。删除前校验 user3848/marker/ID，保留既有账号及配置。尚存一项或不可核实即 G7不通过。
-- [ ] **Step 5: 服务端收口。** App100 RELEASE_NOTES 使用简体中文，技术提交、非强制 push 和仓库正常兼容补丁 Release 完成；记录真实版本/commit/tag/URL，不预设并发发布后的版本仍是3.0.2。
+- [x] **Step 1: 部署前确认。** 核对最新 PROD 基线、仅本次改变对象与 TEST 验证源码同一 SHA；准备现有正式备份和精确回滚，不把 SELECT 输出当备份。
+- [x] **Step 2: 服务端范围部署。** 原服务端任务按生产 bugfix 流程部署并立即核对 App100 `ALL_OBJECTS OWNER='APEXCN'`、编译错误及实际 API。
+- [x] **Step 3: PROD 实际端到端。** 真实 Chrome 读现有文章；中文/英文 CLI 问题和有用问答均对应标题、正文、引用及打开页面；相反浏览器/账号偏好不覆盖 URL 指定语言。生产不写社区测试帖子。
+- [x] **Step 4: 精确 cleanup。** 关闭自身 Chrome，核对并删除自己新旧临时主题、回复、收藏、订阅、保护会话、临时API密钥及协议要求的自有审计/幂等记录；DB和API对应证明0。删除前校验 user3848/marker/ID，保留既有账号及配置。尚存一项或不可核实即 G7不通过。
+- [x] **Step 5: 服务端收口。** App100 RELEASE_NOTES 使用简体中文，技术提交、非强制 push 和仓库正常兼容补丁 Release 完成；记录真实版本/commit/tag/URL，不预设并发发布后的版本仍是3.0.2。
 
 ### Task 6: 发布相同 CLI 资产、实际升级和目标闭环
 
@@ -182,8 +185,8 @@ node scripts/check-ga-readiness.mjs --candidate
 
 **Interfaces:** Consumes G1–G7 pass；Produces G8/G9、可追溯正式发布和目标完成状态。
 
-- [ ] **Step 1: 发布前复核身份。** 读取 candidate.json 里实际 releaseCommit，断言当前版本、tag未占用、远端main可非强推前进；若合并引入运行变化回到 Task3，新冻结并新验收，不移动旧冻结 SHA。
-- [ ] **Step 2: 推送与正式发布。** 在受控发布 checkout 精确 checkout 已验收提交，运行以下命令；只有网络已证代理故障才使用取消代理环境或SSH的已有安全路线：
+- [x] **Step 1: 发布前复核身份。** 读取 candidate.json 里实际 releaseCommit，断言当前版本、tag未占用、远端main可非强推前进；若合并引入运行变化回到 Task3，新冻结并新验收，不移动旧冻结 SHA。
+- [x] **Step 2: 推送与正式发布。** 在受控发布 checkout 精确 checkout 已验收提交，运行以下命令；只有网络已证代理故障才使用取消代理环境或SSH的已有安全路线：
 
 ```bash
 git push origin HEAD:main
@@ -193,9 +196,9 @@ gh release create v1.2.1 /Users/kwang/apexcn-cli/reports/query-language/goal-202
 ```
 
 只能上传清单中11个最终文件，目录不得混入日志。版本若经Task3调整，以更新后的计划为准。发布失败不关闭issues。
-- [ ] **Step 3: 下载验证。** `gh release download v1.2.1 --repo wfg2513148/apexcn-cli --dir reports/query-language/goal-20261005/downloaded-release`；逐文件对照 candidate SHA、provenance sourceCommit与远端tag，运行 `node scripts/check-release-artifacts.mjs --verify-only --expected-version 1.2.1 --artifacts-dir reports/query-language/goal-20261005/downloaded-release`，必须退出0。
-- [ ] **Step 4: 实际升级。** 先对现有用户配置做私密备份/哈希，执行现有官方 `apexcn update`，再 `apexcn --version`；真实 PROD `search` 英文问题、中文问题和文章详情/打开URL各一次，确认新安装实际使用1.2.1且配置未被覆盖。记录安装路径/版本/请求/截图；不以测试目录运行冒充用户安装完成。
-- [ ] **Step 5: 问题关闭。** G1–G8证据齐全后，将两条活动问题完整归档到本轮历史记录，再从 issues 活动集移出，enhancement改completed并指向实际独立报告和release证据；保留最初失败文件。
+- [x] **Step 3: 下载验证。** `gh release download v1.2.1 --repo wfg2513148/apexcn-cli --dir reports/query-language/goal-20261005/downloaded-release`；逐文件对照 candidate SHA、provenance sourceCommit与远端tag，运行 `node scripts/check-release-artifacts.mjs --verify-only --expected-version 1.2.1 --artifacts-dir reports/query-language/goal-20261005/downloaded-release`，必须退出0。
+- [x] **Step 4: 实际升级。** 先对现有用户配置做私密备份/哈希，执行现有官方 `apexcn update`，再 `apexcn --version`；真实 PROD `search` 英文问题、中文问题和文章详情/打开URL各一次，确认新安装实际使用1.2.1且配置未被覆盖。记录安装路径/版本/请求/截图；不以测试目录运行冒充用户安装完成。
+- [x] **Step 5: 问题关闭。** G1–G8证据齐全后，将两条活动问题完整归档到本轮历史记录，再从 issues 活动集移出，enhancement改completed并指向实际独立报告和release证据；保留最初失败文件。
 - [ ] **Step 6: 最终质量与交接。** `npm run check:roadmap`、`node scripts/check-ga-readiness.mjs` 和资产 verify-only 均通过；不得重新打包已验收资产。交接输入必须有 `milestoneId:"1.1"` 及 enhancedCapabilities/unexpectedProblems/rootCauses/preventionActions/expectedResults/majorRisks 六个非空字符串数组和 nextMilestoneGoal字符串，内容取实际事实；nextMilestoneGoal明确“本补丁闭环，不激活后续里程碑”。
 
 ```bash
@@ -219,3 +222,7 @@ npm run context:compact -- --summary reports/query-language/goal-20261005/iterat
 - [x] source commit、artifact SHA、scope SHA、environment SHA 分别记录；第三轮与新轮不混用。
 - [x] 发布提交后缀规则与旧冻结不一致已明确通过新提交/新资产/新独立轮解决。
 - [x] 不将历史timeboxed里程碑作为本补丁后续目标；没有未经授权的新功能目标。
+
+执行记录（2026-10-06）：R4 业务补验后77/77基线、20/20动态通过。原始phase台账被报告脚本覆盖；已从原生工具输出恢复74条初始completed收据，另12项保留原生执行前调用、原始首次输出和哈希，不补造child时间戳。此差异及首证替代恢复依据见 `round4-controller-final-review.json`。G2/G4通过，G6生产、G7清理、G8发布安装、G9交接仍未完成。
+
+执行记录（2026-10-06 收口）：G1–G8通过，CLI1.2.1已发布并从用户1.2.0安装升级；226安装文件与下载资产一致，6次PROD调用及两种真实Chrome页面通过，所有自建状态已精确清理。部署前即时导出失败的偏差保留；较早正式PROD四对象导出已恢复并逐字节匹配当时SHA，恢复依据见prechange-formal-export-recovery.json。剩余G9最终检查与元数据交接。

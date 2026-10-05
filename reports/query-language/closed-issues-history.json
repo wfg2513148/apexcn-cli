@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "closedAt": "2026-10-05T18:43:13.141213+00:00",
+  "releaseVersion": "1.2.1",
+  "releaseUrl": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.2.1",
+  "releaseCommit": "b96289a746c701c3a5c9f7a31d63ee3418c594e4",
+  "independentValidator": "01a10cf1-f48c-7b12-b4dc-9818a5ba2c47",
+  "revalidationEvidence": "reports/query-language/goal-20261005/round4-controller-final-review.json",
+  "releaseEvidence": "reports/query-language/goal-20261005/release-verification.json",
+  "issues": [
+    {
+      "id": "ISSUE-QUERY-LANGUAGE-20261005-01",
+      "priority": "P1",
+      "owner": "server",
+      "status": "closed",
+      "milestoneId": "0.9",
+      "targetVersion": "1.2.1",
+      "enhancementRequestId": "ENH-QUERY-LANGUAGE-20261005",
+      "title": "English ask can return Chinese answer despite contentLanguage=en",
+      "description": "Fresh independent validation found both a Chinese server fallback for English ask and a Chinese generated answer for an English current question with Chinese historical context. Candidate release remains blocked pending server repair and a new independent round.",
+      "validatorRound": "APEXCN-QUERY-LANGUAGE-1.2.1-R1",
+      "serverThreadId": "01a10a92-ec48-7b70-b4c9-8b7c5c6a718e",
+      "blockingMilestones": [
+        "0.9"
+      ],
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "01a10b03-04e6-7072-b51e-da3a6a348335",
+        "assignmentRef": "APEXCN-QUERY-LANGUAGE-1.2.1-R1",
+        "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.1-01/report.json",
+        "findingRefs": [
+          "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.1-01/findings.json#F-LANG-17-001"
+        ],
+        "scenarioOrExplorationRef": [
+          "LANG-17",
+          "M110-Q-005",
+          "M110-Q-006",
+          "M110-Q-184"
+        ],
+        "observedCliVersion": "1.2.1",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "First English ask outputs/ask-en-001.stdout: contentLanguage=en but Chinese fallback answer, no sources, requestId req_3532.; English question plus Chinese context outputs/ask-en-zh-context-001.stdout: contentLanguage=en but answer prose is Chinese; requestId req_3534.",
+        "expectedUserOutcome": "English ask returns a useful English answer with source citation title and complete English canonical URL; English question plus Chinese context remains English. Chinese ask returns Chinese answer and Chinese citations.",
+        "responsibilityAssessment": "server",
+        "firstAttemptEvidence": [
+          {
+            "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.1-01/outputs/ask-en-001.stdout",
+            "sha256": "450bad9484231f26aba74d19bc2218dd19e220dcf2bd28409f1fa975933e4c3d"
+          },
+          {
+            "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.1-01/outputs/ask-en-zh-context-001.stdout",
+            "sha256": "2387893a5448fc5f58d6f3f5188387599ecea1af70f84c1c66202930582f4dac"
+          },
+          {
+            "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.1-01/outputs/ask-zh-001.stdout",
+            "sha256": "7033720a568e8e67c0cc8c362826603418c24a48e748c8d7a60ea296e61181c6"
+          }
+        ]
+      },
+      "closedAt": "2026-10-05T18:43:13.141213+00:00"
+    },
+    {
+      "id": "ISSUE-QUERY-LANGUAGE-20261005-02",
+      "priority": "P2",
+      "owner": "cli",
+      "status": "closed",
+      "milestoneId": "0.9",
+      "targetVersion": "1.2.1",
+      "enhancementRequestId": "ENH-QUERY-LANGUAGE-20261005",
+      "title": "Preserve the API cursor-language rejection code in CLI errors",
+      "description": "The language-bound cursor is rejected by the server with INVALID_CURSOR_LANGUAGE, but the CLI discarded that new code as HTTP_400. Confirmed by independent first attempt and controller raw API evidence.",
+      "validatorRound": "APEXCN-QUERY-LANGUAGE-1.2.1-R2",
+      "blockingMilestones": [
+        "0.9"
+      ],
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "01a10b47-7742-7582-a13e-4513e5c56780",
+        "assignmentRef": "APEXCN-QUERY-LANGUAGE-1.2.1-R2",
+        "report": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.1-02/report.json",
+        "findingRefs": [
+          "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.1-02/findings.json#CONTRACT-001"
+        ],
+        "scenarioOrExplorationRef": [
+          "LANG-13"
+        ],
+        "observedCliVersion": "1.2.1",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "Cross-language cursor rejected with HTTP 400, CLI code HTTP_400; raw API code INVALID_CURSOR_LANGUAGE.",
+        "expectedUserOutcome": "Cross-language cursor rejection retains INVALID_CURSOR_LANGUAGE and requestId. Other legacy HTTP errors retain compatibility codes.",
+        "responsibilityAssessment": "cli",
+        "firstAttemptEvidence": [
+          {
+            "path": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.1-02/outputs/dynamic-LANG-13.stderr",
+            "sha256": "81274aa83eecf3cd4eef921be95884aa3f7c85614b7e813d3d0f6c68194051a7"
+          }
+        ]
+      },
+      "repairEvidence": "reports/query-language/cursor-cross-language-raw-api.json",
+      "closedAt": "2026-10-05T18:43:13.141213+00:00"
+    }
+  ],
+  "enhancementRequests": [
+    {
+      "id": "ENH-QUERY-LANGUAGE-20261005",
+      "status": "completed",
+      "title": "Match returned article titles, bodies and browser links to the query language",
+      "currentBehavior": [
+        "Omitted --lang defaults to Chinese even for English questions.",
+        "English search API returns English text but article URLs have no language binding."
+      ],
+      "requiredOutcomes": [
+        "Chinese questions select zh-cn; all other questions select en.",
+        "Search, research, rag retrieve, personal search and query-based collections preserve one language through all reads; explicit --lang overrides inference.",
+        "Returned article links open the matching stored language edition in real Chrome.",
+        "ask answer and reference language follow the original current question before adding historical context; explicit --lang takes priority, including English fallback explanations."
+      ],
+      "serverCapabilityAuditRequired": true,
+      "executionOrder": [
+        "apexcn-forums-if-server-change-required",
+        "apexcn-cli",
+        "apexcn-cli-test"
+      ],
+      "promotionToActiveIssue": "only-after-fresh-independent-validator-finding",
+      "targetVersion": "1.2.1",
+      "serverTaskRef": "01a10a92-ec48-7b70-b4c9-8b7c5c6a718e",
+      "serverContractEvidence": "reports/query-language/cli-server-contract-acceptance.json",
+      "serverRepairEvidence": "reports/query-language/goal-20261005/server-final-freeze-readiness.json",
+      "validatorTaskRef": "01a10cf1-f48c-7b12-b4dc-9818a5ba2c47",
+      "validationScope": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.1-04/scope-contract.json",
+      "validationCandidateChecksum": "7804d0f65f0aff908afe37c95675f87e316537be4c0dde9cfb60903f3526a286",
+      "validationState": "passed-released-installed",
+      "validationEvidence": "reports/query-language/goal-20261005/round4-controller-final-review.json",
+      "runtimeBlockerEvidence": "reports/query-language/goal-20261005/ords-diagnosis-current.json",
+      "implementationPlan": "docs/superpowers/plans/2026-10-05-query-language-release-closure.md",
+      "goalMode": "closing-metadata-handoff",
+      "goalAcceptanceEvidence": "reports/query-language/goal-20261005/acceptance.json",
+      "validationHistory": [
+        {
+          "validatorTaskRef": "01a10b7a-9742-72f0-a285-42a638997322",
+          "validationScope": "round-1.2.1-03/scope-contract.json",
+          "validationCandidateChecksum": "ae0bfe58eab94011c1237fe6fa51a92c486c92111642a5fd0e796f117cf9b74a",
+          "validationState": "round3-incomplete-runtime-blocked",
+          "validationEvidence": "reports/query-language/round3-controller-summary.json"
+        }
+      ],
+      "completedAt": "2026-10-05T18:43:13.141213+00:00",
+      "releaseUrl": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.2.1",
+      "releaseCommit": "b96289a746c701c3a5c9f7a31d63ee3418c594e4",
+      "closureEvidence": "reports/query-language/goal-20261005/release-verification.json"
+    }
+  ]
+}

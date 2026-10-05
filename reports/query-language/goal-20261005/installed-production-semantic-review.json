@@ -1,0 +1,37 @@
+{
+  "reviewedAt": "2026-10-05T18:38:52.741843+00:00",
+  "status": "PASS",
+  "installedVersion": "1.2.1",
+  "reviewer": "main controller",
+  "actions": [
+    {
+      "language": "en",
+      "title": "APEXlang and AI-Assisted Oracle APEX Development",
+      "bodyLength": 22990,
+      "answerCharacters": 5408,
+      "askRequestId": "req_2752",
+      "referenceIds": [
+        32407,
+        24921,
+        25712
+      ],
+      "review": "Correct title/body; useful answer provides configuration and usage steps, three matching-language real references and explicit evidence limits."
+    },
+    {
+      "language": "zh-cn",
+      "title": "APEXlang 与 AI 辅助的 Oracle APEX 开发",
+      "bodyLength": 11025,
+      "answerCharacters": 2515,
+      "askRequestId": "req_2753",
+      "referenceIds": [
+        32407,
+        24921,
+        26461
+      ],
+      "review": "Correct title/body; useful answer provides configuration and usage steps, three matching-language real references and explicit evidence limits."
+    }
+  ],
+  "browserEvidence": "installed-prod-public-language-chrome.json",
+  "qualification": "Language and useful cited-answer smoke; does not certify every technical assertion in retrieved community content. Source code/literals and author names remain original.",
+  "visualReview": "Main controller inspected both current screenshots: English/Chinese titles and readable full article body, opposite browser locales respected via original signed URL. Existing collected-page table-of-contents formatting retained."
+}
