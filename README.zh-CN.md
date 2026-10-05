@@ -2,7 +2,7 @@
 
 [English](README.md) | **简体中文**
 
-让你正在使用的本地 AI 助手，更方便地访问和操作 [APEX 中文社区](https://oracleapex.cn/)。
+通过 **apexcn-cli skill**，用自然语言让你正在使用的本地 AI 助手访问和操作 [APEX 中文社区](https://oracleapex.cn/)。
 
 APEX 中文社区面向 Oracle APEX 开发者，汇集问题讨论、教程、开发技巧和实践经验。无论你使用中文还是英文，都可以借助 CLI 搜索资料、阅读可用的文章语言版本，并让本地 AI 根据来源组织答案。社区由社区维护，非 Oracle 官方产品。
 
@@ -38,7 +38,11 @@ APEX 中文社区面向 Oracle APEX 开发者，汇集问题讨论、教程、�
 
 在 AI 工具中直接发送：
 
-> 请从官方 GitHub 仓库 https://github.com/wfg2513148/apexcn-cli 在本机安装 apexcn-cli。只使用该仓库的官方安装器；安装后运行 `apexcn --version` 并告诉我结果。安装阶段不要向我索取、记录或显示 API Key。
+> 请从官方 GitHub 仓库 https://github.com/wfg2513148/apexcn-cli 在本机安装 apexcn-cli。使用官方安装器安装 CLI 和随附的 skill；安装后核对 CLI 版本，并确认当前 AI 工具能够发现和读取 apexcn-cli skill。请分别告诉我安装版本和 skill 是否可用。安装阶段不要向我索取、记录或显示 API Key。
+
+推荐流程是：**你描述目标 → AI 根据 skill 选择操作 → CLI 访问社区 → AI 整理结果并引用来源**。你无需记忆命令或参数。
+
+安装器会将随附 skill 复制到支持的本地技能目录。不同 AI 工具的技能发现机制不同，CLI 能运行不代表 skill 已加载；必要时刷新技能或新建本地任务，再让 AI 确认能够读取该技能。使用自定义技能目录的工具，应按该工具的文档安装 skill。
 
 安装器会安装 CLI，并显示升级、回滚和卸载方法。安装程序需要 Node.js 20 或更高版本；缺少时，让 AI 先安装合适的 Node.js 再继续。
 

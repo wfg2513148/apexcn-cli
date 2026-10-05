@@ -2,7 +2,7 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-Explore the [APEX Chinese Community](https://oracleapex.cn/) from your terminal or local AI assistant. Find Oracle APEX discussions, read available English article editions, and turn community knowledge into answers with sources you can check.
+Use the [APEX Chinese Community](https://oracleapex.cn/) through natural conversation with your AI assistant. The included **apexcn-cli skill** teaches your assistant how to search, read, cite, and participate through the CLI. Find Oracle APEX discussions, read available English article editions, and turn community knowledge into answers with sources you can check.
 
 [Get started](#get-started) · [Examples](#put-it-to-work) · [Language support](#chinese-and-english-content) · [English user guide](docs/user-guide.en.md) · [Command reference](docs/cli-manual.en.md)
 
@@ -27,19 +27,101 @@ The community and CLI are community projects, not official Oracle products. Cont
 | Join a discussion | Draft a question or reply, review a preview, then confirm the action. |
 | Build a repeatable workflow | Use structured JSON results in local scripts and AI tools. |
 
-There are two ways to get an answer: `rag retrieve` supplies community evidence for **your local AI** to synthesize; `ask` requests an answer from the **community's server-side service**. Both support source-aware workflows. Check the cited content and its applicable APEX version before using a solution.
-
 ## Get started
 
-You need **Node.js 20 or later**. Installers are available for macOS, Linux, and Windows. For account-based community access, sign in on the website and obtain your API key. A local AI tool is optional; it must be able to execute commands to operate the CLI for you.
+The recommended experience is **you describe your goal → your AI uses the skill → the CLI accesses the community → your AI explains the results with sources**. You do not need to learn command names or flags.
 
-### 1. Install from the official repository
+Choose an AI tool that can run local commands and load local skills, such as Codex. A browser-only chatbot without local execution cannot use this workflow. Node.js 20 or later is required; installers support macOS, Linux, and Windows.
 
-Ask your local AI assistant, such as Codex:
+### 1. Ask your AI to install the CLI and skill
 
-> Install apexcn-cli on this computer from https://github.com/wfg2513148/apexcn-cli using its official installer. Run `apexcn --version` afterward. Do not request, record, or display my API key during installation.
+Copy this into a local AI task:
 
-Or install in your terminal.
+> Install apexcn-cli and its bundled skill from https://github.com/wfg2513148/apexcn-cli using the official installer. Check that the CLI runs and that this AI tool can discover and read the apexcn-cli skill. Tell me the installed version and whether the skill is available. Do not request or display my API key during installation.
+
+The installer copies the [bundled skill](agent-skill/SKILL.md) into supported local skill directories. Skill discovery differs between AI tools: a working CLI alone does not prove the skill is loaded. If necessary, reload the tool's skills or start a new local task, then ask it to verify that it can read the skill. For tools with a custom skill directory, ask the assistant to install the bundled skill in that tool's documented location.
+
+### 2. Connect your community account once
+
+Sign in at [oracleapex.cn](https://oracleapex.cn/), open the account menu, and select **API Key Management** (Chinese label: **API Key 管理**). Copy your key.
+
+If your AI tool provides secure environment settings, save it there as `APEXCN_API_KEY`. Then tell your assistant:
+
+> Configure apexcn-cli to use the existing APEXCN_API_KEY environment variable. Verify community access without displaying the key. Do not copy the secret into chat or a command argument.
+
+If your tool has no secure environment settings, use the one-time terminal setup in the [authentication guide](docs/user-guide.en.md#2-connect-your-api-key). Never paste a key into ordinary AI chat, screenshots, issues, or source control. Browser sign-in and CLI authentication are separate sessions.
+
+### 3. Describe what you need
+
+> Use the apexcn-cli skill to search APEX Chinese Community for ORDS authentication problems. Read the most relevant discussions and explain the solutions in English. Include full topic titles, community links, and original source links where available. Tell me if the evidence is incomplete.
+
+The skill guides your assistant to choose the commands, request the appropriate content language, read the results, and cite sources. Continue naturally:
+
+> Which of those approaches fits my environment? Ask me for any missing version details before recommending one.
+
+For publishing or other community changes, the assistant shows a preview and waits for your confirmation.
+
+## Put it to work
+
+### Research an APEX problem
+
+Ask your assistant:
+
+> Use apexcn-cli to investigate an HTTP 401 when calling a REST API from Oracle APEX. Separate what the community sources establish from your own suggestions. Link each important conclusion to its supporting topic.
+
+### Follow recent activity
+
+> Show topics updated in the last seven days from APEX Chinese Community, using English editions where available. Group them by category and explain which are relevant to an APEX developer working with ORDS.
+
+Your assistant handles the date window and retrieves the matching topics through the skill.
+
+### Build a personal reading list
+
+> Search only my favorites and subscriptions for ORDS. Suggest which discussions I should revisit and preserve their community links.
+
+### Contribute your experience
+
+> Search for similar discussions, then draft a support topic about my APEX REST call returning HTTP 401. Include my environment, reproduction steps, expected result, actual result, and attempted fixes. Show me the draft before publishing.
+
+> Draft a reply to the selected discussion with my test results. Show the target topic and exact reply, and wait for my confirmation.
+
+The write workflow uses a preview followed by explicit confirmation. Publishing, editing, deleting, favoriting, subscribing, and marking an answer require the relevant account permissions. If the target, account, or content changes after preview, preview again.
+
+### See the skill workflow
+
+These English walkthroughs show what to ask your AI and how the skill connects your request to community content. They are documentation illustrations, not screenshots of a particular AI product. The retrieval example uses actual **v1.2.1** results captured on October 6, 2026; the prompt is a suggested user request.
+
+![Install the apexcn-cli skill and start with a natural-language request](docs/assets/readme/ai-skill-get-started-en.jpg)
+
+![Natural-language research with the skill and real English community sources](docs/assets/readme/ai-skill-research-en.jpg)
+
+## Chinese and English content
+
+Tell your assistant “Use English editions where available and explain the results in English.” The skill can select the requested content language; you do not need to remember a flag. The underlying behavior is:
+
+- **Searches and questions infer language.** Input containing Han characters, without Japanese kana or Korean Hangul, selects Chinese; other input selects English. Explicit `--lang` overrides this rule.
+- **Reads without a query default to Chinese.** Add `--lang en` to category lists, recent topics, and topic-detail reads when you want English.
+- **Articles use stored server editions.** If a translation is unavailable, the original may be returned. A stored edition awaiting refresh can be marked `STALE`. Requesting English does not guarantee every result is English.
+- **Ordinary posts and replies remain in their original language.** The CLI does not automatically translate them. Ask your local AI for a translation or summary while retaining the original link.
+- **The current question controls `ask`.** Previous conversation supplied through `--context` does not change the current question's inferred answer and reference language.
+- **Pagination retains language and filters.** Reusing a cursor with another language returns `INVALID_CURSOR_LANGUAGE`. Saved collections retain their requested language when synced.
+
+## Updates and troubleshooting
+
+> Update apexcn-cli to the latest official release. Verify the installed version and check that the bundled skill is still available in this AI tool. Preserve my authentication configuration.
+
+The official updater verifies the downloaded package and keeps a rollback backup. If an older installation cannot update itself, ask your AI to rerun the official installer.
+
+> Check whether the apexcn-cli skill is available, then diagnose the CLI installation, authentication, and community connection. Explain which step failed. Do not display my API key.
+
+If GitHub downloads fail, ask the assistant to check network and proxy settings. Keep TLS verification enabled and use official release URLs. If a key is rejected, obtain a valid key from the community and configure it again; regenerating a key revokes the previous one.
+
+## Optional: use the terminal directly
+
+The CLI also works without an AI tool. Expand this section for manual installation and command examples, or use the [English terminal manual](docs/cli-manual.en.md).
+
+<details>
+<summary>Manual installation and CLI examples</summary>
 
 **macOS / Linux:**
 
@@ -53,138 +135,19 @@ bash -euo pipefail -c 'tmp="$(mktemp)"; trap "rm -f \"$tmp\"" EXIT; curl -fsSL -
 irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
 ```
 
-The official repository is [wfg2513148/apexcn-cli](https://github.com/wfg2513148/apexcn-cli). The installer installs the CLI and its agent skill for supported local tool directories. AI tools differ in how they discover skills; see the [user guide](docs/user-guide.en.md) if you need to operate it manually.
+Configure authentication separately using the [user guide](docs/user-guide.en.md#2-connect-your-api-key), then try:
 
 ```bash
 apexcn --version
-```
-
-### 2. Connect your community account
-
-Sign in at [oracleapex.cn](https://oracleapex.cn/), open the account menu, and select **API Key Management** (Chinese label: **API Key 管理**). Copy your key.
-
-Run the following in your own terminal, replacing the placeholder:
-
-```bash
-apexcn auth set-token "YOUR_API_KEY"
-apexcn doctor --json
-```
-
-The first command saves the key for the default community profile. The second checks community connectivity and account access. Keep the key out of AI chats, screenshots, issues, and source control. A key entered on the command line may remain in shell history.
-
-If you already use a secret manager or your AI tool's secure environment settings, supply `APEXCN_API_KEY` there, then configure a reference to it:
-
-```bash
-apexcn auth set-token --token-env APEXCN_API_KEY
-apexcn doctor --json
-```
-
-That environment variable must be available to the process running the CLI. See the [authentication guide](docs/user-guide.en.md#2-connect-your-api-key) for platform-specific examples. Browser sign-in and CLI authentication are separate sessions.
-
-### 3. Try an English search
-
-```bash
 apexcn search "ORDS authentication" --lang en --json
 apexcn topic recent --since-hours 168 --page-size 10 --lang en --json
-```
-
-Search results provide topic identifiers and community links. Use a real identifier from those results when reading a topic; do not copy arbitrary example IDs.
-
-Or ask your assistant:
-
-> Search APEX Chinese Community for ORDS authentication problems in English. Read the most relevant discussions, summarize their proposed solutions, and include full topic titles, community links, and original source links where available. Tell me if the evidence is incomplete.
-
-## Put it to work
-
-### Research an APEX problem
-
-Retrieve evidence for your local AI:
-
-```bash
 apexcn rag retrieve "How can Oracle APEX call a REST API?" --lang en --json
-```
-
-Or request the community's server-generated answer:
-
-```bash
-apexcn ask "How can Oracle APEX call a REST API?" --lang en --json
-```
-
-A useful prompt for your assistant:
-
-> Use apexcn-cli to investigate an HTTP 401 when calling a REST API from Oracle APEX. Separate what the community sources establish from your own suggestions. Link each important conclusion to its supporting topic.
-
-### Follow recent activity
-
-> Show topics updated in the last seven days from APEX Chinese Community, using English editions where available. Group them by category and explain which are relevant to an APEX developer working with ORDS.
-
-Use `topic recent` for browsing without a keyword; `search` requires a nonempty query.
-
-### Build a personal reading list
-
-```bash
-apexcn me search "ORDS" --scope created,favorited --lang en --json
-```
-
-> Search only my favorites and subscriptions for ORDS. Suggest which discussions I should revisit and preserve their community links.
-
-### Contribute your experience
-
-> Search for similar discussions, then draft a support topic about my APEX REST call returning HTTP 401. Include my environment, reproduction steps, expected result, actual result, and attempted fixes. Show me the draft before publishing.
-
-> Draft a reply to the selected discussion with my test results. Show the target topic and exact reply, and wait for my confirmation.
-
-The write workflow uses a preview followed by explicit confirmation. Publishing, editing, deleting, favoriting, subscribing, and marking an answer require the relevant account permissions. If the target, account, or content changes after preview, preview again.
-
-### See the CLI in action
-
-These English screenshots show rendered transcripts of real CLI runs captured on October 6, 2026, using **v1.2.1**, the latest official release at capture time. They show selected output, not an AI chat interface; omitted sections are labeled.
-
-Check the installed version and discover the English search options:
-
-![apexcn-cli v1.2.1 version and English search help](docs/assets/readme/cli-version-and-search-en.jpg)
-
-Retrieve English evidence with community and original-source links. The actual `partial` answerability status is preserved: retrieved evidence may not fully answer the question.
-
-![apexcn-cli v1.2.1 English evidence retrieval with two cited sources](docs/assets/readme/cli-evidence-and-sources-en.jpg)
-
-## Chinese and English content
-
-Use `--lang en` or `--lang zh-cn` on supported content commands to choose the requested edition explicitly.
-
-- **Searches and questions infer language.** Input containing Han characters, without Japanese kana or Korean Hangul, selects Chinese; other input selects English. Explicit `--lang` overrides this rule.
-- **Reads without a query default to Chinese.** Add `--lang en` to category lists, recent topics, and topic-detail reads when you want English.
-- **Articles use stored server editions.** If a translation is unavailable, the original may be returned. A stored edition awaiting refresh can be marked `STALE`. Requesting English does not guarantee every result is English.
-- **Ordinary posts and replies remain in their original language.** The CLI does not automatically translate them. Ask your local AI for a translation or summary while retaining the original link.
-- **The current question controls `ask`.** Previous conversation supplied through `--context` does not change the current question's inferred answer and reference language.
-- **Pagination retains language and filters.** Reusing a cursor with another language returns `INVALID_CURSOR_LANGUAGE`. Saved collections retain their requested language when synced.
-
-```bash
-apexcn category list --lang en --json
-apexcn research "APEX REST API" --lang en --json
-```
-
-Authentication, write operations, updates, and local diagnostics do not take a content-language option. See the [terminal manual](docs/cli-manual.en.md) for individual commands.
-
-## Updates and troubleshooting
-
-```bash
 apexcn update
 ```
 
-The update command downloads the latest official release, verifies the package, preserves authentication configuration, and keeps a rollback backup. If an older installation does not recognize `update`, rerun the official installer first.
+`rag retrieve` returns evidence for your local AI to synthesize. `ask` requests an answer from the community's server-side service; the skill uses it when you explicitly request that service. `auth audit` checks local configuration, while `doctor` also checks community API access.
 
-For diagnosis:
-
-```bash
-apexcn auth audit --json
-apexcn doctor --json
-apexcn --help
-```
-
-`auth audit` checks local configuration; `doctor` also checks community API access. If a key is rejected, obtain a valid key from the community and configure it again. Regenerating a key revokes the previous one.
-
-If installation or updates fail with a GitHub SSL or download error, check your network and proxy settings. The terminal may use different proxy settings from your browser. Keep TLS verification enabled and use the official release URLs.
+</details>
 
 ## Documentation and feedback
 
