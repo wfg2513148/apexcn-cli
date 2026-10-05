@@ -318,7 +318,7 @@ describe("me command", () => {
           requestId: "req-capabilities"
         });
       }
-      if (value.endsWith("/api/v1/me/search?keyword=APEX&scope=created%2Cfavorited&pageSize=2&cursor=next.cursor")) {
+      if (value.endsWith("/api/v1/me/search?lang=en&keyword=APEX&scope=created%2Cfavorited&pageSize=2&cursor=next.cursor")) {
         return Response.json({
           kind: "me-search",
           items: [{

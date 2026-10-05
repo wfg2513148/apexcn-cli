@@ -145,7 +145,7 @@ function validateSurface(surface) {
 function validateReleaseSurface(baseline, surface, contract) {
   const problemCountBefore = problems.length;
   if (contract.kind !== "apexcn-release-qualification-contract"
-    || contract.contractVersion !== (releaseVersion === "1.2.0" ? "COMMUNITY-I18N-QUALIFICATION-1" : "M110-QUALIFICATION-1")
+    || contract.contractVersion !== (releaseVersion.startsWith("1.2.") ? "COMMUNITY-I18N-QUALIFICATION-1" : "M110-QUALIFICATION-1")
     || contract.targetVersion !== releaseVersion
     || surface.frozenForVersion !== contract.targetVersion
     || surface.baselineVersion !== contract.baseline.version) {
@@ -391,6 +391,7 @@ function validateRoadmapState(currentRoadmap, currentIssues) {
     problems.push(`unexpected 1.1 status ${String(releaseMilestone?.status)}`);
   }
   if (releaseEnhancements.some((item) => item.id !== "ENH-20260731-ADMIN-OPERATIONS"
+    && !(item.targetVersion === releaseVersion && releaseContract.enhancementRequestIds?.includes(item.id))
     && !(item.id === "CLI-SELF-UPDATE" && item.targetVersion === releaseVersion
       && releaseContract.approvedAdditions.some((addition) => addition.commandId === "update")))) {
     problems.push("1.1 readiness contains an unrelated enhancement request");

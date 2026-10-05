@@ -27,7 +27,7 @@ import { createWorkflowCommand } from "./commands/workflow.js";
 import { createUpdateCommand } from "./commands/update.js";
 import { DEFAULT_BASE_URL, setProfile } from "./config.js";
 import { descriptorForPath } from "./core/command-registry.js";
-import { CONTENT_LANGUAGE_COMMANDS, parseContentLanguage } from "./core/content-language.js";
+import { commandContentLanguage, CONTENT_LANGUAGE_COMMANDS, parseContentLanguage } from "./core/content-language.js";
 import { isUsableCredential } from "./core/credential-store.js";
 import { runWithCliRequestContext, setCurrentCliOperation, setCurrentContentLanguage } from "./core/request-context.js";
 import { formatCliUsageError } from "./output.js";
@@ -113,7 +113,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
   const registerLanguage = (command: Command): void => {
     const descriptor = descriptorForPath(canonicalCommandPath(command));
     if (descriptor && CONTENT_LANGUAGE_COMMANDS.has(descriptor.id)) {
-      command.option("--lang <language>", "content language: zh-cn or en (default zh-cn)", parseContentLanguage);
+      command.option("--lang <language>", "content language: zh-cn or en (inferred from query; otherwise zh-cn)", parseContentLanguage);
       languageCommands.push(command);
     }
     command.commands.forEach(registerLanguage);
@@ -124,7 +124,7 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
     if (descriptor) {
       setCurrentCliOperation(descriptor.id.replace(/[^a-z0-9]+/g, "_").slice(0, 64));
     }
-    setCurrentContentLanguage(actionCommand.opts().lang);
+    setCurrentContentLanguage(commandContentLanguage(descriptor?.id, actionCommand.args, actionCommand.opts()));
   });
   configureCommandOutput(program, io, () => activeJsonErrors);
   const parseAsync = program.parseAsync.bind(program);
@@ -153,6 +153,8 @@ function resetTransientCommandOptions(program: Command): void {
   const rag = program.commands.find((command) => command.name() === "rag");
   const retrieve = rag?.commands.find((command) => command.name() === "retrieve");
   retrieve?.setOptionValue("query", []);
+  const collection = program.commands.find((command) => command.name() === "collection");
+  collection?.commands.find((command) => command.name() === "build")?.setOptionValue("query", []);
 }
 
 type CommandManifest = {

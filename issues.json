@@ -4,7 +4,31 @@
   "updatedAt": "2026-10-05",
   "activeOnly": true,
   "issues": [],
-  "enhancementRequests": [],
+  "enhancementRequests": [
+    {
+      "id": "ENH-QUERY-LANGUAGE-20261005",
+      "status": "in_progress",
+      "title": "Match returned article titles, bodies and browser links to the query language",
+      "currentBehavior": [
+        "Omitted --lang defaults to Chinese even for English questions.",
+        "English search API returns English text but article URLs have no language binding."
+      ],
+      "requiredOutcomes": [
+        "Chinese questions select zh-cn; all other questions select en.",
+        "Search, research, rag retrieve, personal search and query-based collections preserve one language through all reads; explicit --lang overrides inference.",
+        "Returned article links open the matching stored language edition in real Chrome.",
+        "ask references and answer language are audited and repaired on the server if necessary."
+      ],
+      "serverCapabilityAuditRequired": true,
+      "executionOrder": [
+        "apexcn-forums-if-server-change-required",
+        "apexcn-cli",
+        "apexcn-cli-test"
+      ],
+      "promotionToActiveIssue": "only-after-fresh-independent-validator-finding",
+      "targetVersion": "1.2.1"
+    }
+  ],
   "developmentExtensionProtocol": {
     "schemaVersion": 1,
     "scope": "all-future-cli-capability-extensions",

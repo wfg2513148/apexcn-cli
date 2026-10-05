@@ -68,7 +68,7 @@ describe("GA readiness contracts", () => {
     const report = JSON.parse(result.stdout);
 
     expect(result.status, JSON.stringify(report.problems)).toBe(activeFindings.length === 0 ? 0 : 1);
-    expect(report.targetVersion).toBe("1.2.0");
+    expect(report.targetVersion).toBe("1.2.1");
     expect(report.problems).toEqual(activeFindings.length === 0
       ? []
       : ["1.1 readiness contains active validator findings"]);

@@ -1,6 +1,29 @@
 import { expect, test } from "vitest";
-import { parseContentLanguage, contentLanguageQuery } from "../src/core/content-language.js";
+import { commandContentLanguage, inferContentLanguage, parseContentLanguage, contentLanguageQuery } from "../src/core/content-language.js";
 import { runWithCliRequestContext, setCurrentContentLanguage } from "../src/core/request-context.js";
+
+test.each([
+  ["How do I use REST APIs in APEX?", "en"],
+  ["APEX 如何调用 REST API？", "zh-cn"],
+  ["繁體中文問題", "zh-cn"],
+  ["¿Cómo usar ORDS?", "en"],
+  ["Comment utiliser ORDS ?", "en"],
+  ["Как использовать APEX?", "en"],
+  ["APEX", "en"],
+  ["𠀀 APEX", "zh-cn"]
+])("input language selects the stored edition: %s", (input, language) => {
+  expect(inferContentLanguage(input)).toBe(language);
+});
+
+test("command language comes from the question, not retrieval keywords or context", () => {
+  expect(commandContentLanguage("rag.retrieve", ["How does ORDS work?"], { query: ["中文检索词"] })).toBe("en");
+  expect(commandContentLanguage("rag.retrieve", ["如何使用 ORDS？"], { query: ["ORDS"] })).toBe("zh-cn");
+  expect(commandContentLanguage("search", ["English"], { lang: "zh-cn" })).toBe("zh-cn");
+  expect(commandContentLanguage("search", ["中文"], { lang: "en" })).toBe("en");
+  expect(commandContentLanguage("collection.build", [], { query: ["ORDS", "中文"] })).toBe("zh-cn");
+  expect(commandContentLanguage("collection.build", [], {})).toBeUndefined();
+  expect(commandContentLanguage("topic.view", ["42"], {})).toBeUndefined();
+});
 
 test("language is scoped to supported content reads", () => {
   runWithCliRequestContext(undefined, () => {

@@ -331,7 +331,7 @@ describe("content commands", () => {
       "https://oracleapex.cn/ords/test/api/v1/admin/operations?from=2026-07-01&to=2026-07-07&userId=42&limit=10",
       expect.objectContaining({
         headers: expect.objectContaining({
-          "X-APEXCN-Client": "apexcn-cli/1.2.0",
+          "X-APEXCN-Client": "apexcn-cli/1.2.1",
           "X-APEXCN-CLI-Operation": "admin_operations"
         })
       })
@@ -868,7 +868,7 @@ describe("content commands", () => {
     await program.parseAsync(["node", "apexcn", "search", "APEX", "--page-size", "2", "--from-date", "2026-01-01", "--to-date", "2026-12-31", "--json"]);
 
     expect(fetch).toHaveBeenLastCalledWith(
-      "https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&pageSize=2&fromDate=2026-01-01&toDate=2026-12-31",
+      "https://oracleapex.cn/ords/test/api/v1/search?lang=en&keyword=APEX&pageSize=2&fromDate=2026-01-01&toDate=2026-12-31",
       expect.any(Object)
     );
     expect(JSON.parse(stdout.join("")).items[0].id).toBe(42);
@@ -882,7 +882,7 @@ describe("content commands", () => {
     await program.parseAsync(["node", "apexcn", "search", "APEX Lang", "--json"]);
 
     expect(fetch).toHaveBeenLastCalledWith(
-      "https://oracleapex.cn/ords/test/api/v1/search?keyword=ApexLang",
+      "https://oracleapex.cn/ords/test/api/v1/search?lang=en&keyword=ApexLang",
       expect.any(Object)
     );
     expect(JSON.parse(stdout.join("")).query).toEqual({
@@ -998,7 +998,7 @@ describe("content commands", () => {
     await program.parseAsync(["node", "apexcn", "search", "APEX", "--page-size", "50"]);
 
     expect(fetch).toHaveBeenLastCalledWith(
-      "https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&pageSize=50",
+      "https://oracleapex.cn/ords/test/api/v1/search?lang=en&keyword=APEX&pageSize=50",
       expect.any(Object)
     );
   });
@@ -1007,11 +1007,11 @@ describe("content commands", () => {
     const cases = [
       {
         argv: ["node", "apexcn", "search", "APEX", "--from-date", "2026-01-01"],
-        url: "https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&fromDate=2026-01-01"
+        url: "https://oracleapex.cn/ords/test/api/v1/search?lang=en&keyword=APEX&fromDate=2026-01-01"
       },
       {
         argv: ["node", "apexcn", "search", "APEX", "--to-date", "2026-12-31"],
-        url: "https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&toDate=2026-12-31"
+        url: "https://oracleapex.cn/ords/test/api/v1/search?lang=en&keyword=APEX&toDate=2026-12-31"
       }
     ];
 
@@ -1144,7 +1144,7 @@ describe("content commands", () => {
           requestId: "req-search"
         });
       }
-      if (href.endsWith("/api/v1/topics/42")) {
+      if (href.endsWith("/api/v1/topics/42?lang=en")) {
         return Response.json({
           topic: {
             id: 42,
@@ -1157,7 +1157,7 @@ describe("content commands", () => {
           requestId: "req-topic-42"
         });
       }
-      if (href.endsWith("/api/v1/topics/43")) {
+      if (href.endsWith("/api/v1/topics/43?lang=en")) {
         return Response.json({
           topic: {
             id: 43,
@@ -1190,11 +1190,11 @@ describe("content commands", () => {
 
     expect(fetch).toHaveBeenNthCalledWith(
       1,
-      "https://oracleapex.cn/ords/test/api/v1/search?keyword=REST+API&pageSize=2&categoryId=4&fromDate=2026-01-01&toDate=2026-12-31",
+      "https://oracleapex.cn/ords/test/api/v1/search?lang=en&keyword=REST+API&pageSize=2&categoryId=4&fromDate=2026-01-01&toDate=2026-12-31",
       expect.any(Object)
     );
-    expect(fetch).toHaveBeenNthCalledWith(2, "https://oracleapex.cn/ords/test/api/v1/topics/42", expect.any(Object));
-    expect(fetch).toHaveBeenNthCalledWith(3, "https://oracleapex.cn/ords/test/api/v1/topics/43", expect.any(Object));
+    expect(fetch).toHaveBeenNthCalledWith(2, "https://oracleapex.cn/ords/test/api/v1/topics/42?lang=en", expect.any(Object));
+    expect(fetch).toHaveBeenNthCalledWith(3, "https://oracleapex.cn/ords/test/api/v1/topics/43?lang=en", expect.any(Object));
     const data = JSON.parse(stdout.join(""));
     expect(data.query).toEqual({
       keyword: "REST API",
@@ -1351,7 +1351,7 @@ describe("content commands", () => {
 
     expect(fetch).toHaveBeenNthCalledWith(
       1,
-      "https://oracleapex.cn/ords/test/api/v1/search?keyword=REST&pageSize=1",
+      "https://oracleapex.cn/ords/test/api/v1/search?lang=en&keyword=REST&pageSize=1",
       expect.any(Object)
     );
     const data = JSON.parse(stdout.join(""));
@@ -1371,7 +1371,7 @@ describe("content commands", () => {
           requestId: "req-search"
         });
       }
-      if (href.endsWith("/api/v1/topics/42")) {
+      if (href.endsWith("/api/v1/topics/42?lang=en")) {
         return Response.json({ topic: { id: 42, title: "REST API", content: "ok" }, requestId: "req-topic-42" });
       }
       return Response.json({ error: { message: "not found", requestId: "req-topic-43" } }, { status: 404 });
@@ -1519,7 +1519,7 @@ describe("content commands", () => {
     await program.parseAsync(["node", "apexcn", "search", "APEX", "--page-size", "5", "--cursor", "cursor-1", "--offset", "5", "--json"]);
 
     expect(fetch).toHaveBeenLastCalledWith(
-      "https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&pageSize=5&cursor=cursor-1&offset=5",
+      "https://oracleapex.cn/ords/test/api/v1/search?lang=en&keyword=APEX&pageSize=5&cursor=cursor-1&offset=5",
       expect.any(Object)
     );
     expect(stderr.join("")).toBe("");
@@ -1595,7 +1595,7 @@ describe("content commands", () => {
     ]);
 
     expect(fetch).toHaveBeenLastCalledWith(
-      "https://oracleapex.cn/ords/test/api/v1/search?keyword=ORDS&pageSize=20&cursor=cursor-1&fromDate=2026-07-01&toDate=2026-07-05&tag=APEX&tags=APEX%2CORDS&author=Wang&authorId=1&sourceDomain=example.com&originalUrl=docs&contentType=article&sourceType=external&status=useful&view=popular&sort=viewCount&featured=true&pinned=true&locked=true&unanswered=true&hasUsefulReply=true",
+      "https://oracleapex.cn/ords/test/api/v1/search?lang=en&keyword=ORDS&pageSize=20&cursor=cursor-1&fromDate=2026-07-01&toDate=2026-07-05&tag=APEX&tags=APEX%2CORDS&author=Wang&authorId=1&sourceDomain=example.com&originalUrl=docs&contentType=article&sourceType=external&status=useful&view=popular&sort=viewCount&featured=true&pinned=true&locked=true&unanswered=true&hasUsefulReply=true",
       expect.any(Object)
     );
     expect(stderr.join("")).toBe("");

@@ -303,7 +303,7 @@ const EXECUTABLE_NATURAL_LANGUAGE_SCENARIOS: ExecutableNaturalLanguageScenario[]
     commandPath: "search",
     argv: ["node", "apexcn", "search", "APEX Lang", "--json"],
     responseForUrl: (url) => {
-      expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/search?keyword=ApexLang");
+      expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/search?lang=en&keyword=ApexLang");
       return Response.json({ items: [{ id: 42, title: "ApexLang topic" }], requestId: "req-search" });
     },
     assertFeedback: ({ stdout, stderr, fetch }) => {
@@ -318,7 +318,7 @@ const EXECUTABLE_NATURAL_LANGUAGE_SCENARIOS: ExecutableNaturalLanguageScenario[]
     commandPath: "search",
     argv: ["node", "apexcn", "search", "ApexLang", "--page-size", "5", "--cursor", "cursor-2", "--json"],
     responseForUrl: (url) => {
-      expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/search?keyword=ApexLang&pageSize=5&cursor=cursor-2");
+      expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/search?lang=en&keyword=ApexLang&pageSize=5&cursor=cursor-2");
       return Response.json({ items: [{ id: 43, title: "ApexLang page 2", createdDate: "2026-07-01", updatedDate: "2026-07-02" }], page: { hasMore: false }, requestId: "req-search" });
     },
     assertFeedback: ({ stdout, stderr, exitCode, fetch }) => {
@@ -413,13 +413,13 @@ const EXECUTABLE_NATURAL_LANGUAGE_SCENARIOS: ExecutableNaturalLanguageScenario[]
     argv: ["node", "apexcn", "research", "APEX Lang", "--limit", "1", "--json"],
     responseForUrl: (url) => {
       if (url.includes("/api/v1/search")) {
-        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/search?keyword=ApexLang&pageSize=1");
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/search?lang=en&keyword=ApexLang&pageSize=1");
         return Response.json({
           items: [{ id: 42, title: "ApexLang", url: "https://oracleapex.cn/t/42", updatedDate: "2026-06-02" }],
           requestId: "req-search"
         });
       }
-      expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/topics/42");
+      expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/topics/42?lang=en");
       return Response.json({
         topic: {
           id: 42,
@@ -638,10 +638,10 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
       commandPath: "rag retrieve",
       argv: ["node", "apexcn", "rag", "retrieve", "ORDS 401 怎么排查？", "--query", "ORDS", "--top-k", "1", "--json"],
       responseForUrl: (url) => {
-        if (url.endsWith("/api/v1/search?keyword=ORDS&pageSize=1")) {
+        if (url.endsWith("/api/v1/search?lang=zh-cn&keyword=ORDS&pageSize=1")) {
           return Response.json({ items: [{ id: 42 }], requestId: "req-rag-search" });
         }
-        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/topics/42");
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/topics/42?lang=zh-cn");
         return Response.json({
           topic: { id: 42, title: "ORDS 401", content: "问题正文", threadUrl: "https://oracleapex.cn/t/42" },
           replies: [{ replyId: 90, content: "检查 OAuth role。", isUseful: true, replyUrl: "https://oracleapex.cn/t/42#post_90" }],
@@ -888,7 +888,7 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
             requestId: "req-capabilities"
           });
         }
-        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/me/search?keyword=ORDS&scope=favorited%2Csubscribed");
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/me/search?lang=en&keyword=ORDS&scope=favorited%2Csubscribed");
         return Response.json({
           kind: "me-search",
           items: [{ id: 42, title: "Personal ORDS", matchedScopes: ["favorited"], url: "https://oracleapex.cn/ords/f?p=100:14:::::P14_THREAD_ID:42&cs=checksum-42" }],

@@ -19,6 +19,26 @@ export function parseContentLanguage(value: string): ContentLanguage {
   return value;
 }
 
+/** Select the stored edition from the user's input, before retrieval rewrites it. */
+export function inferContentLanguage(input: string): ContentLanguage {
+  return /\p{Script=Han}/u.test(input) ? "zh-cn" : "en";
+}
+
+export function commandContentLanguage(
+  commandId: string | undefined,
+  args: readonly unknown[],
+  options: { lang?: ContentLanguage; query?: string[] }
+): ContentLanguage | undefined {
+  if (options.lang) return options.lang;
+  if (["search", "research", "rag.retrieve", "me.search"].includes(commandId ?? "")) {
+    return typeof args[0] === "string" ? inferContentLanguage(args[0]) : undefined;
+  }
+  if (commandId === "collection.build" && options.query?.length) {
+    return inferContentLanguage(options.query.join(" "));
+  }
+  return undefined;
+}
+
 export function contentLanguageQuery(
   path: string,
   method: string | undefined,

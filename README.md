@@ -254,7 +254,7 @@ apexcn doctor --json
 
 ## Content language
 
-Content read commands accept `--lang zh-cn|en`; omission retains the Chinese default. Articles use stored server editions, with original fallback for missing translations and STALE for saved editions awaiting refresh. The CLI does not translate user originals or replies. UI preferences, content selection and ask answer language are separate. Replay the same language and filters with pagination cursors; a crossed-language cursor returns INVALID_CURSOR_LANGUAGE.
+Content read commands accept `--lang zh-cn|en`. Search, research, RAG retrieval, personal search and query-based collection builds infer the stored edition from the original input: text containing Han characters selects Chinese; all other input selects English. Explicit `--lang` overrides inference. Commands without a question or query retain the Chinese default. Retrieval keywords and previous conversation context do not override the question language. Articles use stored server editions, with original fallback for missing translations and STALE for saved editions awaiting refresh. The CLI does not translate user originals or replies. Replay the same language and filters with pagination cursors; a crossed-language cursor returns INVALID_CURSOR_LANGUAGE.
 
 ```sh
 apexcn category list --lang en --json

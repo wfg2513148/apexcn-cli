@@ -642,7 +642,7 @@ apexcn confirm <operation-id> --yes --json
 
 ## 内容语言
 
-支持内容读取命令的 `--lang zh-cn|en`；省略时保持中文默认。文章使用服务器保存的语言版本，缺失译文回退原稿，STALE 表示保存译文待刷新；用户话题原稿和回复不被CLI翻译。UI语言、内容选择与ask回答语言分别处理。续页必须使用同一语言及过滤参数，跨语言游标返回INVALID_CURSOR_LANGUAGE。
+内容读取命令支持 `--lang zh-cn|en`。搜索、research、RAG 检索、个人搜索及按查询构建知识集会按原始输入自动选择语言：含汉字返回中文，其余返回英文；显式 `--lang` 优先。没有问题或查询的命令保持中文默认。检索关键词和历史上下文不覆盖当前提问的语言。文章使用服务器保存的语言版本，缺失译文回退原稿，STALE 表示保存译文待刷新；CLI 不翻译用户原稿或回复。续页必须使用同一语言及过滤参数，跨语言游标返回 INVALID_CURSOR_LANGUAGE。
 
 ```sh
 apexcn category list --lang en --json

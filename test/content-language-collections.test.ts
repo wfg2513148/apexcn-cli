@@ -23,6 +23,8 @@ async function fixture() {
       translationStatus: "CURRENT", url: "https://oracleapex.cn/t/42" };
     if (url.pathname.endsWith("/export")) return Response.json({ requestId: "req_favorite", contentLanguage: lang,
       items: [topic], page: { hasMore: false } });
+    if (url.pathname.endsWith("/search")) return Response.json({ requestId: "req_search", contentLanguage: lang,
+      items: [topic], page: { hasMore: false } });
     return Response.json({ requestId: "req_topic", contentLanguage: lang, topic });
   }));
   const out: string[] = [];
@@ -53,6 +55,28 @@ test.each(["build", "favorites"])("%s saves language and sync replays it", async
   expect((await run(["collection", "verify-bundle", "--bundle", bundle, "--json"])).ok).toBe(true);
   await run(["collection", "import", "--bundle", bundle, "--output-dir", restored, "--json"]);
   expect(JSON.parse(await readFile(join(restored, "collection.json"), "utf8")).source.requestedContentLanguage).toBe("en");
+});
+
+test.each([
+  ["English APEX question", "en"], ["APEX 中文问题", "zh-cn"]
+])("query-based collections infer and retain language: %s", async (query, language) => {
+  const { dir, run, calls, manifest } = await fixture();
+  await run(["collection", "build", "--query", query, "--output-dir", dir, "--json"]);
+  expect((await manifest()).source.requestedContentLanguage).toBe(language);
+  expect(calls.length).toBeGreaterThan(1);
+  expect(calls.every(u => u.searchParams.get("lang") === language)).toBe(true);
+  calls.length = 0;
+  await run(["collection", "sync", "--dir", dir, "--json"]);
+  expect(calls.every(u => u.searchParams.get("lang") === language)).toBe(true);
+  expect(JSON.parse(await readFile(join(dir, "topics/42.json"), "utf8")).result.topic.contentLanguage).toBe(language);
+});
+
+test("reusing the program does not retain a previous collection query language", async () => {
+  const { root, run, calls } = await fixture();
+  await run(["collection", "build", "--query", "中文 APEX", "--output-dir", join(root, "zh"), "--json"]);
+  calls.length = 0;
+  await run(["collection", "build", "--query", "English APEX", "--output-dir", join(root, "en"), "--json"]);
+  expect(calls.every(u => u.searchParams.get("lang") === "en")).toBe(true);
 });
 
 test("legacy collections retain Chinese default and malformed language is rejected before network", async () => {

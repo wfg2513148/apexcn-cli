@@ -33,19 +33,19 @@ describe("local-AI RAG evidence retrieval", () => {
   test("uses only readonly search and topic detail endpoints and emits citable evidence", async () => {
     const { program, stdout, stderr, fetch } = await configuredProgram(async (input) => {
       const url = String(input);
-      if (url.endsWith("/api/v1/search?keyword=ORDS&pageSize=2")) {
+      if (url.endsWith("/api/v1/search?lang=zh-cn&keyword=ORDS&pageSize=2")) {
         return Response.json({
           items: [{ id: 42, title: "ORDS 401" }],
           requestId: "req-search-ords"
         });
       }
-      if (url.endsWith("/api/v1/search?keyword=REST&pageSize=2")) {
+      if (url.endsWith("/api/v1/search?lang=zh-cn&keyword=REST&pageSize=2")) {
         return Response.json({
           items: [{ id: 42, title: "ORDS 401" }, { id: 43, title: "REST 权限" }],
           requestId: "req-search-rest"
         });
       }
-      if (url.endsWith("/api/v1/topics/42")) {
+      if (url.endsWith("/api/v1/topics/42?lang=zh-cn")) {
         return Response.json({
           topic: {
             id: 42,
@@ -65,7 +65,7 @@ describe("local-AI RAG evidence retrieval", () => {
           requestId: "req-topic-42"
         });
       }
-      if (url.endsWith("/api/v1/topics/43")) {
+      if (url.endsWith("/api/v1/topics/43?lang=zh-cn")) {
         return Response.json({
           topic: {
             id: 43,
@@ -127,7 +127,8 @@ describe("local-AI RAG evidence retrieval", () => {
     }));
     const urls = fetch.mock.calls.map(([input]) => String(input));
     expect(urls).not.toEqual(expect.arrayContaining([expect.stringContaining("/api/v1/ask")]));
-    expect(urls.every((url) => url.includes("/api/v1/search") || /\/api\/v1\/topics\/\d+$/.test(url))).toBe(true);
+    expect(urls.every((url) => new URL(url).pathname.endsWith("/api/v1/search") || /\/api\/v1\/topics\/\d+$/.test(new URL(url).pathname))).toBe(true);
+    expect(urls.every((url) => new URL(url).searchParams.get("lang") === "zh-cn")).toBe(true);
     expect(stderr.join("")).toBe("");
   });
 
@@ -191,16 +192,16 @@ describe("local-AI RAG evidence retrieval", () => {
   test("falls back to the original question only when explicit queries return no topics", async () => {
     const { program, stdout, fetch } = await configuredProgram(async (input) => {
       const url = String(input);
-      if (url.endsWith("/api/v1/search?keyword=watermark&pageSize=5")) {
+      if (url.endsWith("/api/v1/search?lang=zh-cn&keyword=watermark&pageSize=5")) {
         return Response.json({ items: [], requestId: "req-empty" });
       }
-      if (url.includes("/api/v1/search?keyword=") && url.includes("%E5%85%A8%E5%B1%80%E6%B0%B4%E5%8D%B0")) {
+      if (url.includes("/api/v1/search?lang=zh-cn&keyword=") && url.includes("%E5%85%A8%E5%B1%80%E6%B0%B4%E5%8D%B0")) {
         return Response.json({
           items: [{ id: 51, title: "APEX 全局水印" }],
           requestId: "req-fallback"
         });
       }
-      if (url.endsWith("/api/v1/topics/51")) {
+      if (url.endsWith("/api/v1/topics/51?lang=zh-cn")) {
         return Response.json({
           topic: {
             id: 51,
@@ -235,17 +236,17 @@ describe("local-AI RAG evidence retrieval", () => {
     let explicitCalls = 0;
     const { program, stdout, fetch } = await configuredProgram(async (input) => {
       const url = String(input);
-      if (url.endsWith("/api/v1/search?keyword=watermark&pageSize=5")) {
+      if (url.endsWith("/api/v1/search?lang=zh-cn&keyword=watermark&pageSize=5")) {
         explicitCalls += 1;
         return Response.json({
           items: explicitCalls === 2 ? [{ id: 52, title: "APEX 水印" }] : [],
           requestId: `req-explicit-${explicitCalls}`
         });
       }
-      if (url.includes("/api/v1/search?keyword=")) {
+      if (url.includes("/api/v1/search?lang=zh-cn&keyword=")) {
         return Response.json({ items: [], requestId: "req-question-empty" });
       }
-      if (url.endsWith("/api/v1/topics/52")) {
+      if (url.endsWith("/api/v1/topics/52?lang=zh-cn")) {
         return Response.json({
           topic: {
             id: 52,

@@ -130,7 +130,7 @@ describe("collection commands", () => {
       if (url.includes("/api/v1/search")) {
         return Response.json({ requestId: "search", items: [{ id: 1 }, { id: 2 }] });
       }
-      if (url.endsWith("/api/v1/topics/1")) {
+      if (url.endsWith("/api/v1/topics/1?lang=en")) {
         return Response.json({ requestId: "topic-1", topic: { id: 1, title: "Topic 1" } });
       }
       return Response.json({ error: { message: "topic failed", requestId: "bad-topic" } }, { status: 500 });

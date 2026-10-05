@@ -65,6 +65,47 @@ test("a second parse returns to default language and invalid language sends no r
   expect(calls).toHaveLength(0);
 });
 
+test.each([
+  ["search", "How do I use APEX?", "en"],
+  ["search", "APEX 如何使用？", "zh-cn"],
+  ["research", "Comment utiliser APEX ?", "en"],
+  ["research", "APEX 如何使用？", "zh-cn"],
+  ["me search", "How do I use APEX?", "en"],
+  ["me search", "中文问题 APEX", "zh-cn"],
+  ["rag retrieve", "How do I use APEX?", "en"],
+  ["rag retrieve", "APEX 如何使用？", "zh-cn"]
+])("%s infers language from the original question: %s", async (command, question, language) => {
+  const { run, calls } = await fixture();
+  const result = await run([...command.split(" "), question,
+    ...(command === "rag retrieve" ? ["--query", "APEX", "--context", "中文历史上下文"] : []), "--json"]);
+  const reads = calls.filter(u => u.pathname.endsWith("/search") || u.pathname.endsWith("/topics/42"));
+  expect(reads.length).toBeGreaterThan(0);
+  expect(reads.every(u => u.searchParams.get("lang") === language)).toBe(true);
+  if (command === "research") {
+    expect(result.requestedContentLanguage).toBe(language);
+    expect(result.topics[0].title).toBe(language === "en" ? "English APEX" : "中文 APEX");
+  }
+  if (command === "rag retrieve") {
+    expect(result.requestedContentLanguage).toBe(language);
+    expect(result.evidence.find((e: { type: string }) => e.type === "topic").title)
+      .toBe(language === "en" ? "English APEX" : "中文 APEX");
+  }
+});
+
+test("explicit override and repeated parses cannot leak inferred language", async () => {
+  const { run, calls } = await fixture();
+  for (const [question, explicit, expected] of [
+    ["中文问题", "en", "en"], ["English question", "zh-cn", "zh-cn"],
+    ["English question", undefined, "en"], ["中文问题", undefined, "zh-cn"]
+  ] as const) {
+    calls.length = 0;
+    await run(["search", question, ...(explicit ? ["--lang", explicit] : []), "--json"]);
+    expect(calls.at(-1)?.searchParams.get("lang")).toBe(expected);
+  }
+  await run(["topic", "view", "42", "--json"]);
+  expect(calls.at(-1)?.searchParams.has("lang")).toBe(false);
+});
+
 test("manifest and derived evidence expose language without translating replies", async () => {
   const { run } = await fixture();
   const manifest = await run(["commands", "--json"]);
