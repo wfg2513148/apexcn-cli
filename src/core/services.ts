@@ -1,4 +1,5 @@
 import type { ApexcnApiClient } from "./api-client.js";
+import type { ContentLanguage } from "./content-language.js";
 
 export type TopicFilters = Record<string, string | number | boolean | undefined>;
 
@@ -37,7 +38,7 @@ export function listCategories(client: ApexcnApiClient): Promise<unknown> {
   return client.get("/api/v1/categories");
 }
 
-export function askCommunity(client: ApexcnApiClient, input: { question: string; topK?: number; categoryId?: number; fromDate?: string; toDate?: string; tag?: string }): Promise<unknown> {
+export function askCommunity(client: ApexcnApiClient, input: { question: string; lang?: ContentLanguage; topK?: number; categoryId?: number; fromDate?: string; toDate?: string; tag?: string }): Promise<unknown> {
   return client.post("/api/v1/ask", input);
 }
 

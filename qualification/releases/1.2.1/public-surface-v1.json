@@ -121,7 +121,8 @@
           "--to-date <date>",
           "--tag <tag>",
           "--json",
-          "--format <format>"
+          "--format <format>",
+          "--lang <language>"
         ],
         "safety": {
           "effects": [

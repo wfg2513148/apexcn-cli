@@ -72,7 +72,7 @@ export function buildGuide(view: GuideView, options: Pick<GuideOptions, "apexVer
       "This guide is a curated task path, not an Oracle support statement or compatibility certification.",
       "Verify version-specific behavior against official Oracle documentation and the target environment.",
       "Commands that read community content may require an authenticated apexcn profile.",
-      "Supported content reads accept --lang zh-cn|en; omitted language defaults to zh-cn. Stored editions and original fallback are server-owned; replies remain original. Collection sync replays the saved language. ask answer language is separate."
+      "Supported content reads accept --lang zh-cn|en. Query commands infer Chinese for Chinese input and English otherwise; explicit --lang wins, and reads without a query default to zh-cn. Stored editions and original fallback are server-owned; replies remain original. Collection sync replays the saved language. ask selects answer and reference language from the original question before adding context, with explicit --lang taking priority."
     ],
     nextActions: base.nextActions
   };

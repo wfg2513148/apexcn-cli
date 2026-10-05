@@ -7,7 +7,7 @@ export type ContentLanguage = "zh-cn" | "en";
 export const CONTENT_LANGUAGE_COMMANDS = new Set([
   "category.list", "stats.category", "search", "topic.list", "topic.recent", "topic.view",
   "me.dashboard", "me.search", "me.topics", "me.replies", "me.favorites", "me.subscriptions",
-  "research", "rag.retrieve", "collection.build", "collection.favorites"
+  "research", "rag.retrieve", "collection.build", "collection.favorites", "ask"
 ]);
 
 const CONTENT_LANGUAGE_PATH = /^\/api\/v1\/(?:categories|category-stats|search|topics(?:\/\d+(?:\/visual)?)?|me\/(?:topics|replies|favorites(?:\/export)?|subscriptions|search))$/;
@@ -21,7 +21,9 @@ export function parseContentLanguage(value: string): ContentLanguage {
 
 /** Select the stored edition from the user's input, before retrieval rewrites it. */
 export function inferContentLanguage(input: string): ContentLanguage {
-  return /\p{Script=Han}/u.test(input) ? "zh-cn" : "en";
+  const hasChineseCharacters = /\p{Script=Han}/u.test(input);
+  const hasJapaneseOrKoreanCharacters = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(input);
+  return hasChineseCharacters && !hasJapaneseOrKoreanCharacters ? "zh-cn" : "en";
 }
 
 export function commandContentLanguage(
@@ -30,7 +32,7 @@ export function commandContentLanguage(
   options: { lang?: ContentLanguage; query?: string[] }
 ): ContentLanguage | undefined {
   if (options.lang) return options.lang;
-  if (["search", "research", "rag.retrieve", "me.search"].includes(commandId ?? "")) {
+  if (["search", "research", "rag.retrieve", "me.search", "ask"].includes(commandId ?? "")) {
     return typeof args[0] === "string" ? inferContentLanguage(args[0]) : undefined;
   }
   if (commandId === "collection.build" && options.query?.length) {

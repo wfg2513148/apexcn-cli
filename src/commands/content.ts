@@ -904,6 +904,7 @@ export function createAskCommand(options: ApiCommandOptions): Command {
         try {
           data = await askCommunity(createApiClient(session), {
             question: apiQuestion,
+            lang: currentContentLanguage(),
             topK: commandOptions.topK,
             categoryId: commandOptions.categoryId,
             ...dateQuery(commandOptions),
@@ -1627,11 +1628,14 @@ function appendTopicEvidence(
   for (const { reply, sourceIndex } of replies) {
     const replyId = positiveId(reply.replyId ?? reply.id ?? reply.postId);
     const replyUrl = firstAbsoluteUrl(reply.replyUrl, reply.url) ?? communityUrl;
+    const replyLabel = currentContentLanguage() === "en"
+      ? (reply.isUseful === true ? "Correct answer" : `Reply ${sourceIndex + 1}`)
+      : (reply.isUseful === true ? "正确答案" : `回复 ${sourceIndex + 1}`);
     evidence.push(compactBody({
       type: reply.isUseful === true ? "correct-answer" : "reply",
       topicId,
       replyId,
-      title: `${title} — ${reply.isUseful === true ? "正确答案" : `回复 ${sourceIndex + 1}`}`,
+      title: `${title} — ${replyLabel}`,
       content: blockText(reply.content ?? reply.body),
       communityUrl: replyUrl,
       originalUrl: originalUrl || undefined,
@@ -1681,7 +1685,9 @@ function retrievalFallback(query: string): Record<string, unknown> {
   const suggestedQueries = researchQueryCandidates(query);
   return {
     reason: "no-trusted-references",
-    message: "没有找到可引用的社区资料。请缩短或改写关键词，移除过滤条件后再试。",
+    message: currentContentLanguage() === "en"
+      ? "No citable community sources were found. Try shorter or different keywords, or remove the filters."
+      : "没有找到可引用的社区资料。请缩短或改写关键词，移除过滤条件后再试。",
     suggestedQueries,
     suggestedCommands: askSuggestedCommands(suggestedQueries)
   };
@@ -1912,7 +1918,7 @@ function formatAskFallbackText(data: Record<string, unknown>): string {
   const suggestedCommands = textList(fallback.suggestedCommands);
   return lines([
     "Answerable: false",
-    blockLine("Reason", fallback.message ?? "没有找到可引用的社区资料，因此未将回答作为可信结论输出。"),
+    blockLine("Reason", fallback.message ?? askFallbackMessage(fieldText(fallback.reason) || "no-trusted-references")),
     line("confidence", data.confidence),
     line("retryAfterSeconds", data.retryAfterSeconds),
     line("windowSeconds", data.windowSeconds),
@@ -2137,6 +2143,19 @@ function isLowAskConfidence(value: unknown): boolean {
 }
 
 function askFallbackMessage(reason: string, retryAfterSeconds?: number): string {
+  if (currentContentLanguage() === "en") {
+    if (reason === "needs-context") {
+      return "This follow-up needs the previous question or reference context. Include the full background, or provide it with --context.";
+    }
+    if (reason === "rate-limited") {
+      const retry = retryAfterSeconds === undefined ? "" : ` Retry after ${retryAfterSeconds} seconds, or use search/research to find references.`;
+      return `The server rate limit prevented an answer.${retry}`;
+    }
+    if (reason === "low-confidence") {
+      return "The answer confidence is too low to present it as a reliable conclusion. Use search or research to find references.";
+    }
+    return "No citable community sources were found, so the answer is not presented as a reliable conclusion. Use search or research to find related topics.";
+  }
   if (reason === "needs-context") {
     return "这个追问缺少上一轮问题或引用上下文。请把完整背景写进问题，或使用 --context 提供上一轮主题后再问。";
   }

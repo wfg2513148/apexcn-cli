@@ -10,6 +10,8 @@ test.each([
   ["Comment utiliser ORDS ?", "en"],
   ["Как использовать APEX?", "en"],
   ["APEX", "en"],
+  ["APEX の使用方法は？", "en"],
+  ["APEX 質問을 어떻게 처리합니까?", "en"],
   ["𠀀 APEX", "zh-cn"]
 ])("input language selects the stored edition: %s", (input, language) => {
   expect(inferContentLanguage(input)).toBe(language);

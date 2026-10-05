@@ -1250,7 +1250,7 @@ describe("content commands", () => {
     await emptyProgram.program.parseAsync(["node", "apexcn", "research", "REST", "--format", "text"]);
 
     expect(emptyProgram.stdout.join("")).toContain("Research: REST\nTopics: 0\n");
-    expect(emptyProgram.stdout.join("")).toContain("Limitations:\n没有找到可引用的社区资料。");
+    expect(emptyProgram.stdout.join("")).toContain("Limitations:\nNo citable community sources were found.");
     expect(emptyProgram.stdout.join("")).toContain("apexcn search \"REST\" --json");
   });
 
@@ -2483,7 +2483,7 @@ describe("content commands", () => {
     expect(fetch).toHaveBeenNthCalledWith(
       3,
       "https://oracleapex.cn/ords/test/api/v1/ask",
-      expect.objectContaining({ method: "POST", body: JSON.stringify({ question: "How to use APEX?", topK: 3 }) })
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ question: "How to use APEX?", lang: "en", topK: 3 }) })
     );
   });
 
@@ -2509,7 +2509,7 @@ describe("content commands", () => {
 
     expect(fetch).toHaveBeenLastCalledWith(
       "https://oracleapex.cn/ords/test/api/v1/ask",
-      expect.objectContaining({ method: "POST", body: JSON.stringify({ question: "How?", topK: 2 }) })
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ question: "How?", lang: "en", topK: 2 }) })
     );
     expect(stdout.join("")).toBe([
       "Answer:",
@@ -2559,6 +2559,7 @@ describe("content commands", () => {
         method: "POST",
         body: JSON.stringify({
           question: "最近 ORDS API 有哪些更新?",
+          lang: "zh-cn",
           topK: 5,
           categoryId: 4,
           fromDate: "2026-07-01",
@@ -2865,6 +2866,7 @@ describe("content commands", () => {
         method: "POST",
         body: JSON.stringify({
           question: "上下文：APEX 调 ORDS REST API 返回 401\n追问：那第一步怎么确认？",
+          lang: "zh-cn",
           topK: 3
         })
       })

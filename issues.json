@@ -17,7 +17,7 @@
         "Chinese questions select zh-cn; all other questions select en.",
         "Search, research, rag retrieve, personal search and query-based collections preserve one language through all reads; explicit --lang overrides inference.",
         "Returned article links open the matching stored language edition in real Chrome.",
-        "ask references and answer language are audited and repaired on the server if necessary."
+        "ask answer and reference language follow the original current question before adding historical context; explicit --lang takes priority, including English fallback explanations."
       ],
       "serverCapabilityAuditRequired": true,
       "executionOrder": [
@@ -26,7 +26,9 @@
         "apexcn-cli-test"
       ],
       "promotionToActiveIssue": "only-after-fresh-independent-validator-finding",
-      "targetVersion": "1.2.1"
+      "targetVersion": "1.2.1",
+      "serverTaskRef": "01a10a92-ec48-7b70-b4c9-8b7c5c6a718e",
+      "serverContractEvidence": "reports/query-language/cli-server-contract-acceptance.json"
     }
   ],
   "developmentExtensionProtocol": {

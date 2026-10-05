@@ -352,7 +352,7 @@ const EXECUTABLE_NATURAL_LANGUAGE_SCENARIOS: ExecutableNaturalLanguageScenario[]
     argv: ["node", "apexcn", "ask", "APEXLang 支持单页面导入吗？", "--top-k", "1", "--json"],
     responseForUrl: (url, init) => {
       expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/ask");
-      expect(init?.body).toBe(JSON.stringify({ question: "APEXLang 支持单页面导入吗？", topK: 1 }));
+      expect(init?.body).toBe(JSON.stringify({ question: "APEXLang 支持单页面导入吗？", lang: "zh-cn", topK: 1 }));
       return Response.json({
         answer: "支持。",
         sources: [{
@@ -383,6 +383,7 @@ const EXECUTABLE_NATURAL_LANGUAGE_SCENARIOS: ExecutableNaturalLanguageScenario[]
       expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/ask");
       expect(init?.body).toBe(JSON.stringify({
         question: "最近 ORDS API 有哪些更新?",
+        lang: "zh-cn",
         topK: 5,
         fromDate: "2026-07-01",
         toDate: "2026-07-05",

@@ -7,7 +7,7 @@ import { SUPPORTED_API_CONTRACT_VERSIONS } from "../src/core/capability-compatib
 
 afterEach(() => { vi.unstubAllGlobals(); process.exitCode = undefined; });
 
-async function fixture() {
+async function fixture(emptyReads = false) {
   const root = await mkdtemp(join(tmpdir(), "apexcn-language-"));
   const configPath = join(root, "config.json");
   await writeFile(configPath, JSON.stringify({ current: "test", profiles: {
@@ -30,7 +30,7 @@ async function fixture() {
       replies: [{ id: 12, content: "原文回复", isUseful: true }]
     });
     return Response.json({ requestId: "req_list", contentLanguage: lang,
-      items: [{ id: 42, topicId: 42, title: "APEX", url: "https://oracleapex.cn/t/42" }], page: { hasMore: false } });
+      items: emptyReads ? [] : [{ id: 42, topicId: 42, title: "APEX", url: "https://oracleapex.cn/t/42" }], page: { hasMore: false } });
   }));
   const output: string[] = [];
   const program = createProgram({ configPath, stdout: t => output.push(t), stderr: () => undefined });
@@ -67,6 +67,7 @@ test("a second parse returns to default language and invalid language sends no r
 
 test.each([
   ["search", "How do I use APEX?", "en"],
+  ["search", "APEX の使用方法は？", "en"],
   ["search", "APEX 如何使用？", "zh-cn"],
   ["research", "Comment utiliser APEX ?", "en"],
   ["research", "APEX 如何使用？", "zh-cn"],
@@ -115,12 +116,20 @@ test("manifest and derived evidence expose language without translating replies"
   const rag = await run(["rag", "retrieve", "APEX", "--query", "APEX", "--lang", "en", "--json"]);
   expect(rag.evidence.find((e: { type: string }) => e.type === "topic")).toMatchObject({ contentLanguage: "en", translationStatus: "STALE" });
   expect(rag.evidence.find((e: { type: string }) => e.type === "correct-answer").content).toBe("原文回复");
+  expect(rag.evidence.find((e: { type: string }) => e.type === "correct-answer").title).toBe("English APEX — Correct answer");
+});
+
+test("English research without trusted sources gives an English explanation", async () => {
+  const { run } = await fixture(true);
+  const result = await run(["research", "How does ORDS work?", "--json"]);
+  expect(result.fallback.message).toContain("No citable community sources");
+  expect(result.fallback.message).not.toMatch(/\p{Script=Han}/u);
 });
 
 
-test("all sixteen language commands and their topic alias have the documented option", async () => {
+test("all seventeen language commands and their topic alias have the documented option", async () => {
   const { run, calls } = await fixture(); const manifest = await run(["commands", "--json"]);
-  const ids = new Set(["category.list", "stats.category", "search", "topic.list", "topic.recent", "topic.view", "me.dashboard", "me.search", "me.topics", "me.replies", "me.favorites", "me.subscriptions", "research", "rag.retrieve", "collection.build", "collection.favorites"]);
+  const ids = new Set(["category.list", "stats.category", "search", "topic.list", "topic.recent", "topic.view", "me.dashboard", "me.search", "me.topics", "me.replies", "me.favorites", "me.subscriptions", "research", "rag.retrieve", "collection.build", "collection.favorites", "ask"]);
   const actual = manifest.commands.filter((c: { options: string[] }) => c.options.some(o => o.startsWith("--lang"))).map((c: { id: string }) => c.id);
   expect(new Set(actual)).toEqual(ids);
   await run(["thread", "view", "42", "--lang", "en", "--json"]);

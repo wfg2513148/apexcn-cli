@@ -254,7 +254,7 @@ apexcn doctor --json
 
 ## Content language
 
-Content read commands accept `--lang zh-cn|en`. Search, research, RAG retrieval, personal search and query-based collection builds infer the stored edition from the original input: text containing Han characters selects Chinese; all other input selects English. Explicit `--lang` overrides inference. Commands without a question or query retain the Chinese default. Retrieval keywords and previous conversation context do not override the question language. Articles use stored server editions, with original fallback for missing translations and STALE for saved editions awaiting refresh. The CLI does not translate user originals or replies. Replay the same language and filters with pagination cursors; a crossed-language cursor returns INVALID_CURSOR_LANGUAGE.
+Content read commands accept `--lang zh-cn|en`. Search, ask, research, RAG retrieval, personal search and query-based collection builds infer the stored edition from the original input: Han characters without Japanese kana or Korean Hangul select Chinese; other input selects English. Explicit `--lang` overrides inference. Commands without a question or query retain the Chinese default. Retrieval keywords and previous conversation context do not override the question language. Articles use stored server editions, with original fallback for missing translations and STALE for saved editions awaiting refresh. The CLI does not translate user originals or replies. Replay the same language and filters with pagination cursors; a crossed-language cursor returns INVALID_CURSOR_LANGUAGE.
 
 ```sh
 apexcn category list --lang en --json
@@ -262,9 +262,10 @@ apexcn search "APEX" --lang en --json
 apexcn topic view 42 --lang en --json
 apexcn me search "APEX" --scope created,favorited --lang en --json
 apexcn research "APEX" --lang en --json
+apexcn ask "How does APEXlang help Oracle APEX?" --context "上一轮中文背景" --json
 apexcn rag retrieve "APEX" --query "APEX" --lang en --json
 apexcn collection build --topic-id 42 --lang en --output-dir ./apex-en --json
 apexcn collection sync --dir ./apex-en --json
 ```
 
-Collection build/favorites preserve requested language and response contentLanguage/translationStatus. Sync replays the source language. Legacy collections default to Chinese. ask, writes, authentication, admin, update and local diagnostics have no content-language option.
+Collection build/favorites preserve requested language and response contentLanguage/translationStatus. Sync replays the source language. Legacy collections default to Chinese. ask selects answer and reference language from the current question before adding --context; explicit --lang overrides it. Writes, authentication, admin, update and local diagnostics have no content-language option.

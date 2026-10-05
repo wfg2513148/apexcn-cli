@@ -642,7 +642,7 @@ apexcn confirm <operation-id> --yes --json
 
 ## 内容语言
 
-内容读取命令支持 `--lang zh-cn|en`。搜索、research、RAG 检索、个人搜索及按查询构建知识集会按原始输入自动选择语言：含汉字返回中文，其余返回英文；显式 `--lang` 优先。没有问题或查询的命令保持中文默认。检索关键词和历史上下文不覆盖当前提问的语言。文章使用服务器保存的语言版本，缺失译文回退原稿，STALE 表示保存译文待刷新；CLI 不翻译用户原稿或回复。续页必须使用同一语言及过滤参数，跨语言游标返回 INVALID_CURSOR_LANGUAGE。
+内容读取命令支持 `--lang zh-cn|en`。搜索、ask、research、RAG 检索、个人搜索及按查询构建知识集会按原始输入自动选择语言：含汉字且不含日文假名或韩文字母时返回中文，其余返回英文；显式 `--lang` 优先。没有问题或查询的命令保持中文默认。检索关键词和历史上下文不覆盖当前提问的语言。文章使用服务器保存的语言版本，缺失译文回退原稿，STALE 表示保存译文待刷新；CLI 不翻译用户原稿或回复。续页必须使用同一语言及过滤参数，跨语言游标返回 INVALID_CURSOR_LANGUAGE。
 
 ```sh
 apexcn category list --lang en --json
@@ -650,9 +650,10 @@ apexcn search "APEX" --lang en --json
 apexcn topic view 42 --lang en --json
 apexcn me search "APEX" --scope created,favorited --lang en --json
 apexcn research "APEX" --lang en --json
+apexcn ask "How does APEXlang help Oracle APEX?" --context "上一轮中文背景" --json
 apexcn rag retrieve "APEX" --query "APEX" --lang en --json
 apexcn collection build --topic-id 42 --lang en --output-dir ./apex-en --json
 apexcn collection sync --dir ./apex-en --json
 ```
 
-`collection build/favorites` 保存请求语言与服务器返回的contentLanguage及translationStatus；sync自动重放源语言。旧集合无语言元数据时保持中文默认。`ask`、写入、认证、管理员、升级和本地诊断命令没有内容语言选项。
+`collection build/favorites` 保存请求语言与服务器返回的contentLanguage及translationStatus；sync自动重放源语言。旧集合无语言元数据时保持中文默认。`ask` 在拼接 --context 前按当前问题选择回答和引用语言；显式 --lang 优先。写入、认证、管理员、升级和本地诊断命令没有内容语言选项。
