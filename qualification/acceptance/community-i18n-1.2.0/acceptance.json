@@ -1,7 +1,7 @@
 {
   "kind": "community-multilingual-upgrade-acceptance",
   "schemaVersion": 1,
-  "status": "IN_PROGRESS_POST_RELEASE_GOVERNANCE",
+  "status": "PENDING_FINAL_M2_MAIN",
   "candidateCommit": "14ff3bb5c79e9af6e5d8c6c161fc3a5ae02aae1b",
   "candidateArchiveSha256": "1a370947025fd2e801ba2d12afa5fcf210df3dd3365fa150cd1efc7ce4a1a1b2",
   "scopeState": "frozen",
@@ -5331,11 +5331,24 @@
         "serverCommit": "fadf7fdb75914a56f23a79c5bd332cab7c2179b9"
       },
       "firstAttemptEvidence": [],
-      "finalEvidence": [],
+      "finalEvidence": [
+        {
+          "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/candidate3-pre-publication-quality-semantic-join.json",
+          "sha256": "eadb3491914cb909f636a2e6a112c02824ff0183857ca7fbe1013633e5280f4b"
+        },
+        {
+          "path": "/Users/kwang/apexcn-cli/reports/community-i18n-upgrade/audit-m1-quality.json",
+          "sha256": "8398df4124e65987e75cac7953411a61057e7fa40aaad92c4dae1b19d0614208"
+        }
+      ],
       "cleanupEvidence": [],
       "responsibility": "cli",
-      "status": "NOT_VERIFIED",
-      "evidenceOwner": "independent-developer"
+      "status": "PASS",
+      "evidenceOwner": "independent-developer-and-release-governance",
+      "acceptedAt": "2026-10-05T03:34:07.336718+00:00",
+      "thread": "01a107c0-969f-7e31-8f43-207aa08533d2",
+      "actual": "Original C3 build/full825-tests and candidate gates passed; independent clean M1 six default gates actual0.",
+      "evidenceBoundary": "Actual M1 governance evidence. Final M2 clean checks and main push are separate overall closure requirements, still pending; never inferred from this PASS."
     },
     {
       "caseId": "UPG-055-release-candidate-identity",
@@ -5350,11 +5363,24 @@
         "serverCommit": "fadf7fdb75914a56f23a79c5bd332cab7c2179b9"
       },
       "firstAttemptEvidence": [],
-      "finalEvidence": [],
+      "finalEvidence": [
+        {
+          "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/original-c3-h3-release-verification.json",
+          "sha256": "c72ee3cac79e70bfc50686b0a000ac4234822fdeb0cf3fe5b493482c9032e5d1"
+        },
+        {
+          "path": "/Users/kwang/apexcn-cli/reports/community-i18n-upgrade/audit-m1-quality.json",
+          "sha256": "8398df4124e65987e75cac7953411a61057e7fa40aaad92c4dae1b19d0614208"
+        }
+      ],
       "cleanupEvidence": [],
       "responsibility": "cli",
-      "status": "NOT_VERIFIED",
-      "evidenceOwner": "builder-governance-review"
+      "status": "PASS",
+      "evidenceOwner": "independent-developer-and-release-governance",
+      "acceptedAt": "2026-10-05T03:34:07.336718+00:00",
+      "thread": "01a107c0-969f-7e31-8f43-207aa08533d2",
+      "actual": "Real public v1.2.0 tag/sourceC3; all11 downloaded original assets SHA256 match H3 and provenance.",
+      "evidenceBoundary": "Actual M1 governance evidence. Final M2 clean checks and main push are separate overall closure requirements, still pending; never inferred from this PASS."
     },
     {
       "caseId": "UPG-056-issue-closure-metadata",
@@ -5369,11 +5395,28 @@
         "serverCommit": "fadf7fdb75914a56f23a79c5bd332cab7c2179b9"
       },
       "firstAttemptEvidence": [],
-      "finalEvidence": [],
+      "finalEvidence": [
+        {
+          "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-m1-commit-and-package-exclusion.json",
+          "sha256": "2760150b6b309549b0a88fdc8c495bf2a832bff16dbc1b9725a80e8c1d206e62"
+        },
+        {
+          "path": "/Users/kwang/apexcn-cli/reports/community-i18n-upgrade/audit-m1-quality.json",
+          "sha256": "8398df4124e65987e75cac7953411a61057e7fa40aaad92c4dae1b19d0614208"
+        },
+        {
+          "path": "/Users/kwang/apexcn-cli/reports/community-i18n-upgrade/closed-issues-history.json",
+          "sha256": "f0bb99f50e5e68462cb5809fc3593aa89a22fef5fabda8e46ac5cdb6df10077b"
+        }
+      ],
       "cleanupEvidence": [],
       "responsibility": "cli",
-      "status": "NOT_VERIFIED",
-      "evidenceOwner": "builder-governance-review"
+      "status": "PASS",
+      "evidenceOwner": "independent-developer-and-release-governance",
+      "acceptedAt": "2026-10-05T03:34:07.336718+00:00",
+      "thread": "01a107c0-969f-7e31-8f43-207aa08533d2",
+      "actual": "M1 only6 package-excluded audit paths; active issues0 with full history retained; roadmap/default GA actual0; no publication pack/tag.",
+      "evidenceBoundary": "Actual M1 governance evidence. Final M2 clean checks and main push are separate overall closure requirements, still pending; never inferred from this PASS."
     }
   ],
   "parentGates": [
@@ -5571,17 +5614,13 @@
     },
     {
       "gateId": "A20",
-      "status": "NOT_VERIFIED",
+      "status": "PASS",
       "requiredChildCount": 3,
-      "passedChildCount": 0,
-      "pendingChildren": [
-        "UPG-054-local-quality-gates",
-        "UPG-055-release-candidate-identity",
-        "UPG-056-issue-closure-metadata"
-      ],
+      "passedChildCount": 3,
+      "pendingChildren": [],
       "excludedChildren": [],
-      "aggregationBoundary": "Aggregation of explicitly accepted current atomic outcomes only; no independent new execution or global completion implied.",
-      "aggregatedAt": "2026-10-05T02:58:55.811315+00:00"
+      "aggregationBoundary": "Aggregation of accepted actual M1 atomic evidence; final overall M2/main closure remains pending.",
+      "aggregatedAt": "2026-10-05T03:34:07.336718+00:00"
     }
   ],
   "baselineApplicabilityPath": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5/round-1.2.0-05/baseline-applicability.json",
@@ -6141,12 +6180,12 @@
   },
   "parentAggregationProgress": {
     "required": 20,
-    "passed": 19,
+    "passed": 20,
     "atomicRequired": 55,
-    "atomicPassed": 52,
-    "boundary": "All52 prerelease required conditions and192baseline accepted; only quality postM/release identity/audit closure pending.",
+    "atomicPassed": 55,
     "baselineRequired": 192,
-    "baselinePassed": 192
+    "baselinePassed": 192,
+    "boundary": "Atomic assertions accepted from real M1 plus C3/H3 evidence; final overall M2/main closure pending."
   },
   "round5LiveChromeBusinessState": {
     "at": "2026-10-05T01:54:43.378934+00:00",
@@ -6208,5 +6247,16 @@
   "issueClosureHistory": {
     "path": "/Users/kwang/apexcn-cli/reports/community-i18n-upgrade/closed-issues-history.json",
     "sha256": "f0bb99f50e5e68462cb5809fc3593aa89a22fef5fabda8e46ac5cdb6df10077b"
+  },
+  "auditM1Quality": {
+    "path": "/Users/kwang/apexcn-cli/reports/community-i18n-upgrade/audit-m1-quality.json",
+    "sha256": "8398df4124e65987e75cac7953411a61057e7fa40aaad92c4dae1b19d0614208"
+  },
+  "overallClosure": {
+    "status": "PENDING_FINAL_M2_MAIN",
+    "contextGenerationCommit": "e5dc072bad1d3b17b5e6e42c46fd3298ade64705",
+    "M2DefaultGatesVerified": false,
+    "mainUpdated": false,
+    "finalCriticReviewComplete": false
   }
 }

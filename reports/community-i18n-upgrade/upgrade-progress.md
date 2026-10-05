@@ -1,7 +1,5 @@
-# apexcn-cli 1.2.0 升级验收
+# Multilingual upgrade final audit
 
-业务验收与真实发布已完成。52/55 个必验原子条件、192/192 项适用基线、19/20 个聚合门通过。剩余三个发布后治理条件保持待验收。
+Frozen required acceptance: 55/55 upgrade assertions and 192/192 applicable baseline. All20 parent assertions aggregate PASS on actual C3/H3 and M1 evidence. Overall final M2 checks/main push remain pending.
 
-发布标签 v1.2.0 固定到受验提交，原 11 个资产已从 GitHub 下载并核对哈希；没有重新打包。6 个实际 finding 按已通过语义证据移出活动列表，完整历史保存在 closed-issues-history.json。原 roadmap 9 个历史条目未改。
-
-接下来在独立开发会话、干净审计提交上完成默认GA及供应链verify-only，生成offline交接上下文；最后更新完整验收报告。
+Product C3=14ff3bb5c79e9af6e5d8c6c161fc3a5ae02aae1b; released archive H3=1a370947025fd2e801ba2d12afa5fcf210df3dd3365fa150cd1efc7ce4a1a1b2; context generation M1=e5dc072bad1d3b17b5e6e42c46fd3298ade64705. No publication archive rebuilt or retagged. Temporary internal version-gate verification archive is recorded separately.

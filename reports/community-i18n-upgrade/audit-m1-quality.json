@@ -1,0 +1,148 @@
+{
+  "kind": "Independent-clean-M1-default-gates-and-offline-context",
+  "auditCommit": "e5dc072bad1d3b17b5e6e42c46fd3298ade64705",
+  "developerThread": "01a107c0-969f-7e31-8f43-207aa08533d2",
+  "actualSourceReport": {
+    "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/developer-audit-m1-quality-and-context-results.json",
+    "sha256": "ed1440ecaaa66f0cfd4654905f36f365dfec4618848df5dd6cc49b767fd87ef8"
+  },
+  "checks": [
+    {
+      "argv": [
+        "node",
+        "scripts/check-workflows.mjs"
+      ],
+      "cwd": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-source-m1",
+      "actualExitCode": 0,
+      "rawStdout": {
+        "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-m1-check-outputs/workflows.stdout.txt",
+        "sha256": "738b61299260bd5fbe7985ee6cd283c5dd2d8a4e210085a646f30380edd8e466",
+        "bytes": 22
+      },
+      "rawStderr": {
+        "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-m1-check-outputs/workflows.stderr.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/check-source-layout.mjs"
+      ],
+      "cwd": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-source-m1",
+      "actualExitCode": 0,
+      "rawStdout": {
+        "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-m1-check-outputs/source-layout.stdout.txt",
+        "sha256": "579bae14ea4328bcdf3235ddced3b16a0b21049614a9669fdbec8f5881281706",
+        "bytes": 27
+      },
+      "rawStderr": {
+        "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-m1-check-outputs/source-layout.stderr.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "check:roadmap"
+      ],
+      "cwd": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-source-m1",
+      "actualExitCode": 0,
+      "rawStdout": {
+        "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-m1-check-outputs/roadmap.stdout.txt",
+        "sha256": "0720da924f51eb27c9e40303ed520a2b71d1930c7fda3746b92f37ebc325c1ad",
+        "bytes": 58
+      },
+      "rawStderr": {
+        "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-m1-check-outputs/roadmap.stderr.txt",
+        "sha256": "658cc4f413dd5012feeb3b421cb689238ba421610173f4f162f2d068d5b6ddc1",
+        "bytes": 92
+      }
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/check-ga-readiness.mjs",
+        "--supply-chain-dir",
+        "/Users/kwang/apexcn-cli/output/upgrade-20261005/candidate-source-round4/artifacts",
+        "--output",
+        "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-m1-default-ga-readiness.json"
+      ],
+      "cwd": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-source-m1",
+      "actualExitCode": 0,
+      "rawStdout": {
+        "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-m1-check-outputs/default-ga-readiness.stdout.txt",
+        "sha256": "d42b19a939f9e832bee9e09f463c4212a852b436bbc9499679801156af066af7",
+        "bytes": 3327
+      },
+      "rawStderr": {
+        "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-m1-check-outputs/default-ga-readiness.stderr.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/check-release-artifacts.mjs",
+        "--verify-only",
+        "--expected-version",
+        "1.2.0",
+        "--artifacts-dir",
+        "/Users/kwang/apexcn-cli/output/upgrade-20261005/candidate-source-round4/artifacts"
+      ],
+      "cwd": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-source-m1",
+      "actualExitCode": 0,
+      "rawStdout": {
+        "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-m1-check-outputs/verify-original-artifacts.stdout.txt",
+        "sha256": "30fa2d2e0ffb5f25ee1ff8936dd148e2e428608d738cde6baf208e6a56193065",
+        "bytes": 40
+      },
+      "rawStderr": {
+        "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-m1-check-outputs/verify-original-artifacts.stderr.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/check-release-version.mjs"
+      ],
+      "cwd": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-source-m1",
+      "actualExitCode": 0,
+      "rawStdout": {
+        "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-m1-check-outputs/actual-version-check.stdout.txt",
+        "sha256": "3c0964dc4d6fb1572c71421ae0867468668c3596285ff3da6be5edce7841df5e",
+        "bytes": 39
+      },
+      "rawStderr": {
+        "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-m1-check-outputs/actual-version-check.stderr.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    }
+  ],
+  "contextGenerationCommit": "e5dc072bad1d3b17b5e6e42c46fd3298ade64705",
+  "contextSource": {
+    "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/audit-source-m1/reports/iteration-context.json",
+    "sha256": "b43ffda9b0ee72fbb6f6a94b0f4c6fcfbf8334dae6a43fc9be0aab8d1035fe1f"
+  },
+  "releaseSourceCommit": "14ff3bb5c79e9af6e5d8c6c161fc3a5ae02aae1b",
+  "archiveH": "1a370947025fd2e801ba2d12afa5fcf210df3dd3365fa150cd1efc7ce4a1a1b2",
+  "allSixPassed": true,
+  "publicationArchiveRebuilt": false,
+  "temporaryInternalPack": true,
+  "formalRepack": false,
+  "publishedArchiveStillH3": true,
+  "internalPackCriticalConsensus": {
+    "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/version-default-gate-internal-pack-critical-consensus.json",
+    "sha256": "478b737a374632f6f22143e6ad572ee18f190fc90b7194968f42ca05a9f2dd53"
+  },
+  "M2GatesPending": true,
+  "mainPushPending": true,
+  "versionGateBoundary": "Version default checker internally creates and deletes a temporary verification archive; no released archive/tag/upload changes. Original C3/H3/11 asset hashes retained."
+}

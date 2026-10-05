@@ -1,0 +1,63 @@
+{
+  "kind": "apexcn-iteration-context",
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-05T03:28:20.620Z",
+  "release": {
+    "version": "1.2.0",
+    "tag": "v1.2.0",
+    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.2.0"
+  },
+  "repository": {
+    "branch": "",
+    "commit": "e5dc072bad1d3b17b5e6e42c46fd3298ade64705"
+  },
+  "milestone": {
+    "completedIterationFor": "1.1",
+    "resumeMilestoneId": null,
+    "resumeMilestoneStatus": null
+  },
+  "enhancedCapabilities": [
+    "实际审计M1=e5dc072bad1d3b17b5e6e42c46fd3298ade64705；context在该干净M1生成，发布源码仍为C3，元数据M1不重新tag或生成正式包。",
+    "CLI1.2.0社区0.10契约兼容；16适用读取命令中英语言上下文；research/RAG/collection保留语言与完整性。",
+    "独立R5冻结55required/1excluded、192required/10excluded基线；52发布前条件与全部192基线真实语义验收通过。"
+  ],
+  "unexpectedProblems": [
+    "实际审计M1=e5dc072bad1d3b17b5e6e42c46fd3298ade64705；context在该干净M1生成，发布源码仍为C3，元数据M1不重新tag或生成正式包。",
+    "原生Chrome慢资源/关闭边界、临时DEV根地址准备误含api/v1；首次输出与重试都保留，不将设施问题虚称候选缺陷。"
+  ],
+  "rootCauses": [
+    "实际审计M1=e5dc072bad1d3b17b5e6e42c46fd3298ade64705；context在该干净M1生成，发布源码仍为C3，元数据M1不重新tag或生成正式包。",
+    "已确认的契约/CLI语言/预览操作保存/游标与网络诊断问题按各自owner修复和实证归属；历史空壳不虚称复现根因。"
+  ],
+  "preventionActions": [
+    "实际审计M1=e5dc072bad1d3b17b5e6e42c46fd3298ade64705；context在该干净M1生成，发布源码仍为C3，元数据M1不重新tag或生成正式包。",
+    "发布sourceCommit=14ff3bb5c79e9af6e5d8c6c161fc3a5ae02aae1b，archiveSHA256=1a370947025fd2e801ba2d12afa5fcf210df3dd3365fa150cd1efc7ce4a1a1b2；metadata audit M1 不tag/正式pack；版本门仅内部临时校验pack。",
+    "当前自定义升级已完成业务发布，历史0.9timeboxed不重新激活，不自动创建新milestone/goal。",
+    "context:compact --offline仅在干净审计M上生成交接，因为tag刻意仍指C3；真实发布由另外的远端tag/11asset下载哈希验证证明。",
+    "context repository.commit表示生成时干净audit M；后续只可能补充包外验收记录，必须重新核实当前Git状态。"
+  ],
+  "nextMilestoneGoal": "完成当前M1离线交接并交由最终M2核对；保持milestone 1.1，不激活历史0.9或新milestone/goal。",
+  "expectedResults": [
+    "实际审计M1=e5dc072bad1d3b17b5e6e42c46fd3298ade64705；context在该干净M1生成，发布源码仍为C3，元数据M1不重新tag或生成正式包。",
+    "最终55/55必验原子、192/192适用基线、20/20聚合门、活动issues0；tag/sourceC3与原包H3一致，全部资源边界明确。",
+    "M1=e5dc072bad1d3b17b5e6e42c46fd3298ade64705六门实际0、原11资产哈希一致；context generation commit=M1。后续M2另行核对，不循环再生成context。"
+  ],
+  "majorRisks": [
+    "实际审计M1=e5dc072bad1d3b17b5e6e42c46fd3298ade64705；context在该干净M1生成，发布源码仍为C3，元数据M1不重新tag或生成正式包。",
+    "M1六个默认检查实际退出0；本context为离线交接生成，最终M2核对与全局完成声明仍由最终审计负责，不提前宣称全局100%。",
+    "旧两个未知匿名session只证明NON_REVIVABLE_BY_POLICY，不能宣称其物理row0；已知精确会话/进程0、临时配置删除、原账号配置保留。"
+  ],
+  "activeIssues": [],
+  "resume": {
+    "readOrder": [
+      "reports/iteration-context.json",
+      "roadmap.json",
+      "issues.json"
+    ],
+    "instructions": [
+      "Re-read current repository state before planning.",
+      "Create only a just-in-time plan for the active milestone.",
+      "After release closure, automatically activate only the next planned milestone and create its dedicated goal."
+    ]
+  }
+}

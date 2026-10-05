@@ -269,7 +269,7 @@
     "rawGhReceiptMode0600": true,
     "boundary": "Raw signed redirect URL remains restricted local failure receipt; normalized shared evidence only."
   },
-  "postMDefaultGAPending": true,
+  "postMDefaultGAPending": false,
   "actualNetworkTransportEvidence": [
     {
       "path": "/Users/kwang/apexcn-cli/output/upgrade-20261005/original-release-go-api-download-receipt.json",
@@ -284,5 +284,11 @@
       "sha256": "48626d4f7587f985d9d2faaf7f837f8318774747e06a8d87e800b8d10ff00751"
     }
   ],
-  "finalDownloadVerificationBoundary": "All11 actual GitHub downloaded files matched original C3 asset hashes. Go API GET verified TLS and remote release-assets host; three prior downloaded files independently retained. No local candidate bytes copied to download directory."
+  "finalDownloadVerificationBoundary": "All11 actual GitHub downloaded files matched original C3 asset hashes. Go API GET verified TLS and remote release-assets host; three prior downloaded files independently retained. No local candidate bytes copied to download directory.",
+  "postMDefaultGACommit": "e5dc072bad1d3b17b5e6e42c46fd3298ade64705",
+  "postMDefaultGAEvidence": {
+    "path": "/Users/kwang/apexcn-cli/reports/community-i18n-upgrade/audit-m1-quality.json",
+    "sha256": "8398df4124e65987e75cac7953411a61057e7fa40aaad92c4dae1b19d0614208"
+  },
+  "finalM2MainClosurePending": true
 }
