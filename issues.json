@@ -121,11 +121,16 @@
       "targetVersion": "1.2.1",
       "serverTaskRef": "01a10a92-ec48-7b70-b4c9-8b7c5c6a718e",
       "serverContractEvidence": "reports/query-language/cli-server-contract-acceptance.json",
-      "serverRepairEvidence": "reports/query-language/server-contract-dev-repaired.json",
-      "validatorTaskRef": "01a10b47-7742-7582-a13e-4513e5c56780",
-      "validationScope": "round-1.2.1-02/scope-contract.json",
-      "validationCandidateChecksum": "0d0f1fbc0461f36db7abaca1cdfc7cbb5066a0f8a968a09b7836c56bcab0c345",
-      "validationState": "round2-completed-repair-and-new-freeze-required"
+      "serverRepairEvidence": "reports/query-language/server-contract-dev-search-language-repaired.json",
+      "validatorTaskRef": "01a10b7a-9742-72f0-a285-42a638997322",
+      "validationScope": "round-1.2.1-03/scope-contract.json",
+      "validationCandidateChecksum": "ae0bfe58eab94011c1237fe6fa51a92c486c92111642a5fd0e796f117cf9b74a",
+      "validationState": "round3-incomplete-runtime-blocked",
+      "validationEvidence": "reports/query-language/round3-controller-summary.json",
+      "runtimeBlockerEvidence": "reports/query-language/test-runtime-external-blocker.json",
+      "implementationPlan": "docs/superpowers/plans/2026-10-05-query-language-release-closure.md",
+      "goalMode": "active",
+      "goalAcceptanceEvidence": "reports/query-language/goal-20261005/acceptance.json"
     }
   ],
   "developmentExtensionProtocol": {
