@@ -4,7 +4,7 @@
 
 Use the [APEX Chinese Community](https://oracleapex.cn/) through natural conversation with your AI assistant. The included **apexcn-cli skill** teaches your assistant how to search, read, cite, and participate through the CLI. Find Oracle APEX discussions, read available English article editions, and turn community knowledge into answers with sources you can check.
 
-[Get started](#get-started) · [Examples](#put-it-to-work) · [Language support](#chinese-and-english-content) · [English user guide](docs/user-guide.en.md) · [Command reference](docs/cli-manual.en.md)
+[Get started](#get-started) · [Examples](#put-it-to-work) · [Screenshots](#see-the-skill-workflow) · [Language support](#chinese-and-english-content) · [English user guide](docs/user-guide.en.md) · [Command reference](docs/cli-manual.en.md)
 
 ## Meet the APEX Chinese Community
 
@@ -63,6 +63,35 @@ For publishing or other community changes, the assistant shows a preview and wai
 
 ## Put it to work
 
+### See the skill workflow
+
+These real screenshots show apexcn-cli in use through the Codex client and the community website on October 9, 2026.
+The skill selects CLI commands; the AI assistant presents the results and explains the sources.
+
+**1. Search in natural language**
+
+With the apexcn-cli skill selected, ask: “search apexlang content”.
+The assistant searches the community and returns English discussion titles with links and short descriptions.
+This example reports at least five results and identifies its descriptions as based on search snippets.
+
+![Codex using the apexcn-cli skill to return linked English APEXlang search results](docs/assets/readme/codex-apexlang-search-en.png)
+
+**2. Open a result and read the article**
+
+Follow a community link to read the available English article edition on oracleapex.cn.
+Here, the linked CI/CD article is open at its pipeline section, with headings, code blocks, and explanations.
+The code shown belongs to the article; see the [command reference](docs/cli-manual.en.md) for apexcn-cli commands.
+
+![English community article opened from an APEXlang search result, showing its CI pipeline section](docs/assets/readme/community-apexlang-article-en.png)
+
+**3. Ask a question and review the explanation**
+
+Ask the assistant to compare APEX 26.1 and 26.2.
+In this example, it uses apexcn-cli to retrieve community references, checks Oracle's official release information, and produces a comparison with source links.
+The table is the AI assistant's synthesis of those sources.
+
+![Codex answering an APEX 26.1 versus 26.2 question with a comparison table and Oracle source links](docs/assets/readme/codex-apex-version-comparison-en.png)
+
 ### Research an APEX problem
 
 Ask your assistant:
@@ -86,14 +115,6 @@ Your assistant handles the date window and retrieves the matching topics through
 > Draft a reply to the selected discussion with my test results. Show the target topic and exact reply, and wait for my confirmation.
 
 The write workflow uses a preview followed by explicit confirmation. Publishing, editing, deleting, favoriting, subscribing, and marking an answer require the relevant account permissions. If the target, account, or content changes after preview, preview again.
-
-### See the skill workflow
-
-These English walkthroughs show what to ask your AI and how the skill connects your request to community content. They are documentation illustrations, not screenshots of a particular AI product. The retrieval example uses actual **v1.2.1** results captured on October 6, 2026; the prompt is a suggested user request.
-
-![Install the apexcn-cli skill and start with a natural-language request](docs/assets/readme/ai-skill-get-started-en.jpg)
-
-![Natural-language research with the skill and real English community sources](docs/assets/readme/ai-skill-research-en.jpg)
 
 ## Chinese and English content
 
