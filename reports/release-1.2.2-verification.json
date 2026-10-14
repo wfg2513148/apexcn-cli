@@ -1,0 +1,157 @@
+{
+  "kind": "release-verification",
+  "version": "1.2.2",
+  "verifiedAt": "2026-10-14T16:06:59.270Z",
+  "releaseUrl": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.2.2",
+  "stableLatest": true,
+  "sourceCommit": "cc2a8c0f8b7bb1ad460ea3dd6dbc4262f284bd7b",
+  "sourceTreeDirty": false,
+  "assets": [
+    {
+      "name": "apexcn-cli.spdx.json",
+      "sha256": "ae26acd27d3d548a03a508eb2f206a8014e990ca30bf4b17ac2df64dc23ab77f"
+    },
+    {
+      "name": "apexcn-cli.spdx.json.sha256",
+      "sha256": "182d0e17a9e472e26d787c1191c0ef6b8482d9d3429ab42c61125715387df57b"
+    },
+    {
+      "name": "apexcn-cli.tgz",
+      "sha256": "bd3ed6cae470af9710397805b609c6b93e479995295dbb74f0fb15b32656b852"
+    },
+    {
+      "name": "apexcn-cli.tgz.sha256",
+      "sha256": "2e440ce14673c6ae56e84a8a049a712ce25c42cd753787dff97905a8f52663f4"
+    },
+    {
+      "name": "checksums.txt",
+      "sha256": "1854745495d51ac1c99bbe4f873e8052a36009c69f66f5f2ff5e88483d296e7c"
+    },
+    {
+      "name": "install-agent.ps1",
+      "sha256": "e47c129de80e00b371dd892fff8ef27fb23c3acfd35c122885f161f3f49f3de5"
+    },
+    {
+      "name": "install-agent.ps1.sha256",
+      "sha256": "571136304959328aac98bdca39d39f1b54821e84a52ef7f265b5cd840174d4c6"
+    },
+    {
+      "name": "install-agent.sh",
+      "sha256": "1fa26f69bb66c3da5c300b5254b7e49b8fc30b8d2f0596871fed9fa88cd5d8e7"
+    },
+    {
+      "name": "install-agent.sh.sha256",
+      "sha256": "fb533509cd0597e5063fe819a6cec05ffa02639fd8e304ac561850f8def2d295"
+    },
+    {
+      "name": "release-provenance.json",
+      "sha256": "12d9970b6b5dd393a21c2f9baed364c2e2933f73acf7ae6d7017efad50896a63"
+    },
+    {
+      "name": "release-provenance.json.sha256",
+      "sha256": "fd63c571ccb4c2efa9271b92647384c93ca457b5b949550952e915f194f29c65"
+    }
+  ],
+  "local": {
+    "passed": 881,
+    "failed": 0,
+    "skipped": 1,
+    "files": 58,
+    "build": "passed",
+    "releaseChecks": "passed",
+    "evidence": "/Users/kwang/.cache/apexcn-cli/releases/1.2.2/evidence/final-local-tests.json"
+  },
+  "windows": {
+    "runId": 38582021922,
+    "sourceCommit": "cc2a8c0f8b7bb1ad460ea3dd6dbc4262f284bd7b",
+    "platforms": [
+      "Windows PowerShell 5.1",
+      "PowerShell 7"
+    ],
+    "result": "passed",
+    "stages": [
+      "install",
+      "upgrade",
+      "failed-upgrade-recovery",
+      "rollback",
+      "uninstall"
+    ],
+    "evidence": "/Users/kwang/.cache/apexcn-cli/releases/1.2.2/evidence/windows"
+  },
+  "oci": {
+    "candidateVersion": "1.2.2",
+    "nodeVersion": "22.22.0",
+    "checkedAt": "2026-10-14T14:36:18.221Z",
+    "checks": [
+      "profile",
+      "me",
+      "categories",
+      "search"
+    ],
+    "result": "passed",
+    "mode": "read-only; isolated state; no notifications",
+    "productionPrivateCliVersion": "1.2.1",
+    "monitorIntervalMinutes": 30,
+    "productionPrivateCliAutoUpgraded": false
+  },
+  "independent": {
+    "acceptedRound": "R5",
+    "threadId": "01a13b1e-6cee-74b0-a85e-4c472e6b2638",
+    "turnId": "01a13b1e-6ec5-7d10-a6d3-b1cef6f97ea4",
+    "baselinePassed": 26,
+    "dynamicPassed": 11,
+    "assertionsPassed": 96,
+    "outputHashesVerified": 74,
+    "gateRuns": 4,
+    "infraRetries": 0,
+    "scopedAcceptance": true,
+    "fullQualification": false,
+    "independentAcceptance": false,
+    "excludedQualificationItems": 176,
+    "rawReport": "/Users/kwang/.cache/apexcn-cli/releases/1.2.2/evidence/r5/report.json",
+    "rawReportSha256": "01c160307165a2301a701c202246d1c6b7caa89916f9f152d6c9af45578f4f92",
+    "scopeSha256": "29a907505d65a12c12eb7f826f3005d9f54728dfab151d8a3935973f7be3dec1",
+    "priorRounds": [
+      {
+        "round": "R1",
+        "accepted": false,
+        "reason": "fixture defects; two blocked scenarios"
+      },
+      {
+        "round": "R2",
+        "accepted": false,
+        "reason": "material scope and evidence defects"
+      },
+      {
+        "round": "R3",
+        "accepted": false,
+        "reason": "stopped before formal report"
+      },
+      {
+        "round": "R4",
+        "accepted": false,
+        "reason": "retry budget exceeded; technical results retained"
+      }
+    ],
+    "appendices": [
+      {
+        "path": "/Users/kwang/.cache/apexcn-cli/releases/1.2.2/evidence/r4-failure-history-appendix.json",
+        "sha256": "488a7b1c9ecd46f5b2110ca2e1e05ec5b1827e18a273bb797ed546b91a43ba02"
+      },
+      {
+        "path": "/Users/kwang/.cache/apexcn-cli/releases/1.2.2/evidence/r5-report-metadata-appendix.json",
+        "sha256": "a64f38e05eb93cbfed5d0af7a07c92ff1d635892b35495e07686ba08667beb81"
+      }
+    ],
+    "review": "Independent reviewer found no substantive blockers in R5 scoped acceptance"
+  },
+  "limits": [
+    "Not full 202-item qualification; issue #2 remains open",
+    "Not novice usability or production write-back acceptance",
+    "No automatic upgrade of the private production monitor CLI"
+  ],
+  "preservedUserFile": {
+    "path": "handoff.md",
+    "sha256": "c69172c7ff2081646fa803ee02643aec186b30f1126130fd03370d5e687c3f7f"
+  }
+}
