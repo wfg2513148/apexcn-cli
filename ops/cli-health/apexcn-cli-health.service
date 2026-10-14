@@ -1,0 +1,28 @@
+[Unit]
+Description=ApexCN installed CLI read-only health probe
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=apexcn-health
+Group=apexcn-health
+WorkingDirectory=/var/lib/apexcn-cli-health
+ExecStart=/usr/bin/flock -n -E 75 /var/lib/apexcn-cli-health/run.lock /usr/bin/node /opt/apexcn-cli-health/current/monitor.mjs run --config /etc/apexcn-cli-health/monitor.json
+SuccessExitStatus=75
+StateDirectory=apexcn-cli-health
+StateDirectoryMode=0700
+UMask=0077
+TimeoutStartSec=100
+TimeoutStopSec=3
+KillMode=control-group
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/apexcn-cli-health
+CPUQuota=10%
+MemoryMax=256M
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=apexcn-cli-health

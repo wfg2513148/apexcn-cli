@@ -1,0 +1,12 @@
+[Unit]
+Description=Check ApexCN CLI every thirty minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=30min
+RandomizedDelaySec=20s
+AccuracySec=10s
+Unit=apexcn-cli-health.service
+
+[Install]
+WantedBy=timers.target

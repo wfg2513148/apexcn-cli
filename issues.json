@@ -32,7 +32,7 @@
       ]
     },
     "validator": {
-      "repository": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5",
+      "repository": "/Users/kwang/apexcn-cli-test",
       "taskVisibility": "user-visible-codex-desktop-task",
       "freshTaskRequired": true,
       "sessionCwdMustEqualRepository": true,
@@ -51,7 +51,7 @@
   },
   "sourcePolicy": {
     "allowedSource": "independent-validator-thread",
-    "validatorProject": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5",
+    "validatorProject": "/Users/kwang/apexcn-cli-test",
     "threadStrategy": "fresh-task-per-validation-round",
     "dynamicAssignmentRequired": true,
     "novicePersonaRequired": true,

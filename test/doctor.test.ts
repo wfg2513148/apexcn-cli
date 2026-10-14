@@ -1,10 +1,13 @@
 import { mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { Command } from "commander";
 import { createProgram } from "../src/index.js";
+
+const packageVersion = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 
 async function tempConfigPath() {
   const dir = await mkdtemp(join(tmpdir(), "apexcn-doctor-"));
@@ -71,8 +74,8 @@ describe("doctor command", () => {
     const data = JSON.parse(stdout.join(""));
     expect(data.ok).toBe(true);
     expect(data.diagnostics).toEqual(expect.objectContaining({
-      cliVersion: "1.2.1",
-      userAgent: "apexcn-cli/1.2.1",
+      cliVersion: packageVersion,
+      userAgent: `apexcn-cli/${packageVersion}`,
       configPath: expect.stringContaining("config.json"),
       nodeVersion: expect.stringMatching(/^v\d+/),
       platform: process.platform,
@@ -272,8 +275,8 @@ describe("doctor command", () => {
     await program.parseAsync(["node", "apexcn", "doctor", "--format", "text"]);
 
     expect(stdout.join("")).toContain("apexcn doctor: ok\n");
-    expect(stdout.join("")).toContain("CLI Version: 1.2.1\n");
-    expect(stdout.join("")).toContain("User Agent: apexcn-cli/1.2.1\n");
+    expect(stdout.join("")).toContain(`CLI Version: ${packageVersion}\n`);
+    expect(stdout.join("")).toContain(`User Agent: apexcn-cli/${packageVersion}\n`);
     expect(stdout.join("")).toContain("Config Path: ");
     expect(stdout.join("")).toContain("OK search requestId=req-search\n");
   });
@@ -295,7 +298,7 @@ describe("doctor command", () => {
       await program.parseAsync(argv);
 
       expect(stdout.join("")).toContain("apexcn doctor: ok\n");
-      expect(stdout.join("")).toContain("CLI Version: 1.2.1\n");
+      expect(stdout.join("")).toContain(`CLI Version: ${packageVersion}\n`);
       expect(() => JSON.parse(stdout.join(""))).toThrow();
       vi.unstubAllGlobals();
     }

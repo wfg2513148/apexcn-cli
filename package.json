@@ -1,6 +1,6 @@
 {
   "name": "apexcn-cli",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "type": "module",
   "bin": {
     "apexcn": "./dist/index.js"
@@ -9,6 +9,7 @@
     "agent-skill/",
     "dist/",
     "docs/",
+    "ops/cli-health/",
     "eval/qualification/tasks.v2.jsonl",
     "qualification/ga/README.md",
     "qualification/ga/fixtures-v1.json",

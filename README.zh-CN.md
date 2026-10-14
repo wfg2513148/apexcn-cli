@@ -259,6 +259,7 @@ apexcn doctor --json
 - [命令行终端手册](docs/cli-manual.zh.md)
 - [Terminal Manual (English)](docs/cli-manual.en.md)
 - [安全说明](docs/security-model.md)
+- [OCI CLI 健康监控](ops/cli-health/README.md)：供社区运维人员部署、查看告警和回滚，普通用户无需安装此服务。
 
 ## 中文和英文内容如何选择
 

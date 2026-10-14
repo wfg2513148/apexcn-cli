@@ -1,10 +1,13 @@
 import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, test, vi } from "vitest";
 import { createProgram, isCliEntrypoint } from "../src/index.js";
 import type { Command } from "commander";
+
+const packageVersion = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 
 describe("CLI entrypoint detection", () => {
   test("documents the top-level API key shortcut", () => {
@@ -27,7 +30,7 @@ describe("CLI entrypoint detection", () => {
 
     await expect(program.parseAsync(["node", "apexcn", "--version"])).rejects.toMatchObject({ code: "commander.version" });
 
-    expect(output.join("")).toBe("1.2.1\n");
+    expect(output.join("")).toBe(`${packageVersion}\n`);
   });
 
   test("rejects unknown top-level arguments instead of silently succeeding", async () => {
@@ -56,7 +59,7 @@ describe("CLI entrypoint detection", () => {
 
     const manifest = JSON.parse(output.join(""));
     expect(manifest.schemaVersion).toBe(1);
-    expect(manifest.version).toBe("1.2.1");
+    expect(manifest.version).toBe(packageVersion);
     expect(manifest.schema).toEqual({
       safetyEffects: ["read", "api-write", "destructive", "config-read", "config-write", "auth", "secret", "diagnostic", "manifest"],
       previewPolicies: ["required", "available", "none"],

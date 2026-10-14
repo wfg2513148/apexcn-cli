@@ -17,6 +17,7 @@ import { gzipSync } from "node:zlib";
 import { describe, expect, test } from "vitest";
 
 const repoRoot = join(__dirname, "..");
+const packageVersion = (JSON.parse(readRepoFile("package.json")) as { version: string }).version;
 const posixTest = process.platform === "win32" ? test.skip : test;
 
 function readRepoFile(path: string): string {
@@ -214,7 +215,7 @@ describe("zero-argument one-click installers", () => {
       expect(execFileSync(join(root, "bin", "apexcn"), ["--version"], {
         env,
         encoding: "utf8"
-      })).toBe("1.2.1\n");
+      })).toBe(`${packageVersion}\n`);
       expect(existsSync(join(root, "home", ".apexcn", "config.json"))).toBe(false);
       expect(existsSync(join(root, "home", ".agents", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
       expect(existsSync(join(root, "home", ".codex", "skills", "apexcn-cli", "SKILL.md"))).toBe(true);
@@ -345,7 +346,7 @@ exit 0
 
       expect(result.status, result.stderr).toBe(0);
       expect(result.stdout).toContain("Updated shell-resolved launcher");
-      expect(execFileSync(shadow, ["--version"], { env, encoding: "utf8" })).toBe("1.2.1\n");
+      expect(execFileSync(shadow, ["--version"], { env, encoding: "utf8" })).toBe(`${packageVersion}\n`);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -378,7 +379,7 @@ printf 'external launcher\\n'
       expect(result.stdout).not.toContain("Updated shell-resolved launcher");
       expect(readFileSync(externalLauncher, "utf8")).toBe(originalLauncher);
       expect(execFileSync(join(root, "bin", "apexcn"), ["--version"], { env, encoding: "utf8" }))
-        .toBe("1.2.1\n");
+        .toBe(`${packageVersion}\n`);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -419,13 +420,16 @@ printf 'external launcher\\n'
   }, 30_000);
 
   test("primary docs expose the zero-argument commands and separate authentication", () => {
-    for (const path of ["README.md"]) {
+    for (const [path, keyBoundary] of [
+      ["README.md", "Installation does not accept an API key"],
+      ["README.zh-CN.md", "安装命令不接收 API key"]
+    ]) {
       const doc = readRepoFile(path);
       expect(doc).toContain('bash -euo pipefail -c');
       expect(doc).toContain('curl -fsSL -o "$tmp" https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.sh');
       expect(doc).toContain('bash "$tmp"');
       expect(doc).toContain('irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex');
-      expect(doc).toContain("安装命令不接收 API key");
+      expect(doc).toContain(keyBoundary);
       expect(doc).not.toContain("APEXCN_CLI_INSTALL_AGENT_SKILLS");
       expect(doc).not.toContain("APEXCN_CLI_YES");
       expect(doc).not.toContain("bash -s --");

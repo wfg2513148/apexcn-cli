@@ -1,10 +1,13 @@
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { Command } from "commander";
 import { currentCliOperation } from "../src/core/request-context.js";
 import { createProgram } from "../src/index.js";
+
+const packageVersion = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 
 async function tempConfigPath() {
   const dir = await mkdtemp(join(tmpdir(), "apexcn-content-"));
@@ -331,7 +334,7 @@ describe("content commands", () => {
       "https://oracleapex.cn/ords/test/api/v1/admin/operations?from=2026-07-01&to=2026-07-07&userId=42&limit=10",
       expect.objectContaining({
         headers: expect.objectContaining({
-          "X-APEXCN-Client": "apexcn-cli/1.2.1",
+          "X-APEXCN-Client": `apexcn-cli/${packageVersion}`,
           "X-APEXCN-CLI-Operation": "admin_operations"
         })
       })

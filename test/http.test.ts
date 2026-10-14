@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { readFileSync } from "node:fs";
 import { runWithCliRequestContext } from "../src/core/request-context.js";
 import { errorBodyFrom, remediationForHttpError } from "../src/core/errors.js";
 import { HttpError, joinUrl, NetworkError, redactSecret, requestJson, TimeoutError } from "../src/http.js";
+
+const packageVersion = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 
 describe("http", () => {
   afterEach(() => {
@@ -30,7 +33,7 @@ describe("http", () => {
       headers: {
         Authorization: "Bearer abc123",
         "X-APEXCN-API-Key": "abc123",
-        "X-APEXCN-Client": "apexcn-cli/1.2.1",
+        "X-APEXCN-Client": `apexcn-cli/${packageVersion}`,
         "X-APEXCN-CLI-Operation": "me_search",
         "User-Agent": "apexcn-test"
       }
@@ -53,8 +56,8 @@ describe("http", () => {
       headers: {
         Authorization: "Bearer abc123",
         "X-APEXCN-API-Key": "abc123",
-        "X-APEXCN-Client": "apexcn-cli/1.2.1",
-        "User-Agent": "apexcn-cli/1.2.1",
+        "X-APEXCN-Client": `apexcn-cli/${packageVersion}`,
+        "User-Agent": `apexcn-cli/${packageVersion}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ title: "Hello" })

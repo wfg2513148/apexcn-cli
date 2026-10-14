@@ -5,6 +5,7 @@ import { describe, expect, test } from "vitest";
 const repoRoot = join(__dirname, "..");
 const publicDocs = [
   "README.md",
+  "README.zh-CN.md",
   "docs/cli-manual.en.md",
   "docs/cli-manual.zh.md",
   "docs/security-model.md",
@@ -81,15 +82,18 @@ describe("documentation consistency", () => {
     }
   });
 
-  test("README community onboarding uses real screenshot assets", () => {
-    const readme = read("README.md");
+  test.each([
+    ["README.md", "## Meet the APEX Chinese Community", "### 2. Connect your community account once"],
+    ["README.zh-CN.md", "## APEX 中文社区是什么", "## 如何获取 API Key"]
+  ])("%s community onboarding uses real screenshot assets", (path, communityHeading, authHeading) => {
+    const readme = read(path);
     const screenshots = [
       "docs/assets/readme/apexcn-community-home.jpg",
       "docs/assets/readme/apexcn-api-key-management.png"
     ];
 
-    expect(readme).toContain("## APEX 中文社区是什么");
-    expect(readme).toContain("## 如何获取 API Key");
+    expect(readme).toContain(communityHeading);
+    expect(readme).toContain(authHeading);
 
     for (const screenshot of screenshots) {
       expect(readme).toContain(`](${screenshot})`);
@@ -107,13 +111,16 @@ describe("documentation consistency", () => {
 
   test("user-facing examples do not present stale fixed content ids as live", () => {
     const readme = read("README.md");
+    const chineseReadme = read("README.zh-CN.md");
     const userGuides = [read("docs/user-guide.zh.md"), read("docs/user-guide.en.md")].join("\n");
     const manuals = [read("docs/cli-manual.zh.md"), read("docs/cli-manual.en.md")].join("\n");
 
     expect(readme).not.toContain("30549");
+    expect(chineseReadme).not.toContain("30549");
     expect(userGuides).not.toContain("30549");
     expect(userGuides).not.toContain("201480");
-    expect(readme).toContain("不要把示例编号当作当前线上内容");
+    expect(readme).toContain("IDs in examples are not current community content");
+    expect(chineseReadme).toContain("不要把示例编号当作当前线上内容");
     expect(manuals).toContain("示例中的帖子和回复编号只用于说明命令格式");
     expect(manuals).toContain("ids in examples only demonstrate command syntax");
   });

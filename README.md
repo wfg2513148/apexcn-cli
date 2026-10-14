@@ -45,6 +45,8 @@ The installer copies the [bundled skill](agent-skill/SKILL.md) into supported lo
 
 Sign in at [oracleapex.cn](https://oracleapex.cn/), open the account menu, and select **API Key Management** (Chinese label: **API Key 管理**). Copy your key.
 
+![APEX Chinese Community API Key Management dialog](docs/assets/readme/apexcn-api-key-management.png)
+
 If your AI tool provides secure environment settings, save it there as `APEXCN_API_KEY`. Then tell your assistant:
 
 > Configure apexcn-cli to use the existing APEXCN_API_KEY environment variable. Verify community access without displaying the key. Do not copy the secret into chat or a command argument.
@@ -156,7 +158,7 @@ bash -euo pipefail -c 'tmp="$(mktemp)"; trap "rm -f \"$tmp\"" EXIT; curl -fsSL -
 irm "https://github.com/wfg2513148/apexcn-cli/releases/latest/download/install-agent.ps1" | iex
 ```
 
-Configure authentication separately using the [user guide](docs/user-guide.en.md#2-connect-your-api-key), then try:
+Installation does not accept an API key. Configure authentication separately using the [user guide](docs/user-guide.en.md#2-connect-your-api-key), then try:
 
 ```bash
 apexcn --version
@@ -168,6 +170,8 @@ apexcn update
 
 `rag retrieve` returns evidence for your local AI to synthesize. `ask` requests an answer from the community's server-side service; the skill uses it when you explicitly request that service. `auth audit` checks local configuration, while `doctor` also checks community API access.
 
+Topic and reply IDs in examples are not current community content; choose IDs from actual search results.
+
 </details>
 
 ## Documentation and feedback
@@ -176,6 +180,7 @@ apexcn update
 - [English terminal manual](docs/cli-manual.en.md) — commands and options.
 - [中文用户手册](docs/user-guide.zh.md) · [中文命令行手册](docs/cli-manual.zh.md).
 - [Security model](docs/security-model.md) — authentication and write confirmation details.
+- [OCI CLI health monitoring](ops/cli-health/README.md): operator deployment, alerts and rollback; not required for local CLI use.
 - [GitHub Issues](https://github.com/wfg2513148/apexcn-cli/issues) — CLI bugs, documentation improvements, and feature requests in English or Chinese.
 - [APEX Chinese Community](https://oracleapex.cn/) — Oracle APEX questions and community discussions.
 

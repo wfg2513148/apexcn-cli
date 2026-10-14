@@ -104,7 +104,7 @@
       "reusePredecessorTaskAllowed": false
     },
     "validator": {
-      "project": "/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5",
+      "project": "/Users/kwang/apexcn-cli-test",
       "threadVisibility": "user-visible-codex-desktop-task",
       "sessionCwdMustEqualProject": true,
       "hiddenSubagentAllowed": false,

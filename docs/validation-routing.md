@@ -13,11 +13,15 @@ For the 2026-10-04 compatibility audit, the main visible validation task ran in
 `/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r4`. The frozen 1.1.6
 archive, current and historical public datasets, fixtures, recorder and scorer
 were copied there with a separate scope contract and input digests. This is a
-new audit workspace, not recovery of the missing historical evidence. Current
-routing fields now point to the fresh supplement workspace
-`/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5`; published historical contracts retain their original
-paths. A preceding preparation round was disqualified for reading materials
+new audit workspace, not recovery of the missing historical evidence. The fresh
+supplement workspace was `/Users/kwang/Documents/Codex/2026-10-04/apexcn-cli-test-r5`;
+published historical contracts retain their original paths. A preceding preparation round was disqualified for reading materials
 outside its novice scope and provides no acceptance evidence.
+
+On 2026-10-14, that supplement directory was no longer available. Current routing
+now points to the registered `/Users/kwang/apexcn-cli-test` project, whose baseline,
+scorer, harness and candidate-validation tools were checked before assignment.
+This changes the execution address, not historical results or acceptance scope.
 
 Before a real validation round:
 
