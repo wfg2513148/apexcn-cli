@@ -1,15 +1,15 @@
 {
   "kind": "apexcn-iteration-context",
   "schemaVersion": 1,
-  "generatedAt": "2026-10-05T18:44:36.931Z",
+  "generatedAt": "2026-10-14T16:06:59.441Z",
   "release": {
-    "version": "1.2.1",
-    "tag": "v1.2.1",
-    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.2.1"
+    "version": "1.2.2",
+    "tag": "v1.2.2",
+    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.2.2"
   },
   "repository": {
-    "branch": "",
-    "commit": "42d3f542e1b75fa7426f5f656c1c4d50bfc09e95"
+    "branch": "main",
+    "commit": "cc2a8c0f8b7bb1ad460ea3dd6dbc4262f284bd7b"
   },
   "milestone": {
     "completedIterationFor": "1.1",
@@ -17,34 +17,27 @@
     "resumeMilestoneStatus": null
   },
   "enhancedCapabilities": [
-    "CLI以原始当前问题选语言：中文zh-cn，其他语言en；显式--lang优先。列表、正文、问答与完整签名链接保持语言上下文。",
-    "独立R4冻结候选b96289a、归档SHA7804d0f65f0aff908afe37c95675f87e316537be4c0dde9cfb60903f3526a286；77适用基线与20语言场景通过，125排除项单列。",
-    "正式1.2.1已发布，全部11资产下载哈希一致；用户安装1.2.0升级1.2.1，226文件一致、配置不变，6次PROD调用和真实Chrome双语语义通过。"
+    "可选 OCI CLI 健康监控：每30分钟检查，连续两次失败告警，恢复通知复用现有飞书安全配置。",
+    "1.2.2 稳定版11个发布附件与冻结安装包哈希一致。"
   ],
   "unexpectedProblems": [
-    "TEST鉴权请求在进入业务handler前出现ORDS代理元数据递归SQL错误；另有独立验收网络连接超时。",
-    "独立phase台账被报告脚本覆盖；原始输出保留，以原生执行前调用补齐来源，12项child精确时间戳未恢复。",
-    "部署前DBMS_METADATA导出未完成；中断时混合状态与收敛后的健康源码均独立保留，不冒称部署前备份。"
+    "旧版本断言和英文文档检查失败，已修复并保留首轮失败证据。",
+    "前四轮独立验证存在夹具、范围或重试预算问题，不作为验收通过依据。"
   ],
   "rootCauses": [
-    "旧CLI缺省语言为中文，服务端文章URL未绑定语言；问答历史上下文和英文fallback也需服务器修正。",
-    "TEST代理连接能复现CURSOR元数据错误，会话级20648883规避有效；未独立确认Oracle内部缺陷编号。",
-    "问答公开requestId由query_id生成，清理须映射实际client_request_id，不可直接据错误关联字段的零结果认定已清。"
+    "硬编码历史版本与验证流程约束不一致。"
   ],
   "preventionActions": [
-    "发布同一11资产并核对下载SHA、sourceCommit和tag；审计元数据提交不移动tag或重新打包。",
-    "保留所有首轮失败与补验；清理按环境、精确ID和来源守卫；原账号、密钥、配置保留。",
-    "交接offline仅适用于晚于releaseCommit的干净审计提交；真实在线发布和安装验证另行留证。",
-    "较早正式PROD导出的四个原始文件已恢复，SHA逐字节等于原始导出记录；与当前健康快照分别保存。"
+    "使用 package.json 精确版本断言；冻结工具、材料、候选包和零重试预算。",
+    "独立R5一次通过，保留原始报告和外部纠错附录；不移动发布tag。"
   ],
-  "nextMilestoneGoal": "本补丁闭环，不激活后续里程碑，不重新激活历史0.9 timeboxed；下一任务须按用户新目标规划。",
+  "nextMilestoneGoal": "本补丁发布闭环，不激活后续里程碑，不重新激活历史0.9 timeboxed；下一任务按用户新目标规划。",
   "expectedResults": [
-    "G1–G9全部以实际证据关闭；用户真实安装为1.2.1，生产中英search/detail/ask与浏览器结果一致。"
+    "881项本地测试通过、1项跳过；独立26基线与11动态场景通过；两种Windows平台和OCI候选只读验证通过。"
   ],
   "majorRisks": [
-    "普通用户原稿和回复保留原文；原稿标题本身可能为外语，不把该原始数据属性误报为语言版本选择失败。",
-    "应区分代理元数据规避已验证、Oracle内部根因未获独立确认，以及部署备份时序的保留限制。",
-    "本补丁已完成自建数据和会话精确清理；原有账号密钥、用户AGENTS.md和docs/agents改动保留。"
+    "完整202题资格化仍有176项未执行，不视为通过或豁免，GitHub issue #2 保持开放。",
+    "生产私有监控CLI仍为1.2.1；发布不会自动升级该实例。"
   ],
   "activeIssues": [],
   "resume": {
