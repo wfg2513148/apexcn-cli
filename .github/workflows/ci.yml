@@ -2,6 +2,17 @@ name: Independent Windows candidate qualification
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Published baseline version, fixed for this test
+        required: true
+        default: v1.2.2
+        type: string
+      archive_sha256:
+        description: Frozen 1.3.0 candidate checksum
+        required: true
+        default: f93e951e54780f713b9b43f4b9fed13f9eebb30960ab1a54d6059f165cc8abaa
+        type: string
 
 permissions:
   contents: read
@@ -25,6 +36,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test "$VALIDATOR_EXPECTED_TAG" = 'v1.2.2' || { printf 'Baseline tag mismatch.\n' >&2; exit 1; }
+          test "$VALIDATOR_EXPECTED_SHA" = 'f93e951e54780f713b9b43f4b9fed13f9eebb30960ab1a54d6059f165cc8abaa' || { printf 'Candidate checksum mismatch.\n' >&2; exit 1; }
           mkdir -p candidate-assets/prior
           npm pack --ignore-scripts --pack-destination candidate-assets
           mv candidate-assets/apexcn-cli-1.3.0.tgz candidate-assets/apexcn-cli.tgz
@@ -34,6 +47,8 @@ jobs:
           printf '%s  %s\n' 'bd3ed6cae470af9710397805b609c6b93e479995295dbb74f0fb15b32656b852' 'candidate-assets/prior/apexcn-cli.tgz' | sha256sum --check
         env:
           GH_TOKEN: ${{ github.token }}
+          VALIDATOR_EXPECTED_TAG: ${{ inputs.release_tag }}
+          VALIDATOR_EXPECTED_SHA: ${{ inputs.archive_sha256 }}
       - uses: actions/upload-artifact@v4
         with:
           name: frozen-windows-candidate-inputs

@@ -164,5 +164,10 @@ try {
     report.ok = false;
     process.exitCode = 1;
   }
-  process.stdout.write(`${JSON.stringify({ ok: report.ok, cleaned: report.cleaned, shell, steps: report.steps.length, error: report.error })}\n`);
+  process.stdout.write(`${JSON.stringify({
+    ok: report.ok, cleaned: report.cleaned, shell, shellVersion: report.shellVersion,
+    node: report.node, candidateSha256: report.candidateSha256, priorSha256: report.priorSha256,
+    steps: report.steps.map((step) => ({ ...step, stdout: step.stdout.slice(0, 4096), stderr: step.stderr.slice(0, 4096) })),
+    error: report.error, cleanupDeferred: report.cleanupDeferred
+  })}\n`);
 }
