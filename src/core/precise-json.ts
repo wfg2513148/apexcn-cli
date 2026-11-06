@@ -91,10 +91,10 @@ export function toNativeApiNumbers(value: unknown): unknown {
   return value;
 }
 
-export function normalizeTopicForSelection(value: unknown, replySelection: "all" | "evidence" | "none" = "all"): unknown {
+export function normalizeTopicForSelection(value: unknown, replySelection: "all" | "evidence" | "none" = "all", allowArrayTopic = true): unknown {
   if (typeof value !== "object" || value === null || Array.isArray(value) || isLosslessNumber(value)) return toNativeApiNumbers(value);
   const root = value as Record<string, unknown>;
-  const topic = typeof root.topic === "object" && root.topic !== null && !isLosslessNumber(root.topic)
+  const topic = typeof root.topic === "object" && root.topic !== null && !isLosslessNumber(root.topic) && (allowArrayTopic || !Array.isArray(root.topic))
     ? root.topic as Record<string, unknown> : root;
   for (const key of ["id", "topicId", "threadId"]) safeApiId(topic[key]);
   const replies = Array.isArray(root.replies) ? root.replies : replySelection === "all" && Array.isArray(topic.replies) ? topic.replies : [];

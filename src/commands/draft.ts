@@ -396,7 +396,7 @@ async function readJsonObject(path: string, label: "research" | "topic", options
   }
   try {
     const precise = parsePreciseJson(text);
-    const parsed = label === "topic" ? normalizeTopicForSelection(precise, "none") : precise;
+    const parsed = label === "topic" ? normalizeTopicForSelection(precise, "none", false) : precise;
     if (!isResearchObject(parsed)) {
       printError(options, { type: "validation", message: `Invalid ${label} file: ${path} must contain a JSON object` });
       process.exitCode = 1;

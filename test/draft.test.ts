@@ -73,6 +73,14 @@ describe("draft commands", () => {
     expect(stdout.join("")).toBe("");
   });
 
+  test("draft reply rejects an imprecise root ID when an array topic is ignored", async () => {
+    const { program, stdout, stderr } = draftProgram({ readStdin: async () => '{"id":9007199254740991.1,"topic":[]}' });
+    await program.parseAsync(["node", "apexcn", "draft", "reply", "--topic-id", "9007199254740991", "--answer", "Example reply", "--topic-file", "-", "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(stdout.join("")).toBe("");
+  });
+
   test("draft import rejects a bundle with a rounded topic ID", async () => {
     const root = await mkdtemp(join(tmpdir(), "apexcn-draft-unsafe-import-"));
     try {
