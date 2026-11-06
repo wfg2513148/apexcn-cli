@@ -3,13 +3,16 @@ import { stdin as processStdin, stdout as processStdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { Command, InvalidArgumentError, Option } from "commander";
 import { ConfigFileError } from "../config.js";
-import { currentContentLanguage } from "../core/request-context.js";
+import { currentContentLanguage, runWithCliRequestContext } from "../core/request-context.js";
 import { createApiClient } from "../core/api-client.js";
+import { isAdminOperationsV2Response, matchesAdminOperationsV2Filters, stringifyAdminOperationsV2Json } from "../core/admin-operations-v2.js";
+import { assessCapabilityCompatibility } from "../core/capability-compatibility.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
 import { confirmWriteOperation, createWriteOperation, type WriteOperationRequest, type WriteOperationSession } from "../core/write-operation.js";
 import {
   adminOperations,
+  adminOperationsV2,
   askCommunity,
   listAdmins,
   listCategories,
@@ -92,6 +95,8 @@ type AdminOperationsOptions = FormatOption & {
   userId?: number;
   limit?: number;
 };
+
+type AdminOperationsV2Options = Omit<AdminOperationsOptions, "userId"> & { userId?: string };
 
 type AskFilterOptions = {
   topK?: number;
@@ -297,6 +302,47 @@ export function createAdminCommand(options: ApiCommandOptions): Command {
           limit: commandOptions.limit
         });
         printData(options, data, outputFormat(commandOptions), formatAdminOperationsText);
+      });
+    });
+
+  admin
+    .command("operations-v2")
+    .description("show administrator-only operations v2 aggregates")
+    .option("--from <date>", "inclusive Shanghai start date, YYYY-MM-DD", parseSearchDate)
+    .option("--to <date>", "inclusive Shanghai end date, YYYY-MM-DD", parseSearchDate)
+    .option("--user-id <id>", "exact community user id", parseAdminOperationsV2UserId)
+    .option("--limit <n>", "maximum operation and error rows: 10, 20, 50, or 100", parseAdminOperationsV2Limit)
+    .option("--json", "pretty-print JSON")
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async (commandOptions: AdminOperationsV2Options) => {
+      if (!validateFormatOptions(options, commandOptions) || !validateAdminOperationsDateRange(options, commandOptions)) return;
+      await runApi(options, commandOptions, async (session) => {
+        const capabilities = await runWithCliRequestContext("me_capabilities", () =>
+          requestJson(session.baseUrl, "/api/v1/capabilities", { token: session.token }));
+        const compatibility = assessCapabilityCompatibility(capabilities, ["admin-operations-v2"]);
+        const entries = isRecord(capabilities) && Array.isArray(capabilities.capabilities)
+          ? capabilities.capabilities.filter(isRecord) : [];
+        const matching = entries.filter((entry) => entry.id === "admin-operations-v2");
+        const capability = matching[0];
+        if (!compatibility.ok || matching.length !== 1 || capability?.available !== true || !Array.isArray(capability.endpoints)
+          || !capability.endpoints.includes("/admin/operations/v2")) {
+          const requestId = isRecord(capabilities) && typeof capabilities.requestId === "string"
+            && /^req_[A-Za-z0-9_-]{1,100}$/.test(capabilities.requestId) ? capabilities.requestId : undefined;
+          if (compatibility.status === "missing-capability" && matching.length === 1
+            && capability?.available === false && capability.unavailableReason === "FORBIDDEN") {
+            throw new CliSafetyError("Administrator permission is required for operations v2.", "FORBIDDEN", requestId);
+          }
+          throw new CliSafetyError("Administrator operations v2 is unavailable or incompatible with this server.", "CAPABILITY_UNAVAILABLE", requestId);
+        }
+        const data = await runWithCliRequestContext("admin_operations", () => adminOperationsV2(createApiClient(session), {
+          from: commandOptions.from, to: commandOptions.to, userId: commandOptions.userId, limit: commandOptions.limit
+        }));
+        if (!isAdminOperationsV2Response(data) || !matchesAdminOperationsV2Filters(data, commandOptions)) {
+          throw new CliValidationError("Invalid administrator operations v2 response or mismatched filters.");
+        }
+        const format = outputFormat(commandOptions);
+        if (format === "text") printData(options, data, format, formatAdminOperationsV2Text);
+        else options.stdout(`${stringifyAdminOperationsV2Json(data, format === "pretty")}\n`);
       });
     });
   return admin;
@@ -943,6 +989,9 @@ class CliValidationError extends Error {
 }
 
 class CliSafetyError extends Error {
+  constructor(message: string, readonly code?: string, readonly requestId?: string) {
+    super(message);
+  }
 }
 
 async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOption, callback: (session: Session) => Promise<void>): Promise<void> {
@@ -976,7 +1025,7 @@ async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOpt
       return;
     }
     if (error instanceof CliSafetyError) {
-      printError(options, { type: "safety", message: error.message, exitCode: 1 }, undefined, jsonErrors);
+      printError(options, { type: "safety", code: error.code, message: error.message, requestId: error.requestId, exitCode: 1 }, undefined, jsonErrors);
       process.exitCode = 1;
       return;
     }
@@ -1353,6 +1402,32 @@ function formatAdminOperationsText(data: unknown): string {
     `Operations:\n${operations}`,
     `Errors:\n${errors}`,
     `Keywords:\n${keywords}`,
+    line("requestId", data.requestId)
+  ].filter(Boolean).join("\n");
+}
+
+function formatAdminOperationsV2Text(data: unknown): string {
+  if (!isRecord(data) || !isRecord(data.window) || !isRecord(data.filter) || !isRecord(data.totals)) return "";
+  const window = data.window;
+  const filter = data.filter;
+  const totals = data.totals;
+  const user = isRecord(filter.user) ? filter.user : undefined;
+  const percent = (value: unknown) => value === null ? "n/a" : `${fieldText(value)}%`;
+  const summary = lines([
+    line("schemaVersion", data.schemaVersion), line("semanticsId", data.semanticsId),
+    `window: ${fieldText(window.from)} to ${fieldText(window.to)} (${fieldText(window.days)} days, ${fieldText(window.timeZone)})`,
+    line("client", filter.client), line("limit", filter.limit),
+    user ? `user: ${fieldText(user.id)} ${fieldText(user.nickname)}`.trimEnd() : "user: all",
+    line("calls", totals.calls), line("success", totals.successCount), line("failures", totals.failureCount),
+    line("unclassified", totals.unclassifiedCalls), line("classified", totals.classifiedCalls),
+    line("distinct users", totals.distinctUsers), `success rate: ${percent(totals.successRate)}`,
+    `classification coverage: ${percent(totals.classificationCoverage)}`, line("freshness", totals.freshnessAt)
+  ]);
+  return [
+    `Summary:\n${summary}`,
+    `Daily:\ndate\tcalls\tsuccess\tfailure\tunclassified\n${adminOperationsRows(data.daily, (item) => [item.date, item.calls, item.successCount, item.failureCount, item.unclassifiedCalls])}`,
+    `Operations:\noperation\troute\tcalls\tsuccess\tfailure\tunclassified\tdistinctUsers\tsuccessRate\tavgDurationMs\tfreshnessAt\n${adminOperationsRows(data.operations, (item) => [item.operation, item.route, item.calls, item.successCount, item.failureCount, item.unclassifiedCalls, item.distinctUsers, percent(item.successRate), item.avgDurationMs, item.freshnessAt])}`,
+    `Errors:\nhttpStatus\terrorCode\toperation\troute\tcalls\tdistinctUsers\tfreshnessAt\n${adminOperationsRows(data.errors, (item) => [item.httpStatus, item.errorCode, item.operation, item.route, item.calls, item.distinctUsers, item.freshnessAt])}`,
     line("requestId", data.requestId)
   ].filter(Boolean).join("\n");
 }
@@ -2531,6 +2606,20 @@ function parseAdminOperationsLimit(value: string): number {
   if (parsed < 1 || parsed > 100) {
     throw new InvalidArgumentError("Expected --limit to be between 1 and 100");
   }
+  return parsed;
+}
+
+function parseAdminOperationsV2Limit(value: string): number {
+  if (!["10", "20", "50", "100"].includes(value)) {
+    throw new InvalidArgumentError("Expected --limit to be one of 10, 20, 50, or 100");
+  }
+  return Number(value);
+}
+
+function parseAdminOperationsV2UserId(value: string): string {
+  if (!/^\d+$/.test(value)) throw new InvalidArgumentError("Expected --user-id to be a positive integer of at most 28 digits");
+  const parsed = value.replace(/^0+/, "") || "0";
+  if (parsed === "0" || parsed.length > 28) throw new InvalidArgumentError("Expected --user-id to be a positive integer of at most 28 digits");
   return parsed;
 }
 

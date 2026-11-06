@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { buildGaPublicSurface } from "./generate-ga-public-surface.mjs";
 import { buildGaQualificationTasks } from "./generate-ga-qualification-dataset.mjs";
 import { buildGaQualificationHarness } from "./generate-ga-qualification-harness.mjs";
+import { releaseQualificationIdentityMatches } from "./release-qualification-identity.mjs";
 
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const args = parseArgs(process.argv.slice(2));
@@ -146,6 +147,7 @@ function validateReleaseSurface(baseline, surface, contract) {
   const problemCountBefore = problems.length;
   if (contract.kind !== "apexcn-release-qualification-contract"
     || contract.contractVersion !== (releaseVersion.startsWith("1.2.") ? "COMMUNITY-I18N-QUALIFICATION-1" : "M110-QUALIFICATION-1")
+    || !releaseQualificationIdentityMatches(contract, releaseVersion)
     || contract.targetVersion !== releaseVersion
     || surface.frozenForVersion !== contract.targetVersion
     || surface.baselineVersion !== contract.baseline.version) {

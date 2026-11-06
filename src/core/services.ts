@@ -1,12 +1,13 @@
 import type { ApexcnApiClient } from "./api-client.js";
 import type { ContentLanguage } from "./content-language.js";
+import { parseAdminOperationsV2Json } from "./admin-operations-v2.js";
 
 export type TopicFilters = Record<string, string | number | boolean | undefined>;
 
 export type AdminOperationsFilters = {
   from?: string;
   to?: string;
-  userId?: number;
+  userId?: number | string;
   limit?: number;
 };
 
@@ -16,6 +17,10 @@ export function listAdmins(client: ApexcnApiClient): Promise<unknown> {
 
 export function adminOperations(client: ApexcnApiClient, filters: AdminOperationsFilters = {}): Promise<unknown> {
   return client.get("/api/v1/admin/operations", filters);
+}
+
+export function adminOperationsV2(client: ApexcnApiClient, filters: AdminOperationsFilters = {}): Promise<unknown> {
+  return client.get("/api/v1/admin/operations/v2", filters, parseAdminOperationsV2Json);
 }
 
 export function searchTopics(client: ApexcnApiClient, keyword: string, filters: TopicFilters = {}): Promise<unknown> {

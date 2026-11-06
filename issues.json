@@ -1,10 +1,37 @@
 {
   "schemaVersion": 1,
   "product": "apexcn-cli",
-  "updatedAt": "2026-10-05T18:43:13.141213+00:00",
+  "updatedAt": "2026-11-05T17:03:44+00:00",
   "activeOnly": true,
   "issues": [],
-  "enhancementRequests": [],
+  "enhancementRequests": [
+    {
+      "id": "ER-20261105-admin-operations-v2",
+      "status": "in_progress",
+      "targetVersion": "1.3.0",
+      "title": "Expose compatible administrator operations v2",
+      "currentBehavior": [
+        "The production API advertises administrator operations v2, while the CLI exposes only the v1 aggregate and its keyword output.",
+        "English APEX search returned HTTP 500 and the community OpenAPI YAML failed to parse during the 2026-11-05 audit.",
+        "Independent baseline testing observed HTTP 400 for a v2 request without limit on the candidate DEV endpoint, although the documented default is 20; explicit 10, 20, 50 and 100 succeeded."
+      ],
+      "requiredOutcomes": [
+        "Investigate and repair the server search failure and API contract in the server-owned task, retaining first-failure and environment evidence.",
+        "Expose operations v2 through an explicit backwards-compatible CLI command, with a separate schema, capability checks and documented v1/v2 semantics.",
+        "Freeze the exact candidate and pass the applicable baseline plus dynamic real-scenario validation in a fresh independent apexcn-cli-test task."
+      ],
+      "serverCapabilityAuditRequired": true,
+      "serverAssignmentThreadId": "01a1ac75-211c-7152-b763-3ae977a7b84f",
+      "baselineValidationThreadId": "01a1ac80-6c8c-7c63-a509-1a945449c8fa",
+      "baselineValidationReport": "/Users/kwang/apexcn-cli-test/runs/preupgrade-1.2.2-20261106-ylCCz9/REPORT.md",
+      "executionOrder": [
+        "apexcn-forums-if-server-change-required",
+        "apexcn-cli",
+        "apexcn-cli-test"
+      ],
+      "promotionToActiveIssue": "only-after-fresh-independent-validator-finding"
+    }
+  ],
   "developmentExtensionProtocol": {
     "schemaVersion": 1,
     "scope": "all-future-cli-capability-extensions",

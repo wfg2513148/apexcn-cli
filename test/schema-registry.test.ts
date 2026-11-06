@@ -34,7 +34,7 @@ describe("public JSON Schema registry", () => {
         $id: expect.any(String),
         title: expect.any(String),
         type: "object",
-        "x-apexcn-schema-version": 1,
+        "x-apexcn-schema-version": command.id === "admin.operations-v2" ? 2 : 1,
         "x-apexcn-command-ids": expect.arrayContaining([command.id])
       }));
     }

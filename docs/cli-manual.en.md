@@ -159,11 +159,17 @@ apexcn admin list --json
 apexcn admin list --format text
 apexcn admin operations --json
 apexcn admin operations --from 2026-07-01 --to 2026-07-07 --user-id 42 --limit 20 --format text
+apexcn admin operations-v2 --json
+apexcn admin operations-v2 --from 2026-07-01 --to 2026-07-07 --user-id 42 --limit 50 --format text
 ```
 
 `admin list` returns only server-approved public admin fields and public contact entries; private contact data is not exposed.
 
 `admin operations` is an administrator-only view of apexcn-cli requests received by the server. The default window is the last seven days. A custom window must provide both `--from` and `--to`; they are inclusive `YYYY-MM-DD` dates with a maximum 90-day window. `--user-id` applies an exact community user filter, and `--limit` bounds each operation, error, and keyword section to 1-100 rows, defaulting to 20. Output contains five aggregate sections: summary, daily trend, operation/route distribution, HTTP status and stable error distribution, and explicit search keywords, followed by the `requestId`. Errors also use structured JSON with `--format json`, `--format pretty`, or `--json`. Its JSON contract is `admin-operations-response-v1`.
+
+`admin operations-v2` uses a separate administrator aggregate and requires the server to advertise the `admin-operations-v2` capability and endpoint. It defaults to the last seven Shanghai business dates. Supply both `--from` and `--to` for an inclusive window of at most 90 days; the end date cannot be in the future in Shanghai. `--user-id` filters an exact community user ID. `--limit` accepts 10, 20, 50, or 100; when omitted, the server defaults to 20. The JSON contract is `admin-operations-response-v2`, with `schemaVersion: 2` and `semanticsId: AFA-CLI-OPS-1.0`.
+
+V2 reports successful, failed, and unclassified calls separately, along with success rate, classification coverage, and zero-filled days. Do not count unclassified calls as successes or failures; an unavailable rate is null. V2 contains no keyword details: use the existing `admin operations` command when keyword data is needed. Missing capability, insufficient permission, or an invalid server response is reported as an error; the command does not fall back to v1.
 
 Counts represent requests that reached the server with a valid versioned client marker, not local process starts. Local validation/configuration failures and network failures that never reach the server are absent. Keywords come only from explicit `search` and `me search` input; `research` and `rag retrieve` appear through the search requests they perform, while `ask` question bodies are never included in keyword analytics. The response never exposes API keys, Authorization values, or request bodies.
 

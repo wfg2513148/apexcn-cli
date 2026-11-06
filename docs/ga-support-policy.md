@@ -47,7 +47,9 @@ macOS、Linux 和 Windows 资格都使用隔离安装根、隔离 launcher 和�
 
 发布包内保留 `scripts/verify-release-supply-chain.mjs`，使下载者和独立 validator 无需 builder 源码即可验证同目录资产。维护者必须在上传前用它重新计算全部 SHA-256，核对 SBOM 中的版本与运行时依赖，并核对 provenance 的全部 subject、源 commit、完整源树 hash 和候选版本。最终上传前使用 `--require-clean`，拒绝 provenance 记录为 dirty 的源树。发布后还要比较 GitHub Release API 返回的每个资产 digest，确认上传内容与本地冻结资产相同。
 
-provenance 证明构建输入、源 commit、构建器和 subject digest；它不是第三方签名。任何需要签名证明的分发渠道必须另行资格化，不能把本文件解释为已提供签名。
+包内验证器只读检查归档成员、运行时依赖及其入口，并将归档依赖字节与运行该验证器的安装副本比较；它不执行待验归档中的代码。如果验证器与待验归档来自同一副本，两者一致不能证明依赖原真或可运行。维护者的源码发布门禁还会核对锁文件；独立验收须从可信渠道取得冻结摘要，并实际运行隔离安装的启动器。校验文件和未签名的 provenance 只能证明所检查材料之间一致。
+
+provenance 记录构建输入、源 commit、构建器和 subject digest；本检查不会独立认证这些声明，它也不是第三方签名。任何需要签名证明的分发渠道必须另行资格化，不能把本文件解释为已提供签名。
 
 ## 独立资格与安全审查
 

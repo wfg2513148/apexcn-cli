@@ -280,6 +280,7 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   "ask": "answer a question using APEX Chinese Community content",
   "admin list": "list public community admins",
   "admin operations": "show administrator-only apexcn-cli operations aggregates",
+  "admin operations-v2": "show administrator-only operations v2 aggregates",
   "auth audit": "audit local auth profile configuration",
   "auth list": "list configured auth profiles",
   "auth logout": "clear the active auth profile",
@@ -377,6 +378,13 @@ const COMMAND_GUIDANCE: Record<string, CommandGuidance> = {
     examples: [
       { command: "apexcn admin operations --json", mode: "read" },
       { command: "apexcn admin operations --from 2026-07-01 --to 2026-07-07 --user-id 42 --limit 20 --json", mode: "read" }
+    ]
+  },
+  "admin operations-v2": {
+    safety: { effects: ["read"], preview: "none", confirmation: [] },
+    examples: [
+      { command: "apexcn admin operations-v2 --json", mode: "read" },
+      { command: "apexcn admin operations-v2 --from 2026-07-01 --to 2026-07-07 --user-id 42 --limit 20 --json", mode: "read" }
     ]
   },
   "ask": {

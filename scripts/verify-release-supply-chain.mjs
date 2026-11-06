@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { inspectReleaseArchive, readArchiveJson, verifyRuntimeDependencies } from "./inspect-release-archive.mjs";
 
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const args = process.argv.slice(2);
@@ -40,11 +41,36 @@ const describedPackage = Array.isArray(sbom.packages)
 if (describedPackage?.versionInfo !== packageJson.version) {
   failures.push(`SBOM apexcn-cli version mismatch: expected ${packageJson.version}, got ${String(describedPackage?.versionInfo)}`);
 }
-const commanderPackage = Array.isArray(sbom.packages)
-  ? sbom.packages.find((item) => item?.SPDXID === "SPDXRef-Package-commander")
-  : undefined;
-if (!commanderPackage?.versionInfo) {
-  failures.push("SBOM is missing the bundled commander dependency");
+for (const name of Object.keys(packageJson.dependencies ?? {})) {
+  const spdxId = `SPDXRef-Package-${name.replace(/[^A-Za-z0-9.-]/g, "-")}`;
+  const entry = Array.isArray(sbom.packages) ? sbom.packages.find((item) => item?.SPDXID === spdxId) : undefined;
+  let installedVersion;
+  if (/^(?:@[A-Za-z0-9._-]+\/)?[A-Za-z0-9._-]+$/.test(name)) {
+    try {
+      installedVersion = readJson(join(repoRoot, "node_modules", name, "package.json")).version;
+    } catch {
+      installedVersion = undefined;
+    }
+  }
+  if (!entry?.versionInfo || entry.name !== name || !installedVersion || entry.versionInfo !== installedVersion) {
+    failures.push(`SBOM is missing the bundled ${name} dependency or its installed version`);
+  }
+  if (!sbom.relationships?.some((item) => item?.spdxElementId === "SPDXRef-Package-apexcn-cli"
+    && item.relationshipType === "DEPENDS_ON" && item.relatedSpdxElement === spdxId)) {
+    failures.push(`SBOM is missing the bundled ${name} dependency relationship`);
+  }
+}
+try {
+  const archivePath = join(artifactsDir, "apexcn-cli.tgz");
+  const entries = inspectReleaseArchive(archivePath);
+  if (!entries.has("package/package.json")) throw new Error("release package missing package.json");
+  const archiveManifest = readArchiveJson(archivePath, "package/package.json");
+  if (archiveManifest.name !== packageJson.name || archiveManifest.version !== packageJson.version) {
+    throw new Error("release package identity differs from the verifier installation");
+  }
+  verifyRuntimeDependencies(entries, archivePath, archiveManifest, repoRoot);
+} catch (error) {
+  failures.push(`release archive inspection failed: ${error instanceof Error ? error.message : String(error)}`);
 }
 
 const provenance = readJson(join(artifactsDir, "release-provenance.json"));
@@ -94,6 +120,9 @@ process.stdout.write(`${JSON.stringify({
   artifactsDir: basename(artifactsDir),
   verifiedChecksumAssets: checksumRows.size,
   verifiedProvenanceSubjects: requiredSubjects.length,
+  dependencyReference: "verifier-installation",
+  authenticityVerified: false,
+  runtimeExecutionVerified: false,
   sbomPackageCount: sbom.packages.length,
   sourceCommit,
   sourceTreeDirty,

@@ -17,10 +17,13 @@ const sourceTreeSha256 = hashSourceTree();
 const primaryAssets = ["apexcn-cli.tgz", "install-agent.sh", "install-agent.ps1"];
 
 const primarySubjects = primaryAssets.map(subjectFor);
-const commander = packageLock.packages?.["node_modules/commander"];
-if (!commander?.version) {
-  throw new Error("package-lock.json is missing bundled commander metadata");
-}
+const runtimeDependencies = Object.keys(packageJson.dependencies ?? {}).sort().map((name) => {
+  const metadata = packageLock.packages?.[`node_modules/${name}`];
+  if (!metadata?.version || metadata.inBundle !== true) {
+    throw new Error(`package-lock.json is missing bundled ${name} metadata`);
+  }
+  return { name, metadata, spdxId: `SPDXRef-Package-${name.replace(/[^A-Za-z0-9.-]/g, "-")}` };
+});
 
 const sbomName = "apexcn-cli.spdx.json";
 const sbom = {
@@ -51,21 +54,21 @@ const sbom = {
         referenceLocator: `pkg:npm/apexcn-cli@${version}`
       }]
     },
-    {
-      SPDXID: "SPDXRef-Package-commander",
-      name: "commander",
-      versionInfo: commander.version,
-      downloadLocation: commander.resolved ?? "NOASSERTION",
+    ...runtimeDependencies.map(({ name, metadata, spdxId }) => ({
+      SPDXID: spdxId,
+      name,
+      versionInfo: metadata.version,
+      downloadLocation: metadata.resolved ?? "NOASSERTION",
       filesAnalyzed: false,
-      licenseConcluded: commander.license ?? "NOASSERTION",
-      licenseDeclared: commander.license ?? "NOASSERTION",
+      licenseConcluded: metadata.license ?? "NOASSERTION",
+      licenseDeclared: metadata.license ?? "NOASSERTION",
       copyrightText: "NOASSERTION",
       externalRefs: [{
         referenceCategory: "PACKAGE-MANAGER",
         referenceType: "purl",
-        referenceLocator: `pkg:npm/commander@${commander.version}`
+        referenceLocator: `pkg:npm/${name}@${metadata.version}`
       }]
-    }
+    }))
   ],
   relationships: [
     {
@@ -73,11 +76,11 @@ const sbom = {
       relationshipType: "DESCRIBES",
       relatedSpdxElement: "SPDXRef-Package-apexcn-cli"
     },
-    {
+    ...runtimeDependencies.map(({ spdxId }) => ({
       spdxElementId: "SPDXRef-Package-apexcn-cli",
       relationshipType: "DEPENDS_ON",
-      relatedSpdxElement: "SPDXRef-Package-commander"
-    }
+      relatedSpdxElement: spdxId
+    }))
   ]
 };
 writeJson(join(artifactsDir, sbomName), sbom);

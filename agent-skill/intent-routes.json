@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "1.1.6",
+  "release": "1.3.0",
   "commandManifest": "apexcn commands --json",
   "policy": {
     "localTasksRequireAuthPreflight": false,
@@ -33,11 +33,11 @@
       "id": "monitor-cli-operations",
       "category": "admin-operations",
       "network": "remote-read",
-      "commands": ["auth audit", "me capabilities", "admin operations"],
+      "commands": ["auth audit", "me capabilities", "admin operations", "admin operations-v2"],
       "preflightCommands": ["auth audit", "me capabilities"],
       "requiresPreview": false,
       "requiresConfirmation": false,
-      "examples": ["查看最近七天 apexcn-cli 调用量和失败情况", "按用户查看 CLI 调用异常和搜索关键词"]
+      "examples": ["查看最近七天 apexcn-cli 调用量和失败情况", "按用户查看 CLI 调用异常和搜索关键词", "查看 CLI 调用成功率、分类覆盖率和未分类数"]
     },
     {
       "id": "retrieve-troubleshooting-evidence",

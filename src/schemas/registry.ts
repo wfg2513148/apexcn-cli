@@ -1,4 +1,5 @@
 import { COMMAND_DESCRIPTORS } from "../core/command-registry.js";
+import { ADMIN_V2_FORBIDDEN_FIELDS } from "../core/admin-operations-v2.js";
 import { COMMAND_MANIFEST_JSON_SCHEMA } from "./command-manifest.js";
 import { APEXCN_ERROR_JSON_SCHEMA } from "./error.js";
 import { NOVICE_GUIDE_JSON_SCHEMA } from "./guide.js";
@@ -50,6 +51,9 @@ const schemaEntries = COMMAND_DESCRIPTORS
     if (command.id === "admin.operations") {
       return [id, adminOperationsSchema(id, command.path.join(" "))] as const;
     }
+    if (command.id === "admin.operations-v2") {
+      return [id, adminOperationsV2Schema(id, command.path.join(" "))] as const;
+    }
     const baseSchema = legacySchema(id);
     const schema: PublicJsonSchema = {
       ...baseSchema,
@@ -68,6 +72,68 @@ const schemaEntries = COMMAND_DESCRIPTORS
     };
     return [id, schema] as const;
   });
+
+function adminOperationsV2Schema(id: string, commandPath: string): PublicJsonSchema {
+  const count = { type: "integer", minimum: 0 };
+  const nullableRate = { type: ["number", "null"], minimum: 0, maximum: 100 };
+  const nullableTime = { type: ["string", "null"], format: "date-time" };
+  const forbiddenPattern = ADMIN_V2_FORBIDDEN_FIELDS.map((name) =>
+    [...name].map((letter) => `[${letter.toLowerCase()}${letter.toUpperCase()}]`).join("[-_\\s]*")).join("|");
+  const noSensitiveNames = { not: { pattern: `^[-_\\s]*(?:${forbiddenPattern})[-_\\s]*$` } };
+  const safeAdditional = { $ref: "#/definitions/safeAdditionalValue" };
+  const aggregate = (properties: Record<string, unknown>, required: string[]) => ({
+    type: "object", properties, required,
+    propertyNames: noSensitiveNames, additionalProperties: safeAdditional
+  });
+  const counts = { calls: count, successCount: count, failureCount: count, unclassifiedCalls: count };
+  return {
+    $schema: "http://json-schema.org/draft-07/schema#",
+    $id: `${SCHEMA_BASE_URL}/${id}.schema.json`,
+    title: `apexcn-cli ${commandPath} response`,
+    type: "object",
+    definitions: {
+      safeAdditionalValue: {
+        anyOf: [
+          { type: ["string", "number", "boolean", "null"] },
+          { type: "array", items: safeAdditional },
+          { type: "object", propertyNames: noSensitiveNames, additionalProperties: safeAdditional }
+        ]
+      }
+    },
+    required: ["kind", "schemaVersion", "semanticsId", "requestId", "window", "filter", "totals", "daily", "operations", "errors"],
+    properties: {
+      kind: { const: "admin-operations" },
+      schemaVersion: { const: 2 },
+      semanticsId: { const: "AFA-CLI-OPS-1.0" },
+      requestId: { type: "string", pattern: "^req_" },
+      window: aggregate({
+        from: { type: "string", format: "date" }, to: { type: "string", format: "date" },
+        days: { type: "integer", minimum: 1, maximum: 90 }, timeZone: { const: "Asia/Shanghai" }
+      }, ["from", "to", "days", "timeZone"]),
+      filter: aggregate({
+        client: { const: "apexcn-cli" }, limit: { enum: [10, 20, 50, 100] },
+        user: aggregate({ id: { type: "integer", minimum: 1 }, nickname: { type: ["string", "null"] } }, ["id", "nickname"])
+      }, ["client", "limit"]),
+      totals: aggregate({
+        ...counts, classifiedCalls: count, distinctUsers: count, successRate: nullableRate,
+        classificationCoverage: nullableRate, freshnessAt: nullableTime
+      }, ["calls", "successCount", "failureCount", "unclassifiedCalls", "classifiedCalls", "distinctUsers", "successRate", "classificationCoverage", "freshnessAt"]),
+      daily: { type: "array", items: aggregate({ date: { type: "string", format: "date" }, ...counts }, ["date", "calls", "successCount", "failureCount", "unclassifiedCalls"]) },
+      operations: { type: "array", items: aggregate({
+        route: { type: "string" }, operation: { type: "string" }, ...counts, distinctUsers: count,
+        successRate: nullableRate, avgDurationMs: { type: ["number", "null"] }, freshnessAt: nullableTime
+      }, ["route", "operation", "calls", "successCount", "failureCount", "unclassifiedCalls", "distinctUsers", "successRate", "avgDurationMs", "freshnessAt"]) },
+      errors: { type: "array", items: aggregate({
+        httpStatus: { type: "integer", minimum: 100, maximum: 599, not: { minimum: 200, maximum: 299 } }, errorCode: { type: "string" },
+        route: { type: "string" }, operation: { type: "string" }, calls: count, distinctUsers: count, freshnessAt: nullableTime
+      }, ["httpStatus", "errorCode", "route", "operation", "calls", "distinctUsers", "freshnessAt"]) }
+    },
+    propertyNames: noSensitiveNames,
+    additionalProperties: safeAdditional,
+    "x-apexcn-schema-version": 2,
+    "x-apexcn-command-ids": ["admin.operations-v2"]
+  };
+}
 
 function adminOperationsSchema(id: string, commandPath: string): PublicJsonSchema {
   const countProperties = {

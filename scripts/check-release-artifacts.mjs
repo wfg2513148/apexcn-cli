@@ -5,6 +5,8 @@ import { cpSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseNpmPackResult } from "./npm-pack-json.mjs";
+import { releaseQualificationIdentityMatches } from "./release-qualification-identity.mjs";
+import { inspectReleaseArchive, readArchiveJson } from "./inspect-release-archive.mjs";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const args = parseArgs(process.argv.slice(2));
@@ -107,11 +109,7 @@ function verifyArtifacts() {
     readFileSync(join(artifactsDir, asset));
   }
 
-  const entries = new Set(execFileSync("tar", ["-tzf", archivePath], { cwd: repoRoot, encoding: "utf8" })
-    .split("\n")
-    .map((entry) => entry.trim())
-    .filter(Boolean)
-    .map((entry) => entry.replace(/^\.\//, "").replaceAll("\\", "/")));
+  const entries = inspectReleaseArchive(archivePath);
 
   const requiredFiles = [
     "package/package.json",
@@ -138,6 +136,7 @@ function verifyArtifacts() {
     "package/dist/core/runtime-session.js",
     "package/dist/core/workflow-plan.js",
     "package/node_modules/commander/package.json",
+    "package/node_modules/lossless-json/package.json",
     "package/eval/qualification/tasks.v2.jsonl",
     "package/qualification/ga/README.md",
     "package/qualification/ga/fixtures-v1.json",
@@ -155,7 +154,8 @@ function verifyArtifacts() {
     "package/scripts/install-agent.ps1",
     "package/scripts/lifecycle-agent.sh",
     "package/scripts/lifecycle-agent.ps1",
-    "package/scripts/verify-release-supply-chain.mjs"
+    "package/scripts/verify-release-supply-chain.mjs",
+    "package/scripts/inspect-release-archive.mjs"
   ];
   for (const file of requiredFiles) {
     if (!entries.has(file)) {
@@ -198,6 +198,7 @@ function verifyArtifacts() {
   if (packageJson.version !== expectedVersion) {
     throw new Error(`release package version: expected ${expectedVersion}, got ${String(packageJson.version)}`);
   }
+  verifyPackagedDependencyLocks(entries, archivePath, packageJson);
   verifyPackagedQualificationHarness(entries, archivePath);
   verifyPackagedReleaseQualification(entries, archivePath, expectedVersion);
 
@@ -208,6 +209,20 @@ function verifyArtifacts() {
   });
 }
 
+function verifyPackagedDependencyLocks(entries, archivePath, packageJson) {
+  const lock = readJson("package-lock.json");
+  for (const name of Object.keys(packageJson.dependencies ?? {})) {
+    if (!/^(?:@[A-Za-z0-9._-]+\/)?[A-Za-z0-9._-]+$/.test(name)) throw new Error(`invalid bundled dependency name ${name}`);
+    const path = `package/node_modules/${name}/package.json`;
+    if (!entries.has(path)) throw new Error(`bundled dependency ${name} missing package metadata`);
+    const metadata = readArchiveJson(archivePath, path);
+    const locked = lock.packages?.[`node_modules/${name}`];
+    if (!locked?.version || locked.inBundle !== true || metadata.name !== name || metadata.version !== locked.version) {
+      throw new Error(`bundled dependency ${name} version differs from the lockfile`);
+    }
+  }
+}
+
 function verifyPackagedReleaseQualification(entries, archivePath, expectedVersion) {
   const contractEntry = `package/qualification/releases/${expectedVersion}/qualification-contract-v1.json`;
   if (!entries.has(contractEntry)) throw new Error(`release package qualification contract missing ${contractEntry}`);
@@ -215,11 +230,7 @@ function verifyPackagedReleaseQualification(entries, archivePath, expectedVersio
     cwd: repoRoot,
     encoding: "utf8"
   }));
-  if (contract.targetVersion !== expectedVersion
-    || contract.current?.exactTaskCount !== 202
-    || contract.approvedAdditions?.length !== 2
-    || contract.approvedAdditions[0]?.commandId !== "admin.operations"
-    || contract.approvedAdditions[1]?.commandId !== "update") {
+  if (!releaseQualificationIdentityMatches(contract, expectedVersion)) {
     throw new Error("release package current qualification identity or denominator is invalid");
   }
   for (const path of [contract.current.surfacePath, contract.current.datasetPath]) {

@@ -161,11 +161,17 @@ apexcn admin list --json
 apexcn admin list --format text
 apexcn admin operations --json
 apexcn admin operations --from 2026-07-01 --to 2026-07-07 --user-id 42 --limit 20 --format text
+apexcn admin operations-v2 --json
+apexcn admin operations-v2 --from 2026-07-01 --to 2026-07-07 --user-id 42 --limit 50 --format text
 ```
 
 `admin list` 只返回服务端标记为公开的管理员信息和公开联系方式，不包含私有联系信息。
 
 `admin operations` 仅供管理员读取服务端接收的 apexcn-cli 调用聚合。默认窗口为最近 7 天；自定义日期时必须同时传入 `--from` 和 `--to`，两者使用包含首尾的 `YYYY-MM-DD` 日期，单次最多 90 天；`--user-id` 按社区用户 ID 精确过滤；`--limit` 控制命令、异常和关键词各分区最多返回 1 到 100 行，默认 20。输出包含概览、按日趋势、命令/路由、HTTP 状态与稳定错误码、显式搜索关键词五个分区及 `requestId`。`--format json`、`--format pretty` 和 `--json` 的错误也使用结构化 JSON。JSON 契约为 `admin-operations-response-v1`。
+
+`admin operations-v2` 使用独立的管理员统计口径，需服务端声明 `admin-operations-v2` 能力及对应端点可用。默认读取最近 7 个上海自然日；指定日期时需同时提供 `--from` 和 `--to`，范围包含首尾、最多 90 天，结束日期不能晚于上海当前日期。`--user-id` 按社区用户 ID 精确过滤；`--limit` 只能是 10、20、50 或 100，省略时由服务端使用 20。JSON 契约为 `admin-operations-response-v2`，响应包含 `schemaVersion: 2` 和 `semanticsId: AFA-CLI-OPS-1.0`。
+
+v2 分别报告成功、失败及未分类调用，并保留成功率、分类覆盖率和没有请求的日期。未分类调用不应算入成功或失败；无法计算的比率为 null。v2 不返回关键词明细；需要搜索关键词时使用原有 `admin operations`。能力不可用、权限不足或服务端响应不符合合同会报错，不会自动切换到 v1。
 
 该统计只覆盖到达服务端且带合法版本客户端标识的请求，不等同于本机进程启动次数；本地参数校验失败、认证配置失败和未到达服务端的网络错误不会计入。关键词只来自 `search` 与 `me search` 的显式搜索输入；`research` 和 `rag retrieve` 通过其实际 search 请求体现，`ask` 问题正文不进入关键词统计。服务端不会在此响应中返回 API Key、Authorization 或请求正文。
 

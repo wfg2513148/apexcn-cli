@@ -9,6 +9,7 @@ export type RequestJsonOptions = {
   body?: unknown;
   userAgent?: string;
   timeoutMs?: number;
+  parseResponse?: (text: string) => unknown;
 };
 
 export class HttpError extends Error {
@@ -112,7 +113,7 @@ export async function requestJson<T = unknown>(
   let body: unknown;
   try {
     response = await fetch(url, init);
-    body = await parseJson(response);
+    body = await parseJson(response, options.parseResponse);
   } catch (error) {
     if (error instanceof HttpError) {
       throw error;
@@ -131,13 +132,13 @@ export async function requestJson<T = unknown>(
   return body as T;
 }
 
-async function parseJson(response: Response): Promise<unknown> {
+async function parseJson(response: Response, parseResponse: (text: string) => unknown = JSON.parse): Promise<unknown> {
   const text = await response.text();
   if (text.length === 0) {
     return null;
   }
   try {
-    return JSON.parse(text) as unknown;
+    return parseResponse(text);
   } catch {
     const requestId = response.headers.get("x-request-id") ?? undefined;
     const message = response.ok ? "Invalid JSON response from server" : response.statusText || `HTTP ${response.status}`;
