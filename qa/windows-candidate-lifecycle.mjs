@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { runtimeManifest } from "./runtime-manifest.mjs";
 
 const candidateSha = "57823150cd639f8d89c6a355525d09931119d147ae1be280e64604460eb20734";
 const priorSha = "bd3ed6cae470af9710397805b609c6b93e479995295dbb74f0fb15b32656b852";
@@ -49,6 +50,7 @@ Object.assign(env, {
 });
 const report = { schemaVersion: 1, platform: process.platform, arch: process.arch, node: process.version, shell, expectedCandidateSha256: candidateSha, expectedPriorSha256: priorSha, installedChecks: [], steps: [], ok: false, cleaned: false };
 const sha = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
+const manifestSha = (manifest) => createHash("sha256").update(JSON.stringify(manifest)).digest("hex");
 function run(label, args, expectFailure = false) {
   const result = spawnSync(shell, ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", ...args], {
     cwd: root, env, encoding: "utf8", timeout: 120000, maxBuffer: 8 * 1024 * 1024
@@ -80,8 +82,16 @@ function recordInstalledCandidate(label) {
   const launcherSha256 = sha(launcher);
   const dependencies = Object.fromEntries(["commander", "lossless-json"].map((name) => [name,
     existsSync(join(cliRoot, "node_modules", name, "package.json"))]));
-  report.installedChecks.push({ label, entrySha256, launcherSha256, dependencies });
+  const observation = { label, entrySha256, launcherSha256, dependencies };
+  report.installedChecks.push(observation);
+  let actualManifest;
+  try { actualManifest = runtimeManifest(cliRoot); }
+  catch (error) { observation.runtimeManifestError = error instanceof Error ? error.message : String(error); throw error; }
+  observation.runtimeManifest = actualManifest;
+  observation.runtimeManifestSha256 = manifestSha(actualManifest);
+  observation.runtimeFileCount = actualManifest.files.length;
   assert.equal(entrySha256, report.expectedEntrySha256, `${label}: installed entry digest mismatch`);
+  assert.equal(observation.runtimeManifestSha256, report.expectedRuntimeManifestSha256, `${label}: installed runtime tree mismatch`);
   assert.equal(readFileSync(launcher, "ascii").replace(/\r\n/g, "\n").trimEnd(),
     `@echo off\nnode "${entry}" %*`, `${label}: launcher content mismatch`);
   if (report.expectedLauncherSha256 === undefined) report.expectedLauncherSha256 = launcherSha256;
@@ -108,6 +118,23 @@ try {
   assert.ok(!entryFromArchive.error && !entryFromArchive.signal, "candidate entry extraction was incomplete");
   report.windowsArchiveEntrySha256 = createHash("sha256").update(entryFromArchive.stdout).digest("hex");
   assert.equal(report.windowsArchiveEntrySha256, report.expectedEntrySha256, "candidate archive entry digest mismatch");
+  const reference = join(root, "candidate-reference");
+  mkdirSync(reference);
+  const extracted = spawnSync("tar.exe", ["-xzf", candidate, "-C", reference], {
+    cwd: root, env, timeout: 120000, maxBuffer: 8 * 1024 * 1024
+  });
+  if (extracted.error || extracted.signal) report.cleanupDeferred = true;
+  report.archiveExtraction = { status: extracted.status, signal: extracted.signal,
+    error: extracted.error?.message, stderr: extracted.stderr?.toString("utf8") ?? "" };
+  assert.equal(extracted.status, 0, "candidate archive extraction failed");
+  assert.ok(!extracted.error && !extracted.signal, "candidate archive extraction was incomplete");
+  const archiveManifest = runtimeManifest(join(reference, "package"));
+  const ubuntuManifest = JSON.parse(readFileSync(join(assets, "runtime-manifest.json"), "utf8"));
+  report.archiveRuntimeManifest = archiveManifest;
+  report.expectedRuntimeManifestSha256 = manifestSha(archiveManifest);
+  report.ubuntuRuntimeManifestSha256 = manifestSha(ubuntuManifest);
+  report.expectedRuntimeFileCount = archiveManifest.files.length;
+  assert.equal(report.expectedRuntimeManifestSha256, report.ubuntuRuntimeManifestSha256, "archive runtime tree differs between Windows and Ubuntu");
   report.actualPriorSha256 = sha(prior);
   assert.equal(report.actualPriorSha256, priorSha, "prior digest mismatch");
   const shellVersion = run("shell version", ["-Command", "$PSVersionTable.PSVersion.ToString()"]);
@@ -206,7 +233,10 @@ try {
     node: report.node, expectedCandidateSha256: report.expectedCandidateSha256, actualCandidateSha256: report.actualCandidateSha256,
     expectedPriorSha256: report.expectedPriorSha256, actualPriorSha256: report.actualPriorSha256,
     expectedEntrySha256: report.expectedEntrySha256, windowsArchiveEntrySha256: report.windowsArchiveEntrySha256,
-    archiveEntryExtraction: report.archiveEntryExtraction, expectedLauncherSha256: report.expectedLauncherSha256, installedChecks: report.installedChecks,
+    archiveEntryExtraction: report.archiveEntryExtraction, archiveExtraction: report.archiveExtraction,
+    expectedRuntimeManifestSha256: report.expectedRuntimeManifestSha256, ubuntuRuntimeManifestSha256: report.ubuntuRuntimeManifestSha256,
+    expectedRuntimeFileCount: report.expectedRuntimeFileCount, expectedLauncherSha256: report.expectedLauncherSha256,
+    installedChecks: report.installedChecks.map(({ runtimeManifest: _manifest, ...summary }) => summary),
     steps: report.steps.map((step) => ({ ...step, stdout: step.stdout.slice(0, 4096), stderr: step.stderr.slice(0, 4096) })),
     error: report.error, cleanupDeferred: report.cleanupDeferred
   })}\n`);

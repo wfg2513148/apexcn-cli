@@ -26,10 +26,16 @@ jobs:
         with:
           ref: c5df569ca6fe6573bf2d08e7133440344f138527
           persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: qa-support
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 24.16.0
       - run: npm install --global npm@11.13.0
+      - run: node --test qa-support/qa/runtime-manifest.test.mjs
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run build
       - name: Rebuild and bind the frozen 1.3.0 archive
@@ -42,7 +48,12 @@ jobs:
           npm pack --ignore-scripts --pack-destination candidate-assets
           mv candidate-assets/apexcn-cli-1.3.0.tgz candidate-assets/apexcn-cli.tgz
           printf '%s  %s\n' '57823150cd639f8d89c6a355525d09931119d147ae1be280e64604460eb20734' 'candidate-assets/apexcn-cli.tgz' | sha256sum --check
+          node --input-type=module -e 'import { inspectReleaseArchive } from "./scripts/inspect-release-archive.mjs"; inspectReleaseArchive("candidate-assets/apexcn-cli.tgz");'
           tar -xOzf candidate-assets/apexcn-cli.tgz package/dist/index.js | sha256sum | cut -d ' ' -f1 > candidate-assets/candidate-entry.sha256
+          mkdir candidate-reference
+          tar -xzf candidate-assets/apexcn-cli.tgz -C candidate-reference
+          node qa-support/qa/runtime-manifest.mjs candidate-reference/package > candidate-assets/runtime-manifest.json
+          rm -r candidate-reference
           cp scripts/install-agent.ps1 candidate-assets/install-agent.ps1
           gh release download v1.2.2 --repo wfg2513148/apexcn-cli --pattern apexcn-cli.tgz --dir candidate-assets/prior
           printf '%s  %s\n' 'bd3ed6cae470af9710397805b609c6b93e479995295dbb74f0fb15b32656b852' 'candidate-assets/prior/apexcn-cli.tgz' | sha256sum --check
