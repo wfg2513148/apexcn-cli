@@ -113,6 +113,11 @@ function installedRoot() {
   return [install, join(install, "package"), join(install, "cli")].find((path) => existsSync(join(path, "package.json")));
 }
 function recordInstalled(label, expectedVersion) {
+  const attemptedAt = new Date().toISOString();
+  writeSync(1, `${JSON.stringify({ kind: "windows-installation-identity-start", label, attemptedAt,
+    action: "compare installed runtime tree, launcher and dependency files against pinned archive", expectedVersion })}\n`);
+  let observation;
+  try {
   const cliRoot = installedRoot();
   assert.ok(cliRoot, "installed package root missing");
   const entry = join(cliRoot, "dist", "index.js");
@@ -121,7 +126,7 @@ function recordInstalled(label, expectedVersion) {
   const metadata = JSON.parse(readFileSync(join(cliRoot, "package.json"), "utf8"));
   const dependencies = Object.fromEntries(Object.keys(metadata.dependencies ?? {}).sort().map((name) => [name,
     existsSync(join(cliRoot, "node_modules", name, "package.json"))]));
-  const observation = { label, observedAt: new Date().toISOString(), expectedVersion, actualVersion: metadata.version, installationRoot: cliRoot,
+  observation = { label, attemptedAt, expectedVersion, actualVersion: metadata.version, installationRoot: cliRoot,
     entryPath: entry, launcherPath: launcher, entrySha256, launcherSha256, dependencies };
   report.installedChecks.push(observation);
   let actualManifest;
@@ -142,15 +147,30 @@ function recordInstalled(label, expectedVersion) {
   for (const [dependency, present] of Object.entries(dependencies)) {
     assert.ok(present, `${label}: ${dependency} missing`);
   }
-  writeSync(1, `${JSON.stringify({ kind: "windows-installation-identity", label, observedAt: observation.observedAt,
+  observation.finishedAt = new Date().toISOString();
+  writeSync(1, `${JSON.stringify({ kind: "windows-installation-identity-finish", ok: true, label, attemptedAt, finishedAt: observation.finishedAt,
     expectedVersion, installationRoot: cliRoot, entryPath: entry, launcherPath: launcher,
     entrySha256, launcherSha256, runtimeManifestSha256: observation.runtimeManifestSha256,
     runtimeFileCount: observation.runtimeFileCount, dependencies })}\n`);
+  } catch (error) {
+    const failure = { kind: "windows-installation-identity-finish", ok: false, label, attemptedAt,
+      finishedAt: new Date().toISOString(), error: error instanceof Error ? error.message : String(error) };
+    if (observation) { observation.finishedAt = failure.finishedAt; observation.error = failure.error; }
+    try { writeSync(1, `${JSON.stringify(failure)}\n`); }
+    catch (markerError) {
+      report.markerErrors ??= [];
+      report.markerErrors.push({ label, error: markerError instanceof Error ? markerError.message : String(markerError) });
+    }
+    throw error;
+  }
 }
 try {
   assert.equal(process.platform, "win32", "Real Windows is required");
   assert.equal(process.version, "v20.20.2", "Node 20.20.2 is required for this matrix");
   assert.ok(expectedShell === "5.1" || expectedShell === "7", "Expected PowerShell version is required");
+  report.identityPreflight = { attemptedAt: new Date().toISOString(), action: "verify pinned archives, runtime manifests and Node identity" };
+  writeSync(1, `${JSON.stringify({ kind: "windows-identity-preflight-start", ...report.identityPreflight })}\n`);
+  try {
   report.nodeExecutablePath = process.execPath;
   report.nodeExecutableSha256 = sha(process.execPath);
   report.actualCandidateSha256 = sha(candidate);
@@ -204,6 +224,7 @@ try {
   report.priorArchiveRuntimeManifest = priorManifest;
   report.expectedPriorRuntimeManifestSha256 = manifestSha(priorManifest);
   report.ubuntuPriorRuntimeManifestSha256 = manifestSha(ubuntuPriorManifest);
+  report.expectedPriorRuntimeFileCount = priorManifest.files.length;
   report.expectedPriorEntrySha256 = priorManifest.files.find((file) => file.path === "dist/index.js").sha256;
   assert.equal(report.expectedPriorRuntimeManifestSha256, report.ubuntuPriorRuntimeManifestSha256, "prior archive runtime tree differs between Windows and Ubuntu");
   const shellVersion = run("shell version", ["-Command", "$PSVersionTable.PSVersion.ToString()"]);
@@ -213,12 +234,27 @@ try {
   report.launcherNodeExecutablePath = launcherNode.stdout.trim();
   report.launcherNodeExecutableSha256 = sha(report.launcherNodeExecutablePath);
   assert.equal(report.launcherNodeExecutableSha256, report.nodeExecutableSha256, "launcher Node executable SHA mismatch");
-  writeSync(1, `${JSON.stringify({ kind: "windows-lifecycle-environment", observedAt: new Date().toISOString(),
+  const environmentEvidence = { kind: "windows-lifecycle-environment", observedAt: new Date().toISOString(),
     candidateSha256: report.actualCandidateSha256, priorSha256: report.actualPriorSha256,
     candidateRuntimeManifestSha256: report.expectedRuntimeManifestSha256, priorRuntimeManifestSha256: report.expectedPriorRuntimeManifestSha256,
+    candidateEntrySha256: report.windowsArchiveEntrySha256, priorEntrySha256: report.expectedPriorEntrySha256,
+    candidateRuntimeFileCount: report.expectedRuntimeFileCount, priorRuntimeFileCount: report.expectedPriorRuntimeFileCount,
     nodeVersion: report.node, nodeExecutablePath: report.nodeExecutablePath, nodeExecutableSha256: report.nodeExecutableSha256,
     launcherNodeExecutablePath: report.launcherNodeExecutablePath, launcherNodeExecutableSha256: report.launcherNodeExecutableSha256,
-    shell, shellVersion: report.shellVersion, installationRoot: install, launcherPath: launcher })}\n`);
+    shell, shellVersion: report.shellVersion, installationRoot: install, launcherPath: launcher };
+  report.identityPreflight.finishedAt = environmentEvidence.observedAt;
+  report.identityPreflight.environmentEvidenceJsonSha256 = createHash("sha256").update(JSON.stringify(environmentEvidence)).digest("hex");
+  writeSync(1, `${JSON.stringify(environmentEvidence)}\n`);
+  writeSync(1, `${JSON.stringify({ kind: "windows-identity-preflight-finish", ok: true, ...report.identityPreflight })}\n`);
+  } catch (error) {
+    report.identityPreflight.finishedAt = new Date().toISOString();
+    report.identityPreflight.error = error instanceof Error ? error.message : String(error);
+    try { writeSync(1, `${JSON.stringify({ kind: "windows-identity-preflight-finish", ok: false, ...report.identityPreflight })}\n`); }
+    catch (markerError) {
+      report.identityPreflight.markerError = markerError instanceof Error ? markerError.message : String(markerError);
+    }
+    throw error;
+  }
   mkdirSync(dirname(config), { recursive: true });
   writeFileSync(config, configText);
   const priorChecksums = join(root, "prior-checksums.txt");
@@ -318,6 +354,7 @@ try {
     expectedCandidateSha256: report.expectedCandidateSha256, actualCandidateSha256: report.actualCandidateSha256,
     expectedPriorSha256: report.expectedPriorSha256, actualPriorSha256: report.actualPriorSha256,
     expectedEntrySha256: report.expectedEntrySha256, windowsArchiveEntrySha256: report.windowsArchiveEntrySha256,
+    identityPreflight: report.identityPreflight,
     archiveEntryExtraction: report.archiveEntryExtraction, archiveExtraction: report.archiveExtraction, priorArchiveExtraction: report.priorArchiveExtraction,
     expectedRuntimeManifestSha256: report.expectedRuntimeManifestSha256, ubuntuRuntimeManifestSha256: report.ubuntuRuntimeManifestSha256,
     expectedRuntimeFileCount: report.expectedRuntimeFileCount, expectedPriorRuntimeManifestSha256: report.expectedPriorRuntimeManifestSha256,
