@@ -61,6 +61,48 @@ describe("auth command", () => {
     expect(text).not.toContain("abcdefghijklmnopqrstuvwxyz");
   });
 
+  test.each(["show", "list", "audit"])("auth %s sanitizes URL credentials in text and JSON", async (command) => {
+    const configPath = await tempConfigPath();
+    const baseUrl = "https://synthetic-user:synthetic-password@example.invalid/ords/dev?apiKey=synthetic-key&unknown=synthetic-value#synthetic-fragment";
+    await writeConfig(configPath, {
+      current: "one",
+      profiles: { one: { baseUrl, token: "test-token-value" }, two: { baseUrl, token: "test-token-value" } }
+    });
+
+    for (const args of [[], ["--json"]]) {
+      const output: string[] = [];
+      const program = createProgram({ configPath, stdout: (text) => output.push(text), stderr: (text) => output.push(text) });
+      await program.parseAsync(["node", "apexcn", "auth", command, ...args]);
+      expect(output.join("").includes("synthetic-")).toBe(false);
+      expect(output.join("")).toContain("https://example.invalid/ords/dev");
+    }
+  });
+
+  test.each([
+    "token=synthetic-path-secret",
+    "token=[redacted]}synthetic-path-secret",
+    "token=[redacted],synthetic-path-secret",
+    "token%3Dsynthetic-path-secret",
+    "token%253Dsynthetic-path-secret",
+    "%74oken=synthetic-path-secret",
+    "%61pi%4Bey=synthetic-path-secret",
+    "token%3Dsynthetic-path-secret%GG",
+    "token/synthetic-path-secret",
+    "api-key/synthetic-path-secret",
+    "Bearer%20synthetic-path-secret",
+    "%74oken=synthetic-path-secret/../dev",
+    "%74oken=synthetic-path-secret/%2e%2e/dev"
+  ])("auth show masks recognizable credentials in a URL path", async (pathSegment) => {
+    const configPath = await tempConfigPath();
+    await writeConfig(configPath, {
+      current: "dev", profiles: { dev: { baseUrl: `https://example.invalid/ords/${pathSegment}`, token: "test-token-value" } }
+    });
+    const output: string[] = [];
+    const program = createProgram({ configPath, stdout: (text) => output.push(text), stderr: (text) => output.push(text) });
+    await program.parseAsync(["node", "apexcn", "auth", "show", "--json"]);
+    expect(output.join("").includes("synthetic-")).toBe(false);
+  });
+
   test("top-level -apikey configures the default production profile without quotes or network access", async () => {
     const configPath = await tempConfigPath();
     const token = "abcdefghijklmnopqrstuvwxyz123456";

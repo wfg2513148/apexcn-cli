@@ -11,6 +11,7 @@ import { isExactSafeIntegerInput, isPreciseObject, normalizeTopicForSelection, p
 import { assessCapabilityCompatibility } from "../core/capability-compatibility.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
+import { sanitizeUrlForDisplay } from "../core/url-redaction.js";
 import { confirmWriteOperation, createWriteOperation, type WriteOperationRequest, type WriteOperationSession } from "../core/write-operation.js";
 import {
   adminOperations,
@@ -1085,7 +1086,7 @@ function printDryRun(options: CommandIo, session: Session, request: ApiRequestPl
     preview: mode === "preview",
     mode,
     profile: session.profile,
-    baseUrl: session.baseUrl,
+    baseUrl: sanitizeUrlForDisplay(session.baseUrl),
     method: request.method,
     path: request.path,
     query: request.query,

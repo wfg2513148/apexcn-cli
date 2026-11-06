@@ -1,5 +1,7 @@
 import { currentCliOperation } from "./core/request-context.js";
 import { contentLanguageQuery } from "./core/content-language.js";
+import { redactSecretText } from "./core/secret-redaction.js";
+import { sanitizeUrlForDisplay, sanitizeUrlsInText } from "./core/url-redaction.js";
 import { DEFAULT_USER_AGENT } from "./version.js";
 
 export type RequestJsonOptions = {
@@ -21,11 +23,11 @@ export class HttpError extends Error {
   readonly windowSeconds?: number;
 
   constructor(message: string, status: number, statusText: string, requestId: string | undefined, body: unknown) {
-    super(message);
+    super(redactSecretText(sanitizeUrlsInText(message)));
     this.name = "HttpError";
     this.status = status;
     this.statusText = statusText;
-    this.requestId = requestId;
+    this.requestId = requestId === undefined ? undefined : redactSecretText(sanitizeUrlsInText(requestId));
     this.body = body;
     const rateLimit = rateLimitFrom(body);
     this.retryAfterSeconds = rateLimit.retryAfterSeconds;
@@ -38,9 +40,10 @@ export class NetworkError extends Error {
   readonly cause: unknown;
 
   constructor(url: string, cause: unknown) {
-    super(`Network error: failed to reach ${url}`);
+    const displayUrl = sanitizeUrlForDisplay(url);
+    super(`Network error: failed to reach ${displayUrl}`);
     this.name = "NetworkError";
-    this.url = url;
+    this.url = displayUrl;
     this.cause = cause;
   }
 }
@@ -50,9 +53,10 @@ export class TimeoutError extends Error {
   readonly timeoutMs: number;
 
   constructor(url: string, timeoutMs: number) {
-    super(`Request timed out after ${timeoutMs}ms: ${url}`);
+    const displayUrl = sanitizeUrlForDisplay(url);
+    super(`Request timed out after ${timeoutMs}ms: ${displayUrl}`);
     this.name = "TimeoutError";
-    this.url = url;
+    this.url = displayUrl;
     this.timeoutMs = timeoutMs;
   }
 }

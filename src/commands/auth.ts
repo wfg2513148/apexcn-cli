@@ -10,6 +10,7 @@ import {
   setProfile
 } from "../config.js";
 import { isUsableCredential } from "../core/credential-store.js";
+import { sanitizeUrlForDisplay } from "../core/url-redaction.js";
 
 export type CommandIo = {
   stdout: (text: string) => void;
@@ -137,7 +138,7 @@ Security: run these commands in your own shell. A key passed on the command line
       const profiles = names.map((name) => ({
         name,
         current: name === current,
-        baseUrl: config.profiles[name].baseUrl,
+        baseUrl: sanitizeUrlForDisplay(config.profiles[name].baseUrl),
         ...(config.profiles[name].tokenEnv
           ? { credentialStore: "env-fallback", tokenEnv: config.profiles[name].tokenEnv }
           : {}),
@@ -258,14 +259,14 @@ Security: run these commands in your own shell. A key passed on the command line
       if (commandOptions.json) {
         options.stdout(`${JSON.stringify({
           profile,
-          baseUrl: current.baseUrl,
+          baseUrl: sanitizeUrlForDisplay(current.baseUrl),
           ...(current.tokenEnv ? { credentialStore, tokenEnv: current.tokenEnv } : {}),
           token: redactedToken
         }, null, 2)}\n`);
         return;
       }
 
-      options.stdout(`Profile: ${profile}\nBase URL: ${current.baseUrl}\nCredential Store: ${credentialStore}\nToken: ${redactedToken || "[environment only]"}\n`);
+      options.stdout(`Profile: ${profile}\nBase URL: ${sanitizeUrlForDisplay(current.baseUrl)}\nCredential Store: ${credentialStore}\nToken: ${redactedToken || "[environment only]"}\n`);
     });
 
   auth.command("logout")
@@ -377,7 +378,7 @@ function authAudit(config: unknown, configPath: string, env: NodeJS.ProcessEnv =
     return {
       name,
       current: name === current,
-      baseUrl,
+      baseUrl: sanitizeUrlForDisplay(baseUrl),
       credentialStore: tokenEnv ? "env-fallback" : "file",
       tokenEnv: tokenEnv ? { name: tokenEnv, present: envTokenPresent } : undefined,
       token: {
@@ -391,7 +392,7 @@ function authAudit(config: unknown, configPath: string, env: NodeJS.ProcessEnv =
   for (const [baseUrl, namesForUrl] of baseUrlProfiles) {
     if (namesForUrl.length > 1) {
       for (const name of namesForUrl) {
-        warnings.push({ code: "duplicate-base-url", message: `Multiple profiles use ${baseUrl}.`, profile: name });
+        warnings.push({ code: "duplicate-base-url", message: `Multiple profiles use ${sanitizeUrlForDisplay(baseUrl)}.`, profile: name });
       }
     }
   }

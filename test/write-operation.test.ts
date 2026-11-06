@@ -13,6 +13,37 @@ afterEach(() => {
 });
 
 describe("business write confirmation", () => {
+  test.each(["--dry-run", "--preview"])("%s output masks URL credentials without changing the stored target", async (mode) => {
+    const root = await mkdtemp(join(tmpdir(), "apexcn-url-preview-"));
+    const configPath = join(root, "config.json");
+    const baseUrl = "https://synthetic-user:synthetic-password@example.invalid/ords/dev?unknown=synthetic-query#synthetic-fragment";
+    try {
+      await writeFile(configPath, JSON.stringify({ current: "dev", profiles: { dev: { baseUrl, token: "test-token-value" } } }));
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      const fetch = vi.fn(async () => Response.json({ ok: true }));
+      vi.stubGlobal("fetch", fetch);
+      const program = createProgram({ configPath, stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
+
+      await program.parseAsync(["node", "apexcn", "favorite", "add", "42", mode, "--json"]);
+
+      expect((stdout.join("") + stderr.join("")).includes("synthetic-")).toBe(false);
+      const result = JSON.parse(stdout.join(""));
+      expect(result.baseUrl).toBe("https://example.invalid/ords/dev");
+      expect(fetch).not.toHaveBeenCalled();
+      if (mode === "--preview") {
+        const stored = JSON.parse(await readFile(join(root, "operations", `${result.operationId}.json`), "utf8"));
+        expect(stored.target.baseUrl === baseUrl).toBe(true);
+        stdout.length = 0;
+        await program.parseAsync(["node", "apexcn", "confirm", result.operationId, "--yes", "--json"]);
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(JSON.parse(stdout.join("")).status).toBe("completed");
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   describe("topic favorite and subscription modes", () => {
     const cases = [
       { name: "favorite", action: "add", method: "POST", path: "/api/v1/topics/42/favorite" },

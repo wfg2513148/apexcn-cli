@@ -3,6 +3,8 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { defaultConfigPath } from "../config.js";
 import { DEFAULT_USER_AGENT } from "../http.js";
+import { redactSecretText } from "./secret-redaction.js";
+import { sanitizeUrlForDisplay, sanitizeUrlsInText } from "./url-redaction.js";
 import { isRecord } from "../output.js";
 import { CLI_VERSION } from "../version.js";
 
@@ -73,7 +75,7 @@ export async function createDoctorSnapshot(configPath = defaultConfigPath()): Pr
     });
   }
 
-  return {
+  return redactSnapshotStrings({
     kind: "doctor-snapshot",
     schemaVersion: 1,
     ok: checks.every((check) => check.severity !== "issue"),
@@ -91,7 +93,17 @@ export async function createDoctorSnapshot(configPath = defaultConfigPath()): Pr
     environment,
     config,
     agentSkill
-  };
+  }) as DoctorSnapshotOutput;
+}
+
+function redactSnapshotStrings(value: unknown): unknown {
+  if (typeof value === "string") return redactSecretText(sanitizeUrlsInText(value));
+  if (Array.isArray(value)) return value.map(redactSnapshotStrings);
+  if (isRecord(value)) return Object.fromEntries(Object.entries(value).map(([key, nested]) => [
+    key,
+    key === "baseUrl" && typeof nested === "string" ? redactSecretText(nested) : redactSnapshotStrings(nested)
+  ]));
+  return value;
 }
 
 async function inspectConfig(configPath: string, checks: DoctorSnapshotCheck[]): Promise<DoctorSnapshotOutput["config"]> {
@@ -155,7 +167,7 @@ async function inspectConfig(configPath: string, checks: DoctorSnapshotCheck[]):
   const envTokenPresent = tokenEnv ? Boolean(process.env[tokenEnv]) : false;
   const baseUrlValid = isValidHttpUrl(baseUrl);
   output.activeProfile = {
-    baseUrl,
+    baseUrl: sanitizeUrlForDisplay(baseUrl),
     baseUrlValid,
     ...(tokenEnv ? { credentialStore: "env-fallback" as const, tokenEnv: { name: tokenEnv, present: envTokenPresent } } : {}),
     tokenPresent: envTokenPresent || token.trim().length > 0,

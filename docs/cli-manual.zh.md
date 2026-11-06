@@ -127,6 +127,8 @@ apexcn doctor --timeout-ms 10000 --json
 
 `doctor snapshot` 是纯本地支持快照，不调用社区 API。它直读配置文件并输出 `kind: "doctor-snapshot"`、`schemaVersion: 1`、`diagnostics`、`environment`、`config`、`agentSkill` 和稳定 `checks[].code`。硬问题 code 包括 `config-unreadable`、`config-invalid-json`、`no-active-profile`、`missing-current-profile`、`invalid-base-url`、`invalid-timeout-env`；warning code 包括 `api-key-env-missing`、`missing-token`、`agent-skill-missing`。环境变量只输出是否存在或是否有效；token 只输出是否存在和脱敏长度，不输出完整值。`--output <file>` 会以仅当前用户可读写权限保存同一份脱敏快照。
 
+`auth` 和 `doctor` 显示的配置 URL，以及连接错误中的 URL，会移除用户信息、查询参数和片段。快照中的诊断文本也会遮盖可识别的凭据格式；由于无法识别所有自定义敏感信息，分享支持文件前仍应检查内容。
+
 ## category
 
 列出板块：

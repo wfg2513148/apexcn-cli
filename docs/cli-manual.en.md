@@ -125,6 +125,8 @@ apexcn doctor --timeout-ms 10000 --json
 
 `doctor snapshot` is a local-only support snapshot and does not call the community API. It reads the config file directly and outputs `kind: "doctor-snapshot"`, `schemaVersion: 1`, `diagnostics`, `environment`, `config`, `agentSkill`, and stable `checks[].code` values. Hard issue codes include `config-unreadable`, `config-invalid-json`, `no-active-profile`, `missing-current-profile`, `invalid-base-url`, and `invalid-timeout-env`; warning codes include `api-key-env-missing`, `missing-token`, and `agent-skill-missing`. Environment variables are reported only as present/valid, and tokens are reported only as presence plus redacted length. `--output <file>` writes the same sanitized snapshot with user-only permissions.
 
+Profile URLs displayed by `auth` and `doctor`, and URLs in transport errors, omit userinfo, query strings, and fragments. Snapshot diagnostic strings also mask recognizable credential patterns; review support artifacts before sharing them because arbitrary secret formats cannot always be detected.
+
 ## category
 
 List categories:

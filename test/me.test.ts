@@ -61,6 +61,22 @@ describe("me command", () => {
     expect(process.exitCode).toBeUndefined();
   });
 
+  test("verbose diagnostics omit credentials from the configured URL", async () => {
+    const configPath = await tempConfigPath();
+    const baseUrl = "https://synthetic-user:synthetic-password@example.invalid/ords/dev?x=synthetic-query#synthetic-fragment";
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(configPath, JSON.stringify({ current: "dev", profiles: { dev: { baseUrl, token: "test-token-value" } } }));
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ user: { id: 11, nickname: "Tester" } })));
+    const program = createProgram({ configPath, stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
+
+    await program.parseAsync(["node", "apexcn", "me", "--verbose", "--json"]);
+
+    expect((stdout.join("") + stderr.join("")).includes("synthetic-")).toBe(false);
+    expect(stderr.join("")).toContain("GET https://example.invalid/ords/dev\n");
+  });
+
   test("can redact email for privacy-safe JSON output", async () => {
     const configPath = await tempConfigPath();
     const stdout: string[] = [];

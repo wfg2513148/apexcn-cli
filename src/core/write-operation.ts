@@ -5,6 +5,7 @@ import { defaultConfigPath } from "../config.js";
 import { HttpError, NetworkError, requestJson, TimeoutError } from "../http.js";
 import { assessCapabilityCompatibility } from "./capability-compatibility.js";
 import { assertSafeWriteTarget, containsImpreciseNumbers, parsePreciseJson, toNativeApiNumbers, UnsafeApiIdError } from "./precise-json.js";
+import { sanitizeUrlForDisplay } from "./url-redaction.js";
 
 export type WriteOperationSession = {
   profile: string;
@@ -337,7 +338,7 @@ function previewFrom(operation: WriteOperation): WriteOperationPreview {
     expiresAt: operation.expiresAt,
     willExecute: false,
     profile: operation.target.profile,
-    baseUrl: operation.target.baseUrl,
+    baseUrl: sanitizeUrlForDisplay(operation.target.baseUrl),
     method: operation.request.method,
     path: operation.request.path,
     body: operation.request.body,

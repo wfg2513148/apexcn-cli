@@ -18,6 +18,89 @@ describe("http", () => {
     );
   });
 
+  test.each(["network", "timeout"])("%s errors omit all request query values", async (failure) => {
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      if (failure === "timeout") throw new DOMException("timed out", "TimeoutError");
+      throw new TypeError("unreachable");
+    }));
+    let caught: unknown;
+    try {
+      await requestJson("https://example.invalid/ords/dev", "/api/v1/search", {
+        token: "test-token-value",
+        timeoutMs: 100,
+        query: { apiKey: "synthetic-query-secret", originalUrl: "https://other.invalid/?token=synthetic-nested-secret" }
+      });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught instanceof (failure === "timeout" ? TimeoutError : NetworkError)).toBe(true);
+    expect((caught as Error).message.includes("synthetic-")).toBe(false);
+    expect(JSON.stringify(errorBodyFrom(caught)).includes("synthetic-")).toBe(false);
+    expect((caught as Error).message).toContain("https://example.invalid/ords/dev/api/v1/search");
+  });
+
+  test("HTTP errors redact URLs echoed in messages and nested details", async () => {
+    const echoed = "https://synthetic-user:synthetic-password@example.invalid/ords/dev?unknown=synthetic-query-secret#synthetic-fragment";
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      error: { message: `upstream failed at ${echoed}`, context: [{ endpoint: echoed }] }
+    }, { status: 400 })));
+    let caught: unknown;
+    try {
+      await requestJson("https://example.invalid/ords/dev", "/api/v1/me", { token: "test-token-value" });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(HttpError);
+    expect((caught as Error).message.includes("synthetic-")).toBe(false);
+    expect(JSON.stringify(errorBodyFrom(caught)).includes("synthetic-")).toBe(false);
+    expect((caught as Error).message).toContain("[redacted URL]");
+  });
+
+  test.each(["'", '"'])("HTTP diagnostics fail closed on quotes inside echoed URLs", (quote) => {
+    const url = `https://user:prefix${quote}synthetic-password@example.invalid/ords?unknown=synthetic-query#synthetic-fragment`;
+    const error = new HttpError(`upstream failed at ${url}`, 400, "Bad Request", undefined, { context: [url] });
+    expect(error.message.includes("synthetic-")).toBe(false);
+    expect(JSON.stringify(errorBodyFrom(error)).includes("synthetic-")).toBe(false);
+  });
+
+  test.each([
+    "prefixhttps://synthetic-user:synthetic-password@example.invalid/?unknown=synthetic-query",
+    "https:\\/\\/synthetic-user:synthetic-password@example.invalid/?unknown=synthetic-query",
+    "https%3A%2F%2Fsynthetic-user%3Asynthetic-password%40example.invalid%2F%3Funknown%3Dsynthetic-query",
+    "https%253A%252F%252Fsynthetic-user%253Asynthetic-password%2540example.invalid%252F%253Funknown%253Dsynthetic-query",
+    "//synthetic-user:synthetic-password@example.invalid/?unknown=synthetic-query",
+    "//user:prefix synthetic-password@example.invalid/?unknown=synthetic-query",
+    String.raw`https:\\synthetic-user:synthetic-password@example.invalid/?unknown=synthetic-query`,
+    String.raw`https:/\synthetic-user:synthetic-password@example.invalid/?unknown=synthetic-query`,
+    String.raw`https:\synthetic-user:synthetic-password@example.invalid/?unknown=synthetic-query`,
+    "https:/synthetic-user:synthetic-password@example.invalid/?unknown=synthetic-query",
+    "https:synthetic-user:synthetic-password@example.invalid/?unknown=synthetic-query"
+  ])("HTTP diagnostics remove embedded and escaped URLs", (message) => {
+    const error = new HttpError(message, 400, "Bad Request", undefined, { context: [message] });
+    expect(error.message.includes("synthetic-")).toBe(false);
+    expect(JSON.stringify(errorBodyFrom(error)).includes("synthetic-")).toBe(false);
+  });
+
+  test("HTTP diagnostic detail keys redact URLs without losing colliding entries", () => {
+    const first = "https://synthetic-user:synthetic-pass@example.invalid/?unknown=synthetic-one";
+    const second = "https://example.invalid/?unknown=synthetic-two";
+    const error = new HttpError("bad request", 400, "Bad Request", undefined, { byEndpoint: { [first]: "first", [second]: "second" } });
+    const envelope = errorBodyFrom(error);
+    expect(JSON.stringify(envelope).includes("synthetic-")).toBe(false);
+    const endpoints = (envelope.error.details as { byEndpoint: Record<string, string> }).byEndpoint;
+    expect(Object.values(endpoints).sort()).toEqual(["first", "second"]);
+  });
+
+  test("HTTP diagnostics retain many URL-keyed details after redaction", () => {
+    const byEndpoint = Object.fromEntries(Array.from({ length: 2000 }, (_, index) => [
+      `https://example.invalid/?index=${index}`, index
+    ]));
+    const envelope = errorBodyFrom(new HttpError("bad request", 400, "Bad Request", undefined, { byEndpoint }));
+    const result = (envelope.error.details as { byEndpoint: Record<string, number> }).byEndpoint;
+    expect(Object.keys(result)).toHaveLength(2000);
+    expect(new Set(Object.values(result)).size).toBe(2000);
+  });
+
   test("requestJson sends auth, client identity, user agent, and command operation headers", async () => {
     const fetch = vi.fn(async () => Response.json({ ok: true }));
     vi.stubGlobal("fetch", fetch);
