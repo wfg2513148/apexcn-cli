@@ -106,5 +106,7 @@ jobs:
         if: always()
         with:
           name: ${{ matrix.id }}-candidate-lifecycle
-          path: reports/${{ matrix.id }}-candidate-lifecycle.json
+          path: |
+            reports/${{ matrix.id }}-candidate-lifecycle.json
+            reports/${{ matrix.id }}-candidate-lifecycle.json.outputs/
           if-no-files-found: warn

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync, writeSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -52,14 +52,52 @@ const report = { schemaVersion: 1, platform: process.platform, arch: process.arc
 const sha = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
 const manifestSha = (manifest) => createHash("sha256").update(JSON.stringify(manifest)).digest("hex");
 function run(label, args, expectFailure = false) {
-  const result = spawnSync(shell, ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", ...args], {
-    cwd: root, env, encoding: "utf8", timeout: 120000, maxBuffer: 8 * 1024 * 1024
-  });
-  const step = { label, expectedOutcome: expectFailure ? "failure" : "success", status: result.status, signal: result.signal, stdout: result.stdout ?? "", stderr: result.stderr ?? "", error: result.error?.message };
+  const shellArgs = ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", ...args];
+  const step = { label, expectedOutcome: expectFailure ? "failure" : "success", attemptedAt: new Date().toISOString(),
+    action: { executable: shell, args: shellArgs }, state: "started" };
   report.steps.push(step);
-  if (result.error || result.signal) report.cleanupDeferred = true;
+  writeSync(1, `${JSON.stringify({ kind: "windows-lifecycle-step-start", label, attemptedAt: step.attemptedAt, action: step.action })}\n`);
+  report.cleanupDeferred = true;
+  const result = spawnSync(shell, shellArgs, {
+    cwd: root, env, timeout: 120000, maxBuffer: 8 * 1024 * 1024
+  });
+  if (result.status !== null && !result.error && !result.signal) report.cleanupDeferred = false;
+  const rawStdout = result.stdout ?? Buffer.alloc(0);
+  const rawStderr = result.stderr ?? Buffer.alloc(0);
+  Object.assign(step, { state: "finished", finishedAt: new Date().toISOString(), status: result.status, signal: result.signal,
+    stdout: rawStdout.toString("utf8"), stderr: rawStderr.toString("utf8"),
+    stdoutBase64: rawStdout.toString("base64"), stderrBase64: rawStderr.toString("base64"),
+    stdoutSha256: createHash("sha256").update(rawStdout).digest("hex"), stderrSha256: createHash("sha256").update(rawStderr).digest("hex"),
+    error: result.error?.message });
   const expected = expectFailure ? result.status !== null && result.status !== 0 && !result.error && !result.signal
     : result.status === 0 && !result.error && !result.signal;
+  if (!expected && report.firstFailure === undefined) {
+    report.firstFailure = { label, attemptedAt: step.attemptedAt, status: step.status, signal: step.signal, error: step.error };
+  }
+  const outputDirectory = `${reportPath}.outputs`;
+  const sequence = String(report.steps.length).padStart(3, "0");
+  step.stdoutFile = `${sequence}.stdout.bin`;
+  step.stderrFile = `${sequence}.stderr.bin`;
+  try {
+    mkdirSync(outputDirectory, { recursive: true });
+    for (const [name, bytes] of [[step.stdoutFile, rawStdout], [step.stderrFile, rawStderr]]) {
+      const fd = openSync(join(outputDirectory, name), "wx", 0o600);
+      try { writeFileSync(fd, bytes); fsyncSync(fd); } finally { closeSync(fd); }
+    }
+  } catch (error) {
+    step.outputEvidenceError = error instanceof Error ? error.message : String(error);
+    if (!expected) throw new Error(`${label}: unexpected subprocess result (${step.error ?? `status ${String(step.status)}`})`);
+    throw error;
+  }
+  try {
+    writeSync(1, `${JSON.stringify({ kind: "windows-lifecycle-step-finish", label, attemptedAt: step.attemptedAt,
+      finishedAt: step.finishedAt, expectedOutcome: step.expectedOutcome, status: step.status, signal: step.signal,
+      error: step.error, stdoutSha256: step.stdoutSha256, stderrSha256: step.stderrSha256 })}\n`);
+  } catch (error) {
+    step.finishMarkerError = error instanceof Error ? error.message : String(error);
+    if (!expected) throw new Error(`${label}: unexpected subprocess result (${step.error ?? `status ${String(step.status)}`})`);
+    throw error;
+  }
   if (!expected) process.stderr.write(`${JSON.stringify({ stage: "unexpected-subprocess-result", ...step })}\n`);
   assert.ok(expected, expectFailure ? `${label} should fail normally` : `${label} failed`);
   return step;
@@ -83,7 +121,7 @@ function recordInstalled(label, expectedVersion) {
   const metadata = JSON.parse(readFileSync(join(cliRoot, "package.json"), "utf8"));
   const dependencies = Object.fromEntries(Object.keys(metadata.dependencies ?? {}).sort().map((name) => [name,
     existsSync(join(cliRoot, "node_modules", name, "package.json"))]));
-  const observation = { label, expectedVersion, actualVersion: metadata.version, installationRoot: cliRoot,
+  const observation = { label, observedAt: new Date().toISOString(), expectedVersion, actualVersion: metadata.version, installationRoot: cliRoot,
     entryPath: entry, launcherPath: launcher, entrySha256, launcherSha256, dependencies };
   report.installedChecks.push(observation);
   let actualManifest;
@@ -104,6 +142,10 @@ function recordInstalled(label, expectedVersion) {
   for (const [dependency, present] of Object.entries(dependencies)) {
     assert.ok(present, `${label}: ${dependency} missing`);
   }
+  writeSync(1, `${JSON.stringify({ kind: "windows-installation-identity", label, observedAt: observation.observedAt,
+    expectedVersion, installationRoot: cliRoot, entryPath: entry, launcherPath: launcher,
+    entrySha256, launcherSha256, runtimeManifestSha256: observation.runtimeManifestSha256,
+    runtimeFileCount: observation.runtimeFileCount, dependencies })}\n`);
 }
 try {
   assert.equal(process.platform, "win32", "Real Windows is required");
@@ -115,10 +157,11 @@ try {
   assert.equal(report.actualCandidateSha256, candidateSha, "candidate digest mismatch");
   report.expectedEntrySha256 = readFileSync(join(assets, "candidate-entry.sha256"), "utf8").trim();
   assert.match(report.expectedEntrySha256, /^[0-9a-f]{64}$/, "candidate entry digest missing or invalid");
+  report.cleanupDeferred = true;
   const entryFromArchive = spawnSync("tar.exe", ["-xOzf", candidate, "package/dist/index.js"], {
     cwd: root, env, timeout: 120000, maxBuffer: 8 * 1024 * 1024
   });
-  if (entryFromArchive.error || entryFromArchive.signal) report.cleanupDeferred = true;
+  if (entryFromArchive.status !== null && !entryFromArchive.error && !entryFromArchive.signal) report.cleanupDeferred = false;
   report.archiveEntryExtraction = { status: entryFromArchive.status, signal: entryFromArchive.signal,
     error: entryFromArchive.error?.message, stderr: entryFromArchive.stderr?.toString("utf8") ?? "" };
   assert.equal(entryFromArchive.status, 0, "candidate entry extraction failed");
@@ -127,10 +170,11 @@ try {
   assert.equal(report.windowsArchiveEntrySha256, report.expectedEntrySha256, "candidate archive entry digest mismatch");
   const reference = join(root, "candidate-reference");
   mkdirSync(reference);
+  report.cleanupDeferred = true;
   const extracted = spawnSync("tar.exe", ["-xzf", candidate, "-C", reference], {
     cwd: root, env, timeout: 120000, maxBuffer: 8 * 1024 * 1024
   });
-  if (extracted.error || extracted.signal) report.cleanupDeferred = true;
+  if (extracted.status !== null && !extracted.error && !extracted.signal) report.cleanupDeferred = false;
   report.archiveExtraction = { status: extracted.status, signal: extracted.signal,
     error: extracted.error?.message, stderr: extracted.stderr?.toString("utf8") ?? "" };
   assert.equal(extracted.status, 0, "candidate archive extraction failed");
@@ -146,10 +190,11 @@ try {
   assert.equal(report.actualPriorSha256, priorSha, "prior digest mismatch");
   const priorReference = join(root, "prior-reference");
   mkdirSync(priorReference);
+  report.cleanupDeferred = true;
   const extractedPrior = spawnSync("tar.exe", ["-xzf", prior, "-C", priorReference], {
     cwd: root, env, timeout: 120000, maxBuffer: 8 * 1024 * 1024
   });
-  if (extractedPrior.error || extractedPrior.signal) report.cleanupDeferred = true;
+  if (extractedPrior.status !== null && !extractedPrior.error && !extractedPrior.signal) report.cleanupDeferred = false;
   report.priorArchiveExtraction = { status: extractedPrior.status, signal: extractedPrior.signal,
     error: extractedPrior.error?.message, stderr: extractedPrior.stderr?.toString("utf8") ?? "" };
   assert.equal(extractedPrior.status, 0, "prior archive extraction failed");
@@ -168,6 +213,12 @@ try {
   report.launcherNodeExecutablePath = launcherNode.stdout.trim();
   report.launcherNodeExecutableSha256 = sha(report.launcherNodeExecutablePath);
   assert.equal(report.launcherNodeExecutableSha256, report.nodeExecutableSha256, "launcher Node executable SHA mismatch");
+  writeSync(1, `${JSON.stringify({ kind: "windows-lifecycle-environment", observedAt: new Date().toISOString(),
+    candidateSha256: report.actualCandidateSha256, priorSha256: report.actualPriorSha256,
+    candidateRuntimeManifestSha256: report.expectedRuntimeManifestSha256, priorRuntimeManifestSha256: report.expectedPriorRuntimeManifestSha256,
+    nodeVersion: report.node, nodeExecutablePath: report.nodeExecutablePath, nodeExecutableSha256: report.nodeExecutableSha256,
+    launcherNodeExecutablePath: report.launcherNodeExecutablePath, launcherNodeExecutableSha256: report.launcherNodeExecutableSha256,
+    shell, shellVersion: report.shellVersion, installationRoot: install, launcherPath: launcher })}\n`);
   mkdirSync(dirname(config), { recursive: true });
   writeFileSync(config, configText);
   const priorChecksums = join(root, "prior-checksums.txt");
@@ -177,14 +228,14 @@ try {
 
   setArchive(prior, priorChecksums);
   run("install 1.2.2", ["-File", installer]);
-  assert.equal(invokeLauncher("prior version", "--version").stdout.trim(), "1.2.2");
   recordInstalled("install prior", "1.2.2");
+  assert.equal(invokeLauncher("prior version", "--version").stdout.trim(), "1.2.2");
   assert.equal(readFileSync(config, "utf8"), configText);
 
   setArchive(candidate, candidateChecksums);
   invokeLauncher("upgrade 1.2.2 to candidate", "update");
-  assert.equal(invokeLauncher("candidate version", "--version").stdout.trim(), "1.3.0");
   recordInstalled("upgrade to candidate", "1.3.0");
+  assert.equal(invokeLauncher("candidate version", "--version").stdout.trim(), "1.3.0");
   assert.match(invokeLauncher("candidate v2 help", "admin operations-v2 --help").stdout, /--user-id/);
   assert.equal(readFileSync(config, "utf8"), configText);
   const previous = readdirSync(backups).find((name) => name.startsWith("1.2.2-"));
@@ -195,8 +246,8 @@ try {
   setArchive(candidate, badChecksums);
   const failed = invokeLauncher("failed checksum update", "update", true);
   assert.match(failed.stdout + failed.stderr, /Checksum verification failed/i);
-  assert.equal(invokeLauncher("version after failed update", "--version").stdout.trim(), "1.3.0");
   recordInstalled("after failed update", "1.3.0");
+  assert.equal(invokeLauncher("version after failed update", "--version").stdout.trim(), "1.3.0");
   assert.equal(readFileSync(config, "utf8"), configText);
 
   const lifecycle = () => {
@@ -205,25 +256,25 @@ try {
     return join(cliRoot, "scripts", "lifecycle-agent.ps1");
   };
   run("rollback to 1.2.2", ["-File", lifecycle(), "rollback", "-Backup", join(backups, previous), "-Yes"]);
-  assert.equal(invokeLauncher("version after rollback", "--version").stdout.trim(), "1.2.2");
   recordInstalled("after rollback", "1.2.2");
+  assert.equal(invokeLauncher("version after rollback", "--version").stdout.trim(), "1.2.2");
   assert.equal(readFileSync(config, "utf8"), configText);
 
   setArchive(candidate, candidateChecksums);
   run("shell-native upgrade to candidate", ["-File", lifecycle(), "upgrade"]);
-  assert.equal(invokeLauncher("shell-native upgraded version", "--version").stdout.trim(), "1.3.0");
   recordInstalled("shell-native upgrade", "1.3.0");
+  assert.equal(invokeLauncher("shell-native upgraded version", "--version").stdout.trim(), "1.3.0");
   assert.equal(readFileSync(config, "utf8"), configText);
   setArchive(candidate, badChecksums);
   const shellFailed = run("shell-native failed checksum upgrade", ["-File", lifecycle(), "upgrade"], true);
   assert.match(shellFailed.stdout + shellFailed.stderr, /Checksum verification failed/i);
-  assert.equal(invokeLauncher("version after shell-native failed upgrade", "--version").stdout.trim(), "1.3.0");
   recordInstalled("after shell-native failed upgrade", "1.3.0");
+  assert.equal(invokeLauncher("version after shell-native failed upgrade", "--version").stdout.trim(), "1.3.0");
   assert.equal(readFileSync(config, "utf8"), configText);
   setArchive(candidate, candidateChecksums);
   run("reinstall candidate", ["-File", installer]);
-  assert.equal(invokeLauncher("reinstalled candidate version", "--version").stdout.trim(), "1.3.0");
   recordInstalled("reinstall candidate", "1.3.0");
+  assert.equal(invokeLauncher("reinstalled candidate version", "--version").stdout.trim(), "1.3.0");
   assert.equal(readFileSync(config, "utf8"), configText);
   run("uninstall candidate", ["-File", lifecycle(), "uninstall", "-Yes"]);
   assert.equal(existsSync(launcher), false, "launcher still exists after uninstall");
@@ -232,7 +283,9 @@ try {
   report.ok = true;
 } catch (error) {
   report.error = error instanceof Error ? error.message : String(error);
-  process.stderr.write(`${JSON.stringify({ ok: false, stage: "lifecycle", error: report.error })}\n`);
+  const lastStep = report.steps.at(-1);
+  process.stderr.write(`${JSON.stringify({ ok: false, stage: "lifecycle", error: report.error,
+    firstFailure: report.firstFailure, outputEvidenceError: lastStep?.outputEvidenceError, finishMarkerError: lastStep?.finishMarkerError })}\n`);
   process.exitCode = 1;
 } finally {
   if (!report.cleanupDeferred) {
@@ -271,7 +324,8 @@ try {
     ubuntuPriorRuntimeManifestSha256: report.ubuntuPriorRuntimeManifestSha256,
     expectedLauncherSha256: report.expectedLauncherSha256, expectedPriorLauncherSha256: report.expectedPriorLauncherSha256,
     installedChecks: report.installedChecks.map(({ runtimeManifest: _manifest, ...summary }) => summary),
-    steps: report.steps.map((step) => ({ ...step, stdout: step.stdout.slice(0, 4096), stderr: step.stderr.slice(0, 4096) })),
-    error: report.error, cleanupDeferred: report.cleanupDeferred
+    steps: report.steps.map(({ stdoutBase64: _stdout, stderrBase64: _stderr, ...step }) => ({ ...step,
+      stdout: step.stdout?.slice(0, 4096), stderr: step.stderr?.slice(0, 4096) })),
+    error: report.error, firstFailure: report.firstFailure, cleanupDeferred: report.cleanupDeferred
   })}\n`);
 }
