@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const candidateSha = "9aa880c839f37cf78cf176206628119c9fc249fe760ee2e4239df51a83eaf8d0";
+const candidateSha = "57823150cd639f8d89c6a355525d09931119d147ae1be280e64604460eb20734";
 const priorSha = "bd3ed6cae470af9710397805b609c6b93e479995295dbb74f0fb15b32656b852";
 const assets = resolve("candidate-assets");
 const candidate = join(assets, "apexcn-cli.tgz");
