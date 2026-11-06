@@ -17,7 +17,10 @@ describe("unsafe integer arguments", () => {
     ["draft reply", ["draft", "reply", "--topic-id", "9007199254740993", "--answer", "Example reply"]],
     ["workflow plan", ["workflow", "plan", "--goal", "reply", "--topic-id", "9007199254740993"]],
     ["review topic", ["review", "topic", "--category-id", "9007199254740993"]],
-    ["collection build", ["collection", "build", "--topic-id", "9007199254740993", "--output-dir", "__TEST_OUTPUT__"]]
+    ["collection build", ["collection", "build", "--topic-id", "9007199254740993", "--output-dir", "__TEST_OUTPUT__"]],
+    ["topic view", ["topic", "view", "1.0000000000000001"]],
+    ["workflow fractional ID", ["workflow", "plan", "--goal", "reply", "--topic-id", "1.0000000000000001"]],
+    ["topic offset", ["topic", "list", "--offset", "9007199254740993"]]
   ])("%s rejects an unsafe ID before its action", async (_name, args) => {
     const root = await mkdtemp(join(tmpdir(), "apexcn-unsafe-id-"));
     try {
@@ -55,5 +58,32 @@ describe("unsafe integer arguments", () => {
     expect(result.ok).toBe(false);
     expect(result.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "invalid-draft-schema" })]));
     expect(result.requestPlan).toBeNull();
+  });
+
+  test("review reply rejects an imported draft whose fractional ID rounds to a safe integer", async () => {
+    const stdout: string[] = [];
+    const program = createProgram({
+      stdout: (text) => stdout.push(text), stderr: () => {}, isStdinTTY: () => false,
+      readStdin: async () => '{"kind":"reply-draft","schemaVersion":1,"topicId":9007199254740991.1,"parentPostId":null,"content":"This is a sufficiently detailed example reply."}'
+    });
+    await program.parseAsync(["node", "apexcn", "review", "reply", "--draft-file", "-", "--json"]);
+    const result = JSON.parse(stdout.join(""));
+    expect(result.ok).toBe(false);
+    expect(result.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "invalid-draft-schema" })]));
+    expect(result.requestPlan).toBeNull();
+  });
+
+  test("review reply emits no plan or suggestion for an invalid parent ID", async () => {
+    const stdout: string[] = [];
+    const program = createProgram({
+      stdout: (text) => stdout.push(text), stderr: () => {}, isStdinTTY: () => false,
+      readStdin: async () => "This is a sufficiently detailed example reply for validation."
+    });
+    await program.parseAsync(["node", "apexcn", "review", "reply", "--topic-id", "42", "--parent-post-id", "9007199254740993", "--content-file", "-", "--json"]);
+    const result = JSON.parse(stdout.join(""));
+    expect(result.ok).toBe(false);
+    expect(result.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "invalid-parent-post-id" })]));
+    expect(result.requestPlan).toBeNull();
+    expect(result.suggestedCommand).toBeNull();
   });
 });

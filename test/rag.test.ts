@@ -30,6 +30,34 @@ describe("local-AI RAG evidence retrieval", () => {
     process.exitCode = undefined;
   });
 
+  test("refuses an unsafe search result ID rather than fetching a rounded topic", async () => {
+    const { program, stderr, fetch } = await configuredProgram(async () =>
+      new Response('{"requestId":"req-search","items":[{"id":9007199254740993,"title":"unsafe"}]}', { headers: { "content-type": "application/json" } })
+    );
+
+    await program.parseAsync(["node", "apexcn", "rag", "retrieve", "example", "--query", "example", "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("refuses an imprecise topic detail ID rather than publishing it as evidence", async () => {
+    const { program, stdout, stderr, fetch } = await configuredProgram(async (input) => {
+      const body = String(input).includes("/api/v1/search")
+        ? '{"items":[{"id":42,"title":"safe search"}]}'
+        : '{"topic":{"id":9007199254740991.1,"title":"unsafe detail","threadUrl":"https://example.invalid/t/42"}}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "rag", "retrieve", "example", "--query", "example", "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(stdout.join("")).toBe("");
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   test("uses only readonly search and topic detail endpoints and emits citable evidence", async () => {
     const { program, stdout, stderr, fetch } = await configuredProgram(async (input) => {
       const url = String(input);

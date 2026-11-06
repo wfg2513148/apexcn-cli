@@ -103,6 +103,24 @@ describe("workflow commands", () => {
     process.exitCode = undefined;
   });
 
+  test("workflow research rejects an unsafe search ID before fetching a topic", async () => {
+    const runDir = await tempPath("unsafe-search");
+    const env = await configuredWorkflowProgram(async () =>
+      new Response('{"requestId":"req-search","items":[{"id":9007199254740993,"title":"unsafe"}]}', { headers: { "content-type": "application/json" } })
+    );
+
+    await env.program.parseAsync([
+      "node", "apexcn", "workflow", "run", "--goal", "ask-question", "--keyword", "synthetic",
+      "--title", "Example", "--problem", "Example problem", "--category-id", "4", "--output-dir", runDir, "--json"
+    ]);
+
+    expect(process.exitCode).toBe(1);
+    expect(env.stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(env.fetch).toHaveBeenCalledTimes(1);
+    expect((await readJson(join(runDir, "run.json"))).status).toBe("failed");
+    await rm(runDir, { recursive: true, force: true });
+  });
+
   test("workflow plan builds an ask-question plan without execute by default", async () => {
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
@@ -477,6 +495,69 @@ describe("workflow commands", () => {
     await unsafe.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute"]);
     expect(unsafe.stderr.join("")).toContain("Refusing to execute workflow without --yes");
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test.each(["9007199254740993", "9007199254740991.1"])("workflow resume rejects imprecise stored IDs %s before preview", async (id) => {
+    const runDir = await tempPath("unsafe-resume");
+    await mkdir(runDir, { recursive: true });
+    const state = `{"kind":"workflow-run","schemaVersion":1,"runId":"unsafe-id","goal":"reply-delete","inputs":{"replyId":${id},"confirmId":${id},"ifVersion":2},"status":"failed","steps":[],"artifacts":{},"nextAction":"review"}`;
+    await writeFile(join(runDir, "run.json"), state, "utf8");
+    const env = await configuredWorkflowProgram(async () => Response.json({ error: "unexpected" }, { status: 500 }));
+
+    await env.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(env.stdout.join("")).toBe("");
+    expect(env.stderr.join("")).toMatch(/invalid|unsafe/i);
+    expect(env.fetch).not.toHaveBeenCalled();
+    expect(await readFile(join(runDir, "run.json"), "utf8")).toBe(state);
+    await expect(readFile(join(runDir, "preview.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  test("workflow approval rejects a preview with an imprecise version", async () => {
+    const runDir = await tempPath("unsafe-preview");
+    const env = await configuredWorkflowProgram(async () => Response.json({ error: "unexpected" }, { status: 500 }));
+    await env.program.parseAsync([
+      "node", "apexcn", "workflow", "run", "--goal", "reply-delete", "--reply-id", "100",
+      "--confirm-id", "100", "--if-version", "2", "--output-dir", runDir, "--json"
+    ]);
+    expect(process.exitCode).toBeUndefined();
+    const previewPath = join(runDir, "preview.json");
+    const preview = await readFile(previewPath, "utf8");
+    expect(preview).toContain('"ifVersion": 2');
+    await writeFile(previewPath, preview.replace('"ifVersion": 2', '"ifVersion": 9007199254740991.1'));
+    const approver = workflowProgram();
+
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(approver.stderr.join("")).toMatch(/unsafe|imprecise/i);
+    await expect(readFile(join(runDir, "approval.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    expect(env.fetch).not.toHaveBeenCalled();
+  });
+
+  test("workflow execution rejects an imprecise approval value before network", async () => {
+    const runDir = await tempPath("unsafe-approval");
+    const env = await configuredWorkflowProgram(async () => Response.json({ ok: true }));
+    await env.program.parseAsync([
+      "node", "apexcn", "workflow", "run", "--goal", "reply-delete", "--reply-id", "100",
+      "--confirm-id", "100", "--if-version", "9007199254740991", "--output-dir", runDir, "--json"
+    ]);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    const approvalPath = join(runDir, "approval.json");
+    const approval = await readFile(approvalPath, "utf8");
+    expect(approval).toContain('"ifVersion": 9007199254740991');
+    await writeFile(approvalPath, approval.replace('"ifVersion": 9007199254740991', '"ifVersion": 9007199254740991.1'));
+    const executor = workflowProgram({ configPath: env.configPath });
+
+    await executor.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(executor.stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(env.fetch).not.toHaveBeenCalled();
+    await expect(readFile(join(runDir, "execute.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   test("workflow run resume skips completed reads and posts only the final request", async () => {

@@ -1912,6 +1912,24 @@ describe("content commands", () => {
     }
   });
 
+  test.each(["0", "9007199254740991"])("topic list accepts exact safe offset %s", async (offset) => {
+    const { program, fetch } = await configuredProgram(async () => Response.json({ items: [] }));
+
+    await program.parseAsync(["node", "apexcn", "topic", "list", "--offset", offset, "--json"]);
+
+    expect(process.exitCode).toBeUndefined();
+    expect(new URL(String(fetch.mock.calls[0][0])).searchParams.get("offset")).toBe(offset);
+  });
+
+  test.each([["1.0", "1"], ["1e2", "100"], ["0x2", "2"], ["+1", "1"]])("topic view preserves exact safe input %s", async (inputId, expectedId) => {
+    const { program, fetch } = await configuredProgram(async () => Response.json({ topic: { id: Number(expectedId) } }));
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", inputId, "--json"]);
+
+    expect(process.exitCode).toBeUndefined();
+    expect(fetch).toHaveBeenLastCalledWith(`https://oracleapex.cn/ords/test/api/v1/topics/${expectedId}`, expect.any(Object));
+  });
+
   test("topic view preserves a large topic ID and response integers exactly", async () => {
     const topicId = "1234567890123456789012345678";
     const accountId = "9007199254740993";
@@ -1946,6 +1964,75 @@ describe("content commands", () => {
     expect(stdout.join("")).toContain('"canEdit": false');
     expect(stdout.join("")).toContain('"canDelete": false');
     expect(stdout.join("")).toContain('"createdBy": 9007199254740993');
+  });
+
+  test("topic view recognizes equal large account IDs in decimal and exponential JSON", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":9007199254740993}}'
+        : '{"topic":{"id":42,"createdBy":9.007199254740993e15}}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--json"]);
+
+    expect(stdout.join("")).toContain('"canEdit": true');
+    expect(stdout.join("")).toContain('"canDelete": true');
+  });
+
+  test("topic view recognizes equivalent decimal and exponential account ID strings", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":"9007199254740993"}}'
+        : '{"topic":{"id":42,"createdBy":"9.007199254740993e15"}}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--json"]);
+
+    expect(stdout.join("")).toContain('"canEdit": true');
+    expect(stdout.join("")).toContain('"canDelete": true');
+  });
+
+  test("topic view refuses ownership for account IDs with imprecise exponents", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":"1e9007199254740992"}}'
+        : '{"topic":{"id":42,"createdBy":"1e9007199254740993"}}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--json"]);
+
+    expect(stdout.join("")).toContain('"canEdit": false');
+    expect(stdout.join("")).toContain('"canDelete": false');
+  });
+
+  test("topic view preserves a large ID recovered from a source URL", async () => {
+    const id = "1234567890123456789012345678";
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":1}}'
+        : `{"topic":{"threadUrl":"https://example.invalid/t/${id}","title":"Precision"}}`;
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--json"]);
+
+    expect(stdout.join("")).toContain(`"id": ${id}`);
+  });
+
+  test("topic view does not replace a large numeric schemaVersion", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":1}}'
+        : '{"schemaVersion":9007199254740993,"topic":{"id":42}}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--json"]);
+
+    expect(stdout.join("")).toContain('"schemaVersion": 9007199254740993');
   });
 
   test("topic view text preserves large numeric fields", async () => {

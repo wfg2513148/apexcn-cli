@@ -4,6 +4,7 @@ import { isAbsolute, join, normalize, parse, relative, resolve, sep } from "node
 import { Command, InvalidArgumentError } from "commander";
 import { ConfigFileError } from "../config.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
+import { assertSafeApiNumbers, isExactSafeIntegerInput, parsePreciseJson, safeApiId, UnsafeApiIdError } from "../core/precise-json.js";
 import { currentContentLanguage } from "../core/request-context.js";
 import type { ContentLanguage } from "../core/content-language.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
@@ -333,6 +334,7 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
   for (const query of queries) {
     const search = await requestJson(session.baseUrl, "/api/v1/search", {
       token: session.token,
+      parseResponse: parsePreciseJson,
       query: {
         keyword: query,
         pageSize: limit,
@@ -360,7 +362,8 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
     const relativePath = join("topics", `${id}.json`);
     const path = join(outputDir, relativePath);
     try {
-      const result = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
+      const result = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token, parseResponse: parsePreciseJson });
+      assertSafeApiNumbers(result);
       const requestId = requestIdFrom(result);
       if (requestId) requestIds.add(requestId);
       const artifact = {
@@ -709,8 +712,10 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
   do {
     const data = await requestJson(session.baseUrl, "/api/v1/me/favorites/export", {
       token: session.token,
+      parseResponse: parsePreciseJson,
       query: { pageSize, cursor }
     });
+    assertSafeApiNumbers(data);
     const requestId = requestIdFrom(data);
     if (requestId) requestIds.add(requestId);
     pageCount += 1;
@@ -1588,13 +1593,8 @@ function sha256Hex(content: Buffer): string {
 
 function topicIdFromItem(item: Record<string, unknown>): number | undefined {
   for (const key of ["id", "topicId", "threadId", "targetId"]) {
-    const value = item[key];
-    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
-      return value;
-    }
-    if (typeof value === "string" && /^\d+$/.test(value)) {
-      return Number(value);
-    }
+    const value = safeApiId(item[key]);
+    if (value !== undefined) return value;
   }
   return undefined;
 }
@@ -1612,13 +1612,8 @@ function favoriteTargetType(item: Record<string, unknown>): "THREAD" | "POST" | 
 
 function positiveIdFromKeys(item: Record<string, unknown>, keys: string[]): number | undefined {
   for (const key of keys) {
-    const value = item[key];
-    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
-      return value;
-    }
-    if (typeof value === "string" && /^\d+$/.test(value)) {
-      return Number(value);
-    }
+    const value = safeApiId(item[key]);
+    if (value !== undefined) return value;
   }
   return undefined;
 }
@@ -1685,7 +1680,7 @@ function validateDateRange(io: CommandIo, fromDate?: string, toDate?: string, js
 
 function parsePositiveInteger(value: string): number {
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 1) {
+  if (!isExactSafeIntegerInput(value) || parsed < 1) {
     throw new InvalidArgumentError(`Expected a positive integer: ${value}`);
   }
   return parsed;
@@ -1735,6 +1730,11 @@ function errorMessage(error: unknown): string {
 }
 
 function handleCollectionError(io: CommandIo, error: unknown, json?: boolean): void {
+  if (error instanceof UnsafeApiIdError) {
+    printError(io, { type: "validation", message: error.message, exitCode: 1 }, undefined, json);
+    process.exitCode = 1;
+    return;
+  }
   if (error instanceof HttpError) {
     printError(io, {
       type: "http",

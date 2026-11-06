@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { stdin as processStdin } from "node:process";
 import { Command, InvalidArgumentError, Option } from "commander";
+import { isExactSafeIntegerInput, parsePreciseJson } from "../core/precise-json.js";
 import { blockText, fieldText, isRecord, outputFormat, parseOutputFormat, printData, printError, validateFormatOptions, type FormatOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
 
@@ -191,7 +192,7 @@ async function topicInputFromDraft(path: string, options: ReviewCommandOptions):
   }
   let data: unknown;
   try {
-    data = JSON.parse(text) as unknown;
+    data = parsePreciseJson(text);
   } catch (error) {
     if (error instanceof SyntaxError) {
       printError(options, { type: "validation", message: `Invalid draft file: ${path}` });
@@ -306,7 +307,8 @@ async function reviewReply(commandOptions: ReviewReplyOptions, options: ReviewCo
   warnings.push(...replySoftWarnings(input));
 
   const safeContent = issues.some((issue) => issue.code === "possible-secret") ? redactSensitiveContent(input.content) : input.content;
-  const requestPlan = input.topicId && safeContent ? {
+  const invalidIdentifier = issues.some((issue) => ["invalid-topic-id", "invalid-parent-post-id", "invalid-draft-schema"].includes(issue.code));
+  const requestPlan = !invalidIdentifier && input.topicId && safeContent ? {
     method: "POST" as const,
     path: `/api/v1/topics/${input.topicId}/replies`,
     body: compactBody({
@@ -328,7 +330,7 @@ async function reviewReply(commandOptions: ReviewReplyOptions, options: ReviewCo
       duplicateLineCount: duplicateLineCount(input.content)
     },
     requestPlan,
-    suggestedCommand: suggestedReplyCreateCommand(input)
+    suggestedCommand: invalidIdentifier ? null : suggestedReplyCreateCommand(input)
   };
 }
 
@@ -345,7 +347,7 @@ async function replyInputFromDraft(
   }
   let data: unknown;
   try {
-    data = JSON.parse(text) as unknown;
+    data = parsePreciseJson(text);
   } catch (error) {
     if (error instanceof SyntaxError) {
       issues.push({ code: "invalid-draft-json", severity: "issue", message: `Invalid draft file: ${path}` });
@@ -596,7 +598,7 @@ function readStdin(options: ReviewCommandOptions): Promise<string> {
 
 function parsePositiveInteger(value: string): number {
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 1) {
+  if (!isExactSafeIntegerInput(value) || parsed < 1) {
     throw new InvalidArgumentError(`Expected a positive integer: ${value}`);
   }
   return parsed;
@@ -607,7 +609,7 @@ function positiveIntegerOption(value: string | undefined, name: string, issues: 
     return undefined;
   }
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 1) {
+  if (!isExactSafeIntegerInput(value) || parsed < 1) {
     issues.push({ code: `invalid-${name}`, severity: "issue", message: `Expected a positive integer for --${name}: ${value}` });
     return undefined;
   }

@@ -49,6 +49,35 @@ describe("collection commands", () => {
     process.exitCode = undefined;
   });
 
+  test.each(["9007199254740993", "9007199254740991.1", '"9007199254740993"'])("collection build refuses an imprecise search ID %s before topic fetch", async (id) => {
+    const outputDir = await tempPath("unsafe-search");
+    const { program, stderr, fetch } = await configuredProgram(async () =>
+      new Response(`{"requestId":"req-search","items":[{"id":${id},"title":"unsafe"}]}`, { headers: { "content-type": "application/json" } })
+    );
+
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--query", "synthetic", "--output-dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("favorites import rejects an imprecise topic ID before writing a topic", async () => {
+    const outputDir = await tempPath("unsafe-favorite");
+    const { program, stderr, fetch } = await configuredProgram(async () =>
+      new Response('{"requestId":"req-favorites","items":[{"targetType":"THREAD","topicId":9007199254740991.1,"title":"unsafe"}],"page":{"nextCursor":null}}', { headers: { "content-type": "application/json" } })
+    );
+
+    await program.parseAsync(["node", "apexcn", "collection", "favorites", "--output-dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await expect(readFile(join(outputDir, "topics", "9007199254740991.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
   test("collection build creates a deduplicated local knowledge collection", async () => {
     const outputDir = await tempPath("collection");
     const { program, stdout, stderr, fetch } = await configuredProgram(async (input) => {

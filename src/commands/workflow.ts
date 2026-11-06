@@ -2,8 +2,10 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { Command, InvalidArgumentError, Option } from "commander";
+import { isLosslessNumber } from "lossless-json";
 import { ConfigFileError, defaultConfigPath } from "../config.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
+import { assertSafeApiNumbers, containsImpreciseNumbers, isExactSafeIntegerInput, parsePreciseJson, safeApiId, UnsafeApiIdError } from "../core/precise-json.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
 import {
   createWorkflowPlan,
@@ -110,6 +112,13 @@ class WorkflowReviewError extends Error {
   constructor() {
     super("Workflow content review failed.");
     this.name = "WorkflowReviewError";
+  }
+}
+
+class UnsafeWorkflowNumberError extends Error {
+  constructor(path: string) {
+    super(`Unsafe or imprecise number in workflow artifact: ${path}`);
+    this.name = "UnsafeWorkflowNumberError";
   }
 }
 
@@ -580,7 +589,15 @@ async function runWorkflow(io: WorkflowCommandOptions, options: WorkflowRunOptio
       process.exitCode = 1;
       return;
     }
-    const approvalError = await workflowApprovalError(loaded.state);
+    let approvalError: string | undefined;
+    try {
+      approvalError = await workflowApprovalError(loaded.state);
+    } catch (error) {
+      if (!(error instanceof UnsafeWorkflowNumberError)) throw error;
+      printError(io, { type: "validation", message: error.message, exitCode: 1 });
+      process.exitCode = 1;
+      return;
+    }
     if (approvalError) {
       loaded.state.nextAction = approvalError.includes("hash mismatch")
         ? `Review ${loaded.state.artifacts.preview} and rerun apexcn workflow approve --run-dir ${shellArg(loaded.runDir)} --json.`
@@ -1561,6 +1578,7 @@ async function runResearch(session: Session, state: WorkflowRunState, options: W
   const keyword = effectiveKeyword(state, options);
   const search = await requestJson(session.baseUrl, "/api/v1/search", {
     token: session.token,
+    parseResponse: parsePreciseJson,
     query: { keyword, pageSize: 3 }
   });
   const items = itemsFromData(search).slice(0, 3);
@@ -1569,7 +1587,8 @@ async function runResearch(session: Session, state: WorkflowRunState, options: W
   for (const [sourceItemIndex, item] of items.entries()) {
     const id = topicIdFromItem(item);
     if (id !== undefined) {
-      const topic = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
+      const topic = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token, parseResponse: parsePreciseJson });
+      assertSafeApiNumbers(topic);
       const normalized = topicFromApiData(topic);
       topics.push(compactObject({
         sourceItemIndex,
@@ -1783,10 +1802,20 @@ function missingInputsForRun(options: WorkflowRunOptions, goal: WorkflowRunGoal)
 
 async function loadWorkflowRun(runDir: string): Promise<{ runDir: string; state: WorkflowRunState } | undefined> {
   try {
-    const data = await readJson(join(runDir, "run.json"));
-    if (!isRecord(data) || data.kind !== "workflow-run" || !isWorkflowRunGoal(data.goal)) {
+    const text = await readFile(join(runDir, "run.json"), "utf8");
+    const precise = parsePreciseJson(text);
+    if (!isRecord(precise) || precise.kind !== "workflow-run" || !isWorkflowRunGoal(precise.goal)) {
       return undefined;
     }
+    const inputs = precise.inputs;
+    if (inputs !== undefined && inputs !== null) {
+      if (!isRecord(inputs) || Array.isArray(inputs) || isLosslessNumber(inputs)) return undefined;
+      for (const key of ["topicId", "replyId", "parentPostId", "categoryId", "ifVersion", "confirmId"]) {
+        const value = inputs[key];
+        if (value !== undefined && (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1)) return undefined;
+      }
+    }
+    const data = JSON.parse(text) as Record<string, unknown>;
     const state = data as WorkflowRunState;
     state.inputs ??= {};
     state.artifacts = runArtifacts(state.goal, runDir);
@@ -2029,10 +2058,16 @@ async function readJson(path: string): Promise<unknown> {
   return JSON.parse(await readFile(path, "utf8")) as unknown;
 }
 
+async function readSafeWorkflowArtifact(path: string): Promise<unknown> {
+  const text = await readFile(path, "utf8");
+  if (containsImpreciseNumbers(parsePreciseJson(text))) throw new UnsafeWorkflowNumberError(path);
+  return JSON.parse(text) as unknown;
+}
+
 async function workflowApprovalError(state: WorkflowRunState): Promise<string | undefined> {
   let approvalData: unknown;
   try {
-    approvalData = await readJson(state.artifacts.approval);
+    approvalData = await readSafeWorkflowArtifact(state.artifacts.approval);
   } catch (error) {
     if (isNodeError(error) && error.code === "ENOENT") {
       return `Workflow approval not found: ${state.artifacts.approval}`;
@@ -2081,7 +2116,7 @@ async function workflowTargetError(state: WorkflowRunState, session: Session): P
 async function workflowPreviewEnvelope(path: string): Promise<{ target: WorkflowTarget; request: WorkflowPreviewRequest }> {
   let preview: unknown;
   try {
-    preview = await readJson(path);
+    preview = await readSafeWorkflowArtifact(path);
   } catch (error) {
     if (isNodeError(error) && error.code === "ENOENT") {
       throw new Error(`Invalid workflow preview artifact: ${path}`);
@@ -2198,13 +2233,8 @@ function itemsFromData(data: unknown): Array<Record<string, unknown>> {
 
 function topicIdFromItem(item: Record<string, unknown>): number | undefined {
   for (const key of ["id", "topicId", "threadId"]) {
-    const value = item[key];
-    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
-      return value;
-    }
-    if (typeof value === "string" && /^\d+$/.test(value)) {
-      return Number(value);
-    }
+    const value = safeApiId(item[key]);
+    if (value !== undefined) return value;
   }
   return undefined;
 }
@@ -2295,6 +2325,11 @@ function errorMessage(error: unknown): string {
 }
 
 function handleRunError(io: CommandIo, error: unknown, session: Session): void {
+  if (error instanceof UnsafeApiIdError) {
+    printError(io, { type: "validation", message: error.message, exitCode: 1 });
+    process.exitCode = 1;
+    return;
+  }
   if (error instanceof WorkflowReviewError) {
     printError(io, { type: "safety", message: error.message });
     process.exitCode = 1;
@@ -2378,7 +2413,7 @@ function parseWorkflowGoal(value: string): WorkflowGoal {
 
 function parsePositiveInteger(value: string): number {
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 1) {
+  if (!isExactSafeIntegerInput(value) || parsed < 1) {
     throw new InvalidArgumentError(`Expected a positive integer: ${value}`);
   }
   return parsed;

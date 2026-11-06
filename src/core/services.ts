@@ -23,8 +23,8 @@ export function adminOperationsV2(client: ApexcnApiClient, filters: AdminOperati
   return client.get("/api/v1/admin/operations/v2", filters, parsePreciseJson);
 }
 
-export function searchTopics(client: ApexcnApiClient, keyword: string, filters: TopicFilters = {}): Promise<unknown> {
-  return client.get("/api/v1/search", { keyword, ...filters });
+export function searchTopics(client: ApexcnApiClient, keyword: string, filters: TopicFilters = {}, parseResponse?: (text: string) => unknown): Promise<unknown> {
+  return client.get("/api/v1/search", { keyword, ...filters }, parseResponse);
 }
 
 export function listTopics(client: ApexcnApiClient, filters: TopicFilters = {}): Promise<unknown> {

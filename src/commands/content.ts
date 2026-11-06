@@ -2,11 +2,12 @@ import { readFile } from "node:fs/promises";
 import { stdin as processStdin, stdout as processStdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { Command, InvalidArgumentError, Option } from "commander";
+import { isLosslessNumber } from "lossless-json";
 import { ConfigFileError } from "../config.js";
 import { currentContentLanguage, runWithCliRequestContext } from "../core/request-context.js";
 import { createApiClient } from "../core/api-client.js";
 import { isAdminOperationsV2Response, matchesAdminOperationsV2Filters } from "../core/admin-operations-v2.js";
-import { parsePreciseJson, stringifyPreciseJson } from "../core/precise-json.js";
+import { assertSafeApiNumbers, isExactSafeIntegerInput, parsePreciseJson, precisePositiveIdKey, safeApiId, stringifyPreciseJson, UnsafeApiIdError } from "../core/precise-json.js";
 import { assessCapabilityCompatibility } from "../core/capability-compatibility.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
@@ -594,7 +595,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
         const me = await requestJson(session.baseUrl, "/api/v1/me", { token: session.token, parseResponse: parsePreciseJson });
         const data = bindTopicOwnership(await viewTopic(createApiClient(session), id, parsePreciseJson), me);
         const topic = topicFromData(data);
-        const result = withReadProvenance(data, "topic-detail", topic ? [topic] : []);
+        const result = withReadProvenance(data, "topic-detail", topic ? [topic] : [], true);
         const format = outputFormat(commandOptions);
         if (format === "text") printData(options, result, format, formatTopicText);
         else options.stdout(`${stringifyPreciseJson(result, format === "pretty")}\n`);
@@ -1023,7 +1024,7 @@ async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOpt
       process.exitCode = 1;
       return;
     }
-    if (error instanceof CliValidationError) {
+    if (error instanceof CliValidationError || error instanceof UnsafeApiIdError) {
       printError(options, { type: "validation", message: error.message, exitCode: 1 }, undefined, jsonErrors);
       process.exitCode = 1;
       return;
@@ -1577,7 +1578,7 @@ async function retrieveRagEvidence(
       fromDate: input.fromDate,
       toDate: input.toDate,
       tag: input.tag
-    });
+    }, parsePreciseJson);
     if (isRecord(search) && typeof search.requestId === "string" && search.requestId.trim()) {
       requestIds.add(search.requestId);
     }
@@ -1621,7 +1622,8 @@ async function retrieveRagEvidence(
   const retrievalErrors: Array<Record<string, unknown>> = [];
   for (const topicId of [...topicMatches.keys()].slice(0, input.topK)) {
     try {
-      const detail = await viewTopic(client, topicId);
+      const detail = await viewTopic(client, topicId, parsePreciseJson);
+      assertSafeApiNumbers(detail);
       if (isRecord(detail) && typeof detail.requestId === "string" && detail.requestId.trim()) {
         requestIds.add(detail.requestId);
       }
@@ -1879,7 +1881,8 @@ async function recentTopicsFromSearchFallback(
     cursor: options.cursor,
     fromDate: options.fromDate,
     toDate: options.toDate
-  });
+  }, parsePreciseJson);
+  assertSafeApiNumbers(search);
   const items = itemsFromData(search).filter((item) => !options.since || isOnOrAfter(item.updatedDate ?? item.createdDate, options.since));
   const recentItems = [];
   const topicRequestIds = [];
@@ -1891,7 +1894,8 @@ async function recentTopicsFromSearchFallback(
       continue;
     }
     try {
-      const topic = await viewTopic(createApiClient(session), id);
+      const topic = await viewTopic(createApiClient(session), id, parsePreciseJson);
+      assertSafeApiNumbers(topic);
       recentItems.push(recentTopicFromData(topic, item, sourceItemIndex));
       if (isRecord(topic) && topic.requestId) {
         topicRequestIds.push(topic.requestId);
@@ -2038,14 +2042,12 @@ function accountId(data: unknown): string | undefined {
   }
   const user = isRecord(data.user) ? data.user : data;
   const value = user.id ?? user.userId ?? user.user_id;
-  const id = fieldText(value).trim();
-  return id || undefined;
+  return precisePositiveIdKey(value);
 }
 
 function topicAuthorId(data: unknown): string | undefined {
   const topic = topicFromData(data);
-  const id = topic ? fieldText(topic.createdBy ?? topic.createdById ?? topic.authorId).trim() : "";
-  return id || undefined;
+  return topic ? precisePositiveIdKey(topic.createdBy ?? topic.createdById ?? topic.authorId) : undefined;
 }
 
 function bindTopicOwnership(data: unknown, me: unknown): unknown {
@@ -2322,7 +2324,7 @@ function firstAbsoluteUrl(...values: unknown[]): string | undefined {
     .find((value) => /^https?:\/\//i.test(value));
 }
 
-function topicIdFromAskReference(source: Record<string, unknown>): number | undefined {
+function topicIdFromAskReference(source: Record<string, unknown>, preserveNumbers = false): unknown {
   for (const key of ["topicId", "threadId"]) {
     const direct = positiveId(source[key]);
     if (direct !== undefined) {
@@ -2335,11 +2337,10 @@ function topicIdFromAskReference(source: Record<string, unknown>): number | unde
       continue;
     }
     const match = /(?:P14_THREAD_ID:|\/t\/)(\d+)/.exec(value);
-    if (match) {
-      return Number(match[1]);
-    }
-    if (/^\d+$/.test(value)) {
-      return Number(value);
+    const rawId = match?.[1] ?? (/^\d+$/.test(value) ? value : undefined);
+    if (rawId) {
+      const normalized = rawId.replace(/^0+/, "");
+      if (normalized) return preserveNumbers ? parsePreciseJson(normalized) : Number(normalized);
     }
   }
   return positiveId(source.id);
@@ -2347,13 +2348,8 @@ function topicIdFromAskReference(source: Record<string, unknown>): number | unde
 
 function topicIdFromSearchItem(item: Record<string, unknown>): number | undefined {
   for (const key of ["id", "topicId", "threadId"]) {
-    const value = item[key];
-    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
-      return value;
-    }
-    if (typeof value === "string" && /^\d+$/.test(value)) {
-      return Number(value);
-    }
+    const value = safeApiId(item[key]);
+    if (value !== undefined) return value;
   }
   return undefined;
 }
@@ -2382,19 +2378,20 @@ function researchLinks(items: Array<Record<string, unknown>>, topics: Array<Reco
 function withReadProvenance(
   data: unknown,
   kind: string,
-  sourceRecords: Array<Record<string, unknown>> = []
+  sourceRecords: Array<Record<string, unknown>> = [],
+  preserveNumbers = false
 ): unknown {
   if (!isRecord(data)) {
     return data;
   }
   const requestIds = readRequestIds(data);
   const sources = sourceRecords
-    .map(readSourceSummary)
+    .map((source) => readSourceSummary(source, preserveNumbers))
     .filter((source) => Object.keys(source).length > 0);
   return {
     ...data,
     kind: typeof data.kind === "string" ? data.kind : kind,
-    schemaVersion: typeof data.schemaVersion === "number" ? data.schemaVersion : 1,
+    schemaVersion: typeof data.schemaVersion === "number" || (preserveNumbers && isLosslessNumber(data.schemaVersion)) ? data.schemaVersion : 1,
     provenance: {
       requestIds,
       sources
@@ -2427,8 +2424,8 @@ function readRequestIds(value: unknown): string[] {
   return [...requestIds];
 }
 
-function readSourceSummary(source: Record<string, unknown>): Record<string, unknown> {
-  const topicId = topicIdFromAskReference(source);
+function readSourceSummary(source: Record<string, unknown>, preserveNumbers = false): Record<string, unknown> {
+  const topicId = topicIdFromAskReference(source, preserveNumbers);
   const url = source.canonicalUrl ?? source.threadUrl ?? source.url;
   return compactBody({
     id: source.id ?? source.topicId ?? source.threadId ?? topicId,
@@ -2575,7 +2572,7 @@ async function promptCategoryId(options: CommandIo, session: Session): Promise<n
 
 function parseNumber(value: string): number {
   const parsed = Number(value);
-  if (!Number.isInteger(parsed)) {
+  if (!isExactSafeIntegerInput(value)) {
     throw new InvalidArgumentError(`Invalid number: ${value}`);
   }
   return parsed;
@@ -2594,7 +2591,7 @@ function parsePositiveInteger(value: string): number {
 
 function parseTopicViewId(value: string): number | string {
   const parsed = Number(value);
-  if (Number.isSafeInteger(parsed) && parsed > 0) return parsed;
+  if (isExactSafeIntegerInput(value) && parsed > 0) return parsed;
   if (/^\d+$/.test(value)) {
     const normalized = value.replace(/^0+/, "");
     if (normalized) return normalized;
