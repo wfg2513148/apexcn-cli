@@ -77,8 +77,8 @@ try {
   assert.equal(process.version, "v20.20.2", "Node 20.20.2 is required for this matrix");
   assert.ok(expectedShell === "5.1" || expectedShell === "7", "Expected PowerShell version is required");
   report.actualCandidateSha256 = sha(candidate);
-  report.actualPriorSha256 = sha(prior);
   assert.equal(report.actualCandidateSha256, candidateSha, "candidate digest mismatch");
+  report.actualPriorSha256 = sha(prior);
   assert.equal(report.actualPriorSha256, priorSha, "prior digest mismatch");
   const shellVersion = run("shell version", ["-Command", "$PSVersionTable.PSVersion.ToString()"]);
   report.shellVersion = shellVersion.stdout.trim();
