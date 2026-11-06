@@ -5,7 +5,7 @@ import { Command, InvalidArgumentError, Option } from "commander";
 import { isLosslessNumber } from "lossless-json";
 import { ConfigFileError, defaultConfigPath } from "../config.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
-import { assertSafeApiNumbers, containsImpreciseNumbers, isExactSafeIntegerInput, parsePreciseJson, safeApiId, UnsafeApiIdError } from "../core/precise-json.js";
+import { containsImpreciseNumbers, isExactSafeIntegerInput, normalizeApiForSelection, parsePreciseJson, safeApiId, UnsafeApiIdError } from "../core/precise-json.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
 import {
   createWorkflowPlan,
@@ -525,7 +525,7 @@ async function approveWorkflow(io: CommandIo, options: WorkflowApproveOptions): 
   try {
     preview = await workflowPreviewEnvelope(state.artifacts.preview);
   } catch (error) {
-    printError(io, { type: "validation", message: errorMessage(error) });
+    printError(io, { type: "validation", message: errorMessage(error) }, undefined, options.json);
     process.exitCode = 1;
     return;
   }
@@ -594,7 +594,7 @@ async function runWorkflow(io: WorkflowCommandOptions, options: WorkflowRunOptio
       approvalError = await workflowApprovalError(loaded.state);
     } catch (error) {
       if (!(error instanceof UnsafeWorkflowNumberError)) throw error;
-      printError(io, { type: "validation", message: error.message, exitCode: 1 });
+      printError(io, { type: "validation", message: error.message, exitCode: 1 }, undefined, options.json);
       process.exitCode = 1;
       return;
     }
@@ -869,7 +869,7 @@ async function readOptionalJson(path: string | undefined): Promise<unknown | und
     return undefined;
   }
   try {
-    return await readJson(path);
+    return await readSafeWorkflowArtifact(path);
   } catch {
     return undefined;
   }
@@ -1062,6 +1062,7 @@ function verifyBundleArtifact(artifact: Record<string, unknown>, verification: R
 }
 
 function verifyBundleWorkflowChain(runId: string, status: string, artifacts: Map<string, Record<string, unknown>>, issues: WorkflowVerificationIssue[], warnings: WorkflowVerificationIssue[]): void {
+  bundleJsonArtifact(artifacts, "state", issues, false);
   const preview = bundleJsonArtifact(artifacts, "preview", issues, status === "preview-ready" || status === "completed" || status === "execution-uncertain");
   const previewRequest = preview ? verificationPreviewRequest(preview, "bundle:preview", issues) : undefined;
   const previewTarget = verificationWorkflowTarget(preview);
@@ -1093,6 +1094,9 @@ function bundleJsonArtifact(artifacts: Map<string, Record<string, unknown>>, key
     return undefined;
   }
   try {
+    if ((key === "state" || key === "preview" || key === "approval") && containsImpreciseNumbers(parsePreciseJson(artifact.content))) {
+      throw new UnsafeWorkflowNumberError(`bundle:${key}`);
+    }
     return JSON.parse(artifact.content) as unknown;
   } catch (error) {
     issues.push({ code: `invalid-${key}`, message: `Bundle artifact ${key} is invalid JSON: ${errorMessage(error)}` });
@@ -1207,7 +1211,9 @@ async function workflowBundleArtifacts(state: WorkflowRunState): Promise<Array<R
 
 async function readVerificationJson(path: string, issues: WorkflowVerificationIssue[], invalidCode: string, required: boolean): Promise<unknown | undefined> {
   try {
-    return await readJson(path);
+    return invalidCode === "invalid-preview" || invalidCode === "invalid-approval"
+      ? await readSafeWorkflowArtifact(path)
+      : await readJson(path);
   } catch (error) {
     if (isNodeError(error) && error.code === "ENOENT") {
       if (required) {
@@ -1587,8 +1593,7 @@ async function runResearch(session: Session, state: WorkflowRunState, options: W
   for (const [sourceItemIndex, item] of items.entries()) {
     const id = topicIdFromItem(item);
     if (id !== undefined) {
-      const topic = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token, parseResponse: parsePreciseJson });
-      assertSafeApiNumbers(topic);
+      const topic = normalizeApiForSelection(await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token, parseResponse: parsePreciseJson }));
       const normalized = topicFromApiData(topic);
       topics.push(compactObject({
         sourceItemIndex,

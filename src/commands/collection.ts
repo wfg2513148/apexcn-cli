@@ -4,7 +4,7 @@ import { isAbsolute, join, normalize, parse, relative, resolve, sep } from "node
 import { Command, InvalidArgumentError } from "commander";
 import { ConfigFileError } from "../config.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
-import { assertSafeApiNumbers, isExactSafeIntegerInput, parsePreciseJson, safeApiId, UnsafeApiIdError } from "../core/precise-json.js";
+import { isExactSafeIntegerInput, normalizeApiForSelection, parseGuardedIdJson, parsePreciseJson, safeApiId, UnsafeApiIdError } from "../core/precise-json.js";
 import { currentContentLanguage } from "../core/request-context.js";
 import type { ContentLanguage } from "../core/content-language.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
@@ -362,8 +362,7 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
     const relativePath = join("topics", `${id}.json`);
     const path = join(outputDir, relativePath);
     try {
-      const result = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token, parseResponse: parsePreciseJson });
-      assertSafeApiNumbers(result);
+      const result = normalizeApiForSelection(await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token, parseResponse: parsePreciseJson }));
       const requestId = requestIdFrom(result);
       if (requestId) requestIds.add(requestId);
       const artifact = {
@@ -450,7 +449,7 @@ async function verifyCollection(io: CommandIo, options: VerifyOptions): Promise<
   const collectionPath = join(options.dir, "collection.json");
   let collection: unknown;
   try {
-    collection = JSON.parse(await readFile(collectionPath, "utf8")) as unknown;
+    collection = parseGuardedIdJson(await readFile(collectionPath, "utf8"));
   } catch (error) {
     printError(io, { type: "validation", message: `Invalid collection: ${errorMessage(error)}` }, undefined, options.json);
     process.exitCode = 1;
@@ -710,12 +709,11 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
   let cursor: string | undefined;
   let pageCount = 0;
   do {
-    const data = await requestJson(session.baseUrl, "/api/v1/me/favorites/export", {
+    const data = normalizeApiForSelection(await requestJson(session.baseUrl, "/api/v1/me/favorites/export", {
       token: session.token,
       parseResponse: parsePreciseJson,
       query: { pageSize, cursor }
-    });
-    assertSafeApiNumbers(data);
+    }));
     const requestId = requestIdFrom(data);
     if (requestId) requestIds.add(requestId);
     pageCount += 1;
@@ -730,6 +728,16 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
     if (next) seenCursors.add(next);
     cursor = next;
   } while (cursor);
+
+  for (const { item } of items) {
+    const targetType = favoriteTargetType(item);
+    if (targetType === "POST") {
+      positiveIdFromKeys(item, ["topicId", "threadId"]);
+      positiveIdFromKeys(item, ["replyId", "postId", "targetId", "id"]);
+    } else {
+      positiveIdFromKeys(item, ["topicId", "threadId", "targetId", "id"]);
+    }
+  }
 
   const topicsDir = join(options.outputDir, "topics");
   await mkdir(topicsDir, { recursive: true });
@@ -914,7 +922,7 @@ async function importCollectionBundle(io: CommandIo, options: ImportOptions): Pr
     process.exitCode = 1;
     return;
   }
-  const collection = JSON.parse(await readFile(join(options.outputDir, "collection.json"), "utf8")) as unknown;
+  const collection = parseGuardedIdJson(await readFile(join(options.outputDir, "collection.json"), "utf8"));
   const verification = await collectionVerificationReport(options.outputDir, collection);
   if (!verification.ok) {
     printError(io, { type: "validation", message: "Imported collection verification failed." }, undefined, options.json);
@@ -939,7 +947,7 @@ async function restoreCollectionBundle(io: CommandIo, options: RestoreOptions): 
     process.exitCode = 1;
     return;
   }
-  const collection = JSON.parse(await readFile(join(options.dir, "collection.json"), "utf8")) as unknown;
+  const collection = parseGuardedIdJson(await readFile(join(options.dir, "collection.json"), "utf8"));
   const verification = await collectionVerificationReport(options.dir, collection);
   if (!verification.ok) {
     printError(io, { type: "validation", message: "Restored collection verification failed." }, undefined, options.json);
@@ -953,7 +961,7 @@ async function bundleVerificationReport(path: string): Promise<Record<string, un
   const issues: Array<{ code: string; path?: string }> = [];
   let value: unknown;
   try {
-    value = JSON.parse(await readFile(path, "utf8")) as unknown;
+    value = parseGuardedIdJson(await readFile(path, "utf8"));
   } catch {
     return { kind: "collection-bundle-verification", schemaVersion: 1, ok: false, documentCount: 0, issues: [{ code: "invalid-bundle" }] };
   }
@@ -983,7 +991,7 @@ function verifyEmbeddedBundle(bundle: CollectionBundle, issues: Array<{ code: st
   }
   let collection: unknown;
   try {
-    collection = JSON.parse(collectionFile.content) as unknown;
+    collection = parseGuardedIdJson(collectionFile.content);
   } catch {
     issues.push({ code: "invalid-collection-manifest", path: "collection.json" });
     return;
@@ -1022,7 +1030,7 @@ function verifyEmbeddedBundle(bundle: CollectionBundle, issues: Array<{ code: st
     }
     if (path.startsWith("topics/")) {
       try {
-        const artifact = JSON.parse(file.content) as unknown;
+        const artifact = parseGuardedIdJson(file.content);
         if (!topicLanguageMatches(artifact, collection.source.requestedContentLanguage)) {
           issues.push({ code: "collection-language-mismatch", path });
         }
@@ -1049,7 +1057,7 @@ async function readVerifiedBundle(path: string): Promise<CollectionBundle | unde
   const report = await bundleVerificationReport(path);
   if (!report.ok) return undefined;
   try {
-    const value = JSON.parse(await readFile(path, "utf8")) as unknown;
+    const value = parseGuardedIdJson(await readFile(path, "utf8"));
     return isCollectionBundle(value) ? value : undefined;
   } catch {
     return undefined;
@@ -1277,7 +1285,7 @@ async function readCollectionFile(io: CommandIo, dir: string, json?: boolean): P
   let content: string;
   try {
     content = await readFile(collectionPath, "utf8");
-    collection = JSON.parse(content) as unknown;
+    collection = parseGuardedIdJson(content);
   } catch (error) {
     printError(io, { type: "validation", message: `Invalid collection: ${errorMessage(error)}` }, undefined, json);
     process.exitCode = 1;
@@ -1304,7 +1312,7 @@ async function collectionSearchRecords(dir: string, collection: ValidCollection)
     if (!resolved) {
       throw new Error(issues[0]?.message ?? `Invalid topic file path for topic ${id}`);
     }
-    const artifact = JSON.parse(await readFile(resolved.absolutePath, "utf8")) as unknown;
+    const artifact = parseGuardedIdJson(await readFile(resolved.absolutePath, "utf8"));
     const result = isRecord(artifact) ? artifact.result : undefined;
     const topicDataRecord = topicData(result);
     const title = topicTitle(result) ?? fieldText(topic.title || `Topic ${id}`);
@@ -1487,7 +1495,7 @@ async function verifyTopicArtifact(dir: string, file: Record<string, unknown>, i
     return undefined;
   }
   try {
-    const artifact = JSON.parse(await readFile(resolved.absolutePath, "utf8")) as unknown;
+    const artifact = parseGuardedIdJson(await readFile(resolved.absolutePath, "utf8"));
     if (!isRecord(artifact) || artifact.kind !== "collection-topic" || artifact.schemaVersion !== 1 || artifact.id !== file.id || !Array.isArray(artifact.sources) || !isRecord(artifact.request) || artifact.request.method !== "GET" || !isRecord(artifact.result)) {
       issues.push({ code: "invalid-topic-artifact", message: "Topic artifact schema is invalid.", path: resolved.relativePath });
       return undefined;

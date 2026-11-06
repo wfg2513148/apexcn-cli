@@ -7,7 +7,7 @@ import { ConfigFileError } from "../config.js";
 import { currentContentLanguage, runWithCliRequestContext } from "../core/request-context.js";
 import { createApiClient } from "../core/api-client.js";
 import { isAdminOperationsV2Response, matchesAdminOperationsV2Filters } from "../core/admin-operations-v2.js";
-import { assertSafeApiNumbers, isExactSafeIntegerInput, parsePreciseJson, precisePositiveIdKey, safeApiId, stringifyPreciseJson, UnsafeApiIdError } from "../core/precise-json.js";
+import { isExactSafeIntegerInput, normalizeApiForSelection, parsePreciseJson, precisePositiveIdKey, safeApiId, stringifyPreciseJson, UnsafeApiIdError } from "../core/precise-json.js";
 import { assessCapabilityCompatibility } from "../core/capability-compatibility.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
@@ -1622,8 +1622,7 @@ async function retrieveRagEvidence(
   const retrievalErrors: Array<Record<string, unknown>> = [];
   for (const topicId of [...topicMatches.keys()].slice(0, input.topK)) {
     try {
-      const detail = await viewTopic(client, topicId, parsePreciseJson);
-      assertSafeApiNumbers(detail);
+      const detail = normalizeApiForSelection(await viewTopic(client, topicId, parsePreciseJson));
       if (isRecord(detail) && typeof detail.requestId === "string" && detail.requestId.trim()) {
         requestIds.add(detail.requestId);
       }
@@ -1722,7 +1721,7 @@ function appendTopicEvidence(
     .sort((left, right) => Number(right.reply.isUseful === true) - Number(left.reply.isUseful === true))
     .slice(0, 3);
   for (const { reply, sourceIndex } of replies) {
-    const replyId = positiveId(reply.replyId ?? reply.id ?? reply.postId);
+    const replyId = safeApiId(reply.replyId ?? reply.id ?? reply.postId);
     const replyUrl = firstAbsoluteUrl(reply.replyUrl, reply.url) ?? communityUrl;
     const replyLabel = currentContentLanguage() === "en"
       ? (reply.isUseful === true ? "Correct answer" : `Reply ${sourceIndex + 1}`)
@@ -1882,8 +1881,8 @@ async function recentTopicsFromSearchFallback(
     fromDate: options.fromDate,
     toDate: options.toDate
   }, parsePreciseJson);
-  assertSafeApiNumbers(search);
-  const items = itemsFromData(search).filter((item) => !options.since || isOnOrAfter(item.updatedDate ?? item.createdDate, options.since));
+  const safeSearch = normalizeApiForSelection(search);
+  const items = itemsFromData(safeSearch).filter((item) => !options.since || isOnOrAfter(item.updatedDate ?? item.createdDate, options.since));
   const recentItems = [];
   const topicRequestIds = [];
   const errors = [];
@@ -1894,8 +1893,7 @@ async function recentTopicsFromSearchFallback(
       continue;
     }
     try {
-      const topic = await viewTopic(createApiClient(session), id, parsePreciseJson);
-      assertSafeApiNumbers(topic);
+      const topic = normalizeApiForSelection(await viewTopic(createApiClient(session), id, parsePreciseJson));
       recentItems.push(recentTopicFromData(topic, item, sourceItemIndex));
       if (isRecord(topic) && topic.requestId) {
         topicRequestIds.push(topic.requestId);
@@ -2546,10 +2544,15 @@ async function promptCategoryId(options: CommandIo, session: Session): Promise<n
     return undefined;
   }
 
-  const data = await requestJson<{ items?: Array<{ id: number; name: string; canCreateTopic?: boolean }> }>(session.baseUrl, "/api/v1/categories", {
-    token: session.token
+  const data = normalizeApiForSelection(await requestJson(session.baseUrl, "/api/v1/categories", {
+    token: session.token,
+    parseResponse: parsePreciseJson
+  })) as { items?: Array<{ id: number; name: string; canCreateTopic?: boolean }> };
+  const categories = (data.items ?? []).filter((item) => item.canCreateTopic !== false).map((item) => {
+    const id = safeApiId(item.id);
+    if (id === undefined) throw new UnsafeApiIdError();
+    return { ...item, id };
   });
-  const categories = (data.items ?? []).filter((item) => item.canCreateTopic !== false);
   if (categories.length === 0) {
     printError(options, { type: "validation", message: "No categories are available for topic creation" });
     process.exitCode = 1;

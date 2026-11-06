@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { stdin as processStdin } from "node:process";
 import { Command, InvalidArgumentError, Option } from "commander";
-import { isExactSafeIntegerInput } from "../core/precise-json.js";
+import { isExactSafeIntegerInput, normalizeApiForSelection, parsePreciseJson, safeApiId, UnsafeApiIdError } from "../core/precise-json.js";
 import {
   deleteDraft,
   DraftInventoryError,
@@ -395,7 +395,7 @@ async function readJsonObject(path: string, label: "research" | "topic", options
     throw error;
   }
   try {
-    const parsed = JSON.parse(text) as unknown;
+    const parsed = normalizeApiForSelection(parsePreciseJson(text));
     if (!isResearchObject(parsed)) {
       printError(options, { type: "validation", message: `Invalid ${label} file: ${path} must contain a JSON object` });
       process.exitCode = 1;
@@ -403,6 +403,11 @@ async function readJsonObject(path: string, label: "research" | "topic", options
     }
     return parsed;
   } catch (error) {
+    if (error instanceof UnsafeApiIdError) {
+      printError(options, { type: "validation", message: error.message });
+      process.exitCode = 1;
+      return undefined;
+    }
     if (error instanceof SyntaxError) {
       printError(options, { type: "validation", message: `Invalid ${label} file: ${path}` });
       process.exitCode = 1;
@@ -609,7 +614,15 @@ function capitalized(value: string): string {
 function validateTopicIdMatch(topicId: number, data: Record<string, unknown>, options: DraftCommandOptions): boolean {
   const topic = topicFromData(data);
   const value = topic.id ?? topic.topicId ?? topic.threadId;
-  const parsed = typeof value === "number" && Number.isInteger(value) ? value : typeof value === "string" && /^\d+$/.test(value) ? Number(value) : undefined;
+  let parsed: number | undefined;
+  try {
+    parsed = safeApiId(value);
+  } catch (error) {
+    if (!(error instanceof UnsafeApiIdError)) throw error;
+    printError(options, { type: "validation", message: error.message });
+    process.exitCode = 1;
+    return false;
+  }
   if (parsed !== undefined && parsed !== topicId) {
     printError(options, { type: "validation", message: `--topic-id ${topicId} does not match topic file id ${parsed}` });
     process.exitCode = 1;

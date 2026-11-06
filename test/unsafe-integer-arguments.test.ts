@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -85,5 +85,22 @@ describe("unsafe integer arguments", () => {
     expect(result.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "invalid-parent-post-id" })]));
     expect(result.requestPlan).toBeNull();
     expect(result.suggestedCommand).toBeNull();
+  });
+
+  test("review reply emits no suggested command for an invalid parent ID and a real content file", async () => {
+    const root = await mkdtemp(join(tmpdir(), "apexcn-review-unsafe-parent-"));
+    try {
+      const contentPath = join(root, "reply.md");
+      await writeFile(contentPath, "This is a sufficiently detailed example reply for validation.");
+      const stdout: string[] = [];
+      const program = createProgram({ stdout: (text) => stdout.push(text), stderr: () => {} });
+      await program.parseAsync(["node", "apexcn", "review", "reply", "--topic-id", "42", "--parent-post-id", "9007199254740993", "--content-file", contentPath, "--json"]);
+      const result = JSON.parse(stdout.join(""));
+      expect(result.ok).toBe(false);
+      expect(result.requestPlan).toBeNull();
+      expect(result.suggestedCommand).toBeNull();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

@@ -1930,6 +1930,18 @@ describe("content commands", () => {
     expect(fetch).toHaveBeenLastCalledWith(`https://oracleapex.cn/ords/test/api/v1/topics/${expectedId}`, expect.any(Object));
   });
 
+  test("research refuses an unsafe search ID before fetching a topic", async () => {
+    const { program, stderr, fetch } = await configuredProgram(async () =>
+      new Response('{"items":[{"id":9007199254740993,"title":"unsafe"}]}', { headers: { "content-type": "application/json" } })
+    );
+
+    await program.parseAsync(["node", "apexcn", "research", "synthetic", "--limit", "1", "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   test("topic view preserves a large topic ID and response integers exactly", async () => {
     const topicId = "1234567890123456789012345678";
     const accountId = "9007199254740993";
@@ -1999,6 +2011,20 @@ describe("content commands", () => {
       const body = String(input).endsWith("/api/v1/me")
         ? '{"user":{"id":"1e9007199254740992"}}'
         : '{"topic":{"id":42,"createdBy":"1e9007199254740993"}}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--json"]);
+
+    expect(stdout.join("")).toContain('"canEdit": false');
+    expect(stdout.join("")).toContain('"canDelete": false');
+  });
+
+  test("topic view rejects exponent rounding before normalizing account IDs", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":"0.1e9007199254740993"}}'
+        : '{"topic":{"id":42,"createdBy":"1e9007199254740991"}}';
       return new Response(body, { headers: { "content-type": "application/json" } });
     });
 

@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { chmod, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { defaultConfigPath, loadConfig } from "../config.js";
+import { normalizeApiForSelection, parsePreciseJson, UnsafeApiIdError } from "./precise-json.js";
 
 export type DraftPayload = Record<string, unknown> & {
   kind: string;
@@ -151,7 +152,7 @@ export async function writeDraftBundle(
 
 export async function readDraftBundle(path: string): Promise<unknown> {
   try {
-    return JSON.parse(await readFile(path, "utf8")) as unknown;
+    return normalizeApiForSelection(parsePreciseJson(await readFile(path, "utf8")));
   } catch (error) {
     if (isNodeError(error) && error.code === "ENOENT") {
       throw new DraftInventoryError(`Draft import file not found: ${path}`);
@@ -159,6 +160,7 @@ export async function readDraftBundle(path: string): Promise<unknown> {
     if (error instanceof SyntaxError) {
       throw new DraftInventoryError(`Invalid draft inventory file: ${path}`);
     }
+    if (error instanceof UnsafeApiIdError) throw new DraftInventoryError(error.message);
     throw error;
   }
 }
@@ -196,7 +198,7 @@ async function readAllDrafts(context: DraftContext): Promise<StoredDraft[]> {
 async function readStoredDraft(context: DraftContext, id: string): Promise<StoredDraft> {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(await readFile(draftPath(context, id), "utf8")) as unknown;
+    parsed = normalizeApiForSelection(parsePreciseJson(await readFile(draftPath(context, id), "utf8")));
   } catch (error) {
     if (isNodeError(error) && error.code === "ENOENT") {
       throw new DraftInventoryError(`Saved draft not found: ${id}`);
@@ -204,6 +206,7 @@ async function readStoredDraft(context: DraftContext, id: string): Promise<Store
     if (error instanceof SyntaxError) {
       throw new DraftInventoryError(`Invalid saved draft: ${id}`);
     }
+    if (error instanceof UnsafeApiIdError) throw new DraftInventoryError(error.message);
     throw error;
   }
   const stored = parseStoredDraft(parsed);

@@ -1,4 +1,4 @@
-import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -75,6 +75,64 @@ describe("collection commands", () => {
     expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
     expect(fetch).toHaveBeenCalledTimes(1);
     await expect(readFile(join(outputDir, "topics", "9007199254740991.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("favorites import does not fall back from an unsafe topic ID to a different ID", async () => {
+    const outputDir = await tempPath("unsafe-favorite-alias");
+    const { program, stderr, fetch } = await configuredProgram(async () =>
+      new Response('{"items":[{"targetType":"THREAD","topicId":"9.007199254740993e15","id":42,"title":"unsafe"}],"page":{"nextCursor":null}}', { headers: { "content-type": "application/json" } })
+    );
+
+    await program.parseAsync(["node", "apexcn", "collection", "favorites", "--output-dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await expect(readFile(join(outputDir, "topics", "42.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test.each(['"9007199254740993"', '"not-an-id"'])("favorites import validates ID %s before overwriting any existing topic", async (badId) => {
+    const outputDir = await tempPath("unsafe-favorite-existing");
+    await mkdir(join(outputDir, "topics"), { recursive: true });
+    await writeFile(join(outputDir, "topics", "42.json"), "existing topic");
+    const { program, stderr } = await configuredProgram(async () =>
+      new Response(`{"items":[{"targetType":"THREAD","id":"42"},{"targetType":"THREAD","id":${badId}}],"page":{"nextCursor":null}}`, { headers: { "content-type": "application/json" } })
+    );
+
+    await program.parseAsync(["node", "apexcn", "collection", "favorites", "--output-dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(await readFile(join(outputDir, "topics", "42.json"), "utf8")).toBe("existing topic");
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("collection verify and sync reject a manifest whose ID was rounded", async () => {
+    const outputDir = await tempPath("unsafe-manifest");
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ topic: { id: Number.MAX_SAFE_INTEGER, title: "safe" } }));
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--topic-id", "9007199254740991", "--output-dir", outputDir, "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    const manifestPath = join(outputDir, "collection.json");
+    const manifest = await readFile(manifestPath, "utf8");
+    expect(manifest).toContain('"id": 9007199254740991');
+    await writeFile(manifestPath, manifest.replace('"id": 9007199254740991', '"id": 9007199254740991.1'));
+    stdout.length = 0;
+    stderr.length = 0;
+    fetch.mockClear();
+
+    await program.parseAsync(["node", "apexcn", "collection", "verify", "--dir", outputDir, "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+
+    process.exitCode = undefined;
+    stdout.length = 0;
+    stderr.length = 0;
+    await program.parseAsync(["node", "apexcn", "collection", "sync", "--dir", outputDir, "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).not.toHaveBeenCalled();
     await rm(outputDir, { recursive: true, force: true });
   });
 

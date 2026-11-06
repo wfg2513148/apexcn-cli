@@ -4,6 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { defaultConfigPath } from "../config.js";
 import { HttpError, NetworkError, requestJson, TimeoutError } from "../http.js";
 import { assessCapabilityCompatibility } from "./capability-compatibility.js";
+import { normalizeApiForSelection, parsePreciseJson, safeApiId } from "./precise-json.js";
 
 export type WriteOperationSession = {
   profile: string;
@@ -91,6 +92,7 @@ export async function createWriteOperation(input: {
   request: WriteOperationRequest;
   now?: Date;
 }): Promise<WriteOperationPreview> {
+  validateWriteRequestIds(input.request);
   const operationId = `op_${randomBytes(8).toString("hex")}`;
   const now = input.now ?? new Date();
   const target = operationTarget(input.session);
@@ -274,7 +276,7 @@ async function readOperation(configPath: string | undefined, operationId: string
   }
   let value: unknown;
   try {
-    value = JSON.parse(await readFile(operationPath(configPath, operationId), "utf8"));
+    value = normalizeApiForSelection(parsePreciseJson(await readFile(operationPath(configPath, operationId), "utf8")));
   } catch (error) {
     if (isNodeError(error) && error.code === "ENOENT") {
       throw new Error(`Operation ${operationId} was not found.`);
@@ -299,7 +301,16 @@ async function readOperation(configPath: string | undefined, operationId: string
       || !Array.isArray(value.audit)) {
     throw new Error(`Operation ${operationId} is invalid.`);
   }
+  validateWriteRequestIds(value.request);
+  if (isRecord(value.approval) && isWriteRequest(value.approval.request)) validateWriteRequestIds(value.approval.request);
   return value as WriteOperation;
+}
+
+function validateWriteRequestIds(request: WriteOperationRequest): void {
+  normalizeApiForSelection(request.body);
+  for (const match of request.path.matchAll(/\/(?:topics|replies)\/([^/?#]+)/g)) {
+    safeApiId(decodeURIComponent(match[1]));
+  }
 }
 
 async function writeOperation(configPath: string | undefined, operation: WriteOperation): Promise<void> {

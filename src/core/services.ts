@@ -1,6 +1,6 @@
 import type { ApexcnApiClient } from "./api-client.js";
 import type { ContentLanguage } from "./content-language.js";
-import { parsePreciseJson } from "./precise-json.js";
+import { normalizeApiForSelection, parsePreciseJson, safeApiId } from "./precise-json.js";
 
 export type TopicFilters = Record<string, string | number | boolean | undefined>;
 
@@ -55,12 +55,12 @@ export async function researchTopics(client: ApexcnApiClient, input: {
   toDate?: string;
 }): Promise<unknown> {
   const limit = input.limit ?? 3;
-  const search = await searchTopics(client, input.query, {
+  const search = normalizeApiForSelection(await searchTopics(client, input.query, {
     pageSize: limit,
     categoryId: input.categoryId,
     fromDate: input.fromDate,
     toDate: input.toDate
-  });
+  }, parsePreciseJson));
   const items = isRecord(search) && Array.isArray(search.items) ? search.items.filter(isRecord).slice(0, limit) : [];
   const topics = [];
   const failures = [];
@@ -68,7 +68,7 @@ export async function researchTopics(client: ApexcnApiClient, input: {
     const id = topicIdFrom(item);
     if (id !== undefined) {
       try {
-        topics.push({ sourceItemIndex, value: await viewTopic(client, id) });
+        topics.push({ sourceItemIndex, value: normalizeApiForSelection(await viewTopic(client, id, parsePreciseJson)) });
       } catch (error) {
         failures.push({ sourceItemIndex, id, error });
       }
@@ -79,7 +79,7 @@ export async function researchTopics(client: ApexcnApiClient, input: {
 
 function topicIdFrom(item: Record<string, unknown>): number | undefined {
   const value = item.id ?? item.topicId ?? item.threadId;
-  return typeof value === "number" && Number.isInteger(value) ? value : undefined;
+  return safeApiId(value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
