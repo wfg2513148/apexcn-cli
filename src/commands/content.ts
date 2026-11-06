@@ -7,7 +7,7 @@ import { ConfigFileError } from "../config.js";
 import { currentContentLanguage, runWithCliRequestContext } from "../core/request-context.js";
 import { createApiClient } from "../core/api-client.js";
 import { isAdminOperationsV2Response, matchesAdminOperationsV2Filters } from "../core/admin-operations-v2.js";
-import { isExactSafeIntegerInput, normalizeTopicForSelection, parsePreciseJson, precisePositiveIdKey, safeApiId, stringifyPreciseJson, toNativeApiNumbers, UnsafeApiIdError } from "../core/precise-json.js";
+import { isExactSafeIntegerInput, isPreciseObject, normalizeTopicForSelection, parsePreciseJson, precisePositiveIdKey, safeApiId, stringifyPreciseJson, toNativeApiNumbers, UnsafeApiIdError } from "../core/precise-json.js";
 import { assessCapabilityCompatibility } from "../core/capability-compatibility.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
@@ -1582,7 +1582,7 @@ async function retrieveRagEvidence(
     if (isRecord(search) && typeof search.requestId === "string" && search.requestId.trim()) {
       requestIds.add(search.requestId);
     }
-    const items = itemsFromData(search).slice(0, input.topK);
+    const items = itemsFromData(search).filter(isPreciseObject).slice(0, input.topK);
     searchAttempts.push(compactBody({
       query,
       resultCount: items.length,
@@ -2575,7 +2575,7 @@ async function promptCategoryId(options: CommandIo, session: Session, json?: boo
   const answer = await promptText("Category number: ");
   const index = Number(answer);
   if (!isExactSafeIntegerInput(answer) || index < 1 || index > categories.length) {
-    printError(options, { type: "validation", message: "Invalid category selection" });
+    printError(options, { type: "validation", message: "Invalid category selection" }, undefined, json);
     process.exitCode = 1;
     return undefined;
   }

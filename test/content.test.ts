@@ -1946,6 +1946,18 @@ describe("content commands", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
+  test("research rejects a selected imprecise ID after ignoring a numeric placeholder", async () => {
+    const { program, stderr, fetch } = await configuredProgram(async () =>
+      new Response('{"items":[9007199254740993,{"id":1},{"id":2},{"id":9007199254740991.1}]}', { headers: { "content-type": "application/json" } })
+    );
+
+    await program.parseAsync(["node", "apexcn", "research", "synthetic", "--limit", "3", "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   test("topic view preserves a large topic ID and response integers exactly", async () => {
     const topicId = "1234567890123456789012345678";
     const accountId = "9007199254740993";

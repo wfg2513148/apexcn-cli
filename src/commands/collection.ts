@@ -4,7 +4,7 @@ import { isAbsolute, join, normalize, parse, relative, resolve, sep } from "node
 import { Command, InvalidArgumentError } from "commander";
 import { ConfigFileError } from "../config.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
-import { isExactSafeIntegerInput, normalizeTopicForSelection, parseGuardedIdJson, parsePreciseJson, safeApiId, toNativeApiNumbers, UnsafeApiIdError } from "../core/precise-json.js";
+import { isExactSafeIntegerInput, isPreciseObject, normalizeTopicForSelection, parseGuardedIdJson, parsePreciseJson, safeApiId, toNativeApiNumbers, UnsafeApiIdError } from "../core/precise-json.js";
 import { currentContentLanguage } from "../core/request-context.js";
 import type { ContentLanguage } from "../core/content-language.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
@@ -345,7 +345,7 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
     });
     const requestId = requestIdFrom(search);
     if (requestId) requestIds.add(requestId);
-    for (const [searchIndex, item] of itemsFromData(search).slice(0, limit).entries()) {
+    for (const [searchIndex, item] of itemsFromData(search).filter(isPreciseObject).slice(0, limit).entries()) {
       const id = topicIdFromItem(item);
       if (id !== undefined) {
         addTopicSource(candidates, id, { type: "query", query, searchIndex });

@@ -5,7 +5,7 @@ import { Command, InvalidArgumentError, Option } from "commander";
 import { isLosslessNumber } from "lossless-json";
 import { ConfigFileError, defaultConfigPath } from "../config.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
-import { assertSafeWriteTarget, containsImpreciseNumbers, isExactSafeIntegerInput, normalizeTopicForSelection, parsePreciseJson, safeApiId, UnsafeApiIdError } from "../core/precise-json.js";
+import { assertSafeWriteTarget, containsImpreciseNumbers, isExactSafeIntegerInput, isPreciseObject, normalizeTopicForSelection, parsePreciseJson, safeApiId, UnsafeApiIdError } from "../core/precise-json.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
 import {
   createWorkflowPlan,
@@ -1600,11 +1600,11 @@ async function runResearch(session: Session, state: WorkflowRunState, options: W
     parseResponse: parsePreciseJson,
     query: { keyword, pageSize: 3 }
   });
-  const items = itemsFromData(search).slice(0, 3);
+  const items = itemsFromData(search).filter(isPreciseObject).slice(0, 3);
+  const selectedIds = items.map(topicIdFromItem);
   const topics = [];
   const requestIds = [];
-  for (const [sourceItemIndex, item] of items.entries()) {
-    const id = topicIdFromItem(item);
+  for (const [sourceItemIndex, id] of selectedIds.entries()) {
     if (id !== undefined) {
       const topic = normalizeTopicForSelection(await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token, parseResponse: parsePreciseJson }), "none");
       const normalized = topicFromApiData(topic);

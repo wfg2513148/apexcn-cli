@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { stdin as processStdin } from "node:process";
 import { Command, InvalidArgumentError, Option } from "commander";
-import { isExactSafeIntegerInput, normalizeApiForSelection, normalizeTopicForSelection, parsePreciseJson, safeApiId, UnsafeApiIdError } from "../core/precise-json.js";
+import { isExactSafeIntegerInput, isPreciseObject, normalizeTopicForSelection, parsePreciseJson, safeApiId, UnsafeApiIdError } from "../core/precise-json.js";
 import {
   deleteDraft,
   DraftInventoryError,
@@ -396,7 +396,7 @@ async function readJsonObject(path: string, label: "research" | "topic", options
   }
   try {
     const precise = parsePreciseJson(text);
-    const parsed = label === "topic" ? normalizeTopicForSelection(precise, "none") : normalizeApiForSelection(precise);
+    const parsed = label === "topic" ? normalizeTopicForSelection(precise, "none") : precise;
     if (!isResearchObject(parsed)) {
       printError(options, { type: "validation", message: `Invalid ${label} file: ${path} must contain a JSON object` });
       process.exitCode = 1;
@@ -574,7 +574,7 @@ function isNodeError(error: unknown): error is NodeJS.ErrnoException {
 }
 
 function isResearchObject(value: unknown): value is Record<string, unknown> {
-  return isRecord(value) && !Array.isArray(value);
+  return isPreciseObject(value) && !Array.isArray(value);
 }
 
 function parsePositiveInteger(value: string): number {

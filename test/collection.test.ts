@@ -4,13 +4,17 @@ import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createProgram } from "../src/index.js";
 
+const testRoots = new Set<string>();
+
 async function tempConfigPath() {
   const dir = await mkdtemp(join(tmpdir(), "apexcn-collection-"));
+  testRoots.add(dir);
   return join(dir, ".apexcn", "config.json");
 }
 
 async function tempPath(name: string) {
   const dir = await mkdtemp(join(tmpdir(), "apexcn-collection-"));
+  testRoots.add(dir);
   return join(dir, name);
 }
 
@@ -44,9 +48,11 @@ async function readJson(path: string): Promise<Record<string, unknown>> {
 }
 
 describe("collection commands", () => {
-  afterEach(() => {
+  afterEach(async () => {
     vi.unstubAllGlobals();
     process.exitCode = undefined;
+    await Promise.all([...testRoots].map((root) => rm(root, { recursive: true, force: true })));
+    testRoots.clear();
   });
 
   test.each(["9007199254740993", "9007199254740991.1", '"9007199254740993"'])("collection build refuses an imprecise search ID %s before topic fetch", async (id) => {
@@ -57,6 +63,18 @@ describe("collection commands", () => {
 
     await program.parseAsync(["node", "apexcn", "collection", "build", "--query", "synthetic", "--output-dir", outputDir, "--json"]);
 
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("collection build checks the selected IDs after ignoring a numeric placeholder", async () => {
+    const outputDir = await tempPath("unsafe-search-placeholder");
+    const { program, stderr, fetch } = await configuredProgram(async () =>
+      new Response('{"items":[9007199254740993,{"id":1},{"id":2},{"id":9007199254740991.1}]}', { headers: { "content-type": "application/json" } })
+    );
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--query", "synthetic", "--limit", "3", "--output-dir", outputDir, "--json"]);
     expect(process.exitCode).toBe(1);
     expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
     expect(fetch).toHaveBeenCalledTimes(1);

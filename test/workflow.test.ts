@@ -5,13 +5,17 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createProgram } from "../src/index.js";
 
+const testRoots = new Set<string>();
+
 async function tempPath(name: string): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), "apexcn-workflow-"));
+  testRoots.add(dir);
   return join(dir, name);
 }
 
 async function tempConfigPath(): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), "apexcn-workflow-"));
+  testRoots.add(dir);
   return join(dir, ".apexcn", "config.json");
 }
 
@@ -98,9 +102,11 @@ async function createCompletedBundle(runDir: string, bundlePath: string): Promis
 }
 
 describe("workflow commands", () => {
-  afterEach(() => {
+  afterEach(async () => {
     vi.unstubAllGlobals();
     process.exitCode = undefined;
+    await Promise.all([...testRoots].map((root) => rm(root, { recursive: true, force: true })));
+    testRoots.clear();
   });
 
   test("workflow research rejects an unsafe search ID before fetching a topic", async () => {
@@ -119,6 +125,21 @@ describe("workflow commands", () => {
     expect(JSON.parse(env.stderr.join(""))).toMatchObject({ error: { type: "validation" } });
     expect(env.fetch).toHaveBeenCalledTimes(1);
     expect((await readJson(join(runDir, "run.json"))).status).toBe("failed");
+    await rm(runDir, { recursive: true, force: true });
+  });
+
+  test("workflow research checks selected IDs after ignoring a numeric placeholder", async () => {
+    const runDir = await tempPath("unsafe-placeholder-search");
+    const env = await configuredWorkflowProgram(async () =>
+      new Response('{"items":[9007199254740993,{"id":1},{"id":2},{"id":9007199254740991.1}]}', { headers: { "content-type": "application/json" } })
+    );
+    await env.program.parseAsync([
+      "node", "apexcn", "workflow", "run", "--goal", "ask-question", "--keyword", "synthetic",
+      "--title", "Example", "--problem", "Example problem", "--category-id", "4", "--output-dir", runDir, "--json"
+    ]);
+    expect(process.exitCode).toBe(1);
+    expect(env.stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(env.fetch).toHaveBeenCalledTimes(1);
     await rm(runDir, { recursive: true, force: true });
   });
 

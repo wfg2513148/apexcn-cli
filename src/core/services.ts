@@ -1,6 +1,6 @@
 import type { ApexcnApiClient } from "./api-client.js";
 import type { ContentLanguage } from "./content-language.js";
-import { normalizeTopicForSelection, parsePreciseJson, safeApiId, toNativeApiNumbers } from "./precise-json.js";
+import { isPreciseObject, normalizeTopicForSelection, parsePreciseJson, safeApiId, toNativeApiNumbers } from "./precise-json.js";
 
 export type TopicFilters = Record<string, string | number | boolean | undefined>;
 
@@ -61,7 +61,8 @@ export async function researchTopics(client: ApexcnApiClient, input: {
     fromDate: input.fromDate,
     toDate: input.toDate
   }, parsePreciseJson);
-  const preciseItems = isRecord(preciseSearch) && Array.isArray(preciseSearch.items) ? preciseSearch.items.filter(isRecord).slice(0, limit) : [];
+  const preciseItems = isRecord(preciseSearch) && Array.isArray(preciseSearch.items)
+    ? preciseSearch.items.filter(isPreciseObject).slice(0, limit) : [];
   for (const item of preciseItems) topicIdFrom(item);
   const search = toNativeApiNumbers(preciseSearch);
   const items = isRecord(search) && Array.isArray(search.items) ? search.items.filter(isRecord).slice(0, limit) : [];

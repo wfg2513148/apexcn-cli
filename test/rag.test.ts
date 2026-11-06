@@ -1,13 +1,17 @@
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createProgram } from "../src/index.js";
 
+const testRoots = new Set<string>();
+
 async function configuredProgram(fetchImpl: typeof fetch) {
   const stdout: string[] = [];
   const stderr: string[] = [];
-  const configPath = join(await mkdtemp(join(tmpdir(), "apexcn-rag-")), "config.json");
+  const root = await mkdtemp(join(tmpdir(), "apexcn-rag-"));
+  testRoots.add(root);
+  const configPath = join(root, "config.json");
   vi.stubGlobal("fetch", vi.fn(fetchImpl));
   const program = createProgram({
     configPath,
@@ -25,9 +29,11 @@ async function configuredProgram(fetchImpl: typeof fetch) {
 }
 
 describe("local-AI RAG evidence retrieval", () => {
-  afterEach(() => {
+  afterEach(async () => {
     vi.unstubAllGlobals();
     process.exitCode = undefined;
+    await Promise.all([...testRoots].map((root) => rm(root, { recursive: true, force: true })));
+    testRoots.clear();
   });
 
   test("refuses an unsafe search result ID rather than fetching a rounded topic", async () => {
@@ -37,6 +43,16 @@ describe("local-AI RAG evidence retrieval", () => {
 
     await program.parseAsync(["node", "apexcn", "rag", "retrieve", "example", "--query", "example", "--json"]);
 
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("checks selected search IDs after ignoring a numeric placeholder", async () => {
+    const { program, stderr, fetch } = await configuredProgram(async () =>
+      new Response('{"items":[9007199254740993,{"id":1},{"id":2},{"id":9007199254740991.1}]}', { headers: { "content-type": "application/json" } })
+    );
+    await program.parseAsync(["node", "apexcn", "rag", "retrieve", "example", "--query", "example", "--top-k", "3", "--json"]);
     expect(process.exitCode).toBe(1);
     expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
     expect(fetch).toHaveBeenCalledTimes(1);
@@ -56,6 +72,19 @@ describe("local-AI RAG evidence retrieval", () => {
     expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
     expect(stdout.join("")).toBe("");
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test("rejects an imprecise root ID when a numeric topic placeholder is ignored", async () => {
+    const { program, stdout, stderr } = await configuredProgram(async (input) => {
+      const body = String(input).includes("/api/v1/search")
+        ? '{"items":[{"id":42}]}'
+        : '{"id":9007199254740991.1,"topic":9007199254740993,"threadUrl":"https://example.invalid/t/42"}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+    await program.parseAsync(["node", "apexcn", "rag", "retrieve", "example", "--query", "example", "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(stdout.join("")).toBe("");
   });
 
   test("refuses an unsafe reply ID string instead of rounding evidence", async () => {
@@ -100,6 +129,21 @@ describe("local-AI RAG evidence retrieval", () => {
     expect(process.exitCode).toBeUndefined();
     const result = JSON.parse(stdout.join(""));
     expect(result.evidence.filter((item: { type: string }) => item.type === "reply")).toHaveLength(3);
+  });
+
+  test("rejects an imprecise selected reply after ignoring a numeric placeholder", async () => {
+    const { program, stdout, stderr } = await configuredProgram(async (input) => {
+      const body = String(input).includes("/api/v1/search")
+        ? '{"items":[{"id":42}]}'
+        : '{"topic":{"id":42,"threadUrl":"https://example.invalid/t/42"},"replies":[9007199254740993,{"replyId":1},{"replyId":2},{"replyId":9007199254740991.1}]}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "rag", "retrieve", "example", "--query", "example", "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(stdout.join("")).toBe("");
   });
 
   test("ignores an unsafe nested reply list that RAG does not consume", async () => {

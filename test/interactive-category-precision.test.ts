@@ -3,13 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, test, vi } from "vitest";
 
+const promptAnswer = vi.hoisted(() => ({ value: "1" }));
 vi.mock("node:readline/promises", () => ({
-  createInterface: () => ({ question: async () => "1", close: () => {} })
+  createInterface: () => ({ question: async () => promptAnswer.value, close: () => {} })
 }));
 
 import { createProgram } from "../src/index.js";
 
-afterEach(() => { vi.unstubAllGlobals(); process.exitCode = undefined; });
+afterEach(() => { vi.unstubAllGlobals(); process.exitCode = undefined; promptAnswer.value = "1"; });
 
 test("interactive topic creation rejects an unsafe category ID before preview", async () => {
   const root = await mkdtemp(join(tmpdir(), "apexcn-category-precision-"));
@@ -53,6 +54,31 @@ test("interactive topic creation keeps safe categories when other IDs are unsafe
     expect(stderr.join("")).toBe("");
     expect(stdout.join("")).toContain("unsafe identifiers were omitted");
     expect(stdout.join("")).toContain('"categoryId": 42');
+    expect(fetch).toHaveBeenCalledTimes(1);
+  } finally {
+    if (previous) Object.defineProperty(process.stdin, "isTTY", previous);
+    else delete (process.stdin as NodeJS.ReadStream & { isTTY?: boolean }).isTTY;
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("interactive topic creation reports an imprecise selection as JSON", async () => {
+  const root = await mkdtemp(join(tmpdir(), "apexcn-category-input-"));
+  const previous = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
+  Object.defineProperty(process.stdin, "isTTY", { configurable: true, value: true });
+  try {
+    promptAnswer.value = "1.0000000000000001";
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const fetch = vi.fn(async () => Response.json({ items: [{ id: 42, name: "safe" }] }));
+    vi.stubGlobal("fetch", fetch);
+    const program = createProgram({ configPath: join(root, "config.json"), stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "synthetic-test-token", "--base-url", "https://example.invalid/ords", "--profile", "test"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "topic", "create", "--title", "Example", "--content", "Example body", "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(JSON.parse(stderr.join(""))).toMatchObject({ error: { type: "validation" } });
+    expect(stdout.join("")).not.toContain("write-preview");
     expect(fetch).toHaveBeenCalledTimes(1);
   } finally {
     if (previous) Object.defineProperty(process.stdin, "isTTY", previous);

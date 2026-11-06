@@ -47,6 +47,10 @@ export function containsImpreciseNumbers(value: unknown): boolean {
   return typeof value === "object" && value !== null && Object.values(value).some(containsImpreciseNumbers);
 }
 
+export function isPreciseObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !isLosslessNumber(value);
+}
+
 export function safeApiId(value: unknown): number | undefined {
   if (value === undefined || value === null) return undefined;
   if (isLosslessNumber(value)) throw new UnsafeApiIdError();
@@ -90,12 +94,12 @@ export function toNativeApiNumbers(value: unknown): unknown {
 export function normalizeTopicForSelection(value: unknown, replySelection: "all" | "evidence" | "none" = "all"): unknown {
   if (typeof value !== "object" || value === null || Array.isArray(value) || isLosslessNumber(value)) return toNativeApiNumbers(value);
   const root = value as Record<string, unknown>;
-  const topic = typeof root.topic === "object" && root.topic !== null && !Array.isArray(root.topic)
+  const topic = typeof root.topic === "object" && root.topic !== null && !isLosslessNumber(root.topic)
     ? root.topic as Record<string, unknown> : root;
   for (const key of ["id", "topicId", "threadId"]) safeApiId(topic[key]);
   const replies = Array.isArray(root.replies) ? root.replies : replySelection === "all" && Array.isArray(topic.replies) ? topic.replies : [];
   const selected = replySelection === "none" ? [] : replySelection === "evidence"
-    ? replies.filter((item) => typeof item === "object" && item !== null)
+    ? replies.filter(isPreciseObject)
       .sort((left, right) => Number((right as Record<string, unknown>).isUseful === true) - Number((left as Record<string, unknown>).isUseful === true))
       .slice(0, 3)
     : replies;

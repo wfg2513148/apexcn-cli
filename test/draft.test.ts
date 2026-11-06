@@ -46,6 +46,33 @@ describe("draft commands", () => {
     expect(JSON.parse(stdout.join(""))).toMatchObject({ topicId: 42 });
   });
 
+  test.each([
+    ["question", ["draft", "question", "--title", "Example", "--problem", "Example problem"]],
+    ["reply", ["draft", "reply", "--topic-id", "42", "--answer", "Example reply"]]
+  ])("draft %s accepts research with an unrelated large author ID", async (_name, args) => {
+    const { program, stdout, stderr } = draftProgram({ readStdin: async () => '{"items":[{"id":42,"title":"safe","author":{"id":9007199254740993}}]}' });
+    await program.parseAsync(["node", "apexcn", ...args, "--research-file", "-", "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    expect(stderr.join("")).toBe("");
+    expect(JSON.parse(stdout.join(""))).toMatchObject({ references: expect.arrayContaining([expect.objectContaining({ id: "42" })]) });
+  });
+
+  test("draft question rejects a numeric research root", async () => {
+    const { program, stdout, stderr } = draftProgram({ readStdin: async () => "9007199254740993" });
+    await program.parseAsync(["node", "apexcn", "draft", "question", "--title", "Example", "--problem", "Example problem", "--research-file", "-", "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/invalid research file/i);
+    expect(stdout.join("")).toBe("");
+  });
+
+  test("draft reply rejects an imprecise root ID when a numeric topic placeholder is ignored", async () => {
+    const { program, stdout, stderr } = draftProgram({ readStdin: async () => '{"id":9007199254740991.1,"topic":9007199254740993}' });
+    await program.parseAsync(["node", "apexcn", "draft", "reply", "--topic-id", "9007199254740991", "--answer", "Example reply", "--topic-file", "-", "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(stdout.join("")).toBe("");
+  });
+
   test("draft import rejects a bundle with a rounded topic ID", async () => {
     const root = await mkdtemp(join(tmpdir(), "apexcn-draft-unsafe-import-"));
     try {
