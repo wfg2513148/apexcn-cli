@@ -143,6 +143,25 @@ describe("workflow commands", () => {
     await rm(runDir, { recursive: true, force: true });
   });
 
+  test("workflow research keeps unrelated numeric fields as numbers", async () => {
+    const runDir = await tempPath("research-numeric-fields");
+    const env = await configuredWorkflowProgram(async (input) => {
+      const body = String(input).includes("/api/v1/search")
+        ? '{"items":[{"id":42,"title":"safe","author":{"id":9007199254740993},"score":0.123456789012345678}]}'
+        : '{"topic":{"id":42,"title":"safe","content":"Example content"}}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+    await env.program.parseAsync([
+      "node", "apexcn", "workflow", "run", "--goal", "ask-question", "--keyword", "synthetic",
+      "--title", "Example", "--problem", "Example problem", "--category-id", "4", "--output-dir", runDir, "--json"
+    ]);
+    expect(process.exitCode).toBeUndefined();
+    const research = await readJson(join(runDir, "research.json")) as { result: { items: Array<{ author: { id: unknown }; score: unknown }> } };
+    expect(typeof research.result.items[0].author.id).toBe("number");
+    expect(typeof research.result.items[0].score).toBe("number");
+    await rm(runDir, { recursive: true, force: true });
+  });
+
   test("workflow plan builds an ask-question plan without execute by default", async () => {
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);

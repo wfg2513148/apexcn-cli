@@ -111,6 +111,18 @@ describe("collection commands", () => {
     await rm(outputDir, { recursive: true, force: true });
   });
 
+  test("favorites import ignores a numeric placeholder before valid items", async () => {
+    const outputDir = await tempPath("favorite-placeholder");
+    const { program, stdout, stderr } = await configuredProgram(async () =>
+      new Response('{"items":[9007199254740993,{"targetType":"THREAD","id":42,"title":"safe"}],"page":{"nextCursor":null}}', { headers: { "content-type": "application/json" } })
+    );
+    await program.parseAsync(["node", "apexcn", "collection", "favorites", "--output-dir", outputDir, "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    expect(stderr.join("")).toBe("");
+    expect(JSON.parse(stdout.join(""))).toMatchObject({ topicCount: 1 });
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
   test.each(['"9007199254740993"', '"not-an-id"'])("favorites import validates ID %s before overwriting any existing topic", async (badId) => {
     const outputDir = await tempPath("unsafe-favorite-existing");
     await mkdir(join(outputDir, "topics"), { recursive: true });

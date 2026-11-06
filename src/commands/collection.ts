@@ -724,7 +724,7 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
     const requestId = requestIdFrom(data);
     if (requestId) requestIds.add(requestId);
     pageCount += 1;
-    for (const item of itemsFromData(data)) {
+    for (const item of itemsFromData(data).filter(isPreciseObject)) {
       items.push({ item, requestId, contentLanguage: isRecord(data) ? data.contentLanguage : undefined });
     }
     const page = isRecord(data) && isRecord(data.page) ? data.page : {};
