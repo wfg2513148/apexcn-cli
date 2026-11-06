@@ -5,7 +5,7 @@ import { Command, InvalidArgumentError, Option } from "commander";
 import { isLosslessNumber } from "lossless-json";
 import { ConfigFileError, defaultConfigPath } from "../config.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
-import { containsImpreciseNumbers, isExactSafeIntegerInput, normalizeApiForSelection, parsePreciseJson, safeApiId, UnsafeApiIdError } from "../core/precise-json.js";
+import { assertSafeWriteTarget, containsImpreciseNumbers, isExactSafeIntegerInput, normalizeTopicForSelection, parsePreciseJson, safeApiId, UnsafeApiIdError } from "../core/precise-json.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
 import {
   createWorkflowPlan,
@@ -650,7 +650,7 @@ async function runWorkflow(io: WorkflowCommandOptions, options: WorkflowRunOptio
     state.status = uncertain ? "execution-uncertain" : "failed";
     state.nextAction = workflowRecoveryNextAction(error, runDir, options.execute === true, uncertain);
     await writeRunState(runDir, state);
-    handleRunError(io, error, session);
+    handleRunError(io, error, session, options.json);
     return;
   }
   state.status = options.execute ? "completed" : "preview-ready";
@@ -1094,9 +1094,9 @@ function bundleJsonArtifact(artifacts: Map<string, Record<string, unknown>>, key
     return undefined;
   }
   try {
-    if ((key === "state" || key === "preview" || key === "approval") && containsImpreciseNumbers(parsePreciseJson(artifact.content))) {
-      throw new UnsafeWorkflowNumberError(`bundle:${key}`);
-    }
+    const precise = parsePreciseJson(artifact.content);
+    if (key === "state" && isRecord(precise) && !hasSafeWorkflowInputs(precise.inputs)) throw new UnsafeWorkflowNumberError(`bundle:${key}`);
+    if (key === "preview" || key === "approval" || key === "execute") assertSafeWorkflowRequest(precise, `bundle:${key}`);
     return JSON.parse(artifact.content) as unknown;
   } catch (error) {
     issues.push({ code: `invalid-${key}`, message: `Bundle artifact ${key} is invalid JSON: ${errorMessage(error)}` });
@@ -1211,7 +1211,7 @@ async function workflowBundleArtifacts(state: WorkflowRunState): Promise<Array<R
 
 async function readVerificationJson(path: string, issues: WorkflowVerificationIssue[], invalidCode: string, required: boolean): Promise<unknown | undefined> {
   try {
-    return invalidCode === "invalid-preview" || invalidCode === "invalid-approval"
+    return invalidCode === "invalid-preview" || invalidCode === "invalid-approval" || invalidCode === "invalid-execute"
       ? await readSafeWorkflowArtifact(path)
       : await readJson(path);
   } catch (error) {
@@ -1234,6 +1234,13 @@ function verificationPreviewRequest(preview: unknown, path: string, issues: Work
       || typeof preview.request.path !== "string"
       || !isRecord(preview.request.body)) {
     issues.push({ code: "invalid-preview", message: "Preview artifact does not contain a valid write request.", path });
+    return undefined;
+  }
+  try {
+    assertSafeWriteTarget(preview.request.path, preview.request.body);
+  } catch (error) {
+    if (!(error instanceof UnsafeApiIdError)) throw error;
+    issues.push({ code: "invalid-preview", message: error.message, path });
     return undefined;
   }
   return { method: preview.request.method, path: preview.request.path, body: preview.request.body };
@@ -1284,6 +1291,12 @@ function verificationApprovalRequest(value: unknown): WorkflowPreviewRequest | u
       || (value.method !== "POST" && value.method !== "DELETE")
       || typeof value.path !== "string"
       || !isRecord(value.body)) {
+    return undefined;
+  }
+  try {
+    assertSafeWriteTarget(value.path, value.body);
+  } catch (error) {
+    if (!(error instanceof UnsafeApiIdError)) throw error;
     return undefined;
   }
   return { method: value.method, path: value.path, body: value.body };
@@ -1593,7 +1606,7 @@ async function runResearch(session: Session, state: WorkflowRunState, options: W
   for (const [sourceItemIndex, item] of items.entries()) {
     const id = topicIdFromItem(item);
     if (id !== undefined) {
-      const topic = normalizeApiForSelection(await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token, parseResponse: parsePreciseJson }));
+      const topic = normalizeTopicForSelection(await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token, parseResponse: parsePreciseJson }));
       const normalized = topicFromApiData(topic);
       topics.push(compactObject({
         sourceItemIndex,
@@ -1812,14 +1825,7 @@ async function loadWorkflowRun(runDir: string): Promise<{ runDir: string; state:
     if (!isRecord(precise) || precise.kind !== "workflow-run" || !isWorkflowRunGoal(precise.goal)) {
       return undefined;
     }
-    const inputs = precise.inputs;
-    if (inputs !== undefined && inputs !== null) {
-      if (!isRecord(inputs) || Array.isArray(inputs) || isLosslessNumber(inputs)) return undefined;
-      for (const key of ["topicId", "replyId", "parentPostId", "categoryId", "ifVersion", "confirmId"]) {
-        const value = inputs[key];
-        if (value !== undefined && (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1)) return undefined;
-      }
-    }
+    if (!hasSafeWorkflowInputs(precise.inputs)) return undefined;
     const data = JSON.parse(text) as Record<string, unknown>;
     const state = data as WorkflowRunState;
     state.inputs ??= {};
@@ -1831,6 +1837,15 @@ async function loadWorkflowRun(runDir: string): Promise<{ runDir: string; state:
     }
     throw error;
   }
+}
+
+function hasSafeWorkflowInputs(inputs: unknown): boolean {
+  if (inputs === undefined || inputs === null) return true;
+  if (!isRecord(inputs) || Array.isArray(inputs) || isLosslessNumber(inputs)) return false;
+  return ["topicId", "replyId", "parentPostId", "categoryId", "ifVersion", "confirmId"].every((key) => {
+    const value = inputs[key];
+    return value === undefined || (typeof value === "number" && Number.isSafeInteger(value) && value > 0);
+  });
 }
 
 async function loadSession(io: WorkflowCommandOptions): Promise<Session | undefined> {
@@ -2065,8 +2080,21 @@ async function readJson(path: string): Promise<unknown> {
 
 async function readSafeWorkflowArtifact(path: string): Promise<unknown> {
   const text = await readFile(path, "utf8");
-  if (containsImpreciseNumbers(parsePreciseJson(text))) throw new UnsafeWorkflowNumberError(path);
+  assertSafeWorkflowRequest(parsePreciseJson(text), path);
   return JSON.parse(text) as unknown;
+}
+
+function assertSafeWorkflowRequest(value: unknown, path: string): void {
+  if (!isRecord(value)) return;
+  const request = value.request;
+  if (containsImpreciseNumbers(request)) throw new UnsafeWorkflowNumberError(path);
+  if (!isRecord(request) || typeof request.path !== "string" || !isRecord(request.body)) return;
+  try {
+    assertSafeWriteTarget(request.path, request.body);
+  } catch (error) {
+    if (!(error instanceof UnsafeApiIdError)) throw error;
+    throw new UnsafeWorkflowNumberError(path);
+  }
 }
 
 async function workflowApprovalError(state: WorkflowRunState): Promise<string | undefined> {
@@ -2135,6 +2163,12 @@ async function workflowPreviewEnvelope(path: string): Promise<{ target: Workflow
   const requestPath = preview.request.path;
   if ((method !== "POST" && method !== "DELETE") || typeof requestPath !== "string" || !isRecord(preview.request.body)) {
     throw new Error(`Invalid workflow preview artifact: ${path}`);
+  }
+  try {
+    assertSafeWriteTarget(requestPath, preview.request.body);
+  } catch (error) {
+    if (!(error instanceof UnsafeApiIdError)) throw error;
+    throw new UnsafeWorkflowNumberError(path);
   }
   const target = verificationWorkflowTarget(preview);
   if (!target) {
@@ -2329,9 +2363,9 @@ function errorMessage(error: unknown): string {
   return message.replace(/Bearer\s+[A-Za-z0-9._~-]+/gi, "Bearer [redacted]").replace(/\b[A-Za-z0-9]{26,}\b/g, "[redacted]");
 }
 
-function handleRunError(io: CommandIo, error: unknown, session: Session): void {
+function handleRunError(io: CommandIo, error: unknown, session: Session, json?: boolean): void {
   if (error instanceof UnsafeApiIdError) {
-    printError(io, { type: "validation", message: error.message, exitCode: 1 });
+    printError(io, { type: "validation", message: error.message, exitCode: 1 }, undefined, json);
     process.exitCode = 1;
     return;
   }

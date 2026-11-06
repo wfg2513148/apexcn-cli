@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -8,9 +8,11 @@ import { currentCliOperation } from "../src/core/request-context.js";
 import { createProgram } from "../src/index.js";
 
 const packageVersion = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
+const testConfigRoots = new Set<string>();
 
 async function tempConfigPath() {
   const dir = await mkdtemp(join(tmpdir(), "apexcn-content-"));
+  testConfigRoots.add(dir);
   return join(dir, ".apexcn", "config.json");
 }
 
@@ -201,12 +203,14 @@ const neverApiDryRunCommands = [
 ].sort();
 
 describe("content commands", () => {
-  afterEach(() => {
+  afterEach(async () => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
     process.exitCode = undefined;
     delete process.env.APEXCN_HTTP_TIMEOUT_MS;
     delete process.env.APEXCN_ERROR_FORMAT;
+    await Promise.all([...testConfigRoots].map((root) => rm(root, { recursive: true, force: true })));
+    testConfigRoots.clear();
   });
 
   test("category list prints categories as JSON", async () => {
@@ -2025,6 +2029,20 @@ describe("content commands", () => {
       const body = String(input).endsWith("/api/v1/me")
         ? '{"user":{"id":"0.1e9007199254740993"}}'
         : '{"topic":{"id":42,"createdBy":"1e9007199254740991"}}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--json"]);
+
+    expect(stdout.join("")).toContain('"canEdit": false');
+    expect(stdout.join("")).toContain('"canDelete": false');
+  });
+
+  test("topic view does not collide large exponents after leading-zero normalization", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":"001e9007199254740991"}}'
+        : '{"topic":{"id":42,"createdBy":"1e9007199254740990"}}';
       return new Response(body, { headers: { "content-type": "application/json" } });
     });
 

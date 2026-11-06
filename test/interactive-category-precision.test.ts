@@ -34,3 +34,28 @@ test("interactive topic creation rejects an unsafe category ID before preview", 
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("interactive topic creation keeps safe categories when other IDs are unsafe", async () => {
+  const root = await mkdtemp(join(tmpdir(), "apexcn-category-mixed-"));
+  const previous = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
+  Object.defineProperty(process.stdin, "isTTY", { configurable: true, value: true });
+  try {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const fetch = vi.fn(async () => new Response('{"items":[{"id":9007199254740993,"name":"disabled","canCreateTopic":false},{"id":42,"name":"safe"},{"id":9007199254740993,"name":"unsafe"}]}', { headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetch);
+    const program = createProgram({ configPath: join(root, "config.json"), stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
+    await program.parseAsync(["node", "apexcn", "auth", "set-token", "--token", "synthetic-test-token", "--base-url", "https://example.invalid/ords", "--profile", "test"]);
+    stdout.length = 0;
+    await program.parseAsync(["node", "apexcn", "topic", "create", "--title", "Example", "--content", "Example body", "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    expect(stderr.join("")).toBe("");
+    expect(stdout.join("")).toContain("unsafe identifiers were omitted");
+    expect(stdout.join("")).toContain('"categoryId": 42');
+    expect(fetch).toHaveBeenCalledTimes(1);
+  } finally {
+    if (previous) Object.defineProperty(process.stdin, "isTTY", previous);
+    else delete (process.stdin as NodeJS.ReadStream & { isTTY?: boolean }).isTTY;
+    await rm(root, { recursive: true, force: true });
+  }
+});

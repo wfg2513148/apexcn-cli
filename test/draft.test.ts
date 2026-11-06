@@ -34,6 +34,7 @@ describe("draft commands", () => {
     await program.parseAsync(["node", "apexcn", "draft", "reply", "--topic-id", "42", "--answer", "Example reply", "--topic-file", "-", "--json"]);
     expect(process.exitCode).toBe(1);
     expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(JSON.parse(stderr.join(""))).toMatchObject({ error: { type: "validation" } });
     expect(stdout.join("")).toBe("");
   });
 

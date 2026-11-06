@@ -361,14 +361,14 @@ describe("business write confirmation", () => {
     }
   });
 
-  test("write operation creation rejects an unsafe target path", async () => {
+  test.each(["/api/v1/topics/9007199254740992", "/api/v1/%74opics/9007199254740992"])("write operation creation rejects an unsafe target path %s", async (path) => {
     const context = await testContext();
     try {
       await expect(createWriteOperation({
         configPath: context.configPath,
         session: { profile: "test", baseUrl: "https://example.test/ords/api", token: "synthetic-test-token" },
         action: "topic.delete", summary: "Synthetic only",
-        request: { method: "DELETE", path: "/api/v1/topics/9007199254740992", body: {} }
+        request: { method: "DELETE", path, body: {} }
       })).rejects.toThrow(/unsafe|imprecise/i);
       expect(context.fetch).not.toHaveBeenCalled();
       await expect(readdir(join(dirname(context.configPath), "operations"))).rejects.toMatchObject({ code: "ENOENT" });

@@ -73,11 +73,11 @@ describe("local-AI RAG evidence retrieval", () => {
     expect(stdout.join("")).toBe("");
   });
 
-  test("allows an unrelated high-precision score in topic details", async () => {
+  test("allows an unrelated high-precision score and large author IDs in topic details", async () => {
     const { program, stdout } = await configuredProgram(async (input) => {
       const body = String(input).includes("/api/v1/search")
         ? '{"items":[{"id":42}]}'
-        : '{"topic":{"id":42,"score":0.123456789012345678,"threadUrl":"https://example.invalid/t/42","title":"safe"}}';
+        : '{"topic":{"id":42,"createdBy":9007199254740993,"author":{"id":9007199254740993},"score":0.123456789012345678,"threadUrl":"https://example.invalid/t/42","title":"safe"}}';
       return new Response(body, { headers: { "content-type": "application/json" } });
     });
 

@@ -1,4 +1,4 @@
-import { isLosslessNumber, isSafeNumber, LosslessNumber, parse, splitNumber, stringify } from "lossless-json";
+import { isLosslessNumber, isSafeNumber, LosslessNumber, parse, stringify } from "lossless-json";
 
 export function isExactSafeIntegerInput(value: string): boolean {
   const text = value.trim();
@@ -20,11 +20,18 @@ export function precisePositiveIdKey(value: unknown): string | undefined {
     : typeof value === "number" && Number.isSafeInteger(value) ? String(value)
       : typeof value === "string" && /^\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(value.trim()) ? value.trim() : undefined;
   if (!text) return undefined;
-  const rawExponent = /e([+-]?\d+)$/i.exec(text)?.[1];
-  if (rawExponent !== undefined && !Number.isSafeInteger(Number(rawExponent))) return undefined;
-  const { sign, digits, exponent } = splitNumber(text);
-  if (sign || digits === "0" || !Number.isSafeInteger(exponent) || exponent < digits.length - 1) return undefined;
-  return `${digits}e${exponent}`;
+  const match = /^(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$/i.exec(text);
+  if (!match) return undefined;
+  const fraction = match[2] ?? "";
+  const digits = `${match[1]}${fraction}`.replace(/^0+/, "");
+  if (!digits) return undefined;
+  const trailingZeros = /0+$/.exec(digits)?.[0].length ?? 0;
+  const rawExponent = match[3] ?? "0";
+  if (rawExponent.replace(/^[+-]?0*/, "").length > 20) return undefined;
+  const exponent = BigInt(rawExponent) - BigInt(fraction.length) + BigInt(trailingZeros);
+  if (exponent < 0n) return undefined;
+  const significantDigits = trailingZeros ? digits.slice(0, -trailingZeros) : digits;
+  return `${significantDigits}e${exponent}`;
 }
 
 export class UnsafeApiIdError extends Error {
@@ -54,7 +61,7 @@ export function safeApiId(value: unknown): number | undefined {
   throw new UnsafeApiIdError();
 }
 
-const apiIdFields = new Set(["id", "topicid", "threadid", "replyid", "postid", "parentpostid", "targetid", "categoryid", "confirmid", "ifversion"]);
+const apiIdFields = new Set(["id", "topicid", "topicids", "threadid", "replyid", "replyids", "postid", "parentpostid", "targetid", "categoryid", "confirmid", "ifversion"]);
 
 export function normalizeApiForSelection(value: unknown, key?: string): unknown {
   const normalizedKey = key?.replace(/[_-]/g, "").toLowerCase();
@@ -64,11 +71,50 @@ export function normalizeApiForSelection(value: unknown, key?: string): unknown 
     safeApiId(value);
   }
   if (isLosslessNumber(value)) return Number(value.value);
-  if (Array.isArray(value)) return value.map((item) => normalizeApiForSelection(item));
+  if (Array.isArray(value)) return value.map((item) => normalizeApiForSelection(item, key));
   if (typeof value === "object" && value !== null) {
     return Object.fromEntries(Object.entries(value).map(([childKey, child]) => [childKey, normalizeApiForSelection(child, childKey)]));
   }
   return value;
+}
+
+export function toNativeApiNumbers(value: unknown): unknown {
+  if (isLosslessNumber(value)) return Number(value.value);
+  if (Array.isArray(value)) return value.map(toNativeApiNumbers);
+  if (typeof value === "object" && value !== null) {
+    return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, toNativeApiNumbers(child)]));
+  }
+  return value;
+}
+
+export function normalizeTopicForSelection(value: unknown): unknown {
+  if (typeof value !== "object" || value === null || Array.isArray(value) || isLosslessNumber(value)) return toNativeApiNumbers(value);
+  const root = value as Record<string, unknown>;
+  const topic = typeof root.topic === "object" && root.topic !== null && !Array.isArray(root.topic)
+    ? root.topic as Record<string, unknown> : root;
+  for (const key of ["id", "topicId", "threadId"]) safeApiId(topic[key]);
+  const replies = Array.isArray(root.replies) ? root.replies : Array.isArray(topic.replies) ? topic.replies : [];
+  for (const item of replies) {
+    if (typeof item !== "object" || item === null || Array.isArray(item)) continue;
+    const reply = item as Record<string, unknown>;
+    for (const key of ["replyId", "id", "postId", "topicId"]) safeApiId(reply[key]);
+  }
+  return toNativeApiNumbers(value);
+}
+
+export function assertSafeWriteTarget(path: string, body: Record<string, unknown>): void {
+  if (/[%\\\x00-\x20]/.test(path) || /(?:^|\/)\.{1,2}(?:\/|$)/.test(path)) throw new UnsafeApiIdError();
+  normalizeApiForSelection(body);
+  for (const key of ["topicId", "replyId", "parentPostId", "categoryId", "confirmId", "ifVersion"]) {
+    if (body[key] !== undefined && body[key] !== null) safeApiId(body[key]);
+  }
+  for (const match of path.matchAll(/\/(?:topics|replies)\/([^/?#]+)/g)) {
+    try {
+      safeApiId(decodeURIComponent(match[1]));
+    } catch {
+      throw new UnsafeApiIdError();
+    }
+  }
 }
 
 export function parsePreciseJson(text: string): unknown {

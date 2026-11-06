@@ -4,7 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { defaultConfigPath } from "../config.js";
 import { HttpError, NetworkError, requestJson, TimeoutError } from "../http.js";
 import { assessCapabilityCompatibility } from "./capability-compatibility.js";
-import { normalizeApiForSelection, parsePreciseJson, safeApiId } from "./precise-json.js";
+import { assertSafeWriteTarget, normalizeApiForSelection, parsePreciseJson } from "./precise-json.js";
 
 export type WriteOperationSession = {
   profile: string;
@@ -307,10 +307,7 @@ async function readOperation(configPath: string | undefined, operationId: string
 }
 
 function validateWriteRequestIds(request: WriteOperationRequest): void {
-  normalizeApiForSelection(request.body);
-  for (const match of request.path.matchAll(/\/(?:topics|replies)\/([^/?#]+)/g)) {
-    safeApiId(decodeURIComponent(match[1]));
-  }
+  assertSafeWriteTarget(request.path, request.body);
 }
 
 async function writeOperation(configPath: string | undefined, operation: WriteOperation): Promise<void> {

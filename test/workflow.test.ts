@@ -116,6 +116,7 @@ describe("workflow commands", () => {
 
     expect(process.exitCode).toBe(1);
     expect(env.stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(JSON.parse(env.stderr.join(""))).toMatchObject({ error: { type: "validation" } });
     expect(env.fetch).toHaveBeenCalledTimes(1);
     expect((await readJson(join(runDir, "run.json"))).status).toBe("failed");
     await rm(runDir, { recursive: true, force: true });
@@ -537,6 +538,28 @@ describe("workflow commands", () => {
     expect(env.fetch).not.toHaveBeenCalled();
   });
 
+  test.each(["body", "path"])("workflow approval rejects an unsafe ID string in preview %s", async (field) => {
+    const runDir = await tempPath("unsafe-preview-string");
+    const env = await configuredWorkflowProgram(async () => Response.json({ ok: true }));
+    await env.program.parseAsync([
+      "node", "apexcn", "workflow", "run", "--goal", "reply-delete", "--reply-id", "100",
+      "--confirm-id", "100", "--if-version", "2", "--output-dir", runDir, "--json"
+    ]);
+    const previewPath = join(runDir, "preview.json");
+    const preview = await readJson(previewPath) as { request: { path: string; body: Record<string, unknown> } };
+    if (field === "body") preview.request.body.confirmId = "9007199254740993";
+    else preview.request.path = "/api/v1/replies/9007199254740993";
+    await writeFile(previewPath, JSON.stringify(preview));
+    const approver = workflowProgram();
+
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(approver.stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(env.fetch).not.toHaveBeenCalled();
+    await expect(readFile(join(runDir, "approval.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
   test("workflow bundle verification rejects an imprecise embedded preview", async () => {
     const runDir = await tempPath("unsafe-bundle");
     const bundlePath = join(dirname(runDir), "bundle.json");
@@ -569,7 +592,7 @@ describe("workflow commands", () => {
     expect(env.fetch).not.toHaveBeenCalled();
   });
 
-  test("workflow bundle verification rejects an imprecise embedded run state", async () => {
+  test.each(["9007199254740991.1", '"9007199254740993"'])("workflow bundle verification rejects unsafe embedded run state %s", async (badVersion) => {
     const runDir = await tempPath("unsafe-state-bundle");
     const bundlePath = join(dirname(runDir), "bundle.json");
     const env = workflowProgram();
@@ -584,8 +607,8 @@ describe("workflow commands", () => {
     expect(process.exitCode).toBeUndefined();
     const bundle = await readJson(bundlePath) as { artifacts: Array<Record<string, unknown>>; verification: { artifacts: Record<string, Record<string, unknown>> } };
     const state = bundle.artifacts.find((item) => item.key === "state")!;
-    const content = String(state.content).replace('"ifVersion": 9007199254740991', '"ifVersion": 9007199254740991.1');
-    expect(content).toContain('"ifVersion": 9007199254740991.1');
+    const content = String(state.content).replace('"ifVersion": 9007199254740991', `"ifVersion": ${badVersion}`);
+    expect(content).toContain(`"ifVersion": ${badVersion}`);
     state.content = content;
     state.size = Buffer.byteLength(content);
     state.sha256 = createHash("sha256").update(content).digest("hex");
@@ -599,6 +622,59 @@ describe("workflow commands", () => {
     expect(process.exitCode).toBe(1);
     expect(JSON.parse(verifier.stdout.join(""))).toMatchObject({ ok: false });
     expect(configured.fetch).not.toHaveBeenCalled();
+  });
+
+  test("workflow verification rejects an imprecise execute request", async () => {
+    const runDir = await tempPath("unsafe-execute");
+    const bundlePath = join(dirname(runDir), "bundle.json");
+    const env = await configuredWorkflowProgram(async () => Response.json({ ok: true }));
+    await env.program.parseAsync([
+      "node", "apexcn", "workflow", "run", "--goal", "reply-delete", "--reply-id", "100",
+      "--confirm-id", "100", "--if-version", "9007199254740991", "--output-dir", runDir, "--json"
+    ]);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    const executor = workflowProgram({ configPath: env.configPath });
+    await executor.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    const executePath = join(runDir, "execute.json");
+    const execute = await readFile(executePath, "utf8");
+    expect(execute).toContain('"ifVersion": 9007199254740991');
+    await writeFile(executePath, execute.replace('"ifVersion": 9007199254740991', '"ifVersion": 9007199254740991.1'));
+    const verifier = workflowProgram();
+
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(JSON.parse(verifier.stdout.join(""))).toMatchObject({ ok: false });
+    process.exitCode = undefined;
+    const exporter = workflowProgram();
+    await exporter.program.parseAsync(["node", "apexcn", "workflow", "export", "--run-dir", runDir, "--output", bundlePath, "--allow-invalid", "--json"]);
+    const bundleVerifier = workflowProgram();
+    await bundleVerifier.program.parseAsync(["node", "apexcn", "workflow", "verify-bundle", "--bundle", bundlePath, "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(JSON.parse(bundleVerifier.stdout.join(""))).toMatchObject({ ok: false });
+  });
+
+  test("workflow approval allows a high-precision number outside the request", async () => {
+    const runDir = await tempPath("unrelated-precision");
+    const env = await configuredWorkflowProgram(async () => Response.json({ ok: true }));
+    await env.program.parseAsync([
+      "node", "apexcn", "workflow", "run", "--goal", "reply-delete", "--reply-id", "100",
+      "--confirm-id", "100", "--if-version", "2", "--output-dir", runDir, "--json"
+    ]);
+    const previewPath = join(runDir, "preview.json");
+    const preview = await readFile(previewPath, "utf8");
+    expect(preview).toContain('"result": null');
+    await writeFile(previewPath, preview.replace('"result": null', '"result": {"score": 0.123456789012345678}'));
+    const approver = workflowProgram();
+
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+
+    expect(approver.stderr.join("")).toBe("");
+    expect(process.exitCode).toBeUndefined();
+    expect(JSON.parse(approver.stdout.join(""))).toMatchObject({ kind: "workflow-approval" });
+    expect(env.fetch).not.toHaveBeenCalled();
   });
 
   test("workflow execution rejects an imprecise approval value before network", async () => {

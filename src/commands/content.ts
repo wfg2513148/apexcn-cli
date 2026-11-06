@@ -7,7 +7,7 @@ import { ConfigFileError } from "../config.js";
 import { currentContentLanguage, runWithCliRequestContext } from "../core/request-context.js";
 import { createApiClient } from "../core/api-client.js";
 import { isAdminOperationsV2Response, matchesAdminOperationsV2Filters } from "../core/admin-operations-v2.js";
-import { isExactSafeIntegerInput, normalizeApiForSelection, parsePreciseJson, precisePositiveIdKey, safeApiId, stringifyPreciseJson, UnsafeApiIdError } from "../core/precise-json.js";
+import { isExactSafeIntegerInput, normalizeTopicForSelection, parsePreciseJson, precisePositiveIdKey, safeApiId, stringifyPreciseJson, toNativeApiNumbers, UnsafeApiIdError } from "../core/precise-json.js";
 import { assessCapabilityCompatibility } from "../core/capability-compatibility.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
@@ -1622,7 +1622,7 @@ async function retrieveRagEvidence(
   const retrievalErrors: Array<Record<string, unknown>> = [];
   for (const topicId of [...topicMatches.keys()].slice(0, input.topK)) {
     try {
-      const detail = normalizeApiForSelection(await viewTopic(client, topicId, parsePreciseJson));
+      const detail = normalizeTopicForSelection(await viewTopic(client, topicId, parsePreciseJson));
       if (isRecord(detail) && typeof detail.requestId === "string" && detail.requestId.trim()) {
         requestIds.add(detail.requestId);
       }
@@ -1881,7 +1881,8 @@ async function recentTopicsFromSearchFallback(
     fromDate: options.fromDate,
     toDate: options.toDate
   }, parsePreciseJson);
-  const safeSearch = normalizeApiForSelection(search);
+  for (const item of itemsFromData(search)) topicIdFromSearchItem(item);
+  const safeSearch = toNativeApiNumbers(search);
   const items = itemsFromData(safeSearch).filter((item) => !options.since || isOnOrAfter(item.updatedDate ?? item.createdDate, options.since));
   const recentItems = [];
   const topicRequestIds = [];
@@ -1893,7 +1894,7 @@ async function recentTopicsFromSearchFallback(
       continue;
     }
     try {
-      const topic = normalizeApiForSelection(await viewTopic(createApiClient(session), id, parsePreciseJson));
+      const topic = normalizeTopicForSelection(await viewTopic(createApiClient(session), id, parsePreciseJson));
       recentItems.push(recentTopicFromData(topic, item, sourceItemIndex));
       if (isRecord(topic) && topic.requestId) {
         topicRequestIds.push(topic.requestId);
@@ -1920,7 +1921,7 @@ async function recentTopicsFromSearchFallback(
       searchKeyword: "%"
     }),
     items: recentItems,
-    page: isRecord(search) ? search.page : undefined,
+    page: isRecord(safeSearch) ? safeSearch.page : undefined,
     requestIds: {
       search: isRecord(search) ? search.requestId : undefined,
       topics: topicRequestIds
@@ -2544,28 +2545,36 @@ async function promptCategoryId(options: CommandIo, session: Session): Promise<n
     return undefined;
   }
 
-  const data = normalizeApiForSelection(await requestJson(session.baseUrl, "/api/v1/categories", {
+  const data = await requestJson<{ items?: Array<{ id: unknown; name: string; canCreateTopic?: boolean }> }>(session.baseUrl, "/api/v1/categories", {
     token: session.token,
     parseResponse: parsePreciseJson
-  })) as { items?: Array<{ id: number; name: string; canCreateTopic?: boolean }> };
-  const categories = (data.items ?? []).filter((item) => item.canCreateTopic !== false).map((item) => {
-    const id = safeApiId(item.id);
-    if (id === undefined) throw new UnsafeApiIdError();
-    return { ...item, id };
+  });
+  let unsafeCount = 0;
+  const categories = (data.items ?? []).filter((item) => item.canCreateTopic !== false).flatMap((item) => {
+    try {
+      const id = safeApiId(item.id);
+      if (id === undefined) throw new UnsafeApiIdError();
+      return [{ ...item, id }];
+    } catch (error) {
+      if (!(error instanceof UnsafeApiIdError)) throw error;
+      unsafeCount += 1;
+      return [];
+    }
   });
   if (categories.length === 0) {
-    printError(options, { type: "validation", message: "No categories are available for topic creation" });
+    printError(options, { type: "validation", message: unsafeCount ? "No safe categories are available; unsafe or imprecise identifiers were omitted" : "No categories are available for topic creation" });
     process.exitCode = 1;
     return undefined;
   }
 
+  if (unsafeCount > 0) options.stdout(`${unsafeCount} categories with unsafe identifiers were omitted.\n`);
   options.stdout("Select a category:\n");
   categories.forEach((category, index) => {
     options.stdout(`${index + 1}. ${category.name} (${category.id})\n`);
   });
   const answer = await promptText("Category number: ");
   const index = Number(answer);
-  if (!Number.isInteger(index) || index < 1 || index > categories.length) {
+  if (!isExactSafeIntegerInput(answer) || index < 1 || index > categories.length) {
     printError(options, { type: "validation", message: "Invalid category selection" });
     process.exitCode = 1;
     return undefined;

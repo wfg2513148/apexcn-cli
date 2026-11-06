@@ -1,4 +1,4 @@
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Command } from "commander";
@@ -8,6 +8,7 @@ import { createProgram } from "../src/index.js";
 import { publicSchemaForId, schemaIdForCommand } from "../src/schemas/registry.js";
 
 const base = "https://oracleapex.cn/ords/test/api/v1";
+const testConfigRoots = new Set<string>();
 const supportedVersions = ["0.10.0-candidate", "0.9.1-candidate", "0.9.0-candidate", "0.8.3-candidate", "0.8.0-candidate", "0.7.0-candidate", "0.6.0-candidate"];
 const capabilities = {
   kind: "capabilities",
@@ -46,7 +47,9 @@ function exitOverrideTree(command: Command): void {
 async function setup(fetchImpl: typeof fetch) {
   const stdout: string[] = [];
   const stderr: string[] = [];
-  const configPath = join(await mkdtemp(join(tmpdir(), "apexcn-v2-test-")), "config.json");
+  const root = await mkdtemp(join(tmpdir(), "apexcn-v2-test-"));
+  testConfigRoots.add(root);
+  const configPath = join(root, "config.json");
   vi.stubGlobal("fetch", vi.fn(fetchImpl));
   const program = createProgram({ configPath, stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
   exitOverrideTree(program);
@@ -64,10 +67,12 @@ function mockApi(inventory: unknown = capabilities, result: unknown = payload): 
   };
 }
 
-afterEach(() => {
+afterEach(async () => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
   process.exitCode = undefined;
+  await Promise.all([...testConfigRoots].map((root) => rm(root, { recursive: true, force: true })));
+  testConfigRoots.clear();
 });
 
 describe("administrator operations v2", () => {

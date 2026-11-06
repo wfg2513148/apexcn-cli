@@ -15,7 +15,7 @@ import {
   type DraftPayload,
   type StoredDraft
 } from "../core/draft-inventory.js";
-import { blockText, fieldText, isRecord, outputFormat, parseOutputFormat, printData, printError, validateFormatOptions, type FormatOption } from "../output.js";
+import { blockText, fieldText, isRecord, outputFormat, parseOutputFormat, printData, printError, usesJsonOutput, validateFormatOptions, type FormatOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
 
 type DraftCommandOptions = CommandIo & {
@@ -114,7 +114,7 @@ export function createDraftCommand(options: DraftCommandOptions): Command {
         process.exitCode = 1;
         return;
       }
-      const research = commandOptions.researchFile ? await readResearchJson(commandOptions.researchFile, options) : undefined;
+      const research = commandOptions.researchFile ? await readResearchJson(commandOptions.researchFile, options, usesJsonOutput(commandOptions)) : undefined;
       if (commandOptions.researchFile && research === undefined) {
         return;
       }
@@ -159,14 +159,14 @@ export function createDraftCommand(options: DraftCommandOptions): Command {
         process.exitCode = 1;
         return;
       }
-      const topic = commandOptions.topicFile ? await readJsonObject(commandOptions.topicFile, "topic", options) : undefined;
+      const topic = commandOptions.topicFile ? await readJsonObject(commandOptions.topicFile, "topic", options, usesJsonOutput(commandOptions)) : undefined;
       if (commandOptions.topicFile && topic === undefined) {
         return;
       }
-      if (topic && !validateTopicIdMatch(commandOptions.topicId, topic, options)) {
+      if (topic && !validateTopicIdMatch(commandOptions.topicId, topic, options, usesJsonOutput(commandOptions))) {
         return;
       }
-      const research = commandOptions.researchFile ? await readJsonObject(commandOptions.researchFile, "research", options) : undefined;
+      const research = commandOptions.researchFile ? await readJsonObject(commandOptions.researchFile, "research", options, usesJsonOutput(commandOptions)) : undefined;
       if (commandOptions.researchFile && research === undefined) {
         return;
       }
@@ -373,11 +373,11 @@ function buildDraftReply(input: {
   });
 }
 
-async function readResearchJson(path: string, options: DraftCommandOptions): Promise<Record<string, unknown> | undefined> {
-  return readJsonObject(path, "research", options);
+async function readResearchJson(path: string, options: DraftCommandOptions, json?: boolean): Promise<Record<string, unknown> | undefined> {
+  return readJsonObject(path, "research", options, json);
 }
 
-async function readJsonObject(path: string, label: "research" | "topic", options: DraftCommandOptions): Promise<Record<string, unknown> | undefined> {
+async function readJsonObject(path: string, label: "research" | "topic", options: DraftCommandOptions, json?: boolean): Promise<Record<string, unknown> | undefined> {
   let text: string;
   try {
     text = path === "-" ? await readStdin(options) : await readFile(path, "utf8");
@@ -404,7 +404,7 @@ async function readJsonObject(path: string, label: "research" | "topic", options
     return parsed;
   } catch (error) {
     if (error instanceof UnsafeApiIdError) {
-      printError(options, { type: "validation", message: error.message });
+      printError(options, { type: "validation", message: error.message }, undefined, json);
       process.exitCode = 1;
       return undefined;
     }
@@ -611,7 +611,7 @@ function capitalized(value: string): string {
   return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
 }
 
-function validateTopicIdMatch(topicId: number, data: Record<string, unknown>, options: DraftCommandOptions): boolean {
+function validateTopicIdMatch(topicId: number, data: Record<string, unknown>, options: DraftCommandOptions, json?: boolean): boolean {
   const topic = topicFromData(data);
   const value = topic.id ?? topic.topicId ?? topic.threadId;
   let parsed: number | undefined;
@@ -619,7 +619,7 @@ function validateTopicIdMatch(topicId: number, data: Record<string, unknown>, op
     parsed = safeApiId(value);
   } catch (error) {
     if (!(error instanceof UnsafeApiIdError)) throw error;
-    printError(options, { type: "validation", message: error.message });
+    printError(options, { type: "validation", message: error.message }, undefined, json);
     process.exitCode = 1;
     return false;
   }

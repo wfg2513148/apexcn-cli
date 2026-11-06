@@ -136,6 +136,87 @@ describe("collection commands", () => {
     await rm(outputDir, { recursive: true, force: true });
   });
 
+  test("collection verify rejects an unsafe source topicIds array", async () => {
+    const outputDir = await tempPath("unsafe-source-ids");
+    const { program, stdout, stderr } = await configuredProgram(async () => Response.json({ topic: { id: 42, title: "safe" } }));
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--topic-id", "42", "--output-dir", outputDir, "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    const manifestPath = join(outputDir, "collection.json");
+    const manifest = await readFile(manifestPath, "utf8");
+    const changed = manifest.replace(/"topicIds":\s*\[\s*42\s*\]/, '"topicIds": [9007199254740993]');
+    expect(changed).not.toBe(manifest);
+    await writeFile(manifestPath, changed);
+    stdout.length = 0;
+    stderr.length = 0;
+
+    await program.parseAsync(["node", "apexcn", "collection", "verify", "--dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("collection sync rejects an unsafe reply ID before changing existing files", async () => {
+    const outputDir = await tempPath("unsafe-sync");
+    let syncing = false;
+    const { program, stdout, stderr } = await configuredProgram(async (input) => {
+      const isSecond = String(input).includes("/topics/2");
+      const body = syncing && isSecond
+        ? '{"topic":{"id":2,"title":"unsafe"},"replies":[{"id":9007199254740993}]}'
+        : JSON.stringify({ topic: { id: isSecond ? 2 : 1, title: syncing ? "changed" : "original" } });
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--topic-id", "1", "--topic-id", "2", "--output-dir", outputDir, "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    const manifest = await readFile(join(outputDir, "collection.json"), "utf8");
+    const firstTopic = await readFile(join(outputDir, "topics", "1.json"), "utf8");
+    syncing = true;
+    stdout.length = 0;
+    stderr.length = 0;
+
+    await program.parseAsync(["node", "apexcn", "collection", "sync", "--dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(await readFile(join(outputDir, "collection.json"), "utf8")).toBe(manifest);
+    expect(await readFile(join(outputDir, "topics", "1.json"), "utf8")).toBe(firstTopic);
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("collection query rejects an unsafe ID in a local index", async () => {
+    const outputDir = await tempPath("unsafe-index");
+    await mkdir(outputDir, { recursive: true });
+    await writeFile(join(outputDir, "index.jsonl"), '{"kind":"collection-index-record","schemaVersion":1,"engine":"bm25","topicId":9007199254740993,"title":"oracle","sourcePath":"topics/42.json","terms":{"oracle":1},"documentLength":1,"excerpt":"oracle"}\n');
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const program = createProgram({ stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
+
+    await program.parseAsync(["node", "apexcn", "collection", "query", "oracle", "--dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(stdout.join("")).toBe("");
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("collection can verify a topic with an unrelated large author ID", async () => {
+    const outputDir = await tempPath("large-author");
+    const { program, stdout, stderr } = await configuredProgram(async () =>
+      new Response('{"topic":{"id":42,"title":"safe","author":{"id":9007199254740993},"score":0.123456789012345678}}', { headers: { "content-type": "application/json" } })
+    );
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--topic-id", "42", "--output-dir", outputDir, "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    stdout.length = 0;
+    stderr.length = 0;
+
+    await program.parseAsync(["node", "apexcn", "collection", "verify", "--dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBeUndefined();
+    expect(stderr.join("")).toBe("");
+    expect(JSON.parse(stdout.join(""))).toMatchObject({ ok: true });
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
   test("collection build creates a deduplicated local knowledge collection", async () => {
     const outputDir = await tempPath("collection");
     const { program, stdout, stderr, fetch } = await configuredProgram(async (input) => {
