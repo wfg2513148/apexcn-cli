@@ -47,13 +47,13 @@ Object.assign(env, {
   APEXCN_CLI_BACKUP_ROOT: backups,
   APEXCN_QA_LAUNCHER: launcher
 });
-const report = { schemaVersion: 1, platform: process.platform, arch: process.arch, node: process.version, shell, candidateSha256: candidateSha, priorSha256: priorSha, steps: [], ok: false, cleaned: false };
+const report = { schemaVersion: 1, platform: process.platform, arch: process.arch, node: process.version, shell, expectedCandidateSha256: candidateSha, expectedPriorSha256: priorSha, steps: [], ok: false, cleaned: false };
 const sha = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
 function run(label, args, expectFailure = false) {
   const result = spawnSync(shell, ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", ...args], {
     cwd: root, env, encoding: "utf8", timeout: 120000, maxBuffer: 8 * 1024 * 1024
   });
-  const step = { label, status: result.status, signal: result.signal, stdout: result.stdout ?? "", stderr: result.stderr ?? "", error: result.error?.message };
+  const step = { label, expectedOutcome: expectFailure ? "failure" : "success", status: result.status, signal: result.signal, stdout: result.stdout ?? "", stderr: result.stderr ?? "", error: result.error?.message };
   report.steps.push(step);
   if (result.error || result.signal) report.cleanupDeferred = true;
   const expected = expectFailure ? result.status !== null && result.status !== 0 && !result.error && !result.signal
@@ -76,8 +76,10 @@ try {
   assert.equal(process.platform, "win32", "Real Windows is required");
   assert.equal(process.version, "v20.20.2", "Node 20.20.2 is required for this matrix");
   assert.ok(expectedShell === "5.1" || expectedShell === "7", "Expected PowerShell version is required");
-  assert.equal(sha(candidate), candidateSha, "candidate digest mismatch");
-  assert.equal(sha(prior), priorSha, "prior digest mismatch");
+  report.actualCandidateSha256 = sha(candidate);
+  report.actualPriorSha256 = sha(prior);
+  assert.equal(report.actualCandidateSha256, candidateSha, "candidate digest mismatch");
+  assert.equal(report.actualPriorSha256, priorSha, "prior digest mismatch");
   const shellVersion = run("shell version", ["-Command", "$PSVersionTable.PSVersion.ToString()"]);
   report.shellVersion = shellVersion.stdout.trim();
   assert.match(report.shellVersion, expectedShell === "5.1" ? /^5\.1(?:\.|$)/ : /^7(?:\.|$)/, "PowerShell version mismatch");
@@ -166,7 +168,8 @@ try {
   }
   process.stdout.write(`${JSON.stringify({
     ok: report.ok, cleaned: report.cleaned, shell, shellVersion: report.shellVersion,
-    node: report.node, candidateSha256: report.candidateSha256, priorSha256: report.priorSha256,
+    node: report.node, expectedCandidateSha256: report.expectedCandidateSha256, actualCandidateSha256: report.actualCandidateSha256,
+    expectedPriorSha256: report.expectedPriorSha256, actualPriorSha256: report.actualPriorSha256,
     steps: report.steps.map((step) => ({ ...step, stdout: step.stdout.slice(0, 4096), stderr: step.stderr.slice(0, 4096) })),
     error: report.error, cleanupDeferred: report.cleanupDeferred
   })}\n`);
