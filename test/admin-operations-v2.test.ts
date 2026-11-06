@@ -240,10 +240,39 @@ describe("administrator operations v2", () => {
     expect(app.fetch).toHaveBeenCalledTimes(2);
   });
 
-  test.each(["0", "-1", "not-a-number", "10000000000000000000000000000", "1.0000000000000001", "1e2"])("rejects invalid user id %s", async (userId) => {
+  test.each(["0", "0000", "0000000000000000000000000000", "-1", "not-a-number", "10000000000000000000000000000", "09999999999999999999999999999", "1.0000000000000001", "1e2"])("rejects invalid user id %s", async (userId) => {
     const app = await setup(mockApi());
     await expect(app.program.parseAsync(["node", "apexcn", "admin", "operations-v2", "--user-id", userId])).rejects.toMatchObject({ code: "commander.invalidArgument" });
     expect(app.fetch).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ["0123456789012345678901234567", "123456789012345678901234567"],
+    ["0000000000000000000000000001", "1"]
+  ])("preserves a 28-digit user id with leading zeros while comparing its numeric value", async (input, numericId) => {
+    const raw = JSON.stringify(payloadWithUser).replace('"id":42', `"id":${numericId}`);
+    const app = await setup(async (url) => String(url) === `${base}/capabilities`
+      ? Response.json(capabilities)
+      : new Response(raw, { headers: { "content-type": "application/json" } }));
+
+    await app.program.parseAsync(["node", "apexcn", "admin", "operations-v2", "--from", "2026-07-01", "--to", "2026-07-01", "--user-id", input, "--json"]);
+
+    expect(app.fetch).toHaveBeenLastCalledWith(`${base}/admin/operations/v2?from=2026-07-01&to=2026-07-01&userId=${input}`, expect.any(Object));
+    expect(app.stdout.join("")).toContain(`"id": ${numericId}`);
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  test("rejects an adjacent user id even when the requested id has a leading zero", async () => {
+    const input = "0123456789012345678901234567";
+    const raw = JSON.stringify(payloadWithUser).replace('"id":42', '"id":123456789012345678901234568');
+    const app = await setup(async (url) => String(url) === `${base}/capabilities`
+      ? Response.json(capabilities)
+      : new Response(raw, { headers: { "content-type": "application/json" } }));
+
+    await app.program.parseAsync(["node", "apexcn", "admin", "operations-v2", "--from", "2026-07-01", "--to", "2026-07-01", "--user-id", input, "--json"]);
+
+    expect(app.stdout.join("")).toBe("");
+    expect(process.exitCode).toBe(1);
   });
 
   test.each(["9007199254740993", "9999999999999999999999999999"])("sends and returns large user id %s without precision loss", async (id) => {

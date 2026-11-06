@@ -428,7 +428,7 @@ apexcn thread view 30549 --json
 apexcn topic view 30549 --format text
 ```
 
-`topic view` accepts decimal topic IDs beyond JavaScript's safe integer range and preserves response numbers in text and JSON output. JSON consumers must also use a lossless parser. Numeric arguments for topic/reply writes, workflows, drafts, reviews, and collections currently require safe integers; larger values are rejected to avoid rounding a target ID. The administrator `operations-v2 --user-id` option separately accepts positive integers up to 28 digits. This does not imply full large-integer support in other API responses or imported files.
+`topic view` accepts decimal topic IDs beyond JavaScript's safe integer range and preserves response numbers in text and JSON output. JSON consumers must also use a lossless parser. Numeric arguments for topic/reply writes, workflows, drafts, reviews, and collections currently require safe integers; larger values are rejected to avoid rounding a target ID. The administrator `operations-v2 --user-id` option separately accepts positive decimal integers of at most 28 digits, preserving any leading zeros in the request. This does not imply full large-integer support in other API responses or imported files.
 
 Create a topic from a file:
 

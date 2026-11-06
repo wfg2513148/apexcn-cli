@@ -2659,10 +2659,10 @@ function parseAdminOperationsV2Limit(value: string): number {
 }
 
 function parseAdminOperationsV2UserId(value: string): string {
-  if (!/^\d+$/.test(value)) throw new InvalidArgumentError("Expected --user-id to be a positive integer of at most 28 digits");
-  const parsed = value.replace(/^0+/, "") || "0";
-  if (parsed === "0" || parsed.length > 28) throw new InvalidArgumentError("Expected --user-id to be a positive integer of at most 28 digits");
-  return parsed;
+  if (!/^\d{1,28}$/.test(value) || !/[1-9]/.test(value)) {
+    throw new InvalidArgumentError("Expected --user-id to be a positive integer of at most 28 digits");
+  }
+  return value;
 }
 
 function collectRagQuery(value: string, previous: string[]): string[] {

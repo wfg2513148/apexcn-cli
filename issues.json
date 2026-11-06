@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "product": "apexcn-cli",
-  "updatedAt": "2026-11-06T09:09:52+00:00",
+  "updatedAt": "2026-11-06T09:36:49+00:00",
   "activeOnly": true,
   "issues": [
     {
@@ -68,6 +68,41 @@
         "firstAttemptEvidencePreserved": true,
         "actualOutputSummary": "The first attempt did not exercise JSON output. A separately retained JSON follow-up reported simulated URL key, Authorization, and Cookie values in config.activeProfile.baseUrl; the retained output was redacted by the validator.",
         "expectedUserOutcome": "Sanitize recognizable credentials in support diagnostics and prevent displayed profile URL components from exposing userinfo, queries, or fragments.",
+        "responsibilityAssessment": "cli"
+      }
+    },
+    {
+      "id": "CLI-20261106-V2-USER-ID-REPRESENTATION",
+      "status": "in_progress",
+      "priority": "P2",
+      "owner": "cli",
+      "milestoneId": "0.9",
+      "title": "Preserve the supplied decimal user ID and enforce its length",
+      "description": "A fresh independent validator observed operations-v2 removing a leading zero from a 28-digit input before constructing the request. The API declares an integer, so this observation does not establish an incorrect numeric account selection; preserve the supplied valid spelling and enforce the documented input length.",
+      "targetVersion": "1.3.0",
+      "validatorRound": "community-api-cli-v2-20261106-round-2",
+      "blockingMilestones": [],
+      "acceptanceCriterionIds": [],
+      "dependencies": [],
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "01a1afe3-d896-7400-9020-53a91af837e2",
+        "assignmentRef": "community-api-cli-v2-20261106-round-2",
+        "report": "/Users/kwang/apexcn-cli-test/runs/independent-v130-20261106-r2-BTuwW0FL/attempts/D07-precision-and-write-safety/followups/003/followup-result.json",
+        "findingRefs": [
+          "/Users/kwang/apexcn-cli-test/runs/independent-v130-20261106-r2-BTuwW0FL/attempts/D07-precision-and-write-safety/first-attempt.json",
+          "/Users/kwang/apexcn-cli-test/runs/independent-v130-20261106-r2-BTuwW0FL/attempts/D07-precision-and-write-safety/first-attempt-result.json",
+          "/Users/kwang/apexcn-cli-test/runs/independent-v130-20261106-r2-BTuwW0FL/attempts/D07-precision-and-write-safety/followups/003/followup-002.json",
+          "/Users/kwang/apexcn-cli-test/runs/independent-v130-20261106-r2-BTuwW0FL/attempts/D07-precision-and-write-safety/followups/003/followup-result.json"
+        ],
+        "scenarioOrExplorationRef": [
+          "D07 leading-zero user ID synthetic exploration"
+        ],
+        "observedCliVersion": "1.3.0",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "The first attempt did not reach the aggregate route because the synthetic fixture path was wrong. A retained follow-up showed a 28-digit input beginning with zero sent with that zero removed; the reported integer value is equivalent and no wrong-user selection was demonstrated.",
+        "expectedUserOutcome": "For a supported 1–28 digit positive decimal user ID, preserve the supplied digits in the request without rounding; reject overlength input before network access.",
         "responsibilityAssessment": "cli"
       }
     }
