@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const candidateSha = "f93e951e54780f713b9b43f4b9fed13f9eebb30960ab1a54d6059f165cc8abaa";
+const candidateSha = "9aa880c839f37cf78cf176206628119c9fc249fe760ee2e4239df51a83eaf8d0";
 const priorSha = "bd3ed6cae470af9710397805b609c6b93e479995295dbb74f0fb15b32656b852";
 const assets = resolve("candidate-assets");
 const candidate = join(assets, "apexcn-cli.tgz");
@@ -47,7 +47,7 @@ Object.assign(env, {
   APEXCN_CLI_BACKUP_ROOT: backups,
   APEXCN_QA_LAUNCHER: launcher
 });
-const report = { schemaVersion: 1, platform: process.platform, arch: process.arch, node: process.version, shell, expectedCandidateSha256: candidateSha, expectedPriorSha256: priorSha, steps: [], ok: false, cleaned: false };
+const report = { schemaVersion: 1, platform: process.platform, arch: process.arch, node: process.version, shell, expectedCandidateSha256: candidateSha, expectedPriorSha256: priorSha, installedChecks: [], steps: [], ok: false, cleaned: false };
 const sha = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
 function run(label, args, expectFailure = false) {
   const result = spawnSync(shell, ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", ...args], {
@@ -72,12 +72,42 @@ function setArchive(path, checksumPath) {
 function installedRoot() {
   return [install, join(install, "package"), join(install, "cli")].find((path) => existsSync(join(path, "package.json")));
 }
+function recordInstalledCandidate(label) {
+  const cliRoot = installedRoot();
+  assert.ok(cliRoot, "installed package root missing");
+  const entry = join(cliRoot, "dist", "index.js");
+  const entrySha256 = sha(entry);
+  const launcherSha256 = sha(launcher);
+  const dependencies = Object.fromEntries(["commander", "lossless-json"].map((name) => [name,
+    existsSync(join(cliRoot, "node_modules", name, "package.json"))]));
+  report.installedChecks.push({ label, entrySha256, launcherSha256, dependencies });
+  assert.equal(entrySha256, report.expectedEntrySha256, `${label}: installed entry digest mismatch`);
+  assert.equal(readFileSync(launcher, "ascii").replace(/\r\n/g, "\n").trimEnd(),
+    `@echo off\nnode "${entry}" %*`, `${label}: launcher content mismatch`);
+  if (report.expectedLauncherSha256 === undefined) report.expectedLauncherSha256 = launcherSha256;
+  assert.equal(launcherSha256, report.expectedLauncherSha256, `${label}: launcher digest changed`);
+  for (const [dependency, present] of Object.entries(dependencies)) {
+    assert.ok(present, `${label}: ${dependency} missing`);
+  }
+}
 try {
   assert.equal(process.platform, "win32", "Real Windows is required");
   assert.equal(process.version, "v20.20.2", "Node 20.20.2 is required for this matrix");
   assert.ok(expectedShell === "5.1" || expectedShell === "7", "Expected PowerShell version is required");
   report.actualCandidateSha256 = sha(candidate);
   assert.equal(report.actualCandidateSha256, candidateSha, "candidate digest mismatch");
+  report.expectedEntrySha256 = readFileSync(join(assets, "candidate-entry.sha256"), "utf8").trim();
+  assert.match(report.expectedEntrySha256, /^[0-9a-f]{64}$/, "candidate entry digest missing or invalid");
+  const entryFromArchive = spawnSync("tar.exe", ["-xOzf", candidate, "package/dist/index.js"], {
+    cwd: root, env, timeout: 120000, maxBuffer: 8 * 1024 * 1024
+  });
+  if (entryFromArchive.error || entryFromArchive.signal) report.cleanupDeferred = true;
+  report.archiveEntryExtraction = { status: entryFromArchive.status, signal: entryFromArchive.signal,
+    error: entryFromArchive.error?.message, stderr: entryFromArchive.stderr?.toString("utf8") ?? "" };
+  assert.equal(entryFromArchive.status, 0, "candidate entry extraction failed");
+  assert.ok(!entryFromArchive.error && !entryFromArchive.signal, "candidate entry extraction was incomplete");
+  report.windowsArchiveEntrySha256 = createHash("sha256").update(entryFromArchive.stdout).digest("hex");
+  assert.equal(report.windowsArchiveEntrySha256, report.expectedEntrySha256, "candidate archive entry digest mismatch");
   report.actualPriorSha256 = sha(prior);
   assert.equal(report.actualPriorSha256, priorSha, "prior digest mismatch");
   const shellVersion = run("shell version", ["-Command", "$PSVersionTable.PSVersion.ToString()"]);
@@ -98,6 +128,7 @@ try {
   setArchive(candidate, candidateChecksums);
   invokeLauncher("upgrade 1.2.2 to candidate", "update");
   assert.equal(invokeLauncher("candidate version", "--version").stdout.trim(), "1.3.0");
+  recordInstalledCandidate("upgrade to candidate");
   assert.match(invokeLauncher("candidate v2 help", "admin operations-v2 --help").stdout, /--user-id/);
   assert.equal(readFileSync(config, "utf8"), configText);
   const previous = readdirSync(backups).find((name) => name.startsWith("1.2.2-"));
@@ -109,6 +140,7 @@ try {
   const failed = invokeLauncher("failed checksum update", "update", true);
   assert.match(failed.stdout + failed.stderr, /Checksum verification failed/i);
   assert.equal(invokeLauncher("version after failed update", "--version").stdout.trim(), "1.3.0");
+  recordInstalledCandidate("after failed update");
   assert.equal(readFileSync(config, "utf8"), configText);
 
   const lifecycle = () => {
@@ -123,15 +155,18 @@ try {
   setArchive(candidate, candidateChecksums);
   run("shell-native upgrade to candidate", ["-File", lifecycle(), "upgrade"]);
   assert.equal(invokeLauncher("shell-native upgraded version", "--version").stdout.trim(), "1.3.0");
+  recordInstalledCandidate("shell-native upgrade");
   assert.equal(readFileSync(config, "utf8"), configText);
   setArchive(candidate, badChecksums);
   const shellFailed = run("shell-native failed checksum upgrade", ["-File", lifecycle(), "upgrade"], true);
   assert.match(shellFailed.stdout + shellFailed.stderr, /Checksum verification failed/i);
   assert.equal(invokeLauncher("version after shell-native failed upgrade", "--version").stdout.trim(), "1.3.0");
+  recordInstalledCandidate("after shell-native failed upgrade");
   assert.equal(readFileSync(config, "utf8"), configText);
   setArchive(candidate, candidateChecksums);
   run("reinstall candidate", ["-File", installer]);
   assert.equal(invokeLauncher("reinstalled candidate version", "--version").stdout.trim(), "1.3.0");
+  recordInstalledCandidate("reinstall candidate");
   assert.equal(readFileSync(config, "utf8"), configText);
   run("uninstall candidate", ["-File", lifecycle(), "uninstall", "-Yes"]);
   assert.equal(existsSync(launcher), false, "launcher still exists after uninstall");
@@ -170,6 +205,8 @@ try {
     ok: report.ok, cleaned: report.cleaned, shell, shellVersion: report.shellVersion,
     node: report.node, expectedCandidateSha256: report.expectedCandidateSha256, actualCandidateSha256: report.actualCandidateSha256,
     expectedPriorSha256: report.expectedPriorSha256, actualPriorSha256: report.actualPriorSha256,
+    expectedEntrySha256: report.expectedEntrySha256, windowsArchiveEntrySha256: report.windowsArchiveEntrySha256,
+    archiveEntryExtraction: report.archiveEntryExtraction, expectedLauncherSha256: report.expectedLauncherSha256, installedChecks: report.installedChecks,
     steps: report.steps.map((step) => ({ ...step, stdout: step.stdout.slice(0, 4096), stderr: step.stderr.slice(0, 4096) })),
     error: report.error, cleanupDeferred: report.cleanupDeferred
   })}\n`);
