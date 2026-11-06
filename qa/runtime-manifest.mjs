@@ -18,7 +18,17 @@ export function runtimeManifest(packageRoot) {
   }
   for (const relative of ["package.json", "dist", "scripts", "node_modules"]) walk(relative);
   files.sort((left, right) => left.path < right.path ? -1 : left.path > right.path ? 1 : 0);
-  for (const required of ["package.json", "dist/index.js", "scripts/lifecycle-agent.ps1", "scripts/lifecycle-agent.sh", "node_modules/commander/package.json", "node_modules/lossless-json/package.json"]) {
+  const metadata = JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8"));
+  if (!metadata.dependencies || typeof metadata.dependencies !== "object" || Array.isArray(metadata.dependencies)) {
+    throw new Error("invalid runtime dependency metadata");
+  }
+  const dependencies = Object.keys(metadata.dependencies);
+  if (dependencies.some((name) => !/^(?:@[A-Za-z0-9._-]+\/)?[A-Za-z0-9._-]+$/.test(name))) {
+    throw new Error("invalid runtime dependency name");
+  }
+  const requiredFiles = ["package.json", "dist/index.js", "scripts/lifecycle-agent.ps1", "scripts/lifecycle-agent.sh",
+    ...dependencies.map((name) => `node_modules/${name}/package.json`)];
+  for (const required of requiredFiles) {
     if (!files.some((item) => item.path === required)) throw new Error(`missing runtime file: ${required}`);
   }
   return { kind: "apexcn-runtime-file-manifest", schemaVersion: 1, files };

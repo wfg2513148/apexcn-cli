@@ -57,6 +57,11 @@ jobs:
           cp scripts/install-agent.ps1 candidate-assets/install-agent.ps1
           gh release download v1.2.2 --repo wfg2513148/apexcn-cli --pattern apexcn-cli.tgz --dir candidate-assets/prior
           printf '%s  %s\n' 'bd3ed6cae470af9710397805b609c6b93e479995295dbb74f0fb15b32656b852' 'candidate-assets/prior/apexcn-cli.tgz' | sha256sum --check
+          node --input-type=module -e 'import { inspectReleaseArchive } from "./scripts/inspect-release-archive.mjs"; inspectReleaseArchive("candidate-assets/prior/apexcn-cli.tgz");'
+          mkdir prior-reference
+          tar -xzf candidate-assets/prior/apexcn-cli.tgz -C prior-reference
+          node qa-support/qa/runtime-manifest.mjs prior-reference/package > candidate-assets/prior/runtime-manifest.json
+          rm -r prior-reference
         env:
           GH_TOKEN: ${{ github.token }}
           VALIDATOR_EXPECTED_TAG: ${{ inputs.release_tag }}

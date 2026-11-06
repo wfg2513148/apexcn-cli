@@ -11,7 +11,7 @@ function fixture() {
     mkdirSync(join(root, directory), { recursive: true });
   }
   for (const [name, content] of Object.entries({
-    "package.json": "{}", "dist/index.js": "same entry", "dist/commands/content.js": "candidate code",
+    "package.json": JSON.stringify({ dependencies: { commander: "1", "lossless-json": "1" } }), "dist/index.js": "same entry", "dist/commands/content.js": "candidate code",
     "node_modules/commander/package.json": "{}", "node_modules/lossless-json/package.json": "{}",
     "scripts/lifecycle-agent.ps1": "candidate script", "scripts/lifecycle-agent.sh": "candidate script"
   })) writeFileSync(join(root, name), content);
@@ -46,5 +46,16 @@ test("rejects hard-linked runtime files", () => {
   try {
     linkSync(join(root, "package.json"), join(root, "dist/hardlink.js"));
     assert.throws(() => runtimeManifest(root), /unsupported runtime file type/);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("binds the dependencies declared by the installed version", () => {
+  const root = fixture();
+  try {
+    rmSync(join(root, "node_modules/lossless-json"), { recursive: true, force: true });
+    writeFileSync(join(root, "package.json"), JSON.stringify({ dependencies: { commander: "1" } }));
+    assert.ok(runtimeManifest(root).files.some((entry) => entry.path === "node_modules/commander/package.json"));
+    rmSync(join(root, "node_modules/commander"), { recursive: true, force: true });
+    assert.throws(() => runtimeManifest(root), /missing runtime file/);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

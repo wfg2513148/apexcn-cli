@@ -74,15 +74,17 @@ function setArchive(path, checksumPath) {
 function installedRoot() {
   return [install, join(install, "package"), join(install, "cli")].find((path) => existsSync(join(path, "package.json")));
 }
-function recordInstalledCandidate(label) {
+function recordInstalled(label, expectedVersion) {
   const cliRoot = installedRoot();
   assert.ok(cliRoot, "installed package root missing");
   const entry = join(cliRoot, "dist", "index.js");
   const entrySha256 = sha(entry);
   const launcherSha256 = sha(launcher);
-  const dependencies = Object.fromEntries(["commander", "lossless-json"].map((name) => [name,
+  const metadata = JSON.parse(readFileSync(join(cliRoot, "package.json"), "utf8"));
+  const dependencies = Object.fromEntries(Object.keys(metadata.dependencies ?? {}).sort().map((name) => [name,
     existsSync(join(cliRoot, "node_modules", name, "package.json"))]));
-  const observation = { label, entrySha256, launcherSha256, dependencies };
+  const observation = { label, expectedVersion, actualVersion: metadata.version, installationRoot: cliRoot,
+    entryPath: entry, launcherPath: launcher, entrySha256, launcherSha256, dependencies };
   report.installedChecks.push(observation);
   let actualManifest;
   try { actualManifest = runtimeManifest(cliRoot); }
@@ -90,12 +92,15 @@ function recordInstalledCandidate(label) {
   observation.runtimeManifest = actualManifest;
   observation.runtimeManifestSha256 = manifestSha(actualManifest);
   observation.runtimeFileCount = actualManifest.files.length;
-  assert.equal(entrySha256, report.expectedEntrySha256, `${label}: installed entry digest mismatch`);
-  assert.equal(observation.runtimeManifestSha256, report.expectedRuntimeManifestSha256, `${label}: installed runtime tree mismatch`);
+  const candidateVersion = expectedVersion === "1.3.0";
+  assert.equal(metadata.version, expectedVersion, `${label}: installed package version mismatch`);
+  assert.equal(entrySha256, candidateVersion ? report.expectedEntrySha256 : report.expectedPriorEntrySha256, `${label}: installed entry digest mismatch`);
+  assert.equal(observation.runtimeManifestSha256, candidateVersion ? report.expectedRuntimeManifestSha256 : report.expectedPriorRuntimeManifestSha256, `${label}: installed runtime tree mismatch`);
   assert.equal(readFileSync(launcher, "ascii").replace(/\r\n/g, "\n").trimEnd(),
     `@echo off\nnode "${entry}" %*`, `${label}: launcher content mismatch`);
-  if (report.expectedLauncherSha256 === undefined) report.expectedLauncherSha256 = launcherSha256;
-  assert.equal(launcherSha256, report.expectedLauncherSha256, `${label}: launcher digest changed`);
+  const launcherKey = candidateVersion ? "expectedLauncherSha256" : "expectedPriorLauncherSha256";
+  if (report[launcherKey] === undefined) report[launcherKey] = launcherSha256;
+  assert.equal(launcherSha256, report[launcherKey], `${label}: launcher digest changed`);
   for (const [dependency, present] of Object.entries(dependencies)) {
     assert.ok(present, `${label}: ${dependency} missing`);
   }
@@ -104,6 +109,8 @@ try {
   assert.equal(process.platform, "win32", "Real Windows is required");
   assert.equal(process.version, "v20.20.2", "Node 20.20.2 is required for this matrix");
   assert.ok(expectedShell === "5.1" || expectedShell === "7", "Expected PowerShell version is required");
+  report.nodeExecutablePath = process.execPath;
+  report.nodeExecutableSha256 = sha(process.execPath);
   report.actualCandidateSha256 = sha(candidate);
   assert.equal(report.actualCandidateSha256, candidateSha, "candidate digest mismatch");
   report.expectedEntrySha256 = readFileSync(join(assets, "candidate-entry.sha256"), "utf8").trim();
@@ -137,9 +144,30 @@ try {
   assert.equal(report.expectedRuntimeManifestSha256, report.ubuntuRuntimeManifestSha256, "archive runtime tree differs between Windows and Ubuntu");
   report.actualPriorSha256 = sha(prior);
   assert.equal(report.actualPriorSha256, priorSha, "prior digest mismatch");
+  const priorReference = join(root, "prior-reference");
+  mkdirSync(priorReference);
+  const extractedPrior = spawnSync("tar.exe", ["-xzf", prior, "-C", priorReference], {
+    cwd: root, env, timeout: 120000, maxBuffer: 8 * 1024 * 1024
+  });
+  if (extractedPrior.error || extractedPrior.signal) report.cleanupDeferred = true;
+  report.priorArchiveExtraction = { status: extractedPrior.status, signal: extractedPrior.signal,
+    error: extractedPrior.error?.message, stderr: extractedPrior.stderr?.toString("utf8") ?? "" };
+  assert.equal(extractedPrior.status, 0, "prior archive extraction failed");
+  assert.ok(!extractedPrior.error && !extractedPrior.signal, "prior archive extraction was incomplete");
+  const priorManifest = runtimeManifest(join(priorReference, "package"));
+  const ubuntuPriorManifest = JSON.parse(readFileSync(join(assets, "prior", "runtime-manifest.json"), "utf8"));
+  report.priorArchiveRuntimeManifest = priorManifest;
+  report.expectedPriorRuntimeManifestSha256 = manifestSha(priorManifest);
+  report.ubuntuPriorRuntimeManifestSha256 = manifestSha(ubuntuPriorManifest);
+  report.expectedPriorEntrySha256 = priorManifest.files.find((file) => file.path === "dist/index.js").sha256;
+  assert.equal(report.expectedPriorRuntimeManifestSha256, report.ubuntuPriorRuntimeManifestSha256, "prior archive runtime tree differs between Windows and Ubuntu");
   const shellVersion = run("shell version", ["-Command", "$PSVersionTable.PSVersion.ToString()"]);
   report.shellVersion = shellVersion.stdout.trim();
   assert.match(report.shellVersion, expectedShell === "5.1" ? /^5\.1(?:\.|$)/ : /^7(?:\.|$)/, "PowerShell version mismatch");
+  const launcherNode = run("launcher node identity", ["-Command", "& $env:ComSpec /d /c 'node -p process.execPath'; exit $LASTEXITCODE"]);
+  report.launcherNodeExecutablePath = launcherNode.stdout.trim();
+  report.launcherNodeExecutableSha256 = sha(report.launcherNodeExecutablePath);
+  assert.equal(report.launcherNodeExecutableSha256, report.nodeExecutableSha256, "launcher Node executable SHA mismatch");
   mkdirSync(dirname(config), { recursive: true });
   writeFileSync(config, configText);
   const priorChecksums = join(root, "prior-checksums.txt");
@@ -150,12 +178,13 @@ try {
   setArchive(prior, priorChecksums);
   run("install 1.2.2", ["-File", installer]);
   assert.equal(invokeLauncher("prior version", "--version").stdout.trim(), "1.2.2");
+  recordInstalled("install prior", "1.2.2");
   assert.equal(readFileSync(config, "utf8"), configText);
 
   setArchive(candidate, candidateChecksums);
   invokeLauncher("upgrade 1.2.2 to candidate", "update");
   assert.equal(invokeLauncher("candidate version", "--version").stdout.trim(), "1.3.0");
-  recordInstalledCandidate("upgrade to candidate");
+  recordInstalled("upgrade to candidate", "1.3.0");
   assert.match(invokeLauncher("candidate v2 help", "admin operations-v2 --help").stdout, /--user-id/);
   assert.equal(readFileSync(config, "utf8"), configText);
   const previous = readdirSync(backups).find((name) => name.startsWith("1.2.2-"));
@@ -167,7 +196,7 @@ try {
   const failed = invokeLauncher("failed checksum update", "update", true);
   assert.match(failed.stdout + failed.stderr, /Checksum verification failed/i);
   assert.equal(invokeLauncher("version after failed update", "--version").stdout.trim(), "1.3.0");
-  recordInstalledCandidate("after failed update");
+  recordInstalled("after failed update", "1.3.0");
   assert.equal(readFileSync(config, "utf8"), configText);
 
   const lifecycle = () => {
@@ -177,23 +206,24 @@ try {
   };
   run("rollback to 1.2.2", ["-File", lifecycle(), "rollback", "-Backup", join(backups, previous), "-Yes"]);
   assert.equal(invokeLauncher("version after rollback", "--version").stdout.trim(), "1.2.2");
+  recordInstalled("after rollback", "1.2.2");
   assert.equal(readFileSync(config, "utf8"), configText);
 
   setArchive(candidate, candidateChecksums);
   run("shell-native upgrade to candidate", ["-File", lifecycle(), "upgrade"]);
   assert.equal(invokeLauncher("shell-native upgraded version", "--version").stdout.trim(), "1.3.0");
-  recordInstalledCandidate("shell-native upgrade");
+  recordInstalled("shell-native upgrade", "1.3.0");
   assert.equal(readFileSync(config, "utf8"), configText);
   setArchive(candidate, badChecksums);
   const shellFailed = run("shell-native failed checksum upgrade", ["-File", lifecycle(), "upgrade"], true);
   assert.match(shellFailed.stdout + shellFailed.stderr, /Checksum verification failed/i);
   assert.equal(invokeLauncher("version after shell-native failed upgrade", "--version").stdout.trim(), "1.3.0");
-  recordInstalledCandidate("after shell-native failed upgrade");
+  recordInstalled("after shell-native failed upgrade", "1.3.0");
   assert.equal(readFileSync(config, "utf8"), configText);
   setArchive(candidate, candidateChecksums);
   run("reinstall candidate", ["-File", installer]);
   assert.equal(invokeLauncher("reinstalled candidate version", "--version").stdout.trim(), "1.3.0");
-  recordInstalledCandidate("reinstall candidate");
+  recordInstalled("reinstall candidate", "1.3.0");
   assert.equal(readFileSync(config, "utf8"), configText);
   run("uninstall candidate", ["-File", lifecycle(), "uninstall", "-Yes"]);
   assert.equal(existsSync(launcher), false, "launcher still exists after uninstall");
@@ -230,12 +260,16 @@ try {
   }
   process.stdout.write(`${JSON.stringify({
     ok: report.ok, cleaned: report.cleaned, shell, shellVersion: report.shellVersion,
-    node: report.node, expectedCandidateSha256: report.expectedCandidateSha256, actualCandidateSha256: report.actualCandidateSha256,
+    node: report.node, nodeExecutablePath: report.nodeExecutablePath, nodeExecutableSha256: report.nodeExecutableSha256,
+    launcherNodeExecutablePath: report.launcherNodeExecutablePath, launcherNodeExecutableSha256: report.launcherNodeExecutableSha256,
+    expectedCandidateSha256: report.expectedCandidateSha256, actualCandidateSha256: report.actualCandidateSha256,
     expectedPriorSha256: report.expectedPriorSha256, actualPriorSha256: report.actualPriorSha256,
     expectedEntrySha256: report.expectedEntrySha256, windowsArchiveEntrySha256: report.windowsArchiveEntrySha256,
-    archiveEntryExtraction: report.archiveEntryExtraction, archiveExtraction: report.archiveExtraction,
+    archiveEntryExtraction: report.archiveEntryExtraction, archiveExtraction: report.archiveExtraction, priorArchiveExtraction: report.priorArchiveExtraction,
     expectedRuntimeManifestSha256: report.expectedRuntimeManifestSha256, ubuntuRuntimeManifestSha256: report.ubuntuRuntimeManifestSha256,
-    expectedRuntimeFileCount: report.expectedRuntimeFileCount, expectedLauncherSha256: report.expectedLauncherSha256,
+    expectedRuntimeFileCount: report.expectedRuntimeFileCount, expectedPriorRuntimeManifestSha256: report.expectedPriorRuntimeManifestSha256,
+    ubuntuPriorRuntimeManifestSha256: report.ubuntuPriorRuntimeManifestSha256,
+    expectedLauncherSha256: report.expectedLauncherSha256, expectedPriorLauncherSha256: report.expectedPriorLauncherSha256,
     installedChecks: report.installedChecks.map(({ runtimeManifest: _manifest, ...summary }) => summary),
     steps: report.steps.map((step) => ({ ...step, stdout: step.stdout.slice(0, 4096), stderr: step.stderr.slice(0, 4096) })),
     error: report.error, cleanupDeferred: report.cleanupDeferred
