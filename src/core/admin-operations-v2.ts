@@ -1,4 +1,4 @@
-import { isLosslessNumber, isSafeNumber, LosslessNumber, parse, splitNumber, stringify } from "lossless-json";
+import { isLosslessNumber, splitNumber } from "lossless-json";
 import { isRecord } from "../output.js";
 
 type RecordValue = Record<string, unknown>;
@@ -9,18 +9,6 @@ export const ADMIN_V2_FORBIDDEN_FIELDS = [
   "email", "emailaddress", "phone", "phonenumber", "password", "token", "accesstoken", "refreshtoken", "cookie", "setcookie",
   "searchkeyword", "searchkeywords", "xforwardedfor", "apikeyvalue"
 ];
-
-export function parseAdminOperationsV2Json(text: string): unknown {
-  return parse(text, undefined, {
-    parseNumber: (value: string) => isSafeNumber(value, { approx: false }) ? Number(value) : new LosslessNumber(value)
-  });
-}
-
-export function stringifyAdminOperationsV2Json(value: unknown, pretty: boolean): string {
-  const output = stringify(value, undefined, pretty ? 2 : undefined);
-  if (output === undefined) throw new Error("Unable to serialize administrator operations v2 response.");
-  return output;
-}
 
 function integerCount(value: unknown): bigint | undefined {
   if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) return BigInt(value);

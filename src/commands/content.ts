@@ -5,7 +5,8 @@ import { Command, InvalidArgumentError, Option } from "commander";
 import { ConfigFileError } from "../config.js";
 import { currentContentLanguage, runWithCliRequestContext } from "../core/request-context.js";
 import { createApiClient } from "../core/api-client.js";
-import { isAdminOperationsV2Response, matchesAdminOperationsV2Filters, stringifyAdminOperationsV2Json } from "../core/admin-operations-v2.js";
+import { isAdminOperationsV2Response, matchesAdminOperationsV2Filters } from "../core/admin-operations-v2.js";
+import { parsePreciseJson, stringifyPreciseJson } from "../core/precise-json.js";
 import { assessCapabilityCompatibility } from "../core/capability-compatibility.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
@@ -315,7 +316,7 @@ export function createAdminCommand(options: ApiCommandOptions): Command {
     .option("--json", "pretty-print JSON")
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
     .action(async (commandOptions: AdminOperationsV2Options) => {
-      if (!validateFormatOptions(options, commandOptions) || !validateAdminOperationsDateRange(options, commandOptions)) return;
+      if (!validateFormatOptions(options, commandOptions) || !validateAdminOperationsV2DateRange(options, commandOptions)) return;
       await runApi(options, commandOptions, async (session) => {
         const capabilities = await runWithCliRequestContext("me_capabilities", () =>
           requestJson(session.baseUrl, "/api/v1/capabilities", { token: session.token }));
@@ -342,7 +343,7 @@ export function createAdminCommand(options: ApiCommandOptions): Command {
         }
         const format = outputFormat(commandOptions);
         if (format === "text") printData(options, data, format, formatAdminOperationsV2Text);
-        else options.stdout(`${stringifyAdminOperationsV2Json(data, format === "pretty")}\n`);
+        else options.stdout(`${stringifyPreciseJson(data, format === "pretty")}\n`);
       });
     });
   return admin;
@@ -582,18 +583,21 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
 
   topic
     .command("view")
-    .argument("<id>", "topic id", parsePositiveInteger)
+    .argument("<id>", "topic id", parseTopicViewId)
     .option("--json", "pretty-print JSON")
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
-    .action(async (id: number, commandOptions: FormatOption) => {
+    .action(async (id: number | string, commandOptions: FormatOption) => {
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
       await runApi(options, commandOptions, async (session) => {
-        const me = await requestJson(session.baseUrl, "/api/v1/me", { token: session.token });
-        const data = bindTopicOwnership(await viewTopic(createApiClient(session), id), me);
+        const me = await requestJson(session.baseUrl, "/api/v1/me", { token: session.token, parseResponse: parsePreciseJson });
+        const data = bindTopicOwnership(await viewTopic(createApiClient(session), id, parsePreciseJson), me);
         const topic = topicFromData(data);
-        printData(options, withReadProvenance(data, "topic-detail", topic ? [topic] : []), outputFormat(commandOptions), formatTopicText);
+        const result = withReadProvenance(data, "topic-detail", topic ? [topic] : []);
+        const format = outputFormat(commandOptions);
+        if (format === "text") printData(options, result, format, formatTopicText);
+        else options.stdout(`${stringifyPreciseJson(result, format === "pretty")}\n`);
       });
     });
 
@@ -1316,6 +1320,21 @@ function validateAdminOperationsDateRange(options: CommandIo, dates: Pick<AdminO
   const days = Math.floor((to - from) / 86_400_000) + 1;
   if (days > 90) {
     printError(options, { type: "validation", message: "Admin operations date range must not exceed 90 days", exitCode: 1 }, undefined, usesJsonOutput(dates));
+    process.exitCode = 1;
+    return false;
+  }
+  return true;
+}
+
+function validateAdminOperationsV2DateRange(options: CommandIo, dates: Pick<AdminOperationsOptions, "from" | "to" | "json" | "format">): boolean {
+  if (!validateAdminOperationsDateRange(options, dates)) return false;
+  if (!dates.to) return true;
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(new Date()).map(({ type, value }) => [type, value]));
+  const today = `${parts.year}-${parts.month}-${parts.day}`;
+  if (dates.to > today) {
+    printError(options, { type: "validation", message: "--to must not be later than the current Shanghai date", exitCode: 1 }, undefined, usesJsonOutput(dates));
     process.exitCode = 1;
     return false;
   }
@@ -2045,8 +2064,8 @@ function bindTopicOwnership(data: unknown, me: unknown): unknown {
 }
 
 async function requireOwnedTopic(session: Session, topicId: number): Promise<void> {
-  const me = await requestJson(session.baseUrl, "/api/v1/me", { token: session.token });
-  const data = await viewTopic(createApiClient(session), topicId);
+  const me = await requestJson(session.baseUrl, "/api/v1/me", { token: session.token, parseResponse: parsePreciseJson });
+  const data = await viewTopic(createApiClient(session), topicId, parsePreciseJson);
   const currentUserId = accountId(me);
   const authorId = topicAuthorId(data);
   if (!currentUserId || !authorId) {
@@ -2567,7 +2586,20 @@ function parsePositiveInteger(value: string): number {
   if (parsed < 1) {
     throw new InvalidArgumentError(`Expected a positive integer: ${value}`);
   }
+  if (!Number.isSafeInteger(parsed)) {
+    throw new InvalidArgumentError(`Expected a positive integer within the safe range: ${value}`);
+  }
   return parsed;
+}
+
+function parseTopicViewId(value: string): number | string {
+  const parsed = Number(value);
+  if (Number.isSafeInteger(parsed) && parsed > 0) return parsed;
+  if (/^\d+$/.test(value)) {
+    const normalized = value.replace(/^0+/, "");
+    if (normalized) return normalized;
+  }
+  throw new InvalidArgumentError(`Expected a positive integer: ${value}`);
 }
 
 function parseRelationTarget(value: string): RelationTarget {

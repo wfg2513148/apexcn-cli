@@ -66,6 +66,7 @@ function mockApi(inventory: unknown = capabilities, result: unknown = payload): 
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
   process.exitCode = undefined;
 });
 
@@ -203,6 +204,35 @@ describe("administrator operations v2", () => {
     expect(process.exitCode).toBe(1);
     expect(app.stdout.join("")).toBe("");
     expect(app.stderr.join("")).not.toBe("");
+  });
+
+  test.each([
+    ["2026-07-01T15:59:59Z", "2026-07-02"],
+    ["2026-07-01T16:00:00Z", "2026-07-03"]
+  ])("rejects Shanghai-future date %s before an API request", async (now, futureDate) => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(now));
+    const app = await setup(mockApi());
+    await app.program.parseAsync(["node", "apexcn", "admin", "operations-v2", "--from", futureDate, "--to", futureDate, "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(app.stdout.join("")).toBe("");
+    expect(JSON.parse(app.stderr.join(""))).toMatchObject({ error: { type: "validation" } });
+    expect(app.fetch).not.toHaveBeenCalled();
+  });
+
+  test("accepts the new Shanghai day at UTC 16:00", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-07-01T16:00:00Z"));
+    const result = {
+      ...payload,
+      window: { from: "2026-07-02", to: "2026-07-02", days: 1, timeZone: "Asia/Shanghai" },
+      daily: [{ ...payload.daily[6], date: "2026-07-02" }]
+    };
+    const app = await setup(mockApi(capabilities, result));
+    await app.program.parseAsync(["node", "apexcn", "admin", "operations-v2", "--from", "2026-07-02", "--to", "2026-07-02", "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    expect(JSON.parse(app.stdout.join("")).window.to).toBe("2026-07-02");
+    expect(app.fetch).toHaveBeenCalledTimes(2);
   });
 
   test.each(["0", "-1", "not-a-number", "10000000000000000000000000000", "1.0000000000000001", "1e2"])("rejects invalid user id %s", async (userId) => {

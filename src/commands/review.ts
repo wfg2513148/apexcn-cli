@@ -572,9 +572,9 @@ function isReplyDraft(value: unknown): value is { kind: "reply-draft"; schemaVer
     value.kind === "reply-draft" &&
     value.schemaVersion === 1 &&
     typeof value.topicId === "number" &&
-    Number.isInteger(value.topicId) &&
+    Number.isSafeInteger(value.topicId) &&
     value.topicId > 0 &&
-    (value.parentPostId === null || (typeof value.parentPostId === "number" && Number.isInteger(value.parentPostId) && value.parentPostId > 0)) &&
+    (value.parentPostId === null || (typeof value.parentPostId === "number" && Number.isSafeInteger(value.parentPostId) && value.parentPostId > 0)) &&
     typeof value.content === "string";
 }
 
@@ -596,7 +596,7 @@ function readStdin(options: ReviewCommandOptions): Promise<string> {
 
 function parsePositiveInteger(value: string): number {
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1) {
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
     throw new InvalidArgumentError(`Expected a positive integer: ${value}`);
   }
   return parsed;
@@ -607,7 +607,7 @@ function positiveIntegerOption(value: string | undefined, name: string, issues: 
     return undefined;
   }
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1) {
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
     issues.push({ code: `invalid-${name}`, severity: "issue", message: `Expected a positive integer for --${name}: ${value}` });
     return undefined;
   }

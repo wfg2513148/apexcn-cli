@@ -1,6 +1,6 @@
 import type { ApexcnApiClient } from "./api-client.js";
 import type { ContentLanguage } from "./content-language.js";
-import { parseAdminOperationsV2Json } from "./admin-operations-v2.js";
+import { parsePreciseJson } from "./precise-json.js";
 
 export type TopicFilters = Record<string, string | number | boolean | undefined>;
 
@@ -20,7 +20,7 @@ export function adminOperations(client: ApexcnApiClient, filters: AdminOperation
 }
 
 export function adminOperationsV2(client: ApexcnApiClient, filters: AdminOperationsFilters = {}): Promise<unknown> {
-  return client.get("/api/v1/admin/operations/v2", filters, parseAdminOperationsV2Json);
+  return client.get("/api/v1/admin/operations/v2", filters, parsePreciseJson);
 }
 
 export function searchTopics(client: ApexcnApiClient, keyword: string, filters: TopicFilters = {}): Promise<unknown> {
@@ -31,8 +31,8 @@ export function listTopics(client: ApexcnApiClient, filters: TopicFilters = {}):
   return client.get("/api/v1/topics", filters);
 }
 
-export function viewTopic(client: ApexcnApiClient, topicId: number): Promise<unknown> {
-  return client.get(`/api/v1/topics/${topicId}`);
+export function viewTopic(client: ApexcnApiClient, topicId: number | string, parseResponse?: (text: string) => unknown): Promise<unknown> {
+  return client.get(`/api/v1/topics/${topicId}`, undefined, parseResponse);
 }
 
 export function recentTopics(client: ApexcnApiClient, options: { pageSize?: number; categoryId?: number; fromDate?: string; toDate?: string; cursor?: string } = {}): Promise<unknown> {

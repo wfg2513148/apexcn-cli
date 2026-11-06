@@ -1685,7 +1685,7 @@ function validateDateRange(io: CommandIo, fromDate?: string, toDate?: string, js
 
 function parsePositiveInteger(value: string): number {
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1) {
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
     throw new InvalidArgumentError(`Expected a positive integer: ${value}`);
   }
   return parsed;

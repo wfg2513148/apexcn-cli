@@ -1912,6 +1912,86 @@ describe("content commands", () => {
     }
   });
 
+  test("topic view preserves a large topic ID and response integers exactly", async () => {
+    const topicId = "1234567890123456789012345678";
+    const accountId = "9007199254740993";
+    const viewCount = "9007199254740993123456789012";
+    const { program, stdout, fetch } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? `{"user":{"id":${accountId}},"requestId":"req-me"}`
+        : `{"topic":{"id":${topicId},"createdBy":${accountId},"viewCount":${viewCount},"title":"Precision"},"requestId":"req-topic"}`;
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", topicId, "--json"]);
+
+    expect(fetch).toHaveBeenLastCalledWith(`https://oracleapex.cn/ords/test/api/v1/topics/${topicId}`, expect.any(Object));
+    expect(stdout.join("")).toContain(`"id": ${topicId}`);
+    expect(stdout.join("")).toContain(`"createdBy": ${accountId}`);
+    expect(stdout.join("")).toContain(`"viewCount": ${viewCount}`);
+    expect(stdout.join("")).toContain('"canEdit": true');
+    expect(stdout.join("")).toContain('"canDelete": true');
+  });
+
+  test("topic view does not grant ownership to adjacent large account IDs", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":9007199254740992},"requestId":"req-me"}'
+        : '{"topic":{"id":42,"createdBy":9007199254740993,"canEdit":true,"canDelete":true},"requestId":"req-topic"}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--json"]);
+
+    expect(stdout.join("")).toContain('"canEdit": false');
+    expect(stdout.join("")).toContain('"canDelete": false');
+    expect(stdout.join("")).toContain('"createdBy": 9007199254740993');
+  });
+
+  test("topic view text preserves large numeric fields", async () => {
+    const topicId = "1234567890123456789012345678";
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":1}}'
+        : `{"topic":{"id":${topicId},"viewCount":9007199254740993,"title":"Precision"}}`;
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", topicId, "--format", "text"]);
+
+    expect(stdout.join("")).toContain(`id: ${topicId}\n`);
+    expect(stdout.join("")).toContain("Views: 9007199254740993\n");
+  });
+
+  test("topic delete rejects an unsafe integer ID before making a request", async () => {
+    const { program, fetch } = await configuredProgram(async () => Response.json({ ok: true }));
+    exitOverrideTree(program);
+
+    await expect(program.parseAsync([
+      "node", "apexcn", "topic", "delete", "9007199254740993",
+      "--if-version", "1", "--confirm-title", "Example", "--preview", "--json"
+    ])).rejects.toMatchObject({ code: "commander.invalidArgument" });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("topic deletion preview refuses adjacent large account IDs", async () => {
+    const { program, stdout, stderr, fetch } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":9007199254740992},"requestId":"req-me"}'
+        : '{"topic":{"id":42,"createdBy":9007199254740993},"requestId":"req-topic"}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync([
+      "node", "apexcn", "topic", "delete", "42", "--if-version", "1", "--confirm-title", "Example", "--preview", "--json"
+    ]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toMatchObject({ error: { type: "safety" } });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   test("topic view supports text format", async () => {
     const { program, stdout, fetch } = await configuredProgram(async () =>
       Response.json({
