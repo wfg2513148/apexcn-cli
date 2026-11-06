@@ -2,10 +2,9 @@ import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import { join, posix } from "node:path";
 
-export function inspectReleaseArchive(archivePath) {
+export function parseReleaseArchiveListing(list, typeListing) {
   const entries = new Set();
-  const list = execFileSync("tar", ["-tzPf", archivePath], { encoding: "utf8" });
-  for (const raw of list.split("\n").filter(Boolean)) {
+  for (const raw of list.split(/\r?\n/).filter(Boolean)) {
     const entry = raw.replace(/^(?:\.\/)+/, "");
     if (raw !== raw.trim() || /[\\:\x00-\x1f\x7f]/.test(entry) || !entry.startsWith("package/")
       || entry.split("/").includes("..") || posix.normalize(entry) !== entry) {
@@ -14,11 +13,17 @@ export function inspectReleaseArchive(archivePath) {
     if (entries.has(entry)) throw new Error(`release package contains duplicate path ${entry}`);
     entries.add(entry);
   }
-  const types = execFileSync("tar", ["-tvzPf", archivePath], { encoding: "utf8" }).split("\n").filter(Boolean);
+  const types = typeListing.split(/\r?\n/).filter(Boolean);
   if (types.some((line) => line[0] !== "-" && line[0] !== "d")) {
     throw new Error("release package contains unsupported entry type");
   }
   return entries;
+}
+
+export function inspectReleaseArchive(archivePath) {
+  const list = execFileSync("tar", ["-tzPf", archivePath], { encoding: "utf8" });
+  const types = execFileSync("tar", ["-tvzPf", archivePath], { encoding: "utf8" });
+  return parseReleaseArchiveListing(list, types);
 }
 
 export function readArchiveJson(archivePath, entry) {

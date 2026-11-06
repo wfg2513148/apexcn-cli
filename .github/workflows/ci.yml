@@ -61,7 +61,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - run: npx vitest run test/install-agent.test.ts test/lifecycle-agent.test.ts test/release-version.test.ts
+      - run: npx vitest run test/install-agent.test.ts test/lifecycle-agent.test.ts test/release-version.test.ts test/inspect-release-archive.test.ts
         env:
           APEXCN_TEST_POWERSHELL: ${{ matrix.executable }}
           APEXCN_WINDOWS_REPORT_PATH: reports/${{ matrix.id }}-lifecycle.json
