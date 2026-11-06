@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "product": "apexcn-cli",
-  "updatedAt": "2026-11-06T09:36:49+00:00",
+  "updatedAt": "2026-11-06T11:39:47+00:00",
   "activeOnly": true,
   "issues": [
     {
@@ -103,6 +103,41 @@
         "firstAttemptEvidencePreserved": true,
         "actualOutputSummary": "The first attempt did not reach the aggregate route because the synthetic fixture path was wrong. A retained follow-up showed a 28-digit input beginning with zero sent with that zero removed; the reported integer value is equivalent and no wrong-user selection was demonstrated.",
         "expectedUserOutcome": "For a supported 1–28 digit positive decimal user ID, preserve the supplied digits in the request without rounding; reject overlength input before network access.",
+        "responsibilityAssessment": "cli"
+      }
+    },
+    {
+      "id": "CLI-20261106-WORKFLOW-PREVIEW-INTEGRITY",
+      "status": "in_progress",
+      "priority": "P1",
+      "owner": "cli",
+      "milestoneId": "0.9",
+      "title": "Bind workflow verification, approval and execution to the original preview",
+      "description": "An independent validator changed a preview request body while retaining its payload hash; workflow verify reported no issues and a follow-up approval accepted the changed request. Preserve and validate preview integrity and avoid sending a different request after approval checks.",
+      "targetVersion": "1.3.0",
+      "validatorRound": "community-api-cli-v2-20261106-round-2",
+      "blockingMilestones": [],
+      "acceptanceCriterionIds": [],
+      "dependencies": [],
+      "source": {
+        "type": "independent-validator-thread",
+        "threadId": "01a1afe3-d896-7400-9020-53a91af837e2",
+        "assignmentRef": "community-api-cli-v2-20261106-round-2",
+        "report": "/Users/kwang/apexcn-cli-test/runs/independent-v130-20261106-r2-BTuwW0FL/REPORT.md",
+        "findingRefs": [
+          "/Users/kwang/apexcn-cli-test/runs/independent-v130-20261106-r2-BTuwW0FL/attempts/M110-Q-190/first-attempt.json",
+          "/Users/kwang/apexcn-cli-test/runs/independent-v130-20261106-r2-BTuwW0FL/attempts/M110-Q-190/workflow-tamper-analysis.json",
+          "/Users/kwang/apexcn-cli-test/runs/independent-v130-20261106-r2-BTuwW0FL/attempts/M110-Q-190/verify/stdout.txt",
+          "/Users/kwang/apexcn-cli-test/runs/independent-v130-20261106-r2-BTuwW0FL/attempts/M110-Q-190/approval-followup.stdout.txt"
+        ],
+        "scenarioOrExplorationRef": [
+          "M110-Q-190 tampered workflow preview"
+        ],
+        "observedCliVersion": "1.3.0",
+        "persona": "novice",
+        "firstAttemptEvidencePreserved": true,
+        "actualOutputSummary": "The first verification reported ok with zero issues after preview content changed while payloadHash stayed unchanged; a separately retained approval follow-up accepted that changed request. No execution or real write was performed. The first-attempt aggregate output digest did not match the separately retained output files, so its independent integrity remains limited.",
+        "expectedUserOutcome": "Reject altered previews before approval and verification, and ensure execution sends only the same request that was approved.",
         "responsibilityAssessment": "cli"
       }
     }

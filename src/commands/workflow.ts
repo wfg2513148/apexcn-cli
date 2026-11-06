@@ -115,6 +115,29 @@ class WorkflowReviewError extends Error {
   }
 }
 
+class WorkflowIntegrityError extends Error {}
+
+class WorkflowWriteResponseError extends HttpError {
+  constructor(error: HttpError) {
+    super(error.message, error.status, error.statusText, error.requestId, error.body);
+    this.name = "WorkflowWriteResponseError";
+  }
+}
+
+class WorkflowWriteResultError extends Error {
+  constructor() {
+    super("The write may have succeeded, but the server returned an invalid or unsuccessful result.");
+    this.name = "WorkflowWriteResultError";
+  }
+}
+
+class WorkflowWriteEvidenceError extends Error {
+  constructor(error: unknown) {
+    super(`The write may have succeeded, but execution evidence could not be saved: ${errorMessage(error)}`);
+    this.name = "WorkflowWriteEvidenceError";
+  }
+}
+
 class UnsafeWorkflowNumberError extends Error {
   constructor(path: string) {
     super(`Unsafe or imprecise number in workflow artifact: ${path}`);
@@ -154,6 +177,7 @@ type WorkflowRunState = {
   goal: WorkflowRunGoal;
   inputs: WorkflowRunInputs;
   status: WorkflowRunStatus;
+  previewHash?: string;
   createdAt: string;
   updatedAt: string;
   steps: WorkflowRunStep[];
@@ -440,7 +464,7 @@ async function diffWorkflow(io: CommandIo, options: WorkflowDiffOptions): Promis
   }
   const preview = await readOptionalJson(loaded.state.artifacts.preview);
   const approval = await readOptionalJson(loaded.state.artifacts.approval);
-  const previewRequest = verificationPreviewRequest(preview, loaded.state.artifacts.preview, []);
+  const previewRequest = verificationPreviewRequest(preview, loaded.state.artifacts.preview, [], loaded.state.runId, expectedWorkflowVersion(loaded.state));
   const previewTarget = verificationWorkflowTarget(preview);
   const approvalRequest = isRecord(approval) ? verificationApprovalRequest(approval.request) : undefined;
   const approvalTarget = isRecord(approval) ? verificationWorkflowTarget(approval.target) : undefined;
@@ -448,6 +472,7 @@ async function diffWorkflow(io: CommandIo, options: WorkflowDiffOptions): Promis
   const approvalHash = isRecord(approval) && typeof approval.previewHash === "string" ? approval.previewHash : undefined;
   const allowed = Boolean(
     currentHash
+    && loaded.state.previewHash === currentHash
     && approvalHash
     && currentHash === approvalHash
     && previewTarget
@@ -515,6 +540,11 @@ async function approveWorkflow(io: CommandIo, options: WorkflowApproveOptions): 
     return;
   }
   const { state, runDir } = loaded;
+  if (state.status === "execution-uncertain" || workflowExecutionAttempted(state)) {
+    printError(io, { type: "safety", message: uncertainWorkflowGuidance() }, undefined, options.json);
+    process.exitCode = 1;
+    return;
+  }
   if (state.status !== "preview-ready") {
     printError(io, { type: "validation", message: `Workflow run must be preview-ready before approval; current status is ${state.status}` });
     process.exitCode = 1;
@@ -523,7 +553,7 @@ async function approveWorkflow(io: CommandIo, options: WorkflowApproveOptions): 
 
   let preview: { target: WorkflowTarget; request: WorkflowPreviewRequest };
   try {
-    preview = await workflowPreviewEnvelope(state.artifacts.preview);
+    preview = await workflowPreviewEnvelope(state);
   } catch (error) {
     printError(io, { type: "validation", message: errorMessage(error) }, undefined, options.json);
     process.exitCode = 1;
@@ -571,6 +601,14 @@ async function runWorkflow(io: WorkflowCommandOptions, options: WorkflowRunOptio
     process.exitCode = 1;
     return;
   }
+  const previousAttemptMayHaveSucceeded = loaded?.state.status === "execution-uncertain"
+    || loaded?.state.status === "completed"
+    || (loaded ? workflowExecutionAttempted(loaded.state) : false);
+  if (loaded && !options.execute && previousAttemptMayHaveSucceeded) {
+    printError(io, { type: "safety", message: uncertainWorkflowGuidance() }, undefined, options.json);
+    process.exitCode = 1;
+    return;
+  }
   const goal = loaded?.state.goal ?? options.goal;
   if (!goal) {
     printError(io, { type: "validation", message: "Missing --goal for workflow run" });
@@ -590,20 +628,31 @@ async function runWorkflow(io: WorkflowCommandOptions, options: WorkflowRunOptio
       return;
     }
     let approvalError: string | undefined;
+    let previewIntegrityError = false;
     try {
       approvalError = await workflowApprovalError(loaded.state);
     } catch (error) {
-      if (!(error instanceof UnsafeWorkflowNumberError)) throw error;
-      printError(io, { type: "validation", message: error.message, exitCode: 1 }, undefined, options.json);
-      process.exitCode = 1;
-      return;
+      if (error instanceof WorkflowIntegrityError) {
+        approvalError = error.message;
+        previewIntegrityError = true;
+      } else {
+        if (!(error instanceof UnsafeWorkflowNumberError)) throw error;
+        printError(io, { type: "validation", message: error.message, exitCode: 1 }, undefined, options.json);
+        process.exitCode = 1;
+        return;
+      }
     }
     if (approvalError) {
-      loaded.state.nextAction = approvalError.includes("hash mismatch")
+      loaded.state.nextAction = previousAttemptMayHaveSucceeded
+        ? uncertainWorkflowGuidance()
+        : previewIntegrityError
+        ? `Recreate and review the workflow preview, then run apexcn workflow approve --run-dir ${shellArg(loaded.runDir)} --json.`
+        : approvalError.includes("hash mismatch")
         ? `Review ${loaded.state.artifacts.preview} and rerun apexcn workflow approve --run-dir ${shellArg(loaded.runDir)} --json.`
         : `Run apexcn workflow approve --run-dir ${shellArg(loaded.runDir)} --json before executing.`;
       await writeRunState(loaded.runDir, loaded.state);
-      printError(io, { type: "validation", message: approvalError });
+      const message = previousAttemptMayHaveSucceeded ? `${approvalError} ${uncertainWorkflowGuidance()}` : approvalError;
+      printError(io, { type: "validation", message }, undefined, options.json);
       process.exitCode = 1;
       return;
     }
@@ -628,11 +677,22 @@ async function runWorkflow(io: WorkflowCommandOptions, options: WorkflowRunOptio
     return;
   }
   if (options.execute && loaded) {
-    const targetError = await workflowTargetError(loaded.state, session);
+    let targetError: string | undefined;
+    try {
+      targetError = await workflowTargetError(loaded.state, session);
+    } catch (error) {
+      if (!(error instanceof UnsafeWorkflowNumberError) && !(error instanceof WorkflowIntegrityError)) throw error;
+      printError(io, { type: "validation", message: error.message, exitCode: 1 }, undefined, options.json);
+      process.exitCode = 1;
+      return;
+    }
     if (targetError) {
-      loaded.state.nextAction = "Restore the approved profile and base URL, or create and approve a new workflow.";
+      loaded.state.nextAction = previousAttemptMayHaveSucceeded
+        ? uncertainWorkflowGuidance()
+        : "Restore the approved profile and base URL, or create and approve a new workflow.";
       await writeRunState(loaded.runDir, loaded.state);
-      printError(io, { type: "safety", message: targetError });
+      const message = previousAttemptMayHaveSucceeded ? `${targetError} ${uncertainWorkflowGuidance()}` : targetError;
+      printError(io, { type: "safety", message }, undefined, options.json);
       process.exitCode = 1;
       return;
     }
@@ -646,11 +706,13 @@ async function runWorkflow(io: WorkflowCommandOptions, options: WorkflowRunOptio
   try {
     await executeRunSteps(state, runDir, session, options);
   } catch (error) {
-    const uncertain = options.execute === true && isUncertainWriteError(error);
+    const uncertain = options.execute === true && (isUncertainWriteError(error) || previousAttemptMayHaveSucceeded);
     state.status = uncertain ? "execution-uncertain" : "failed";
-    state.nextAction = workflowRecoveryNextAction(error, runDir, options.execute === true, uncertain);
+    state.nextAction = previousAttemptMayHaveSucceeded && !isUncertainWriteError(error)
+      ? uncertainWorkflowGuidance()
+      : workflowRecoveryNextAction(error, runDir, options.execute === true, uncertain);
     await writeRunState(runDir, state);
-    handleRunError(io, error, session, options.json);
+    handleRunError(io, error, session, options.json, previousAttemptMayHaveSucceeded);
     return;
   }
   state.status = options.execute ? "completed" : "preview-ready";
@@ -667,27 +729,36 @@ async function workflowVerificationReport(runDir: string, state: WorkflowRunStat
   const previewRequired = state.status === "preview-ready"
     || state.status === "completed"
     || state.status === "execution-uncertain"
+    || state.previewHash !== undefined
     || executionAttempted;
   const approvalRequired = state.status === "completed" || state.status === "execution-uncertain" || executionAttempted;
   const preview = await readVerificationJson(state.artifacts.preview, issues, "invalid-preview", previewRequired);
-  const previewRequest = preview ? verificationPreviewRequest(preview, state.artifacts.preview, issues) : undefined;
+  const previewRequest = preview !== undefined ? verificationPreviewRequest(preview, state.artifacts.preview, issues, state.runId, expectedWorkflowVersion(state)) : undefined;
   const previewTarget = verificationWorkflowTarget(preview);
-  if (preview && !previewTarget) {
+  if (preview !== undefined && !previewTarget) {
     issues.push({ code: "invalid-preview-target", message: "Preview target is invalid.", path: state.artifacts.preview });
   }
   const previewHash = previewRequest && previewTarget ? workflowPreviewHash(previewTarget, previewRequest) : undefined;
+  if (previewHash) {
+    const anchorError = workflowPreviewAnchorError(state.previewHash, previewHash);
+    if (anchorError && state.previewHash === undefined && state.status === "completed") {
+      warnings.push({ code: "legacy-preview-anchor-missing", message: anchorError, path: state.artifacts.preview });
+    } else if (anchorError) {
+      issues.push({ code: "preview-anchor-mismatch", message: anchorError, path: state.artifacts.preview });
+    }
+  }
 
   const approval = await readVerificationJson(state.artifacts.approval, issues, "invalid-approval", approvalRequired);
-  if (!approval && state.status === "preview-ready") {
+  if (approval === undefined && state.status === "preview-ready") {
     warnings.push({ code: "approval-missing", message: "Workflow preview has not been approved.", path: state.artifacts.approval });
   }
-  const approvalSummary = approval ? verificationApproval(approval, state, previewTarget, previewHash, issues) : undefined;
+  const approvalSummary = approval !== undefined ? verificationApproval(approval, state, previewTarget, previewHash, issues) : undefined;
 
   const execute = await readVerificationJson(state.artifacts.execute, issues, "invalid-execute", state.status === "completed");
-  if (!execute && state.status !== "completed") {
+  if (execute === undefined && state.status !== "completed") {
     warnings.push({ code: "execute-missing", message: "Workflow has not executed yet.", path: state.artifacts.execute });
   }
-  const executeSummary = execute ? verificationExecute(execute, approvalSummary?.target, approvalSummary?.request, issues) : undefined;
+  const executeSummary = execute !== undefined ? verificationExecute(execute, approvalSummary?.target, approvalSummary?.request, issues) : undefined;
 
   return {
     kind: "workflow-verification",
@@ -795,6 +866,9 @@ async function verifyWorkflowPolicy(runDir: string, state: WorkflowRunState, rep
   const policy = await readJson(policyPath);
   if (!isWorkflowPolicy(policy)) {
     return { kind: "workflow-policy-verification", schemaVersion: 1, ok: false, policyPath, issues: [{ code: "invalid-policy", message: "Workflow policy schema is invalid.", path: policyPath }] };
+  }
+  if (!report.ok) {
+    issues.push({ code: "policy-workflow-invalid", message: "Workflow verification failed; policy cannot approve execution.", path: runDir });
   }
   const approval = await readOptionalJson(state.artifacts.approval);
   if (policy.defaults.requireApproval && !approval) {
@@ -905,7 +979,11 @@ function workflowAuditEvents(state: WorkflowRunState, report: Record<string, unk
     auditEvent(time, state.runId, "preview", command, previewHash, state.status === "preview-ready" || state.status === "completed" ? "ok" : "blocked", state.nextAction)
   ];
   if (isRecord(report.approval)) {
-    events.push(auditEvent(time, state.runId, "approve", command, previewHash, report.approval.hashMatches === false ? "failed" : "ok", "approval artifact present"));
+    const previewInvalid = Array.isArray(report.issues) && report.issues.some((issue) => isRecord(issue)
+      && (["invalid-preview", "invalid-preview-target", "preview-integrity-mismatch", "preview-anchor-mismatch"].includes(fieldText(issue.code))
+        || (issue.code === "missing-required-artifact" && issue.path === state.artifacts.preview)));
+    events.push(auditEvent(time, state.runId, "approve", command, previewHash,
+      report.approval.valid === true && !previewInvalid ? "ok" : "failed", "approval artifact present"));
   }
   if (isRecord(report.execute)) {
     events.push(auditEvent(time, state.runId, "execute", command, previewHash, report.ok === false ? "failed" : "ok", "execute artifact present"));
@@ -1062,21 +1140,44 @@ function verifyBundleArtifact(artifact: Record<string, unknown>, verification: R
 }
 
 function verifyBundleWorkflowChain(runId: string, status: string, artifacts: Map<string, Record<string, unknown>>, issues: WorkflowVerificationIssue[], warnings: WorkflowVerificationIssue[]): void {
-  bundleJsonArtifact(artifacts, "state", issues, false);
-  const preview = bundleJsonArtifact(artifacts, "preview", issues, status === "preview-ready" || status === "completed" || status === "execution-uncertain");
-  const previewRequest = preview ? verificationPreviewRequest(preview, "bundle:preview", issues) : undefined;
+  const bundleState = bundleJsonArtifact(artifacts, "state", issues, true);
+  if (bundleState !== undefined && (!isRecord(bundleState)
+      || bundleState.kind !== "workflow-run"
+      || bundleState.schemaVersion !== 1
+      || bundleState.runId !== runId
+      || bundleState.status !== status
+      || !isWorkflowRunGoal(bundleState.goal)
+      || !hasSafeWorkflowInputs(bundleState.inputs))) {
+    issues.push({ code: "invalid-state", message: "Bundle state is invalid or does not match the bundle run and status.", path: "bundle:state" });
+  }
+  const preview = bundleJsonArtifact(artifacts, "preview", issues, status === "preview-ready" || status === "completed"
+    || status === "execution-uncertain" || (isRecord(bundleState) && bundleState.previewHash !== undefined));
+  const expectedVersion = isRecord(bundleState) ? expectedWorkflowVersion(bundleState) : undefined;
+  const previewRequest = preview !== undefined ? verificationPreviewRequest(preview, "bundle:preview", issues, runId, expectedVersion) : undefined;
   const previewTarget = verificationWorkflowTarget(preview);
+  if (preview !== undefined && !previewTarget) {
+    issues.push({ code: "invalid-preview-target", message: "Bundle preview target is invalid.", path: "bundle:preview" });
+  }
   const previewHash = previewRequest && previewTarget ? workflowPreviewHash(previewTarget, previewRequest) : undefined;
+  if (previewHash) {
+    const anchor = isRecord(bundleState) ? bundleState.previewHash : undefined;
+    const anchorError = workflowPreviewAnchorError(anchor, previewHash);
+    if (anchorError && anchor === undefined && status === "completed") {
+      warnings.push({ code: "legacy-preview-anchor-missing", message: anchorError, path: "bundle:state" });
+    } else if (anchorError) {
+      issues.push({ code: "preview-anchor-mismatch", message: anchorError, path: "bundle:state" });
+    }
+  }
   const approval = bundleJsonArtifact(artifacts, "approval", issues, status === "completed" || status === "execution-uncertain");
-  if (!approval && status === "preview-ready") {
+  if (approval === undefined && status === "preview-ready") {
     warnings.push({ code: "approval-missing", message: "Bundle preview has not been approved." });
   }
-  const approved = approval ? verifyBundleApproval(runId, approval, previewTarget, previewHash, issues) : undefined;
+  const approved = approval !== undefined ? verifyBundleApproval(runId, approval, previewTarget, previewHash, issues) : undefined;
   const execute = bundleJsonArtifact(artifacts, "execute", issues, status === "completed");
-  if (!execute && status !== "completed") {
+  if (execute === undefined && status !== "completed") {
     warnings.push({ code: "execute-missing", message: "Bundle workflow has not executed yet." });
   }
-  if (execute) {
+  if (execute !== undefined) {
     verifyBundleExecute(execute, approved?.target, approved?.request, issues);
   }
 }
@@ -1226,7 +1327,7 @@ async function readVerificationJson(path: string, issues: WorkflowVerificationIs
   }
 }
 
-function verificationPreviewRequest(preview: unknown, path: string, issues: WorkflowVerificationIssue[]): WorkflowPreviewRequest | undefined {
+function verificationPreviewRequest(preview: unknown, path: string, issues: WorkflowVerificationIssue[], runId: string, expectedVersion: unknown): WorkflowPreviewRequest | undefined {
   if (!isRecord(preview)
       || preview.kind !== "workflow-preview"
       || !isRecord(preview.request)
@@ -1243,7 +1344,13 @@ function verificationPreviewRequest(preview: unknown, path: string, issues: Work
     issues.push({ code: "invalid-preview", message: error.message, path });
     return undefined;
   }
-  return { method: preview.request.method, path: preview.request.path, body: preview.request.body };
+  const request: WorkflowPreviewRequest = { method: preview.request.method, path: preview.request.path, body: preview.request.body };
+  const integrityError = workflowRequestIntegrityError(request, runId, expectedVersion);
+  if (integrityError) {
+    issues.push({ code: "preview-integrity-mismatch", message: integrityError, path });
+    return undefined;
+  }
+  return request;
 }
 
 function verificationApproval(
@@ -1252,14 +1359,16 @@ function verificationApproval(
   previewTarget: WorkflowTarget | undefined,
   previewHash: string | undefined,
   issues: WorkflowVerificationIssue[]
-): { runId?: unknown; previewHash?: unknown; target?: WorkflowTarget; request?: WorkflowPreviewRequest } {
-  const summary: { runId?: unknown; previewHash?: unknown; target?: WorkflowTarget; request?: WorkflowPreviewRequest } = {};
+): { runId?: unknown; previewHash?: unknown; hashMatches?: boolean; valid?: boolean; target?: WorkflowTarget; request?: WorkflowPreviewRequest } {
+  const summary: { runId?: unknown; previewHash?: unknown; hashMatches?: boolean; valid?: boolean; target?: WorkflowTarget; request?: WorkflowPreviewRequest } = { valid: false };
+  const initialIssueCount = issues.length;
   if (!isRecord(approval) || approval.kind !== "workflow-approval" || approval.schemaVersion !== 1) {
     issues.push({ code: "invalid-approval", message: "Approval artifact has an invalid schema.", path: state.artifacts.approval });
     return summary;
   }
   summary.runId = approval.runId;
   summary.previewHash = approval.previewHash;
+  summary.hashMatches = typeof approval.previewHash === "string" && approval.previewHash === previewHash;
   if (approval.runId !== state.runId) {
     issues.push({ code: "approval-runid-mismatch", message: "Approval runId does not match run.json.", path: state.artifacts.approval });
   }
@@ -1283,6 +1392,7 @@ function verificationApproval(
   } else {
     summary.request = request;
   }
+  summary.valid = issues.length === initialIssueCount;
   return summary;
 }
 
@@ -1365,6 +1475,7 @@ async function executeRunSteps(state: WorkflowRunState, runDir: string, session:
       await requirePassingWorkflowReview(state, review, state.artifacts.question);
     });
     await runStep(state, runDir, "preview-topic-create", state.artifacts.preview, async () => {
+      if (options.execute) throw new WorkflowIntegrityError("Workflow preview cannot be regenerated during execution.");
       const content = await readFile(state.artifacts.question, "utf8");
       const body = {
         categoryId: effectiveCategoryId(state, options),
@@ -1373,6 +1484,7 @@ async function executeRunSteps(state: WorkflowRunState, runDir: string, session:
         tags: effectiveTags(state, options)
       };
       const request = replaySafeRequest(state, "POST", "/api/v1/topics", body);
+      state.previewHash = workflowPreviewHash(workflowTarget(session), request);
       await writeJson(state.artifacts.preview, {
         kind: "workflow-preview",
         schemaVersion: 1,
@@ -1414,6 +1526,7 @@ async function executeRunSteps(state: WorkflowRunState, runDir: string, session:
     await requirePassingWorkflowReview(state, review, state.artifacts.reply);
   });
   await runStep(state, runDir, "preview-reply-create", state.artifacts.preview, async () => {
+    if (options.execute) throw new WorkflowIntegrityError("Workflow preview cannot be regenerated during execution.");
     const content = await readFile(state.artifacts.reply, "utf8");
     const topicId = effectiveTopicId(state, options);
     const path = `/api/v1/topics/${topicId}/replies`;
@@ -1421,6 +1534,7 @@ async function executeRunSteps(state: WorkflowRunState, runDir: string, session:
       content,
       parentPostId: state.inputs.parentPostId
     }));
+    state.previewHash = workflowPreviewHash(workflowTarget(session), request);
     await writeJson(state.artifacts.preview, {
       kind: "workflow-preview",
       schemaVersion: 1,
@@ -1471,6 +1585,8 @@ async function executeContentMutationSteps(
   const request = await contentMutationRequest(state);
   const previewStep = `preview-${state.goal}`;
   await runStep(state, runDir, previewStep, state.artifacts.preview, async () => {
+    if (options.execute) throw new WorkflowIntegrityError("Workflow preview cannot be regenerated during execution.");
+    state.previewHash = workflowPreviewHash(workflowTarget(session), request);
     await writeJson(state.artifacts.preview, {
       kind: "workflow-preview",
       schemaVersion: 1,
@@ -1564,22 +1680,59 @@ function replaySafeRequest(
   };
 }
 
+function expectedWorkflowVersion(state: { goal?: unknown; inputs?: unknown }): unknown {
+  return typeof state.goal === "string" && ["topic-update", "topic-delete", "reply-update", "reply-delete"].includes(state.goal)
+    && isRecord(state.inputs) ? state.inputs.ifVersion : undefined;
+}
+
+function workflowRequestIntegrityError(request: WorkflowPreviewRequest, runId: string, expectedVersion: unknown): string | undefined {
+  const { operationKey, payloadHash, ifVersion, ...payload } = request.body;
+  const calculatedHash = createHash("sha256").update(canonicalJson(payload), "utf8").digest("hex");
+  if (typeof payloadHash !== "string" || payloadHash !== calculatedHash) {
+    return "Workflow preview payload hash mismatch.";
+  }
+  const operationSeed = canonicalJson({ runId, method: request.method, path: request.path, payloadHash });
+  const expectedKey = `m060:${createHash("sha256").update(operationSeed, "utf8").digest("hex").slice(0, 48)}`;
+  if (operationKey !== expectedKey) return "Workflow preview operation key mismatch.";
+  if (ifVersion !== expectedVersion) return "Workflow preview version mismatch.";
+  return undefined;
+}
+
+function workflowPreviewAnchorError(anchor: unknown, calculatedHash: string): string | undefined {
+  if (typeof anchor !== "string" || !/^[0-9a-f]{64}$/.test(anchor)) return "Workflow preview anchor is missing or invalid.";
+  return anchor === calculatedHash ? undefined : "Workflow preview anchor hash mismatch.";
+}
+
 async function executePreviewRequest(
   state: WorkflowRunState,
   session: Session,
   expectedMethod: WorkflowPreviewRequest["method"],
   expectedPath: string
 ): Promise<string | undefined> {
-  const preview = await workflowPreviewEnvelope(state.artifacts.preview);
+  const preview = await workflowPreviewEnvelope(state);
+  const approvalError = await workflowApprovalError(state, preview);
+  if (approvalError) throw new WorkflowIntegrityError(approvalError);
+  if (canonicalJson(preview.target) !== canonicalJson(workflowTarget(session))) {
+    throw new WorkflowIntegrityError("Workflow execution target does not match the approved local configuration, account, and community.");
+  }
   const request = preview.request;
   if (request.method !== expectedMethod || request.path !== expectedPath) {
     throw new Error(`Workflow preview artifact does not match expected ${expectedMethod} ${expectedPath}.`);
   }
-  const response = await requestJson(session.baseUrl, request.path, {
-    token: session.token,
-    method: request.method,
-    body: request.body
-  });
+  let response: unknown;
+  try {
+    response = await requestJson(session.baseUrl, request.path, {
+      token: session.token,
+      method: request.method,
+      body: request.body
+    });
+  } catch (error) {
+    if (error instanceof HttpError && error.status >= 200 && error.status < 300) throw new WorkflowWriteResponseError(error);
+    throw error;
+  }
+  if (!isRecord(response) || Array.isArray(response) || (response.ok !== undefined && response.ok !== true)) {
+    throw new WorkflowWriteResultError();
+  }
   const artifact = {
     kind: "workflow-execute",
     schemaVersion: 1,
@@ -1589,7 +1742,11 @@ async function executePreviewRequest(
     request,
     result: response
   };
-  await writeJson(state.artifacts.execute, artifact);
+  try {
+    await writeJson(state.artifacts.execute, artifact);
+  } catch (error) {
+    throw new WorkflowWriteEvidenceError(error);
+  }
   return requestIdFrom(response);
 }
 
@@ -2098,7 +2255,7 @@ function assertSafeWorkflowRequest(value: unknown, path: string): void {
   }
 }
 
-async function workflowApprovalError(state: WorkflowRunState): Promise<string | undefined> {
+async function workflowApprovalError(state: WorkflowRunState, checkedPreview?: { target: WorkflowTarget; request: WorkflowPreviewRequest }): Promise<string | undefined> {
   let approvalData: unknown;
   try {
     approvalData = await readSafeWorkflowArtifact(state.artifacts.approval);
@@ -2106,7 +2263,8 @@ async function workflowApprovalError(state: WorkflowRunState): Promise<string | 
     if (isNodeError(error) && error.code === "ENOENT") {
       return `Workflow approval not found: ${state.artifacts.approval}`;
     }
-    throw error;
+    if (error instanceof UnsafeWorkflowNumberError) throw error;
+    return `Invalid workflow approval artifact: ${state.artifacts.approval}`;
   }
   if (!isRecord(approvalData) || approvalData.kind !== "workflow-approval" || approvalData.schemaVersion !== 1) {
     return `Invalid workflow approval artifact: ${state.artifacts.approval}`;
@@ -2123,7 +2281,7 @@ async function workflowApprovalError(state: WorkflowRunState): Promise<string | 
   if (Date.parse(approvalData.expiresAt) <= Date.now()) {
     return "Workflow approval expired; create and review a new approval before execution.";
   }
-  const preview = await workflowPreviewEnvelope(state.artifacts.preview);
+  const preview = checkedPreview ?? await workflowPreviewEnvelope(state);
   const currentHash = workflowPreviewHash(preview.target, preview.request);
   if (approvalData.previewHash !== currentHash) {
     return "Workflow approval hash mismatch; review and approve the current preview again.";
@@ -2140,30 +2298,29 @@ async function workflowApprovalError(state: WorkflowRunState): Promise<string | 
 }
 
 async function workflowTargetError(state: WorkflowRunState, session: Session): Promise<string | undefined> {
-  const preview = await workflowPreviewEnvelope(state.artifacts.preview);
+  const preview = await workflowPreviewEnvelope(state);
   if (canonicalJson(preview.target) !== canonicalJson(workflowTarget(session))) {
     return "Workflow execution target does not match the approved local configuration, account, and community.";
   }
   return undefined;
 }
 
-async function workflowPreviewEnvelope(path: string): Promise<{ target: WorkflowTarget; request: WorkflowPreviewRequest }> {
+async function workflowPreviewEnvelope(state: WorkflowRunState): Promise<{ target: WorkflowTarget; request: WorkflowPreviewRequest }> {
+  const path = state.artifacts.preview;
   let preview: unknown;
   try {
     preview = await readSafeWorkflowArtifact(path);
   } catch (error) {
-    if (isNodeError(error) && error.code === "ENOENT") {
-      throw new Error(`Invalid workflow preview artifact: ${path}`);
-    }
-    throw error;
+    if (error instanceof UnsafeWorkflowNumberError) throw error;
+    throw new WorkflowIntegrityError(`Invalid workflow preview artifact: ${path}`);
   }
   if (!isRecord(preview) || preview.kind !== "workflow-preview" || !isRecord(preview.request)) {
-    throw new Error(`Invalid workflow preview artifact: ${path}`);
+    throw new WorkflowIntegrityError(`Invalid workflow preview artifact: ${path}`);
   }
   const method = preview.request.method;
   const requestPath = preview.request.path;
   if ((method !== "POST" && method !== "DELETE") || typeof requestPath !== "string" || !isRecord(preview.request.body)) {
-    throw new Error(`Invalid workflow preview artifact: ${path}`);
+    throw new WorkflowIntegrityError(`Invalid workflow preview artifact: ${path}`);
   }
   try {
     assertSafeWriteTarget(requestPath, preview.request.body);
@@ -2173,9 +2330,14 @@ async function workflowPreviewEnvelope(path: string): Promise<{ target: Workflow
   }
   const target = verificationWorkflowTarget(preview);
   if (!target) {
-    throw new Error(`Invalid workflow preview target: ${path}`);
+    throw new WorkflowIntegrityError(`Invalid workflow preview target: ${path}`);
   }
-  return { target, request: { method, path: requestPath, body: preview.request.body } };
+  const request: WorkflowPreviewRequest = { method, path: requestPath, body: preview.request.body };
+  const integrityError = workflowRequestIntegrityError(request, state.runId, expectedWorkflowVersion(state));
+  if (integrityError) throw new WorkflowIntegrityError(integrityError);
+  const anchorError = workflowPreviewAnchorError(state.previewHash, workflowPreviewHash(target, request));
+  if (anchorError) throw new WorkflowIntegrityError(anchorError);
+  return { target, request };
 }
 
 function workflowPreviewHash(target: WorkflowTarget, request: WorkflowPreviewRequest): string {
@@ -2212,12 +2374,24 @@ function canonicalValue(value: unknown): unknown {
 function isUncertainWriteError(error: unknown): boolean {
   return error instanceof NetworkError
     || error instanceof TimeoutError
+    || error instanceof WorkflowWriteEvidenceError
+    || error instanceof WorkflowWriteResponseError
+    || error instanceof WorkflowWriteResultError
     || (error instanceof HttpError && error.status >= 500);
+}
+
+function uncertainWorkflowGuidance(): string {
+  return "Verify the original write outcome before any replacement. Do not create a replacement operation until its outcome is known.";
+}
+
+function workflowExecutionAttempted(state: WorkflowRunState): boolean {
+  return state.steps.some((step) => step.id.startsWith("execute-") && step.status !== "pending");
 }
 
 function workflowRecoveryNextAction(error: unknown, runDir: string, executing: boolean, uncertain: boolean): string {
   const retry = `apexcn workflow run --resume ${shellArg(runDir)} --execute --yes --json`;
   if (uncertain) {
+    if (error instanceof WorkflowWriteEvidenceError) return uncertainWorkflowGuidance();
     return `Execution outcome is uncertain. Retry only with ${retry} so the identical operationKey is reused.`;
   }
   if (!executing || !(error instanceof HttpError)) {
@@ -2364,26 +2538,38 @@ function errorMessage(error: unknown): string {
   return message.replace(/Bearer\s+[A-Za-z0-9._~-]+/gi, "Bearer [redacted]").replace(/\b[A-Za-z0-9]{26,}\b/g, "[redacted]");
 }
 
-function handleRunError(io: CommandIo, error: unknown, session: Session, json?: boolean): void {
+function handleRunError(io: CommandIo, error: unknown, session: Session, json?: boolean, previousAttemptMayHaveSucceeded = false): void {
   if (error instanceof UnsafeApiIdError) {
     printError(io, { type: "validation", message: error.message, exitCode: 1 }, undefined, json);
     process.exitCode = 1;
     return;
   }
-  if (error instanceof WorkflowReviewError) {
-    printError(io, { type: "safety", message: error.message });
+  if (error instanceof WorkflowReviewError || error instanceof WorkflowIntegrityError || error instanceof WorkflowWriteEvidenceError || error instanceof WorkflowWriteResultError) {
+    const guidance = previousAttemptMayHaveSucceeded || error instanceof WorkflowWriteEvidenceError
+      ? ` ${uncertainWorkflowGuidance()}`
+      : error instanceof WorkflowWriteResultError ? " Retry only the original approved request with the identical operationKey." : "";
+    printError(io, { type: "safety", message: `${error.message}${guidance}` }, undefined, json);
     process.exitCode = 1;
     return;
   }
   if (error instanceof HttpError) {
+    const customRemediation = error instanceof WorkflowWriteResponseError
+      ? { code: "WRITE_OUTCOME_UNCERTAIN", message: "The write may have succeeded, but its response could not be parsed.", actions: ["Verify the original write outcome.", "Retry only the original approved request with the identical operationKey."] }
+      : previousAttemptMayHaveSucceeded && !isUncertainWriteError(error)
+      ? { code: "WRITE_OUTCOME_UNCERTAIN", message: uncertainWorkflowGuidance(), actions: ["Check the original request and its result before taking further action."] }
+      : undefined;
+    const message = redactSecret(error.message, session.token);
+    const fallback = customRemediation
+      ? `HTTP ${error.status}: ${message}${error.requestId ? ` requestId=${error.requestId}` : ""}\n${customRemediation.message}\n${customRemediation.actions.join(" ")}\n`
+      : formatHttpErrorText(error, session.token);
     printError(io, {
       type: "http",
       code: stableErrorCode(error),
-      message: redactSecret(error.message, session.token),
+      message,
       status: error.status,
       requestId: error.requestId,
-      remediation: remediationForHttpError(error, session.token)
-    }, formatHttpErrorText(error, session.token));
+      remediation: customRemediation ?? remediationForHttpError(error, session.token)
+    }, fallback, json);
     process.exitCode = 1;
     return;
   }
@@ -2393,7 +2579,7 @@ function handleRunError(io: CommandIo, error: unknown, session: Session, json?: 
       code: stableErrorCode(error),
       message: error.message,
       remediation: remediationForTransportError(error)
-    }, formatTransportErrorText(error));
+    }, formatTransportErrorText(error), json);
     process.exitCode = 1;
     return;
   }

@@ -416,6 +416,8 @@ apexcn confirm op_0123456789abcdef --yes --json
 
 Confirmation can execute only the exact account, community target, and request bound to that id. A changed target, body, version, or local configuration invalidates the id, and repeated confirmation never creates a second write. Create a fresh preview after expiry or `409 VERSION_CONFLICT`.
 
+Workflow previews also bind the request, target and version to the run state. If the preview anchor is changed or missing before any execution attempt, create a new preview, review it, and approve it again. If execution was attempted and its outcome is unknown, first verify the original write; do not create a replacement operation until the outcome is known. Pending previews from older versions without an anchor require the same precautions. Completed historical runs using the current request format can still be inspected with an anchor warning; verification may report other issues, such as an expired approval. These local hashes detect inconsistent files, but do not authenticate files against someone who can rewrite the entire run directory.
+
 ## topic / thread
 
 `thread` is an alias of `topic`.

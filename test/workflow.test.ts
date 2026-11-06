@@ -1190,6 +1190,30 @@ describe("workflow commands", () => {
     expect(executeReport.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "execute-request-mismatch" })]));
   });
 
+  test("workflow verify-bundle rejects a changed preview anchor even if artifact metadata is updated", async () => {
+    const runDir = await tempPath("bundle-preview-anchor");
+    const bundlePath = join(runDir, "bundle.json");
+    const bundle = await createCompletedBundle(runDir, bundlePath);
+    const artifacts = bundle.artifacts as Array<Record<string, unknown>>;
+    const stateArtifact = artifacts.find((artifact) => artifact.key === "state");
+    if (!stateArtifact || typeof stateArtifact.content !== "string") throw new Error("state artifact missing");
+    const state = JSON.parse(stateArtifact.content);
+    state.previewHash = "0".repeat(64);
+    stateArtifact.content = `${JSON.stringify(state, null, 2)}\n`;
+    stateArtifact.size = Buffer.byteLength(stateArtifact.content, "utf8");
+    stateArtifact.sha256 = createHash("sha256").update(stateArtifact.content, "utf8").digest("hex");
+    const verificationArtifacts = (bundle.verification as { artifacts: Record<string, Record<string, unknown>> }).artifacts;
+    verificationArtifacts.state.size = stateArtifact.size;
+    verificationArtifacts.state.sha256 = stateArtifact.sha256;
+    await writeFile(bundlePath, `${JSON.stringify(bundle, null, 2)}\n`, "utf8");
+
+    const verifier = workflowProgram();
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify-bundle", "--bundle", bundlePath, "--json"]);
+    const report = JSON.parse(verifier.stdout.join(""));
+    expect(report.ok).toBe(false);
+    expect(report.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "preview-anchor-mismatch" })]));
+  });
+
   test("workflow verify-bundle requires artifacts recorded by embedded verification", async () => {
     const runDir = await tempPath("bundle-missing-artifact");
     const bundlePath = join(runDir, "bundle.json");
@@ -1333,6 +1357,539 @@ describe("workflow commands", () => {
 
     expect(env.fetch).toHaveBeenCalledTimes(4);
     expect((await readJson(join(runDir, "research.json"))).kind).toBe("workflow-research");
+  });
+
+  test.each(["content", "payloadHash", "operationKey", "ifVersion"])(
+    "workflow rejects a preview with changed %s before approval or execution",
+    async (field) => {
+      const runDir = await tempPath(`preapproval-${field}`);
+      const contentFile = join(dirname(runDir), "content.md");
+      await writeFile(contentFile, "Original workflow topic content.", "utf8");
+      const env = await configuredWorkflowProgram(async () => Response.json({ error: "unexpected" }, { status: 500 }));
+      await env.program.parseAsync(["node", "apexcn", "workflow", "run", "--goal", "topic-update", "--topic-id", "42",
+        "--content-file", contentFile, "--if-version", "3", "--output-dir", runDir, "--json"]);
+      const previewPath = join(runDir, "preview.json");
+      const preview = await readJson(previewPath);
+      const body = (preview.request as { body: Record<string, unknown> }).body;
+      if (field === "content") body.content = "Changed after preview";
+      else if (field === "payloadHash") body.payloadHash = "0".repeat(64);
+      else if (field === "operationKey") body.operationKey = "m060:" + "0".repeat(48);
+      else body.ifVersion = 4;
+      await writeFile(previewPath, `${JSON.stringify(preview, null, 2)}\n`, "utf8");
+
+      process.exitCode = undefined;
+      const verifier = workflowProgram({ configPath: env.configPath });
+      await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--json"]);
+      expect(JSON.parse(verifier.stdout.join("")).ok).toBe(false);
+      expect(process.exitCode).toBe(1);
+
+      process.exitCode = undefined;
+      const approver = workflowProgram({ configPath: env.configPath });
+      await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+      expect(process.exitCode).toBe(1);
+      await expect(readFile(join(runDir, "approval.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+      expect(env.fetch).not.toHaveBeenCalled();
+    }
+  );
+
+  test.each([false, true])("workflow does not send a preview changed after approval checks (prior uncertain: %s)", async (priorUncertain) => {
+    const runDir = await tempPath(`preview-race-${priorUncertain}`);
+    const env = await createQuestionPreview(runDir);
+    const approver = workflowProgram({ configPath: env.configPath });
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    if (priorUncertain) {
+      const statePath = join(runDir, "run.json");
+      const state = await readJson(statePath);
+      state.status = "execution-uncertain";
+      (state.steps as Array<Record<string, unknown>>).push({ id: "execute-topic-create", status: "failed" });
+      await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    }
+    await rm(join(runDir, "research.json"));
+    let writes = 0;
+    const fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === "POST") { writes += 1; return Response.json({ requestId: "req-write", id: 123 }); }
+      const path = join(runDir, "preview.json");
+      const preview = await readJson(path);
+      (preview.request as { body: Record<string, unknown> }).body.content = "Changed after approval checks";
+      await writeFile(path, `${JSON.stringify(preview, null, 2)}\n`, "utf8");
+      return Response.json({ requestId: "req-search", items: [] });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const executor = workflowProgram({ configPath: env.configPath });
+
+    await executor.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+
+    expect(writes).toBe(0);
+    expect(process.exitCode).toBe(1);
+    expect(executor.stderr.join("")).toMatch(/hash mismatch|preview.*integrity/i);
+    expect(JSON.parse(executor.stderr.join("")).error.type).toBe("safety");
+    if (priorUncertain) {
+      const state = await readJson(join(runDir, "run.json"));
+      expect(state.status).toBe("execution-uncertain");
+      expect(state.nextAction).toContain("Verify the original write");
+    }
+  });
+
+  test("workflow reports a changed approved preview as JSON before network", async () => {
+    const runDir = await tempPath("preview-tampered-json");
+    const env = await createQuestionPreview(runDir);
+    const approver = workflowProgram({ configPath: env.configPath });
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    const path = join(runDir, "preview.json");
+    const preview = await readJson(path);
+    (preview.request as { body: Record<string, unknown> }).body.content = "Changed after approval";
+    await writeFile(path, `${JSON.stringify(preview, null, 2)}\n`, "utf8");
+    const fetch = vi.fn(); vi.stubGlobal("fetch", fetch);
+    const executor = workflowProgram({ configPath: env.configPath });
+
+    await executor.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(JSON.parse(executor.stderr.join("")).error.message).toMatch(/hash mismatch/i);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test.each(["null", "malformed", "target"])("workflow reports an invalid approved preview (%s) as JSON before network", async (variant) => {
+    const runDir = await tempPath(`invalid-approved-preview-${variant}`);
+    const env = await createQuestionPreview(runDir);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    const path = join(runDir, "preview.json");
+    if (variant === "target") {
+      const preview = await readJson(path);
+      preview.baseUrl = null;
+      await writeFile(path, `${JSON.stringify(preview)}\n`, "utf8");
+    } else {
+      await writeFile(path, variant === "null" ? "null\n" : "{invalid\n", "utf8");
+    }
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const executor = workflowProgram({ configPath: env.configPath });
+    await executor.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(JSON.parse(executor.stderr.join("")).error.type).toBe("validation");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test.each([false, true])("workflow reports malformed approval as JSON before network (prior uncertain: %s)", async (priorUncertain) => {
+    const runDir = await tempPath(`invalid-approval-${priorUncertain}`);
+    const env = await createQuestionPreview(runDir);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    await writeFile(join(runDir, "approval.json"), "{invalid\n", "utf8");
+    if (priorUncertain) {
+      const statePath = join(runDir, "run.json");
+      const state = await readJson(statePath);
+      state.status = "execution-uncertain";
+      await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    }
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const executor = workflowProgram({ configPath: env.configPath });
+    await executor.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+    expect(process.exitCode).toBe(1);
+    const error = JSON.parse(executor.stderr.join("")).error;
+    expect(error.type).toBe("validation");
+    expect(error.message).toContain("Invalid workflow approval artifact");
+    if (priorUncertain) expect(error.message).toContain("Verify the original write");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("workflow rejects a coherently rehashed preview changed before approval", async () => {
+    const runDir = await tempPath("preview-rehashed");
+    const contentFile = join(dirname(runDir), "content.md");
+    await writeFile(contentFile, "Original workflow topic content.", "utf8");
+    const env = await configuredWorkflowProgram(async () => Response.json({ error: "unexpected" }, { status: 500 }));
+    await env.program.parseAsync(["node", "apexcn", "workflow", "run", "--goal", "topic-update", "--topic-id", "42",
+      "--content-file", contentFile, "--if-version", "3", "--output-dir", runDir, "--json"]);
+    const state = await readJson(join(runDir, "run.json"));
+    const previewPath = join(runDir, "preview.json");
+    const preview = await readJson(previewPath);
+    const request = preview.request as { method: string; path: string; body: Record<string, unknown> };
+    request.body.content = "Changed and rehashed after preview";
+    const payload = { content: request.body.content };
+    request.body.payloadHash = createHash("sha256").update(JSON.stringify(payload), "utf8").digest("hex");
+    const seed = { method: request.method, path: request.path, payloadHash: request.body.payloadHash, runId: state.runId };
+    request.body.operationKey = `m060:${createHash("sha256").update(JSON.stringify(seed), "utf8").digest("hex").slice(0, 48)}`;
+    await writeFile(previewPath, `${JSON.stringify(preview, null, 2)}\n`, "utf8");
+
+    const verifier = workflowProgram({ configPath: env.configPath });
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--json"]);
+    expect(JSON.parse(verifier.stdout.join("")).ok).toBe(false);
+    process.exitCode = undefined;
+    const approver = workflowProgram({ configPath: env.configPath });
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    expect(process.exitCode).toBe(1);
+    await expect(readFile(join(runDir, "approval.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    expect(env.fetch).not.toHaveBeenCalled();
+  });
+
+  test("legacy pending workflows without an anchor require a new preview", async () => {
+    const runDir = await tempPath("legacy-pending-preview");
+    const env = await createQuestionPreview(runDir);
+    const statePath = join(runDir, "run.json");
+    const state = await readJson(statePath);
+    delete state.previewHash;
+    await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    const verifier = workflowProgram({ configPath: env.configPath });
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--json"]);
+    expect(JSON.parse(verifier.stdout.join("")).issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "preview-anchor-mismatch" })]));
+    process.exitCode = undefined;
+    const approver = workflowProgram({ configPath: env.configPath });
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(approver.stderr.join("")).toContain("preview anchor is missing or invalid");
+    await expect(readFile(join(runDir, "approval.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  test.each(["running", "failed", "execution-uncertain"])("unanchored %s workflow is not treated as completed history", async (status) => {
+    const runDir = await tempPath(`legacy-${status}`);
+    const env = await createQuestionPreview(runDir);
+    const statePath = join(runDir, "run.json");
+    const state = await readJson(statePath);
+    delete state.previewHash;
+    state.status = status;
+    await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    const verifier = workflowProgram({ configPath: env.configPath });
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--json"]);
+    const report = JSON.parse(verifier.stdout.join(""));
+    expect(report.ok).toBe(false);
+    expect(report.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "preview-anchor-mismatch" })]));
+  });
+
+  test.each(["execution-uncertain", "failed"])("unanchored %s execution requires checking the original write before any replacement", async (status) => {
+    const runDir = await tempPath("legacy-uncertain-guidance");
+    const env = await createQuestionPreview(runDir);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    const statePath = join(runDir, "run.json");
+    const state = await readJson(statePath);
+    state.status = status;
+    (state.steps as Array<Record<string, unknown>>).push({ id: "execute-topic-create", status: "failed" });
+    delete state.previewHash;
+    await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const executor = workflowProgram({ configPath: env.configPath });
+    await executor.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(executor.stderr.join("")).toContain("Verify the original write");
+    expect(executor.stderr.join("")).not.toContain("create a new preview");
+    const persisted = await readJson(statePath);
+    expect(persisted.status).toBe(status);
+    expect(persisted.nextAction).toContain("Verify the original write");
+    expect(persisted.nextAction).toContain("Do not create a replacement");
+  });
+
+  test.each(["execution-uncertain", "failed"])("non-executing resume cannot replace a preview after %s execution", async (status) => {
+    const runDir = await tempPath(`resume-after-${status}`);
+    const env = await createQuestionPreview(runDir);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    const statePath = join(runDir, "run.json");
+    const state = await readJson(statePath);
+    state.status = status;
+    (state.steps as Array<Record<string, unknown>>).push({ id: "execute-topic-create", status: "failed" });
+    await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    const originalHash = state.previewHash;
+    await rm(join(runDir, "preview.json"));
+    await writeFile(join(runDir, "question.md"), "Modified content that must not become a replacement operation.", "utf8");
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const resume = workflowProgram({ configPath: env.configPath });
+    await resume.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(resume.stderr.join("")).toContain("Verify the original write");
+    expect(fetch).not.toHaveBeenCalled();
+    await expect(readFile(join(runDir, "preview.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    const retained = await readJson(statePath);
+    expect(retained.status).toBe(status);
+    expect(retained.previewHash).toBe(originalHash);
+  });
+
+  test("approval cannot replace the request of a preview-ready run with an attempted execution", async () => {
+    const runDir = await tempPath("approval-after-execution");
+    await createQuestionPreview(runDir);
+    const statePath = join(runDir, "run.json");
+    const state = await readJson(statePath);
+    (state.steps as Array<Record<string, unknown>>).push({ id: "execute-topic-create", status: "failed" });
+    await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(approver.stderr.join("")).toContain("Verify the original write");
+    await expect(readFile(join(runDir, "approval.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  test("execution cannot regenerate a preview removed after approval checks", async () => {
+    const runDir = await tempPath("execution-preview-removed");
+    const env = await createQuestionPreview(runDir);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    const statePath = join(runDir, "run.json");
+    const state = await readJson(statePath);
+    state.status = "execution-uncertain";
+    (state.steps as Array<Record<string, unknown>>).push({ id: "execute-topic-create", status: "failed" });
+    await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    const originalHash = state.previewHash;
+    await rm(join(runDir, "research.json"));
+    const fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === "POST") throw new Error("unexpected write");
+      await rm(join(runDir, "preview.json"));
+      return Response.json({ requestId: "req-search", items: [] });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const executor = workflowProgram({ configPath: env.configPath });
+    await executor.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(fetch.mock.calls.every(([, init]) => init?.method !== "POST")).toBe(true);
+    await expect(readFile(join(runDir, "preview.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    const retained = await readJson(statePath);
+    expect(retained.status).toBe("execution-uncertain");
+    expect(retained.previewHash).toBe(originalHash);
+  });
+
+  test("workflow records an uncertain outcome when execution evidence cannot be saved", async () => {
+    const runDir = await tempPath("execution-evidence-write-failure");
+    const env = await createQuestionPreview(runDir);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    const fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method !== "POST") throw new Error("unexpected request");
+      await mkdir(join(runDir, "execute.json"));
+      return Response.json({ requestId: "req-success", id: 1001 });
+    });
+    vi.stubGlobal("fetch", fetch);
+    const executor = workflowProgram({ configPath: env.configPath });
+    await executor.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(process.exitCode).toBe(1);
+    const state = await readJson(join(runDir, "run.json"));
+    expect(state.status).toBe("execution-uncertain");
+    expect(state.nextAction).not.toContain("create and approve a new workflow");
+  });
+
+  test("workflow preserves operation identity when a successful write returns invalid JSON", async () => {
+    const runDir = await tempPath("execution-invalid-response");
+    const env = await createQuestionPreview(runDir);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    const firstFetch = vi.fn(async () => new Response("{invalid", { status: 201, headers: { "x-request-id": "req-original" } }));
+    vi.stubGlobal("fetch", firstFetch);
+    const first = workflowProgram({ configPath: env.configPath });
+    await first.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+    const firstError = JSON.parse(first.stderr.join("")).error;
+    expect(firstError.status).toBe(201);
+    expect(firstError.requestId).toBe("req-original");
+    expect(firstError.remediation.message).toContain("may have succeeded");
+    expect(firstError.remediation.actions.join(" ")).toContain("identical operationKey");
+    const state = await readJson(join(runDir, "run.json"));
+    expect(state.status).toBe("execution-uncertain");
+    expect(state.nextAction).toContain("identical operationKey");
+    const firstBody = String(firstFetch.mock.calls[0]?.[1]?.body);
+    process.exitCode = undefined;
+    const retryFetch = vi.fn(async () => Response.json({ requestId: "req-retry", id: 1001, idempotentReplay: true }));
+    vi.stubGlobal("fetch", retryFetch);
+    const retry = workflowProgram({ configPath: env.configPath });
+    await retry.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+    expect(String(retryFetch.mock.calls[0]?.[1]?.body)).toBe(firstBody);
+    expect((await readJson(join(runDir, "run.json"))).status).toBe("completed");
+  });
+
+  test("a conflict after an uncertain write does not advise creating a replacement", async () => {
+    const runDir = await tempPath("uncertain-conflict");
+    const env = await createQuestionPreview(runDir);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    const statePath = join(runDir, "run.json");
+    const state = await readJson(statePath);
+    state.status = "execution-uncertain";
+    (state.steps as Array<Record<string, unknown>>).push({ id: "execute-topic-create", status: "failed" });
+    await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ error: { code: "VERSION_CONFLICT", message: "conflict" } }, { status: 409 })));
+    const executor = workflowProgram({ configPath: env.configPath });
+    await executor.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+    const error = JSON.parse(executor.stderr.join("")).error;
+    expect(error.status).toBe(409);
+    expect(error.remediation.message).toContain("Verify the original write");
+    expect(error.remediation.actions.join(" ")).not.toContain("Regenerate");
+    expect((await readJson(statePath)).status).toBe("execution-uncertain");
+  });
+
+  test.each(["empty", "null", "false", "string", "array", "failed-object", "invalid-ok"])("workflow treats a 2xx %s write response as uncertain", async (variant) => {
+    const runDir = await tempPath(`execution-response-${variant}`);
+    const env = await createQuestionPreview(runDir);
+    const approver = workflowProgram();
+    await approver.program.parseAsync(["node", "apexcn", "workflow", "approve", "--run-dir", runDir, "--json"]);
+    const bodies: Record<string, string> = { empty: "", null: "null", false: "false", string: '"text"', array: "[]", "failed-object": '{"ok":false}', "invalid-ok": '{"ok":"true"}' };
+    const fetch = vi.fn(async () => new Response(bodies[variant], { status: 200 }));
+    vi.stubGlobal("fetch", fetch);
+    const executor = workflowProgram({ configPath: env.configPath });
+    await executor.program.parseAsync(["node", "apexcn", "workflow", "run", "--resume", runDir, "--execute", "--yes", "--json"]);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(process.exitCode).toBe(1);
+    const state = await readJson(join(runDir, "run.json"));
+    expect(state.status).toBe("execution-uncertain");
+    expect(state.nextAction).toContain("identical operationKey");
+    await expect(readFile(join(runDir, "execute.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  test.each(["running", "failed"])("workflow verify requires a preview when %s state has an anchor", async (status) => {
+    const runDir = await tempPath(`anchored-missing-${status}`);
+    const env = await createQuestionPreview(runDir);
+    const statePath = join(runDir, "run.json");
+    const state = await readJson(statePath);
+    state.status = status;
+    await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    await rm(join(runDir, "preview.json"));
+    const verifier = workflowProgram({ configPath: env.configPath });
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--json"]);
+    const report = JSON.parse(verifier.stdout.join(""));
+    expect(report.ok).toBe(false);
+    expect(report.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "missing-required-artifact", path: join(runDir, "preview.json") })]));
+  });
+
+  test("workflow verify-bundle requires an anchored preview in failed state", async () => {
+    const runDir = await tempPath("bundle-anchored-missing");
+    const env = await createQuestionPreview(runDir);
+    const statePath = join(runDir, "run.json");
+    const state = await readJson(statePath);
+    state.status = "failed";
+    await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    await rm(join(runDir, "preview.json"));
+    const bundlePath = join(dirname(runDir), "bundle.json");
+    const exporter = workflowProgram({ configPath: env.configPath });
+    await exporter.program.parseAsync(["node", "apexcn", "workflow", "export", "--run-dir", runDir, "--output", bundlePath, "--allow-invalid", "--json"]);
+    process.exitCode = undefined;
+    const verifier = workflowProgram({ configPath: env.configPath });
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify-bundle", "--bundle", bundlePath, "--json"]);
+    const report = JSON.parse(verifier.stdout.join(""));
+    expect(report.ok).toBe(false);
+    expect(report.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "missing-required-artifact", message: "Bundle is missing required artifact: preview" })]));
+  });
+
+  test("completed legacy workflows without an anchor remain inspectable with a warning", async () => {
+    const runDir = await tempPath("legacy-completed-preview");
+    const bundlePath = join(dirname(runDir), "bundle.json");
+    await createCompletedBundle(runDir, bundlePath);
+    const statePath = join(runDir, "run.json");
+    const state = await readJson(statePath);
+    delete state.previewHash;
+    await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    const verifier = workflowProgram();
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--json"]);
+    const report = JSON.parse(verifier.stdout.join(""));
+    expect(report.ok).toBe(true);
+    expect(report.warnings).toEqual(expect.arrayContaining([expect.objectContaining({ code: "legacy-preview-anchor-missing" })]));
+  });
+
+  test("completed legacy verification still reports an expired approval", async () => {
+    const runDir = await tempPath("legacy-completed-expired");
+    await createCompletedBundle(runDir, join(dirname(runDir), "bundle.json"));
+    const statePath = join(runDir, "run.json");
+    const state = await readJson(statePath);
+    delete state.previewHash;
+    await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    const approvalPath = join(runDir, "approval.json");
+    const approval = await readJson(approvalPath);
+    approval.expiresAt = "2000-01-01T00:00:00.000Z";
+    await writeFile(approvalPath, `${JSON.stringify(approval, null, 2)}\n`, "utf8");
+    const verifier = workflowProgram();
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--json"]);
+    const report = JSON.parse(verifier.stdout.join(""));
+    expect(report.ok).toBe(false);
+    expect(report.warnings).toEqual(expect.arrayContaining([expect.objectContaining({ code: "legacy-preview-anchor-missing" })]));
+    expect(report.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "approval-expired" })]));
+  });
+
+  test.each([null, false, 0, ""])("workflow verify rejects an existing falsy preview artifact", async (value) => {
+    const runDir = await tempPath("falsy-preview");
+    const env = await createQuestionPreview(runDir);
+    await writeFile(join(runDir, "preview.json"), `${JSON.stringify(value)}\n`, "utf8");
+    const verifier = workflowProgram({ configPath: env.configPath });
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--json"]);
+    const report = JSON.parse(verifier.stdout.join(""));
+    expect(report.ok).toBe(false);
+    expect(report.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "invalid-preview" })]));
+  });
+
+  test.each(["approval", "execute"])("completed workflow verify rejects a falsy %s artifact", async (artifact) => {
+    const runDir = await tempPath(`falsy-${artifact}`);
+    await createCompletedBundle(runDir, join(dirname(runDir), "bundle.json"));
+    await writeFile(join(runDir, `${artifact}.json`), "null\n", "utf8");
+    const verifier = workflowProgram();
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--json"]);
+    const report = JSON.parse(verifier.stdout.join(""));
+    expect(report.ok).toBe(false);
+    expect(report.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: `invalid-${artifact}` })]));
+  });
+
+  test.each(["preview", "approval", "execute"])("workflow verify-bundle rejects a falsy %s artifact with matching metadata", async (key) => {
+    const runDir = await tempPath(`bundle-falsy-${key}`);
+    const bundlePath = join(dirname(runDir), "bundle.json");
+    const bundle = await createCompletedBundle(runDir, bundlePath);
+    const artifact = (bundle.artifacts as Array<Record<string, unknown>>).find((item) => item.key === key);
+    if (!artifact) throw new Error("bundle artifact missing");
+    artifact.content = "null\n";
+    artifact.size = Buffer.byteLength(artifact.content, "utf8");
+    artifact.sha256 = createHash("sha256").update(artifact.content, "utf8").digest("hex");
+    const verificationArtifacts = (bundle.verification as { artifacts: Record<string, Record<string, unknown>> }).artifacts;
+    verificationArtifacts[key].size = artifact.size;
+    verificationArtifacts[key].sha256 = artifact.sha256;
+    await writeFile(bundlePath, `${JSON.stringify(bundle, null, 2)}\n`, "utf8");
+    const verifier = workflowProgram();
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify-bundle", "--bundle", bundlePath, "--json"]);
+    const report = JSON.parse(verifier.stdout.join(""));
+    expect(report.ok).toBe(false);
+    expect(report.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: `invalid-${key}` })]));
+  });
+
+  test.each(["null", "wrong-run", "wrong-status"])("workflow verify-bundle rejects invalid state (%s)", async (variant) => {
+    const runDir = await tempPath(`bundle-state-${variant}`);
+    const bundlePath = join(dirname(runDir), "bundle.json");
+    const bundle = await createCompletedBundle(runDir, bundlePath);
+    const artifact = (bundle.artifacts as Array<Record<string, unknown>>).find((item) => item.key === "state");
+    if (!artifact || typeof artifact.content !== "string") throw new Error("bundle state missing");
+    const state = JSON.parse(artifact.content);
+    if (variant === "wrong-run") state.runId = "run-other";
+    if (variant === "wrong-status") state.status = "failed";
+    artifact.content = `${JSON.stringify(variant === "null" ? null : state, null, 2)}\n`;
+    artifact.size = Buffer.byteLength(artifact.content, "utf8");
+    artifact.sha256 = createHash("sha256").update(artifact.content, "utf8").digest("hex");
+    const verificationArtifacts = (bundle.verification as { artifacts: Record<string, Record<string, unknown>> }).artifacts;
+    verificationArtifacts.state.size = artifact.size; verificationArtifacts.state.sha256 = artifact.sha256;
+    await writeFile(bundlePath, `${JSON.stringify(bundle, null, 2)}\n`, "utf8");
+    const verifier = workflowProgram();
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify-bundle", "--bundle", bundlePath, "--json"]);
+    const report = JSON.parse(verifier.stdout.join(""));
+    expect(report.ok).toBe(false);
+    expect(report.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "invalid-state" })]));
+  });
+
+  test("workflow verify-bundle rejects an invalid target in a preview-ready bundle", async () => {
+    const runDir = await tempPath("bundle-preview-target");
+    const bundlePath = join(dirname(runDir), "bundle.json");
+    await createQuestionPreview(runDir);
+    const exporter = workflowProgram();
+    await exporter.program.parseAsync(["node", "apexcn", "workflow", "export", "--run-dir", runDir, "--output", bundlePath, "--json"]);
+    const bundle = await readJson(bundlePath);
+    const artifact = (bundle.artifacts as Array<Record<string, unknown>>).find((item) => item.key === "preview");
+    if (!artifact || typeof artifact.content !== "string") throw new Error("bundle preview missing");
+    const preview = JSON.parse(artifact.content);
+    preview.baseUrl = null;
+    artifact.content = `${JSON.stringify(preview, null, 2)}\n`;
+    artifact.size = Buffer.byteLength(artifact.content, "utf8");
+    artifact.sha256 = createHash("sha256").update(artifact.content, "utf8").digest("hex");
+    const verificationArtifacts = (bundle.verification as { artifacts: Record<string, Record<string, unknown>> }).artifacts;
+    verificationArtifacts.preview.size = artifact.size;
+    verificationArtifacts.preview.sha256 = artifact.sha256;
+    await writeFile(bundlePath, `${JSON.stringify(bundle, null, 2)}\n`, "utf8");
+    const verifier = workflowProgram();
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify-bundle", "--bundle", bundlePath, "--json"]);
+    const report = JSON.parse(verifier.stdout.join(""));
+    expect(report.ok).toBe(false);
+    expect(report.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "invalid-preview-target" })]));
   });
 
   test("workflow topic update binds preview, approval, and execute to the replay-safe server contract", async () => {
