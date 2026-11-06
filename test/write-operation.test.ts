@@ -361,7 +361,36 @@ describe("business write confirmation", () => {
     }
   });
 
-  test.each(["/api/v1/topics/9007199254740992", "/api/v1/%74opics/9007199254740992"])("write operation creation rejects an unsafe target path %s", async (path) => {
+  test("confirmation rejects an imprecise saved non-ID request number before network", async () => {
+    const context = await testContext();
+    try {
+      const preview = await createWriteOperation({
+        configPath: context.configPath,
+        session: { profile: "test", baseUrl: "https://example.test/ords/api", token: "test-token" },
+        action: "topic.create", summary: "Synthetic only",
+        request: { method: "POST", path: "/api/v1/topics", body: { priority: Number.MAX_SAFE_INTEGER } }
+      });
+      const operationPath = join(dirname(context.configPath), "operations", `${preview.operationId}.json`);
+      const operation = await readFile(operationPath, "utf8");
+      expect(operation).toContain('"priority": 9007199254740991');
+      await writeFile(operationPath, operation.replace('"priority": 9007199254740991', '"priority": 9007199254740991.1'));
+      const confirmation = programFor(context.configPath, context.fetch);
+
+      await confirmation.program.parseAsync(["node", "apexcn", "confirm", preview.operationId, "--yes", "--json"]);
+
+      expect(process.exitCode).toBe(1);
+      expect(confirmation.stderr.join("")).toMatch(/unsafe|imprecise/i);
+      expect(context.fetch).not.toHaveBeenCalled();
+    } finally {
+      await rm(dirname(dirname(context.configPath)), { recursive: true, force: true });
+    }
+  });
+
+  test.each([
+    "/api/v1/topics/9007199254740992", "/api/v1/%74opics/9007199254740992",
+    "/api/v1/topics//9007199254740992", "/api/v1/topics;param/9007199254740992",
+    "/api/v1/topics/42?targetId=9007199254740992"
+  ])("write operation creation rejects an unsafe target path %s", async (path) => {
     const context = await testContext();
     try {
       await expect(createWriteOperation({

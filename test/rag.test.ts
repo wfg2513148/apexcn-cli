@@ -87,6 +87,35 @@ describe("local-AI RAG evidence retrieval", () => {
     expect(JSON.parse(stdout.join("")).evidence).toEqual(expect.arrayContaining([expect.objectContaining({ topicId: 42 })]));
   });
 
+  test("ignores an unsafe reply ID outside the three selected evidence replies", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).includes("/api/v1/search")
+        ? '{"items":[{"id":42}]}'
+        : '{"topic":{"id":42,"threadUrl":"https://example.invalid/t/42"},"replies":[{"replyId":1,"content":"a"},{"replyId":2,"content":"b"},{"replyId":3,"content":"c"},{"replyId":9007199254740993,"content":"unused"}]}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "rag", "retrieve", "example", "--query", "example", "--json"]);
+
+    expect(process.exitCode).toBeUndefined();
+    const result = JSON.parse(stdout.join(""));
+    expect(result.evidence.filter((item: { type: string }) => item.type === "reply")).toHaveLength(3);
+  });
+
+  test("ignores an unsafe nested reply list that RAG does not consume", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).includes("/api/v1/search")
+        ? '{"items":[{"id":42}]}'
+        : '{"topic":{"id":42,"threadUrl":"https://example.invalid/t/42","replies":[{"replyId":9007199254740993}]}}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "rag", "retrieve", "example", "--query", "example", "--json"]);
+
+    expect(process.exitCode).toBeUndefined();
+    expect(JSON.parse(stdout.join("")).evidence).toEqual(expect.arrayContaining([expect.objectContaining({ topicId: 42 })]));
+  });
+
   test("uses only readonly search and topic detail endpoints and emits citable evidence", async () => {
     const { program, stdout, stderr, fetch } = await configuredProgram(async (input) => {
       const url = String(input);

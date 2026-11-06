@@ -570,7 +570,7 @@ async function collectionStats(io: CommandIo, options: StatsOptions): Promise<vo
   let meta: unknown;
   try {
     records = parseCollectionSearchRecords(await readFile(join(options.dir, "index.jsonl"), "utf8"));
-    meta = JSON.parse(await readFile(join(options.dir, "index.meta.json"), "utf8")) as unknown;
+    meta = parseGuardedIdJson(await readFile(join(options.dir, "index.meta.json"), "utf8"));
   } catch (error) {
     printError(io, { type: "validation", message: `Invalid collection index: ${errorMessage(error)}` }, undefined, options.json);
     process.exitCode = 1;
@@ -1256,9 +1256,9 @@ function parseCollectionSearchRecords(text: string): CollectionSearchRecord[] {
 function parseCollectionManifest(text: string): unknown {
   const value = parsePreciseJson(text);
   if (isRecord(value)) {
-    if (isRecord(value.source) && Array.isArray(value.source.topicIds)) value.source.topicIds.forEach(safeApiId);
-    if (Array.isArray(value.topics)) value.topics.filter(isRecord).forEach((topic) => safeApiId(topic.id));
-    if (isRecord(value.files) && Array.isArray(value.files.topics)) value.files.topics.filter(isRecord).forEach((file) => safeApiId(file.id));
+    if (isRecord(value.source) && Array.isArray(value.source.topicIds)) value.source.topicIds.forEach(requireCollectionId);
+    if (Array.isArray(value.topics)) value.topics.filter(isRecord).forEach((topic) => requireCollectionId(topic.id));
+    if (isRecord(value.files) && Array.isArray(value.files.topics)) value.files.topics.filter(isRecord).forEach((file) => requireCollectionId(file.id));
   }
   return toNativeApiNumbers(value);
 }
@@ -1266,9 +1266,13 @@ function parseCollectionManifest(text: string): unknown {
 function parseCollectionTopicArtifact(text: string): unknown {
   const value = parsePreciseJson(text);
   if (!isRecord(value)) return toNativeApiNumbers(value);
-  safeApiId(value.id);
+  requireCollectionId(value.id);
   const result = normalizeTopicForSelection(value.result);
   return { ...(toNativeApiNumbers(value) as Record<string, unknown>), result };
+}
+
+function requireCollectionId(value: unknown): void {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) throw new UnsafeApiIdError();
 }
 
 async function collectionVerificationReport(dir: string, collection: unknown): Promise<Record<string, unknown> & { ok: boolean }> {

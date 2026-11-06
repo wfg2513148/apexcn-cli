@@ -156,6 +156,27 @@ describe("collection commands", () => {
     await rm(outputDir, { recursive: true, force: true });
   });
 
+  test.each(["null", '"42"'])("collection sync rejects a nonnumeric manifest target ID %s", async (badId) => {
+    const outputDir = await tempPath("invalid-manifest-id");
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ topic: { id: 42, title: "safe" } }));
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--topic-id", "42", "--output-dir", outputDir, "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    const manifestPath = join(outputDir, "collection.json");
+    const manifest = await readFile(manifestPath, "utf8");
+    expect(manifest).toContain('"id": 42');
+    await writeFile(manifestPath, manifest.replace('"id": 42', `"id": ${badId}`));
+    stdout.length = 0;
+    stderr.length = 0;
+    fetch.mockClear();
+
+    await program.parseAsync(["node", "apexcn", "collection", "sync", "--dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).not.toHaveBeenCalled();
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
   test("collection sync rejects an unsafe reply ID before changing existing files", async () => {
     const outputDir = await tempPath("unsafe-sync");
     let syncing = false;
@@ -192,6 +213,23 @@ describe("collection commands", () => {
     const program = createProgram({ stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
 
     await program.parseAsync(["node", "apexcn", "collection", "query", "oracle", "--dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(stdout.join("")).toBe("");
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("collection stats rejects an unsafe ID in index metadata", async () => {
+    const outputDir = await tempPath("unsafe-index-meta");
+    await mkdir(outputDir, { recursive: true });
+    await writeFile(join(outputDir, "index.jsonl"), '{"kind":"collection-index-record","schemaVersion":1,"engine":"bm25","topicId":42,"title":"oracle","sourcePath":"topics/42.json","terms":{"oracle":1},"documentLength":1,"excerpt":"oracle"}\n');
+    await writeFile(join(outputDir, "index.meta.json"), '{"sourceDocuments":[{"topicId":9007199254740993}]}');
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const program = createProgram({ stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
+
+    await program.parseAsync(["node", "apexcn", "collection", "stats", "--dir", outputDir, "--json"]);
 
     expect(process.exitCode).toBe(1);
     expect(stderr.join("")).toMatch(/unsafe|imprecise/i);

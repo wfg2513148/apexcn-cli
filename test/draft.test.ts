@@ -38,6 +38,14 @@ describe("draft commands", () => {
     expect(stdout.join("")).toBe("");
   });
 
+  test("draft reply accepts a safe topic with an unrelated large author ID", async () => {
+    const { program, stdout, stderr } = draftProgram({ readStdin: async () => '{"topic":{"id":42,"title":"safe","author":{"id":9007199254740993}}}' });
+    await program.parseAsync(["node", "apexcn", "draft", "reply", "--topic-id", "42", "--answer", "Example reply", "--topic-file", "-", "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    expect(stderr.join("")).toBe("");
+    expect(JSON.parse(stdout.join(""))).toMatchObject({ topicId: 42 });
+  });
+
   test("draft import rejects a bundle with a rounded topic ID", async () => {
     const root = await mkdtemp(join(tmpdir(), "apexcn-draft-unsafe-import-"));
     try {
@@ -54,6 +62,26 @@ describe("draft commands", () => {
       expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
       expect(stdout.join("")).toBe("");
       await expect(readdir(join(root, "drafts"))).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("draft import accepts a safe target with an unrelated large author ID", async () => {
+    const root = await mkdtemp(join(tmpdir(), "apexcn-draft-large-author-"));
+    try {
+      const configPath = join(root, "config.json");
+      const bundlePath = join(root, "bundle.json");
+      await writeFile(bundlePath, '{"kind":"draft-inventory-export","schemaVersion":1,"sourceProfileId":"source","exportedAt":"2026-01-01","drafts":[{"kind":"stored-draft","schemaVersion":1,"id":"test","ownerProfileId":"source","createdAt":"2026-01-01","updatedAt":"2026-01-01","draft":{"kind":"reply-draft","schemaVersion":1,"topicId":42,"parentPostId":null,"content":"Example","author":{"id":9007199254740993}}}]}');
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      const program = createProgram({ configPath, stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
+      await program.parseAsync(["node", "apexcn", "auth", "set-token", "--profile", "test", "--token", "synthetic-test-token"]);
+      stdout.length = 0;
+      await program.parseAsync(["node", "apexcn", "draft", "import", "--input", bundlePath, "--json"]);
+      expect(process.exitCode).toBeUndefined();
+      expect(stderr.join("")).toBe("");
+      expect(JSON.parse(stdout.join(""))).toMatchObject({ importedCount: 1 });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

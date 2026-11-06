@@ -4,7 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { defaultConfigPath } from "../config.js";
 import { HttpError, NetworkError, requestJson, TimeoutError } from "../http.js";
 import { assessCapabilityCompatibility } from "./capability-compatibility.js";
-import { assertSafeWriteTarget, normalizeApiForSelection, parsePreciseJson } from "./precise-json.js";
+import { assertSafeWriteTarget, containsImpreciseNumbers, parsePreciseJson, toNativeApiNumbers, UnsafeApiIdError } from "./precise-json.js";
 
 export type WriteOperationSession = {
   profile: string;
@@ -276,7 +276,12 @@ async function readOperation(configPath: string | undefined, operationId: string
   }
   let value: unknown;
   try {
-    value = normalizeApiForSelection(parsePreciseJson(await readFile(operationPath(configPath, operationId), "utf8")));
+    const precise = parsePreciseJson(await readFile(operationPath(configPath, operationId), "utf8"));
+    if (isRecord(precise) && (containsImpreciseNumbers(precise.request)
+      || (isRecord(precise.approval) && containsImpreciseNumbers(precise.approval.request)))) {
+      throw new UnsafeApiIdError("Unsafe or imprecise number in stored operation request.");
+    }
+    value = toNativeApiNumbers(precise);
   } catch (error) {
     if (isNodeError(error) && error.code === "ENOENT") {
       throw new Error(`Operation ${operationId} was not found.`);

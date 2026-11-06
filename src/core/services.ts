@@ -71,7 +71,7 @@ export async function researchTopics(client: ApexcnApiClient, input: {
     const id = topicIdFrom(item);
     if (id !== undefined) {
       try {
-        topics.push({ sourceItemIndex, value: normalizeTopicForSelection(await viewTopic(client, id, parsePreciseJson)) });
+        topics.push({ sourceItemIndex, value: normalizeTopicForSelection(await viewTopic(client, id, parsePreciseJson), "none") });
       } catch (error) {
         failures.push({ sourceItemIndex, id, error });
       }

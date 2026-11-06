@@ -1606,7 +1606,7 @@ async function runResearch(session: Session, state: WorkflowRunState, options: W
   for (const [sourceItemIndex, item] of items.entries()) {
     const id = topicIdFromItem(item);
     if (id !== undefined) {
-      const topic = normalizeTopicForSelection(await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token, parseResponse: parsePreciseJson }));
+      const topic = normalizeTopicForSelection(await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token, parseResponse: parsePreciseJson }), "none");
       const normalized = topicFromApiData(topic);
       topics.push(compactObject({
         sourceItemIndex,

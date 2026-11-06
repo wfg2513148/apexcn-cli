@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { stdin as processStdin } from "node:process";
 import { Command, InvalidArgumentError, Option } from "commander";
-import { isExactSafeIntegerInput, normalizeApiForSelection, parsePreciseJson, safeApiId, UnsafeApiIdError } from "../core/precise-json.js";
+import { isExactSafeIntegerInput, normalizeApiForSelection, normalizeTopicForSelection, parsePreciseJson, safeApiId, UnsafeApiIdError } from "../core/precise-json.js";
 import {
   deleteDraft,
   DraftInventoryError,
@@ -395,7 +395,8 @@ async function readJsonObject(path: string, label: "research" | "topic", options
     throw error;
   }
   try {
-    const parsed = normalizeApiForSelection(parsePreciseJson(text));
+    const precise = parsePreciseJson(text);
+    const parsed = label === "topic" ? normalizeTopicForSelection(precise, "none") : normalizeApiForSelection(precise);
     if (!isResearchObject(parsed)) {
       printError(options, { type: "validation", message: `Invalid ${label} file: ${path} must contain a JSON object` });
       process.exitCode = 1;

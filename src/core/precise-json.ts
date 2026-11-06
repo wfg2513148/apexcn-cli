@@ -35,8 +35,8 @@ export function precisePositiveIdKey(value: unknown): string | undefined {
 }
 
 export class UnsafeApiIdError extends Error {
-  constructor() {
-    super("Unsafe or imprecise numeric value in the server response; refusing to select or write a topic.");
+  constructor(message = "Unsafe or imprecise numeric identifier; refusing to select or write a topic.") {
+    super(message);
     this.name = "UnsafeApiIdError";
   }
 }
@@ -87,14 +87,19 @@ export function toNativeApiNumbers(value: unknown): unknown {
   return value;
 }
 
-export function normalizeTopicForSelection(value: unknown): unknown {
+export function normalizeTopicForSelection(value: unknown, replySelection: "all" | "evidence" | "none" = "all"): unknown {
   if (typeof value !== "object" || value === null || Array.isArray(value) || isLosslessNumber(value)) return toNativeApiNumbers(value);
   const root = value as Record<string, unknown>;
   const topic = typeof root.topic === "object" && root.topic !== null && !Array.isArray(root.topic)
     ? root.topic as Record<string, unknown> : root;
   for (const key of ["id", "topicId", "threadId"]) safeApiId(topic[key]);
-  const replies = Array.isArray(root.replies) ? root.replies : Array.isArray(topic.replies) ? topic.replies : [];
-  for (const item of replies) {
+  const replies = Array.isArray(root.replies) ? root.replies : replySelection === "all" && Array.isArray(topic.replies) ? topic.replies : [];
+  const selected = replySelection === "none" ? [] : replySelection === "evidence"
+    ? replies.filter((item) => typeof item === "object" && item !== null)
+      .sort((left, right) => Number((right as Record<string, unknown>).isUseful === true) - Number((left as Record<string, unknown>).isUseful === true))
+      .slice(0, 3)
+    : replies;
+  for (const item of selected) {
     if (typeof item !== "object" || item === null || Array.isArray(item)) continue;
     const reply = item as Record<string, unknown>;
     for (const key of ["replyId", "id", "postId", "topicId"]) safeApiId(reply[key]);
@@ -103,18 +108,19 @@ export function normalizeTopicForSelection(value: unknown): unknown {
 }
 
 export function assertSafeWriteTarget(path: string, body: Record<string, unknown>): void {
-  if (/[%\\\x00-\x20]/.test(path) || /(?:^|\/)\.{1,2}(?:\/|$)/.test(path)) throw new UnsafeApiIdError();
+  const patterns = [
+    /^\/api\/v1\/topics$/,
+    /^\/api\/v1\/topics\/(\d+)(?:\/(?:replies|favorite|subscription))?$/,
+    /^\/api\/v1\/topics\/(\d+)\/replies\/(\d+)\/correct-answer$/,
+    /^\/api\/v1\/replies\/(\d+)(?:\/favorite)?$/
+  ];
+  const match = patterns.map((pattern) => pattern.exec(path)).find(Boolean);
+  if (!match) throw new UnsafeApiIdError();
   normalizeApiForSelection(body);
   for (const key of ["topicId", "replyId", "parentPostId", "categoryId", "confirmId", "ifVersion"]) {
     if (body[key] !== undefined && body[key] !== null) safeApiId(body[key]);
   }
-  for (const match of path.matchAll(/\/(?:topics|replies)\/([^/?#]+)/g)) {
-    try {
-      safeApiId(decodeURIComponent(match[1]));
-    } catch {
-      throw new UnsafeApiIdError();
-    }
-  }
+  for (const id of match.slice(1)) if (id !== undefined) safeApiId(id);
 }
 
 export function parsePreciseJson(text: string): unknown {

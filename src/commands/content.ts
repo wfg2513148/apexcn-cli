@@ -619,7 +619,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
           process.exitCode = 1;
           return;
         }
-        const categoryId = commandOptions.categoryId ?? await promptCategoryId(options, session);
+        const categoryId = commandOptions.categoryId ?? await promptCategoryId(options, session, commandOptions.json);
         if (categoryId === undefined) {
           return;
         }
@@ -1622,7 +1622,7 @@ async function retrieveRagEvidence(
   const retrievalErrors: Array<Record<string, unknown>> = [];
   for (const topicId of [...topicMatches.keys()].slice(0, input.topK)) {
     try {
-      const detail = normalizeTopicForSelection(await viewTopic(client, topicId, parsePreciseJson));
+      const detail = normalizeTopicForSelection(await viewTopic(client, topicId, parsePreciseJson), "evidence");
       if (isRecord(detail) && typeof detail.requestId === "string" && detail.requestId.trim()) {
         requestIds.add(detail.requestId);
       }
@@ -1894,7 +1894,7 @@ async function recentTopicsFromSearchFallback(
       continue;
     }
     try {
-      const topic = normalizeTopicForSelection(await viewTopic(createApiClient(session), id, parsePreciseJson));
+      const topic = normalizeTopicForSelection(await viewTopic(createApiClient(session), id, parsePreciseJson), "none");
       recentItems.push(recentTopicFromData(topic, item, sourceItemIndex));
       if (isRecord(topic) && topic.requestId) {
         topicRequestIds.push(topic.requestId);
@@ -2538,7 +2538,7 @@ function lines(values: Array<string | undefined>): string {
   return values.filter((value): value is string => Boolean(value)).join("\n");
 }
 
-async function promptCategoryId(options: CommandIo, session: Session): Promise<number | undefined> {
+async function promptCategoryId(options: CommandIo, session: Session, json?: boolean): Promise<number | undefined> {
   if (processStdin.isTTY !== true) {
     printError(options, { type: "validation", message: "Missing --category-id in non-interactive mode" });
     process.exitCode = 1;
@@ -2562,7 +2562,7 @@ async function promptCategoryId(options: CommandIo, session: Session): Promise<n
     }
   });
   if (categories.length === 0) {
-    printError(options, { type: "validation", message: unsafeCount ? "No safe categories are available; unsafe or imprecise identifiers were omitted" : "No categories are available for topic creation" });
+    printError(options, { type: "validation", message: unsafeCount ? "No safe categories are available; unsafe or imprecise identifiers were omitted" : "No categories are available for topic creation" }, undefined, json);
     process.exitCode = 1;
     return undefined;
   }

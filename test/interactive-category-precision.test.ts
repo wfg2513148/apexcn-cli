@@ -26,6 +26,7 @@ test("interactive topic creation rejects an unsafe category ID before preview", 
     await program.parseAsync(["node", "apexcn", "topic", "create", "--title", "Example", "--content", "Example body", "--json"]);
     expect(process.exitCode).toBe(1);
     expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(JSON.parse(stderr.join(""))).toMatchObject({ error: { type: "validation" } });
     expect(stdout.join("")).not.toContain("write-preview");
     expect(fetch).toHaveBeenCalledTimes(1);
   } finally {
