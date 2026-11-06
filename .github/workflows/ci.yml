@@ -11,7 +11,7 @@ on:
       archive_sha256:
         description: Frozen 1.3.0 candidate checksum
         required: true
-        default: 57823150cd639f8d89c6a355525d09931119d147ae1be280e64604460eb20734
+        default: 06965c4aa87b6327c5deadb5d510b86e9176c8d22ccb0a14eab07d865c4d4eb2
         type: string
 
 permissions:
@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: c5df569ca6fe6573bf2d08e7133440344f138527
+          ref: db94ec301dbc4821a3e283643e47302457573d37
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
@@ -43,11 +43,11 @@ jobs:
         run: |
           set -euo pipefail
           test "$VALIDATOR_EXPECTED_TAG" = 'v1.2.2' || { printf 'Baseline tag mismatch.\n' >&2; exit 1; }
-          test "$VALIDATOR_EXPECTED_SHA" = '57823150cd639f8d89c6a355525d09931119d147ae1be280e64604460eb20734' || { printf 'Candidate checksum mismatch.\n' >&2; exit 1; }
+          test "$VALIDATOR_EXPECTED_SHA" = '06965c4aa87b6327c5deadb5d510b86e9176c8d22ccb0a14eab07d865c4d4eb2' || { printf 'Candidate checksum mismatch.\n' >&2; exit 1; }
           mkdir -p candidate-assets/prior
           npm pack --ignore-scripts --pack-destination candidate-assets
           mv candidate-assets/apexcn-cli-1.3.0.tgz candidate-assets/apexcn-cli.tgz
-          printf '%s  %s\n' '57823150cd639f8d89c6a355525d09931119d147ae1be280e64604460eb20734' 'candidate-assets/apexcn-cli.tgz' | sha256sum --check
+          printf '%s  %s\n' '06965c4aa87b6327c5deadb5d510b86e9176c8d22ccb0a14eab07d865c4d4eb2' 'candidate-assets/apexcn-cli.tgz' | sha256sum --check
           node --input-type=module -e 'import { inspectReleaseArchive } from "./scripts/inspect-release-archive.mjs"; inspectReleaseArchive("candidate-assets/apexcn-cli.tgz");'
           tar -xOzf candidate-assets/apexcn-cli.tgz package/dist/index.js | sha256sum | cut -d ' ' -f1 > candidate-assets/candidate-entry.sha256
           mkdir candidate-reference

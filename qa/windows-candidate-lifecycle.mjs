@@ -7,7 +7,7 @@ import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { runtimeManifest } from "./runtime-manifest.mjs";
 
-const candidateSha = "57823150cd639f8d89c6a355525d09931119d147ae1be280e64604460eb20734";
+const candidateSha = "06965c4aa87b6327c5deadb5d510b86e9176c8d22ccb0a14eab07d865c4d4eb2";
 const priorSha = "bd3ed6cae470af9710397805b609c6b93e479995295dbb74f0fb15b32656b852";
 const assets = resolve("candidate-assets");
 const candidate = join(assets, "apexcn-cli.tgz");
