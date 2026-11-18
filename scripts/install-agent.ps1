@@ -13,6 +13,8 @@ $InstallRoot = if ($env:APEXCN_CLI_INSTALL_ROOT) { $env:APEXCN_CLI_INSTALL_ROOT 
 $BinDir = if ($env:APEXCN_CLI_BIN_DIR) { $env:APEXCN_CLI_BIN_DIR } else { $DefaultBinDir }
 $SkillHome = if ($env:APEXCN_CLI_SKILL_HOME) { $env:APEXCN_CLI_SKILL_HOME } else { $HOME }
 $UsingDefaultPaths = $InstallRoot -eq $DefaultInstallRoot -and $BinDir -eq $DefaultBinDir
+$InstallRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($InstallRoot)
+$BinDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($BinDir)
 $TempDir = Join-Path ([IO.Path]::GetTempPath()) ("apexcn-cli-" + [guid]::NewGuid())
 $StagingRoot = $null
 

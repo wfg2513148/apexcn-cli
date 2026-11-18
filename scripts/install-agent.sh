@@ -12,6 +12,8 @@ default_install_root="$HOME/.apexcn/tools/apexcn-cli"
 default_bin_dir="$HOME/.local/bin"
 install_root="${APEXCN_CLI_INSTALL_ROOT:-$default_install_root}"
 bin_dir="${APEXCN_CLI_BIN_DIR:-$default_bin_dir}"
+[[ "$install_root" == /* ]] || install_root="$PWD/$install_root"
+[[ "$bin_dir" == /* ]] || bin_dir="$PWD/$bin_dir"
 skill_home="${APEXCN_CLI_SKILL_HOME:-$HOME}"
 tmp_dir="$(mktemp -d)"
 stage_root=""
@@ -128,7 +130,8 @@ for skill_root in "$skill_home/.agents/skills" "$skill_home/.codex/skills" "$ski
 done
 
 resolved=""
-if [[ "$install_root" == "$default_install_root" && "$bin_dir" == "$default_bin_dir" ]]; then
+if [[ "${APEXCN_CLI_INSTALL_ROOT:-$default_install_root}" == "$default_install_root" &&
+      "${APEXCN_CLI_BIN_DIR:-$default_bin_dir}" == "$default_bin_dir" ]]; then
   resolved="$(command -v apexcn 2>/dev/null || true)"
 fi
 if [[ -n "$resolved" && "$resolved" != "$launcher" ]]; then

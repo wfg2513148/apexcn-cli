@@ -7,6 +7,7 @@ import {
   mkdtempSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync
 } from "node:fs";
@@ -226,6 +227,26 @@ describe("zero-argument one-click installers", () => {
     }
   }, 30_000);
 
+  posixTest("shell installer supports relative destinations from another working directory", () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "apexcn-relative-install-")));
+    try {
+      const packagePaths = preparePackage(root);
+      const env = installEnvironment(root, packagePaths, {
+        APEXCN_CLI_INSTALL_ROOT: "relative install",
+        APEXCN_CLI_BIN_DIR: "relative bin"
+      });
+      const result = spawnSync("bash", [join(repoRoot, "scripts/install-agent.sh")], { cwd: root, env, encoding: "utf8" });
+      expect(result.status, result.stderr).toBe(0);
+      const cli = join(root, "relative install", "package");
+      expect(readFileSync(join(cli, ".apexcn-install-root"), "utf8").trim()).toBe(join(root, "relative install"));
+      expect(readFileSync(join(cli, ".apexcn-bin-dir"), "utf8").trim()).toBe(join(root, "relative bin"));
+      expect(execFileSync(join(root, "relative bin", "apexcn"), ["--version"], { cwd: repoRoot, env, encoding: "utf8" }))
+        .toBe(`${packageVersion}\n`);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
   posixTest("shell installer can isolate every skill write from the real user home", () => {
     const root = mkdtempSync(join(tmpdir(), "apexcn-skill-isolation-"));
     const packagePaths = preparePackage(root);
@@ -385,17 +406,20 @@ printf 'external launcher\\n'
     }
   }, 30_000);
 
-  test("PowerShell installer can install the same package when pwsh is available", () => {
+  test.each(["absolute", "relative"])("PowerShell installer supports %s destinations when pwsh is available", (pathMode) => {
     const powershell = process.env.APEXCN_TEST_POWERSHELL ?? process.env.PWSH_BIN ?? "pwsh";
     if (spawnSync(powershell, ["-NoProfile", "-Command", "$PSVersionTable.PSVersion.ToString()"]).status !== 0) {
       return;
     }
-    const root = mkdtempSync(join(tmpdir(), "apexcn-zero-pwsh-"));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "apexcn-zero-pwsh-")));
     const packagePaths = preparePackage(root);
     const env = {
       ...installEnvironment(root, packagePaths),
       USERPROFILE: join(root, "home"),
-      LOCALAPPDATA: join(root, "local")
+      LOCALAPPDATA: join(root, "local"),
+      APEXCN_CLI_SKILL_HOME: join(root, "home"),
+      APEXCN_CLI_INSTALL_ROOT: pathMode === "relative" ? "install" : join(root, "install"),
+      APEXCN_CLI_BIN_DIR: pathMode === "relative" ? "bin" : join(root, "bin")
     };
 
     try {
@@ -405,10 +429,13 @@ printf 'external launcher\\n'
         "Bypass",
         "-File",
         join(repoRoot, "scripts/install-agent.ps1")
-      ], { cwd: repoRoot, env, encoding: "utf8" });
+      ], { cwd: root, env, encoding: "utf8" });
 
       expect(result.status, result.stderr).toBe(0);
       expect(result.stdout).toContain("Verified package checksum");
+      const cli = join(root, "install", "package");
+      expect(readFileSync(join(cli, ".apexcn-install-root"), "utf8").trim()).toBe(join(root, "install"));
+      expect(readFileSync(join(cli, ".apexcn-bin-dir"), "utf8").trim()).toBe(join(root, "bin"));
       expect(execFileSync(process.execPath, [
         join(root, "install", "package", "dist", "index.js"),
         "--version"
