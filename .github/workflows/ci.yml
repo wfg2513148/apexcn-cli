@@ -1,26 +1,22 @@
-name: Independent Windows candidate qualification
+name: PowerShell relative install reproduction
 
 on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Published baseline version, fixed for this test
         required: true
-        default: v1.2.2
         type: string
       archive_sha256:
-        description: Frozen 1.3.0 candidate checksum
         required: true
-        default: 2af9d77e932ee9a92565d5cf7213dc4c3982e347f41ad2fc5db8d81942bdc217
         type: string
 
 permissions:
   contents: read
 
 jobs:
-  freeze-inputs:
+  powershell-relative-install:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,95 +30,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24.16.0
-      - run: npm install --global npm@11.13.0
-      - run: node --test qa-support/qa/runtime-manifest.test.mjs
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run build
-      - name: Rebuild and bind the frozen 1.3.0 archive
+      - name: Reproduce relative destination failure against the unchanged installer
         shell: bash
         run: |
           set -euo pipefail
-          test "$VALIDATOR_EXPECTED_TAG" = 'v1.2.2' || { printf 'Baseline tag mismatch.\n' >&2; exit 1; }
-          test "$VALIDATOR_EXPECTED_SHA" = '2af9d77e932ee9a92565d5cf7213dc4c3982e347f41ad2fc5db8d81942bdc217' || { printf 'Candidate checksum mismatch.\n' >&2; exit 1; }
-          mkdir -p candidate-assets/prior
-          npm pack --ignore-scripts --pack-destination candidate-assets
-          mv candidate-assets/apexcn-cli-1.3.0.tgz candidate-assets/apexcn-cli.tgz
-          printf '%s  %s\n' '2af9d77e932ee9a92565d5cf7213dc4c3982e347f41ad2fc5db8d81942bdc217' 'candidate-assets/apexcn-cli.tgz' | sha256sum --check
-          node --input-type=module -e 'import { inspectReleaseArchive } from "./scripts/inspect-release-archive.mjs"; inspectReleaseArchive("candidate-assets/apexcn-cli.tgz");'
-          tar -xOzf candidate-assets/apexcn-cli.tgz package/dist/index.js | sha256sum | cut -d ' ' -f1 > candidate-assets/candidate-entry.sha256
-          mkdir candidate-reference
-          tar -xzf candidate-assets/apexcn-cli.tgz -C candidate-reference
-          node qa-support/qa/runtime-manifest.mjs candidate-reference/package > candidate-assets/runtime-manifest.json
-          rm -r candidate-reference
-          cp scripts/install-agent.ps1 candidate-assets/install-agent.ps1
-          gh release download v1.2.2 --repo wfg2513148/apexcn-cli --pattern apexcn-cli.tgz --dir candidate-assets/prior
-          printf '%s  %s\n' 'bd3ed6cae470af9710397805b609c6b93e479995295dbb74f0fb15b32656b852' 'candidate-assets/prior/apexcn-cli.tgz' | sha256sum --check
-          node --input-type=module -e 'import { inspectReleaseArchive } from "./scripts/inspect-release-archive.mjs"; inspectReleaseArchive("candidate-assets/prior/apexcn-cli.tgz");'
-          mkdir prior-reference
-          tar -xzf candidate-assets/prior/apexcn-cli.tgz -C prior-reference
-          node qa-support/qa/runtime-manifest.mjs prior-reference/package > candidate-assets/prior/runtime-manifest.json
-          rm -r prior-reference
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VALIDATOR_EXPECTED_TAG: ${{ inputs.release_tag }}
-          VALIDATOR_EXPECTED_SHA: ${{ inputs.archive_sha256 }}
-      - name: Install the exact candidate archive on Linux
-        shell: bash
-        run: |
-          set -euo pipefail
-          smoke_dir=$(mktemp -d)
-          trap 'rm -rf "$smoke_dir"' EXIT
-          export APEXCN_CLI_INSTALL_ROOT="$smoke_dir/install"
-          export APEXCN_CLI_BIN_DIR="$smoke_dir/bin"
-          export APEXCN_CLI_SKILL_HOME="$smoke_dir/skills"
-          export APEXCN_CLI_PACKAGE_URL="file://$PWD/candidate-assets/apexcn-cli.tgz"
-          export APEXCN_CLI_CHECKSUMS_URL="file://$smoke_dir/checksums.txt"
-          sha256sum candidate-assets/apexcn-cli.tgz | awk '{print $1 "  apexcn-cli.tgz"}' > "$smoke_dir/checksums.txt"
-          bash scripts/install-agent.sh
-          test "$("$APEXCN_CLI_BIN_DIR/apexcn" --version)" = "1.3.0"
-          "$APEXCN_CLI_BIN_DIR/apexcn" commands --json | node -e 'const m = JSON.parse(require("node:fs").readFileSync(0, "utf8")); if (m.version !== "1.3.0" || m.commands.length !== 86) process.exit(1)'
-          npm test -- test/install-agent.test.ts test/lifecycle-agent.test.ts
-      - uses: actions/upload-artifact@v4
-        with:
-          name: frozen-windows-candidate-inputs
-          path: candidate-assets/
-          if-no-files-found: error
-  windows-lifecycle:
-    needs: freeze-inputs
-    runs-on: windows-2022
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: powershell-5-1
-            shell: powershell.exe
-            expected: "5.1"
-          - id: powershell-7
-            shell: pwsh.exe
-            expected: "7"
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.20.2
-      - uses: actions/download-artifact@v4
-        with:
-          name: frozen-windows-candidate-inputs
-          path: candidate-assets
-      - name: Exercise the exact candidate archive in an isolated installation
-        run: node qa/windows-candidate-lifecycle.mjs
-        env:
-          APEXCN_QA_SHELL: ${{ matrix.shell }}
-          APEXCN_QA_EXPECTED_SHELL: ${{ matrix.expected }}
-          APEXCN_QA_REPORT: reports/${{ matrix.id }}-candidate-lifecycle.json
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: ${{ matrix.id }}-candidate-lifecycle
-          path: |
-            reports/${{ matrix.id }}-candidate-lifecycle.json
-            reports/${{ matrix.id }}-candidate-lifecycle.json.outputs/
-          if-no-files-found: warn
+          pwsh --version
+          cp qa-support/qa/install-agent-relative.test.ts test/install-agent.test.ts
+          ./node_modules/.bin/vitest run test/install-agent.test.ts -t 'PowerShell installer supports relative destinations' --no-color
