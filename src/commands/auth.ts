@@ -316,14 +316,17 @@ function authAudit(config: unknown, configPath: string, env: NodeJS.ProcessEnv =
   const profilesRoot = isRecord(root.profiles) ? root.profiles : {};
   const current = typeof root.current === "string" ? root.current : undefined;
   const names = Object.keys(profilesRoot).sort();
+  const profileNextStep = names.length === 0
+    ? "Run apexcn auth set-token --help to configure a profile."
+    : "Run apexcn auth list, then apexcn auth use <profile> to select a profile.";
 
   if (names.length === 0) {
     issues.push({ code: "no-profiles", message: "No auth profiles are configured." });
   }
   if (!current) {
-    issues.push({ code: "no-active-profile", message: "No active profile is configured." });
+    issues.push({ code: "no-active-profile", message: `No active profile is configured. ${profileNextStep}` });
   } else if (!Object.prototype.hasOwnProperty.call(profilesRoot, current)) {
-    issues.push({ code: "missing-current-profile", message: "The active profile is not present in profiles.", profile: current });
+    issues.push({ code: "missing-current-profile", message: `The active profile is not present in profiles. ${profileNextStep}`, profile: current });
   }
 
   const baseUrlProfiles = new Map<string, string[]>();

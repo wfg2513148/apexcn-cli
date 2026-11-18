@@ -342,7 +342,11 @@ describe("auth command", () => {
     const audit = JSON.parse(stdout.join(""));
     expect(audit.ok).toBe(false);
     expect(audit.issues).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: "missing-current-profile", profile: "missing" }),
+      expect.objectContaining({
+        code: "missing-current-profile",
+        profile: "missing",
+        message: expect.stringContaining("apexcn auth use <profile>")
+      }),
       expect.objectContaining({ code: "invalid-profile", profile: "broken" }),
       expect.objectContaining({ code: "invalid-base-url", profile: "invalidUrl" }),
       expect.objectContaining({ code: "missing-token", profile: "invalidUrl" })
