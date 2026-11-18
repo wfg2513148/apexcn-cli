@@ -7,7 +7,7 @@ import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { runtimeManifest } from "./runtime-manifest.mjs";
 
-const candidateSha = "2af9d77e932ee9a92565d5cf7213dc4c3982e347f41ad2fc5db8d81942bdc217";
+const candidateSha = "35e90004f0e91925a8f0d0b461c164f8e6660ef918ebec885ba6c3af79b9af12";
 const priorSha = "bd3ed6cae470af9710397805b609c6b93e479995295dbb74f0fb15b32656b852";
 const assets = resolve("candidate-assets");
 const candidate = join(assets, "apexcn-cli.tgz");
@@ -308,7 +308,17 @@ try {
   assert.equal(invokeLauncher("version after shell-native failed upgrade", "--version").stdout.trim(), "1.3.0");
   assert.equal(readFileSync(config, "utf8"), configText);
   setArchive(candidate, candidateChecksums);
-  run("reinstall candidate", ["-File", installer]);
+  env.APEXCN_CLI_INSTALL_ROOT = "install";
+  env.APEXCN_CLI_BIN_DIR = "bin";
+  run("reinstall candidate using relative destinations", ["-File", installer]);
+  env.APEXCN_CLI_INSTALL_ROOT = install;
+  env.APEXCN_CLI_BIN_DIR = bin;
+  assert.equal(readFileSync(join(installedRoot(), ".apexcn-install-root"), "utf8").trim(), install);
+  assert.equal(readFileSync(join(installedRoot(), ".apexcn-bin-dir"), "utf8").trim(), bin);
+  const fromAnotherDirectory = run("relative reinstall launcher from a different directory", [
+    "-Command", "Set-Location (Split-Path -Parent $env:APEXCN_QA_LAUNCHER); & $env:APEXCN_QA_LAUNCHER --version; exit $LASTEXITCODE"
+  ]);
+  assert.equal(fromAnotherDirectory.stdout.trim(), "1.3.0");
   recordInstalled("reinstall candidate", "1.3.0");
   assert.equal(invokeLauncher("reinstalled candidate version", "--version").stdout.trim(), "1.3.0");
   assert.equal(readFileSync(config, "utf8"), configText);
