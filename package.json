@@ -58,8 +58,12 @@
   "devDependencies": {
     "@types/node": "^22.10.2",
     "ajv": "^8.20.0",
+    "picomatch": "file:vendor/test-glob",
     "typescript": "^5.7.2",
     "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "picomatch": "$picomatch"
   },
   "bundleDependencies": [
     "commander",

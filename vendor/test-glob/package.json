@@ -1,0 +1,10 @@
+{
+  "name": "apexcn-cli-test-glob",
+  "version": "4.0.7+noextglob.1",
+  "private": true,
+  "license": "MIT",
+  "main": "index.js",
+  "engines": {
+    "node": ">=12"
+  }
+}
