@@ -1064,12 +1064,15 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
       commandPath: "collection favorites",
       argv: (context) => ["node", "apexcn", "collection", "favorites", "--output-dir", join(context.tmpDir, "favorites"), "--json"],
       responseForUrl: (url, init) => {
-        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/me/favorites/export?pageSize=50");
         expect(init?.method ?? "GET").toBe("GET");
+        if (url === "https://oracleapex.cn/ords/test/api/v1/me/favorites?pageSize=50") {
+          return Response.json({ requestId: "req-favorite-relations", items: [], page: { nextCursor: null } });
+        }
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/me/favorites/export?pageSize=50");
         return Response.json({ requestId: "req-favorite-export", items: [{ topicId: 1, title: "REST API", content: "REST API content", url: "https://oracleapex.cn/t/1", relationCreatedDate: "2026-07-01", updatedDate: "2026-07-02", provenance: { source: "favorite", topicId: 1 } }], page: { hasMore: false, nextCursor: null } });
       },
       assertFeedback: ({ stdout, stderr, fetch }) => {
-        expect(fetch).toHaveBeenCalledOnce();
+        expect(fetch).toHaveBeenCalledTimes(2);
         expect(stderr).toBe("");
         expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ kind: "collection-favorites", topicCount: 1 }));
       }

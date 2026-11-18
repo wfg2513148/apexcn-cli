@@ -301,7 +301,7 @@ apexcn collection import --bundle favorites.bundle.json --output-dir restored --
 apexcn collection restore --bundle favorites.bundle.json --dir favorites --json
 ```
 
-`collection favorites` traverses the server's authenticated readonly cursor and writes only topic favorites into the offline collection while preserving full content, URL, topic ID, relation time, update time, and provenance. Reply favorites are reported as `REPLY_FAVORITE_EXCLUDED` with their topic/reply identity and are never reinterpreted as topic IDs. Bundle import requires an empty directory; restore overwrites only managed bundle files and leaves unrelated files untouched.
+`collection favorites` reads the authenticated topic export for full content, URL, topic ID, relation time, update time, and provenance. It reads the caller's favorite relations to report reply favorites as `REPLY_FAVORITE_EXCLUDED` with their topic and reply IDs. The offline collection contains only topics. Deliberate reply exclusions contribute to `excludedReplyCount` and a complete topic export exits successfully. Unavailable topics contribute to `unavailableCount` and cause a nonzero exit. Bundle import requires an empty directory. Restore overwrites only managed bundle files and leaves unrelated files untouched.
 
 Offline automation plans call no network and cannot send community writes:
 

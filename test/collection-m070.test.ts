@@ -209,6 +209,9 @@ describe("roadmap 0.7 collection assets", () => {
           page: { count: 2, hasMore: false, nextCursor: null }
         });
       }
+      if (url.endsWith("/api/v1/me/favorites?pageSize=2")) {
+        return Response.json({ requestId: "favorite-relations", items: [], page: { nextCursor: null } });
+      }
       return Response.json({ error: "unexpected" }, { status: 500 });
     });
 
@@ -218,9 +221,9 @@ describe("roadmap 0.7 collection assets", () => {
       topicCount: 3,
       unavailableCount: 1,
       pageCount: 2,
-      requestIds: ["favorites-1", "favorites-2"]
+      requestIds: ["favorites-1", "favorites-2", "favorite-relations"]
     }));
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch).toHaveBeenCalledTimes(3);
     const artifact = await readJson(join(outputDir, "topics", "11.json"));
     expect(artifact.result.topic).toEqual(expect.objectContaining({ id: 11, content: "Body 11", url: "https://oracleapex.cn/t/11" }));
     expect(artifact.sources).toEqual([expect.objectContaining({ type: "favorite", provenance: expect.objectContaining({ source: "favorite", topicId: 11 }) })]);
@@ -247,6 +250,9 @@ describe("roadmap 0.7 collection assets", () => {
           page: { count: 0, hasMore: false, nextCursor: null }
         });
       }
+      if (url.endsWith("/api/v1/me/favorites?pageSize=1")) {
+        return Response.json({ requestId: "favorite-relations", items: [], page: { nextCursor: null } });
+      }
       return Response.json({ error: "unexpected" }, { status: 500 });
     });
 
@@ -257,9 +263,62 @@ describe("roadmap 0.7 collection assets", () => {
     expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
       topicCount: 1,
       pageCount: 2,
-      requestIds: ["favorites-page-1", "favorites-page-2-empty"]
+      requestIds: ["favorites-page-1", "favorites-page-2-empty", "favorite-relations"]
     }));
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  test("favorites export reports replies listed separately from the topic export", async () => {
+    const outputDir = await tempPath("favorite-relation-exclusions");
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const url = new URL(String(input));
+      const cursor = url.searchParams.get("cursor");
+      if (url.pathname.endsWith("/me/favorites/export")) {
+        return Response.json({
+          kind: "favorite-topic-export",
+          requestId: "topic-export",
+          items: [{ topicId: 11, title: "Favorite topic", content: "Complete topic content" }],
+          page: { nextCursor: null }
+        });
+      }
+      if (url.pathname.endsWith("/me/favorites") && !cursor) {
+        return Response.json({
+          kind: "me-favorites",
+          requestId: "relations-first",
+          items: [{ targetType: "THREAD", topicId: 11, title: "Summary only" }],
+          page: { nextCursor: "second-page" }
+        });
+      }
+      if (url.pathname.endsWith("/me/favorites") && cursor === "second-page") {
+        return Response.json({
+          kind: "me-favorites",
+          requestId: "relations-second",
+          items: [{ id: 90, targetType: "POST", targetId: 90, topicId: 11, replyId: 90 }],
+          page: { nextCursor: null }
+        });
+      }
+      return Response.json({ error: { message: `unexpected ${url}` } }, { status: 500 });
+    });
+
+    await program.parseAsync([
+      "node", "apexcn", "collection", "favorites", "--page-size", "1", "--output-dir", outputDir, "--json"
+    ]);
+
+    expect(JSON.parse(stdout.join(""))).toEqual(expect.objectContaining({
+      topicCount: 1,
+      excludedReplyCount: 1,
+      unavailableCount: 0,
+      pageCount: 1,
+      requestIds: ["topic-export", "relations-first", "relations-second"]
+    }));
+    expect(process.exitCode).toBeUndefined();
+    const collection = await readJson(join(outputDir, "collection.json"));
+    expect(collection.topics.map((topic: { id: number }) => topic.id)).toEqual([11]);
+    expect(collection.errors).toEqual([{
+      targetType: "POST", topicId: 11, replyId: 90, unavailableReason: "REPLY_FAVORITE_EXCLUDED"
+    }]);
+    const topic = await readJson(join(outputDir, "topics", "11.json"));
+    expect(topic.result.topic.content).toBe("Complete topic content");
   });
 
   test("favorites import keeps its topic-only boundary and never treats a reply id as a topic id", async () => {
@@ -293,6 +352,13 @@ describe("roadmap 0.7 collection assets", () => {
           page: { hasMore: false, nextCursor: null }
         });
       }
+      if (url.endsWith("/api/v1/me/favorites?pageSize=50")) {
+        return Response.json({
+          requestId: "favorite-relations",
+          items: [{ targetType: "POST", topicId: 11, replyId: 90 }],
+          page: { nextCursor: null }
+        });
+      }
       return Response.json({ error: { message: `unexpected ${url}` } }, { status: 500 });
     });
 
@@ -306,9 +372,10 @@ describe("roadmap 0.7 collection assets", () => {
       kind: "collection-favorites",
       topicCount: 1,
       excludedReplyCount: 1,
-      unavailableCount: 1,
-      requestIds: ["favorites-targets"]
+      unavailableCount: 0,
+      requestIds: ["favorites-targets", "favorite-relations"]
     }));
+    expect(process.exitCode).toBeUndefined();
     const collection = await readJson(join(outputDir, "collection.json"));
     expect(collection.topics.map((topic: { id: number }) => topic.id)).toEqual([11]);
     expect(collection.errors).toContainEqual(expect.objectContaining({

@@ -703,20 +703,14 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
   }, options.json === true);
 }
 
-async function buildFavoritesCollection(io: CollectionCommandOptions, options: FavoritesOptions): Promise<void> {
-  const requestedContentLanguage = currentContentLanguage() ?? "zh-cn";
-  const session = await loadSession(io);
-  if (!session) {
-    return;
-  }
-  const pageSize = options.pageSize ?? 50;
+async function readFavoritePages(session: Session, path: string, pageSize: number) {
   const items: Array<{ item: Record<string, unknown>; requestId?: string; contentLanguage?: unknown }> = [];
   const requestIds = new Set<string>();
   const seenCursors = new Set<string>();
   let cursor: string | undefined;
   let pageCount = 0;
   do {
-    const data = await requestJson(session.baseUrl, "/api/v1/me/favorites/export", {
+    const data = await requestJson(session.baseUrl, path, {
       token: session.token,
       parseResponse: parsePreciseJson,
       query: { pageSize, cursor }
@@ -735,37 +729,55 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
     if (next) seenCursors.add(next);
     cursor = next;
   } while (cursor);
+  return { items, pageCount, requestIds };
+}
 
-  for (const { item } of items) {
-    const targetType = favoriteTargetType(item);
-    if (targetType === "POST") {
-      positiveIdFromKeys(item, ["topicId", "threadId"]);
-      positiveIdFromKeys(item, ["replyId", "postId", "targetId", "id"]);
+async function buildFavoritesCollection(io: CollectionCommandOptions, options: FavoritesOptions): Promise<void> {
+  const requestedContentLanguage = currentContentLanguage() ?? "zh-cn";
+  const session = await loadSession(io);
+  if (!session) {
+    return;
+  }
+  const pageSize = options.pageSize ?? 50;
+  const exported = await readFavoritePages(session, "/api/v1/me/favorites/export", pageSize);
+  const topicItems = [];
+  const replyItems = [];
+  for (const entry of exported.items) {
+    const { item } = entry;
+    if (favoriteTargetType(item) === "POST") {
+      replyItems.push(item);
     } else {
       positiveIdFromKeys(item, ["topicId", "threadId", "targetId", "id"]);
+      topicItems.push(entry);
     }
   }
+
+  // The topic export supplies full content. The relation list supplies reply identities.
+  const relations = await readFavoritePages(session, "/api/v1/me/favorites", pageSize);
+  for (const { item } of relations.items) {
+    if (favoriteTargetType(item) === "POST") replyItems.push(item);
+  }
+  const errors: Array<Record<string, unknown>> = [];
+  const seenReplyIds = new Set<number>();
+  for (const item of replyItems) {
+    const topicId = positiveIdFromKeys(item, ["topicId", "threadId"]);
+    const replyId = positiveIdFromKeys(item, ["replyId", "postId", "targetId", "id"]);
+    if (replyId !== undefined) {
+      if (seenReplyIds.has(replyId)) continue;
+      seenReplyIds.add(replyId);
+    }
+    errors.push({ targetType: "POST", topicId, replyId, unavailableReason: "REPLY_FAVORITE_EXCLUDED" });
+  }
+  const excludedReplyCount = errors.length;
 
   const topicsDir = join(options.outputDir, "topics");
   await mkdir(topicsDir, { recursive: true });
   const topics: Array<Record<string, unknown>> = [];
   const files: Array<Record<string, unknown>> = [];
   const seenIds = new Set<number>();
-  const errors: Array<Record<string, unknown>> = [];
-  let excludedReplyCount = 0;
-  for (const { item: rawItem, requestId, contentLanguage } of items) {
+  for (const { item: rawItem, requestId, contentLanguage } of topicItems) {
     const item = toNativeApiNumbers(rawItem) as Record<string, unknown>;
     const targetType = favoriteTargetType(item);
-    if (targetType === "POST") {
-      excludedReplyCount += 1;
-      errors.push({
-        targetType,
-        topicId: positiveIdFromKeys(item, ["topicId", "threadId"]),
-        replyId: positiveIdFromKeys(item, ["replyId", "postId", "targetId", "id"]),
-        unavailableReason: "REPLY_FAVORITE_EXCLUDED"
-      });
-      continue;
-    }
     const id = positiveIdFromKeys(item, ["topicId", "threadId", "targetId", "id"]);
     if (id === undefined || item.unavailableReason) {
       errors.push({
@@ -838,16 +850,17 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
     files: { index: indexFile, topics: files }
   };
   await writeJsonWithEvidence(join(options.outputDir, "collection.json"), collection);
-  if (errors.length > 0) process.exitCode = 1;
+  const unavailableCount = errors.length - excludedReplyCount;
+  if (unavailableCount > 0) process.exitCode = 1;
   printData(io, {
     kind: "collection-favorites",
     schemaVersion: 1,
     outputDir: options.outputDir,
     topicCount: topics.length,
     excludedReplyCount,
-    unavailableCount: errors.length,
-    pageCount,
-    requestIds: [...requestIds],
+    unavailableCount,
+    pageCount: exported.pageCount,
+    requestIds: [...new Set([...exported.requestIds, ...relations.requestIds])],
     contentHash: collection.contentHash
   }, options.json === true);
 }

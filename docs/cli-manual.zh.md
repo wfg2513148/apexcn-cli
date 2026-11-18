@@ -303,7 +303,7 @@ apexcn collection import --bundle favorites.bundle.json --output-dir restored --
 apexcn collection restore --bundle favorites.bundle.json --dir favorites --json
 ```
 
-`collection favorites` 遍历服务端认证只读 cursor，只将话题收藏写入离线合集，并保留完整正文、URL、topicId、收藏时间、更新时间和 provenance。回复收藏会以 `REPLY_FAVORITE_EXCLUDED` 明确报告并保留 topicId/replyId 供诊断，不会把 replyId 当成 topicId。import 要求目标目录为空；restore 只覆盖 bundle 管理的文件，不删除无关文件。
+`collection favorites` 从认证话题导出接口获取完整正文、URL、topicId、收藏时间、更新时间和 provenance，从个人收藏列表读取回复收藏的 topicId 和 replyId。离线合集只包含话题。回复收藏以 `REPLY_FAVORITE_EXCLUDED` 报告并计入 `excludedReplyCount`，话题全部导出时正常退出。不可用话题计入 `unavailableCount` 并返回非零退出码。import 要求目标目录为空。restore 只覆盖 bundle 管理的文件。
 
 离线自动化不访问网络，也不能发送社区写请求：
 
