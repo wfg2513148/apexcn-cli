@@ -11,7 +11,7 @@ on:
       archive_sha256:
         description: Frozen 1.3.0 candidate checksum
         required: true
-        default: 06965c4aa87b6327c5deadb5d510b86e9176c8d22ccb0a14eab07d865c4d4eb2
+        default: 2af9d77e932ee9a92565d5cf7213dc4c3982e347f41ad2fc5db8d81942bdc217
         type: string
 
 permissions:
@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: db94ec301dbc4821a3e283643e47302457573d37
+          ref: fe8f68405a029fb7f40736fa196be9daa0b615c9
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
@@ -43,11 +43,11 @@ jobs:
         run: |
           set -euo pipefail
           test "$VALIDATOR_EXPECTED_TAG" = 'v1.2.2' || { printf 'Baseline tag mismatch.\n' >&2; exit 1; }
-          test "$VALIDATOR_EXPECTED_SHA" = '06965c4aa87b6327c5deadb5d510b86e9176c8d22ccb0a14eab07d865c4d4eb2' || { printf 'Candidate checksum mismatch.\n' >&2; exit 1; }
+          test "$VALIDATOR_EXPECTED_SHA" = '2af9d77e932ee9a92565d5cf7213dc4c3982e347f41ad2fc5db8d81942bdc217' || { printf 'Candidate checksum mismatch.\n' >&2; exit 1; }
           mkdir -p candidate-assets/prior
           npm pack --ignore-scripts --pack-destination candidate-assets
           mv candidate-assets/apexcn-cli-1.3.0.tgz candidate-assets/apexcn-cli.tgz
-          printf '%s  %s\n' '06965c4aa87b6327c5deadb5d510b86e9176c8d22ccb0a14eab07d865c4d4eb2' 'candidate-assets/apexcn-cli.tgz' | sha256sum --check
+          printf '%s  %s\n' '2af9d77e932ee9a92565d5cf7213dc4c3982e347f41ad2fc5db8d81942bdc217' 'candidate-assets/apexcn-cli.tgz' | sha256sum --check
           node --input-type=module -e 'import { inspectReleaseArchive } from "./scripts/inspect-release-archive.mjs"; inspectReleaseArchive("candidate-assets/apexcn-cli.tgz");'
           tar -xOzf candidate-assets/apexcn-cli.tgz package/dist/index.js | sha256sum | cut -d ' ' -f1 > candidate-assets/candidate-entry.sha256
           mkdir candidate-reference
@@ -66,6 +66,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VALIDATOR_EXPECTED_TAG: ${{ inputs.release_tag }}
           VALIDATOR_EXPECTED_SHA: ${{ inputs.archive_sha256 }}
+      - name: Install the exact candidate archive on Linux
+        shell: bash
+        run: |
+          set -euo pipefail
+          smoke_dir=$(mktemp -d)
+          trap 'rm -rf "$smoke_dir"' EXIT
+          export APEXCN_CLI_INSTALL_ROOT="$smoke_dir/install"
+          export APEXCN_CLI_BIN_DIR="$smoke_dir/bin"
+          export APEXCN_CLI_SKILL_HOME="$smoke_dir/skills"
+          export APEXCN_CLI_PACKAGE_URL="file://$PWD/candidate-assets/apexcn-cli.tgz"
+          export APEXCN_CLI_CHECKSUMS_URL="file://$smoke_dir/checksums.txt"
+          sha256sum candidate-assets/apexcn-cli.tgz | awk '{print $1 "  apexcn-cli.tgz"}' > "$smoke_dir/checksums.txt"
+          bash scripts/install-agent.sh
+          test "$("$APEXCN_CLI_BIN_DIR/apexcn" --version)" = "1.3.0"
+          "$APEXCN_CLI_BIN_DIR/apexcn" commands --json | node -e 'const m = JSON.parse(require("node:fs").readFileSync(0, "utf8")); if (m.version !== "1.3.0" || m.commands.length !== 86) process.exit(1)'
+          npm test -- test/install-agent.test.ts test/lifecycle-agent.test.ts
       - uses: actions/upload-artifact@v4
         with:
           name: frozen-windows-candidate-inputs
