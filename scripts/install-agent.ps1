@@ -102,7 +102,6 @@ try {
   Set-Content -Encoding UTF8 (Join-Path $CliRoot ".apexcn-bin-dir") $BinDir
   $Version = (& node (Join-Path $CliRoot "dist/index.js") --version).Trim()
   if ($LASTEXITCODE -ne 0) { throw "Staged launcher verification failed." }
-
   New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
   $Launcher = Join-Path $BinDir "apexcn.cmd"
   $LauncherBackup = Join-Path $TempDir "apexcn.previous.cmd"
@@ -130,7 +129,6 @@ try {
     throw
   }
   Remove-Item -Recurse -Force $PreviousRoot -ErrorAction SilentlyContinue
-
   foreach ($SkillRoot in @(
     (Join-Path $SkillHome ".agents/skills"),
     (Join-Path $SkillHome ".codex/skills"),
