@@ -4,7 +4,8 @@ import { assessCapabilityCompatibility } from "../core/capability-compatibility.
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
 import { redactSecrets } from "../core/secret-redaction.js";
-import { HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
+import { sanitizeUrlForDisplay } from "../core/url-redaction.js";
+import { HttpError, joinUrl, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { fieldText, isRecord, itemsFromData, outputFormat, parseOutputFormat, printData, printError, validateFormatOptions, type FormatOption } from "../output.js";
 import type { CommandIo } from "./auth.js";
 
@@ -26,7 +27,7 @@ export function createMeCommand(options: MeCommandOptions): Command {
       await runMeApi(options, commandOptions, async (session) => {
         const data = await requestJson(session.baseUrl, "/api/v1/me", { token: session.token });
         if (commandOptions.verbose) {
-          options.stderr(`GET ${session.baseUrl.replace(/\/+$/, "")}/api/v1/me\n`);
+          options.stderr(`GET ${sanitizeUrlForDisplay(joinUrl(session.baseUrl, "/api/v1/me"))}\n`);
         }
         printData(options, commandOptions.includePrivate ? redactSecrets(data) : redactMeOutput(data), outputFormat(commandOptions), formatMeText);
       });

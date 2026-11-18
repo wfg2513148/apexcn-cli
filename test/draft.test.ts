@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -27,6 +27,99 @@ describe("draft commands", () => {
     process.exitCode = undefined;
     delete process.env.APEXCN_CONFIG_PATH;
     delete process.env.APEXCN_ERROR_FORMAT;
+  });
+
+  test.each(['"9.007199254740993e15"', "9007199254740991.1"])("draft reply rejects an imprecise topic file ID %s", async (id) => {
+    const { program, stdout, stderr } = draftProgram({ readStdin: async () => `{"topic":{"id":${id},"title":"other"}}` });
+    await program.parseAsync(["node", "apexcn", "draft", "reply", "--topic-id", "42", "--answer", "Example reply", "--topic-file", "-", "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(JSON.parse(stderr.join(""))).toMatchObject({ error: { type: "validation" } });
+    expect(stdout.join("")).toBe("");
+  });
+
+  test("draft reply accepts a safe topic with an unrelated large author ID", async () => {
+    const { program, stdout, stderr } = draftProgram({ readStdin: async () => '{"topic":{"id":42,"title":"safe","author":{"id":9007199254740993}}}' });
+    await program.parseAsync(["node", "apexcn", "draft", "reply", "--topic-id", "42", "--answer", "Example reply", "--topic-file", "-", "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    expect(stderr.join("")).toBe("");
+    expect(JSON.parse(stdout.join(""))).toMatchObject({ topicId: 42 });
+  });
+
+  test.each([
+    ["question", ["draft", "question", "--title", "Example", "--problem", "Example problem"]],
+    ["reply", ["draft", "reply", "--topic-id", "42", "--answer", "Example reply"]]
+  ])("draft %s accepts research with an unrelated large author ID", async (_name, args) => {
+    const { program, stdout, stderr } = draftProgram({ readStdin: async () => '{"items":[{"id":42,"title":"safe","author":{"id":9007199254740993}}]}' });
+    await program.parseAsync(["node", "apexcn", ...args, "--research-file", "-", "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    expect(stderr.join("")).toBe("");
+    expect(JSON.parse(stdout.join(""))).toMatchObject({ references: expect.arrayContaining([expect.objectContaining({ id: "42" })]) });
+  });
+
+  test("draft question rejects a numeric research root", async () => {
+    const { program, stdout, stderr } = draftProgram({ readStdin: async () => "9007199254740993" });
+    await program.parseAsync(["node", "apexcn", "draft", "question", "--title", "Example", "--problem", "Example problem", "--research-file", "-", "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/invalid research file/i);
+    expect(stdout.join("")).toBe("");
+  });
+
+  test("draft reply rejects an imprecise root ID when a numeric topic placeholder is ignored", async () => {
+    const { program, stdout, stderr } = draftProgram({ readStdin: async () => '{"id":9007199254740991.1,"topic":9007199254740993}' });
+    await program.parseAsync(["node", "apexcn", "draft", "reply", "--topic-id", "9007199254740991", "--answer", "Example reply", "--topic-file", "-", "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(stdout.join("")).toBe("");
+  });
+
+  test("draft reply rejects an imprecise root ID when an array topic is ignored", async () => {
+    const { program, stdout, stderr } = draftProgram({ readStdin: async () => '{"id":9007199254740991.1,"topic":[]}' });
+    await program.parseAsync(["node", "apexcn", "draft", "reply", "--topic-id", "9007199254740991", "--answer", "Example reply", "--topic-file", "-", "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(stdout.join("")).toBe("");
+  });
+
+  test("draft import rejects a bundle with a rounded topic ID", async () => {
+    const root = await mkdtemp(join(tmpdir(), "apexcn-draft-unsafe-import-"));
+    try {
+      const configPath = join(root, "config.json");
+      const bundlePath = join(root, "bundle.json");
+      await writeFile(bundlePath, '{"kind":"draft-inventory-export","schemaVersion":1,"sourceProfileId":"source","exportedAt":"2026-01-01","drafts":[{"kind":"stored-draft","schemaVersion":1,"id":"test","ownerProfileId":"source","createdAt":"2026-01-01","updatedAt":"2026-01-01","draft":{"kind":"reply-draft","schemaVersion":1,"topicId":9007199254740991.1,"parentPostId":null,"content":"Example"}}]}');
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      const program = createProgram({ configPath, stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
+      await program.parseAsync(["node", "apexcn", "auth", "set-token", "--profile", "test", "--token", "synthetic-test-token"]);
+      stdout.length = 0;
+      await program.parseAsync(["node", "apexcn", "draft", "import", "--input", bundlePath, "--json"]);
+      expect(process.exitCode).toBe(1);
+      expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+      expect(stdout.join("")).toBe("");
+      await expect(readdir(join(root, "drafts"))).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("draft import accepts a safe target with an unrelated large author ID", async () => {
+    const root = await mkdtemp(join(tmpdir(), "apexcn-draft-large-author-"));
+    try {
+      const configPath = join(root, "config.json");
+      const bundlePath = join(root, "bundle.json");
+      await writeFile(bundlePath, '{"kind":"draft-inventory-export","schemaVersion":1,"sourceProfileId":"source","exportedAt":"2026-01-01","drafts":[{"kind":"stored-draft","schemaVersion":1,"id":"test","ownerProfileId":"source","createdAt":"2026-01-01","updatedAt":"2026-01-01","draft":{"kind":"reply-draft","schemaVersion":1,"topicId":42,"parentPostId":null,"content":"Example","author":{"id":9007199254740993}}}]}');
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      const program = createProgram({ configPath, stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
+      await program.parseAsync(["node", "apexcn", "auth", "set-token", "--profile", "test", "--token", "synthetic-test-token"]);
+      stdout.length = 0;
+      await program.parseAsync(["node", "apexcn", "draft", "import", "--input", bundlePath, "--json"]);
+      expect(process.exitCode).toBeUndefined();
+      expect(stderr.join("")).toBe("");
+      expect(JSON.parse(stdout.join(""))).toMatchObject({ importedCount: 1 });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   test("draft question prints a stable local JSON contract", async () => {

@@ -11,6 +11,8 @@ You need:
 - an API key for that account;
 - a local AI tool that can run commands on your computer.
 
+For new installations, use a maintained Node.js LTS release such as 22 or 24. [Node.js release schedule](https://nodejs.org/en/about/previous-releases)
+
 If apexcn-cli is not installed, tell your AI:
 
 > Install apexcn-cli for me and verify the installed version. Do not ask for my API key during installation.

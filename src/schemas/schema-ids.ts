@@ -1,4 +1,5 @@
 const LEGACY_SCHEMA_IDS: Record<string, string> = {
+  "admin.operations-v2": "admin-operations-response-v2",
   ask: "ask-response-v1",
   "collection.query": "collection-query-v1",
   commands: "command-manifest-v2",

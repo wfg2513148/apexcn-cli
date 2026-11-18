@@ -11,7 +11,7 @@ export type ApexcnSession = {
 
 export type ApexcnApiClient = {
   readonly session: ApexcnSession;
-  get<T = unknown>(path: string, query?: RequestJsonOptions["query"]): Promise<T>;
+  get<T = unknown>(path: string, query?: RequestJsonOptions["query"], parseResponse?: RequestJsonOptions["parseResponse"]): Promise<T>;
   post<T = unknown>(path: string, body?: unknown, query?: RequestJsonOptions["query"]): Promise<T>;
 };
 
@@ -40,7 +40,7 @@ export async function loadApiClient(configPath?: string): Promise<ApexcnApiClien
 export function createApiClient(session: ApexcnSession): ApexcnApiClient {
   return {
     session,
-    get: (path, query) => requestJson(session.baseUrl, path, { token: session.token, query }),
+    get: (path, query, parseResponse) => requestJson(session.baseUrl, path, { token: session.token, query, parseResponse }),
     post: (path, body, query) => requestJson(session.baseUrl, path, { token: session.token, method: "POST", body, query })
   };
 }

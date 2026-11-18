@@ -127,6 +127,8 @@ apexcn doctor --timeout-ms 10000 --json
 
 `doctor snapshot` 是纯本地支持快照，不调用社区 API。它直读配置文件并输出 `kind: "doctor-snapshot"`、`schemaVersion: 1`、`diagnostics`、`environment`、`config`、`agentSkill` 和稳定 `checks[].code`。硬问题 code 包括 `config-unreadable`、`config-invalid-json`、`no-active-profile`、`missing-current-profile`、`invalid-base-url`、`invalid-timeout-env`；warning code 包括 `api-key-env-missing`、`missing-token`、`agent-skill-missing`。环境变量只输出是否存在或是否有效；token 只输出是否存在和脱敏长度，不输出完整值。`--output <file>` 会以仅当前用户可读写权限保存同一份脱敏快照。
 
+`auth` 和 `doctor` 显示的配置 URL，以及连接错误中的 URL，会移除用户信息、查询参数和片段。快照中的诊断文本也会遮盖可识别的凭据格式；由于无法识别所有自定义敏感信息，分享支持文件前仍应检查内容。
+
 ## category
 
 列出板块：
@@ -161,11 +163,17 @@ apexcn admin list --json
 apexcn admin list --format text
 apexcn admin operations --json
 apexcn admin operations --from 2026-07-01 --to 2026-07-07 --user-id 42 --limit 20 --format text
+apexcn admin operations-v2 --json
+apexcn admin operations-v2 --from 2026-07-01 --to 2026-07-07 --user-id 42 --limit 50 --format text
 ```
 
 `admin list` 只返回服务端标记为公开的管理员信息和公开联系方式，不包含私有联系信息。
 
 `admin operations` 仅供管理员读取服务端接收的 apexcn-cli 调用聚合。默认窗口为最近 7 天；自定义日期时必须同时传入 `--from` 和 `--to`，两者使用包含首尾的 `YYYY-MM-DD` 日期，单次最多 90 天；`--user-id` 按社区用户 ID 精确过滤；`--limit` 控制命令、异常和关键词各分区最多返回 1 到 100 行，默认 20。输出包含概览、按日趋势、命令/路由、HTTP 状态与稳定错误码、显式搜索关键词五个分区及 `requestId`。`--format json`、`--format pretty` 和 `--json` 的错误也使用结构化 JSON。JSON 契约为 `admin-operations-response-v1`。
+
+`admin operations-v2` 使用独立的管理员统计口径，需服务端声明 `admin-operations-v2` 能力及对应端点可用。默认读取最近 7 个上海自然日；指定日期时需同时提供 `--from` 和 `--to`，范围包含首尾、最多 90 天，结束日期不能晚于上海当前日期。`--user-id` 按社区用户 ID 精确过滤；`--limit` 只能是 10、20、50 或 100，省略时由服务端使用 20。JSON 契约为 `admin-operations-response-v2`，响应包含 `schemaVersion: 2` 和 `semanticsId: AFA-CLI-OPS-1.0`。
+
+v2 分别报告成功、失败及未分类调用，并保留成功率、分类覆盖率和没有请求的日期。未分类调用不应算入成功或失败；无法计算的比率为 null。v2 不返回关键词明细；需要搜索关键词时使用原有 `admin operations`。能力不可用、权限不足或服务端响应不符合合同会报错，不会自动切换到 v1。
 
 该统计只覆盖到达服务端且带合法版本客户端标识的请求，不等同于本机进程启动次数；本地参数校验失败、认证配置失败和未到达服务端的网络错误不会计入。关键词只来自 `search` 与 `me search` 的显式搜索输入；`research` 和 `rag retrieve` 通过其实际 search 请求体现，`ask` 问题正文不进入关键词统计。服务端不会在此响应中返回 API Key、Authorization 或请求正文。
 
@@ -410,6 +418,8 @@ apexcn confirm op_0123456789abcdef --yes --json
 
 确认命令只能执行该编号绑定的同一账号、社区地址和完整请求。内容、目标、版本或本地配置发生变化时，旧编号会被拒绝；重复确认不会再次写入。编号过期或返回 `409 VERSION_CONFLICT` 时，重新读取当前内容并创建新的预览。
 
+工作流预览也会将请求、目标和版本绑定到运行状态。若尚未尝试执行且预览锚点缺失或已变化，请重新生成预览、核对后再次批准。若已尝试执行且结果不确定，应先核实原写入结果；在结果明确前不要创建替代操作。旧版本生成的无锚点预览也需遵循上述注意事项。使用当前请求格式的已完成历史记录仍可查看，并会提示锚点警告；验证也可能报告批准已过期等其他问题。这些本地摘要可发现文件不一致，不能抵御能够同时改写整个运行目录的操作者。
+
 ## topic / thread
 
 `thread` 是 `topic` 的别名。
@@ -421,6 +431,8 @@ apexcn topic view 30549 --json
 apexcn thread view 30549 --json
 apexcn topic view 30549 --format text
 ```
+
+`topic view` 支持以十进制输入超过 JavaScript 安全整数范围的话题 ID，并在文本和 JSON 输出中保留响应数值的精度。JSON 消费端也需要使用无精度损失的解析器。话题／回复写操作以及工作流、草稿、审查和知识集中的数字参数目前只接受安全整数；超出范围会被拒绝，避免目标编号被舍入。管理员 `operations-v2 --user-id` 单独支持最多 28 位的十进制正整数，请求会保留输入的前导零。此限制不代表其他 API 响应或导入文件已全面支持大整数。
 
 创建帖子，正文来自文件：
 

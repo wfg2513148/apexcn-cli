@@ -245,6 +245,30 @@ describe("workflow policy, diff, and audit-log", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  test.each(["approval", "preview-anchor"])("policy and audit fail closed when %s verification fails", async (target) => {
+    const dir = await tempDir();
+    const runDir = join(dir, "run");
+    const policyPath = join(dir, "policy.json");
+    await prepareApprovedRun(runDir);
+    const init = localProgram();
+    await init.program.parseAsync(["node", "apexcn", "workflow", "policy", "init", "--output", policyPath, "--json"]);
+    const targetPath = join(runDir, target === "approval" ? "approval.json" : "run.json");
+    const targetData = JSON.parse(await readFile(targetPath, "utf8"));
+    targetData.previewHash = "0".repeat(64);
+    await writeFile(targetPath, `${JSON.stringify(targetData, null, 2)}\n`, "utf8");
+
+    const verifier = localProgram();
+    await verifier.program.parseAsync(["node", "apexcn", "workflow", "verify", "--run-dir", runDir, "--policy", policyPath, "--json"]);
+    const report = JSON.parse(verifier.stdout.join(""));
+    expect(report.ok).toBe(false);
+    expect(report.policy.ok).toBe(false);
+
+    const audit = localProgram();
+    await audit.program.parseAsync(["node", "apexcn", "workflow", "audit-log", "--run-dir", runDir, "--format", "json"]);
+    const events = JSON.parse(audit.stdout.join("")).events;
+    expect(events.find((event: { event: string }) => event.event === "approve").result).toBe("failed");
+  });
+
   test("audit-log emits parseable NDJSON without secrets", async () => {
     const dir = await tempDir();
     const runDir = join(dir, "run");

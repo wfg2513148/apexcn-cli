@@ -1,5 +1,7 @@
 import { currentCliOperation } from "./core/request-context.js";
 import { contentLanguageQuery } from "./core/content-language.js";
+import { redactSecretText } from "./core/secret-redaction.js";
+import { sanitizeUrlForDisplay, sanitizeUrlsInText } from "./core/url-redaction.js";
 import { DEFAULT_USER_AGENT } from "./version.js";
 
 export type RequestJsonOptions = {
@@ -9,6 +11,7 @@ export type RequestJsonOptions = {
   body?: unknown;
   userAgent?: string;
   timeoutMs?: number;
+  parseResponse?: (text: string) => unknown;
 };
 
 export class HttpError extends Error {
@@ -20,11 +23,11 @@ export class HttpError extends Error {
   readonly windowSeconds?: number;
 
   constructor(message: string, status: number, statusText: string, requestId: string | undefined, body: unknown) {
-    super(message);
+    super(redactSecretText(sanitizeUrlsInText(message)));
     this.name = "HttpError";
     this.status = status;
     this.statusText = statusText;
-    this.requestId = requestId;
+    this.requestId = requestId === undefined ? undefined : redactSecretText(sanitizeUrlsInText(requestId));
     this.body = body;
     const rateLimit = rateLimitFrom(body);
     this.retryAfterSeconds = rateLimit.retryAfterSeconds;
@@ -37,9 +40,10 @@ export class NetworkError extends Error {
   readonly cause: unknown;
 
   constructor(url: string, cause: unknown) {
-    super(`Network error: failed to reach ${url}`);
+    const displayUrl = sanitizeUrlForDisplay(url);
+    super(`Network error: failed to reach ${displayUrl}`);
     this.name = "NetworkError";
-    this.url = url;
+    this.url = displayUrl;
     this.cause = cause;
   }
 }
@@ -49,9 +53,10 @@ export class TimeoutError extends Error {
   readonly timeoutMs: number;
 
   constructor(url: string, timeoutMs: number) {
-    super(`Request timed out after ${timeoutMs}ms: ${url}`);
+    const displayUrl = sanitizeUrlForDisplay(url);
+    super(`Request timed out after ${timeoutMs}ms: ${displayUrl}`);
     this.name = "TimeoutError";
-    this.url = url;
+    this.url = displayUrl;
     this.timeoutMs = timeoutMs;
   }
 }
@@ -112,7 +117,7 @@ export async function requestJson<T = unknown>(
   let body: unknown;
   try {
     response = await fetch(url, init);
-    body = await parseJson(response);
+    body = await parseJson(response, options.parseResponse);
   } catch (error) {
     if (error instanceof HttpError) {
       throw error;
@@ -131,13 +136,13 @@ export async function requestJson<T = unknown>(
   return body as T;
 }
 
-async function parseJson(response: Response): Promise<unknown> {
+async function parseJson(response: Response, parseResponse: (text: string) => unknown = JSON.parse): Promise<unknown> {
   const text = await response.text();
   if (text.length === 0) {
     return null;
   }
   try {
-    return JSON.parse(text) as unknown;
+    return parseResponse(text);
   } catch {
     const requestId = response.headers.get("x-request-id") ?? undefined;
     const message = response.ok ? "Invalid JSON response from server" : response.statusText || `HTTP ${response.status}`;

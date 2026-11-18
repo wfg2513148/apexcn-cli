@@ -1,5 +1,6 @@
 import { HttpError, NetworkError, TimeoutError } from "../http.js";
 import { redactSecrets, redactSecretText } from "./secret-redaction.js";
+import { sanitizeUrlsInValue } from "./url-redaction.js";
 
 export type ErrorRemediation = {
   code: string;
@@ -35,7 +36,7 @@ export function errorBodyFrom(error: unknown, token?: string): ApexcnErrorBody {
         retryAfterSeconds: error.retryAfterSeconds,
         windowSeconds: error.windowSeconds,
         remediation: remediationForHttpError(error, token),
-        details: redactSecrets(error.body)
+        details: sanitizeUrlsInValue(redactSecrets(error.body))
       }
     };
   }

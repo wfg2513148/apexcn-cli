@@ -443,7 +443,7 @@ describe("doctor command", () => {
       { name: "profile", ok: true },
       expect.objectContaining({ name: "me", ok: false, message: `Network error: failed to reach ${baseUrl}/api/v1/me` }),
       expect.objectContaining({ name: "categories", ok: false, message: `Network error: failed to reach ${baseUrl}/api/v1/categories` }),
-      expect.objectContaining({ name: "search", ok: false, message: `Network error: failed to reach ${baseUrl}/api/v1/search?keyword=APEX&pageSize=1` })
+      expect.objectContaining({ name: "search", ok: false, message: `Network error: failed to reach ${baseUrl}/api/v1/search` })
     ]);
     for (const check of data.checks.slice(1)) {
       expect(check).not.toHaveProperty("status");
@@ -489,7 +489,7 @@ describe("doctor command", () => {
       expect.objectContaining({
         name: "search",
         ok: false,
-        message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&pageSize=1",
+        message: "Request timed out after 5ms: https://oracleapex.cn/ords/test/api/v1/search",
         suggestions: expect.arrayContaining(["Retry with a larger --timeout-ms value when the network or ORDS endpoint is slow."])
       })
     ]);
@@ -515,7 +515,7 @@ describe("doctor command", () => {
       { name: "profile", ok: true },
       expect.objectContaining({ name: "me", ok: false, message: "Request timed out after 7ms: https://oracleapex.cn/ords/test/api/v1/me" }),
       expect.objectContaining({ name: "categories", ok: false, message: "Request timed out after 7ms: https://oracleapex.cn/ords/test/api/v1/categories" }),
-      expect.objectContaining({ name: "search", ok: false, message: "Request timed out after 7ms: https://oracleapex.cn/ords/test/api/v1/search?keyword=APEX&pageSize=1" })
+      expect.objectContaining({ name: "search", ok: false, message: "Request timed out after 7ms: https://oracleapex.cn/ords/test/api/v1/search" })
     ]);
     expect(fetch).toHaveBeenCalledTimes(3);
     expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
@@ -578,6 +578,77 @@ describe("doctor command", () => {
     expect(stdout.join("")).not.toContain("abcdefghijklmnopqrstuvwxyz");
     expect(stdout.join("")).not.toContain("env-api-key-secret");
     expect(process.exitCode).toBeUndefined();
+  });
+
+  test.each([
+    ["https://synthetic-user:synthetic-password@example.invalid/ords/dev?apiKey=synthetic-key&Authorization=synthetic-auth&Cookie=synthetic-cookie#synthetic-fragment", "https://example.invalid/ords/dev", true],
+    ["https://example.invalid/ords/dev?%61piKey=synthetic-key&unknown=synthetic-other", "https://example.invalid/ords/dev", true],
+    ["https://example.invalid/ords/dev/token=synthetic-path-secret", "https://example.invalid/ords/dev/[redacted]", true],
+    ["not a URL?token=synthetic-invalid", "[invalid URL]", false],
+    ["https://example.invalid/ords/dev", "https://example.invalid/ords/dev", true]
+  ])("doctor snapshot sanitizes configured URLs in output and artifacts", async (baseUrl, expectedUrl, valid) => {
+    const configPath = await tempConfigPath();
+    const outputPath = join(dirname(configPath), "snapshot.json");
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(configPath, JSON.stringify({ current: "dev", profiles: { dev: { baseUrl, token: "test-token-value" } } }));
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const program = createProgram({ configPath, stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "snapshot", "--output", outputPath, "--json"]);
+
+    const artifact = await readFile(outputPath, "utf8");
+    for (const text of [stdout.join(""), stderr.join(""), artifact]) {
+      expect(text.includes("synthetic-")).toBe(false);
+    }
+    expect(JSON.parse(artifact).config.activeProfile).toEqual(expect.objectContaining({ baseUrl: expectedUrl, baseUrlValid: valid }));
+    expect(JSON.parse(stdout.join("")).config.activeProfile.baseUrl).toBe(expectedUrl);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    "Authorization: Bearer synthetic-profile-secret",
+    "https://synthetic-user:synthetic-password@example.invalid/?unknown=synthetic-query-secret#synthetic-fragment"
+  ])("doctor snapshot redacts recognizable credentials in diagnostic strings", async (current) => {
+    const configPath = await tempConfigPath();
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(configPath, JSON.stringify({
+      current,
+      profiles: { [current]: { baseUrl: "https://example.invalid/ords/dev", tokenEnv: "Cookie: synthetic-env-secret" } },
+      unrelated: [{ apiKey: "synthetic-nested-secret" }]
+    }));
+    const stdout: string[] = [];
+    const program = createProgram({ configPath, stdout: (text) => stdout.push(text), stderr: (text) => stdout.push(text) });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "snapshot", "--json"]);
+
+    expect(stdout.join("").includes("synthetic-")).toBe(false);
+    expect(JSON.parse(stdout.join("")).config.currentProfile).not.toContain("synthetic-");
+  });
+
+  test.each(["network", "timeout"])("doctor %s errors do not expose sensitive base URL components", async (failure) => {
+    const configPath = await tempConfigPath();
+    const baseUrl = "https://synthetic-user:synthetic-password@example.invalid/ords/dev?unknown=synthetic-query#synthetic-fragment";
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(configPath, JSON.stringify({ current: "dev", profiles: { dev: { baseUrl, token: "test-token-value" } } }));
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const fetch = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) => {
+      if (failure === "timeout") throw new DOMException("timed out", "TimeoutError");
+      throw new TypeError("unreachable");
+    });
+    vi.stubGlobal("fetch", fetch);
+    const program = createProgram({ configPath, stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
+
+    await program.parseAsync(["node", "apexcn", "doctor", "--json", "--timeout-ms", "100"]);
+
+    const output = stdout.join("") + stderr.join("");
+    expect(output.includes("synthetic-")).toBe(false);
+    expect(JSON.parse(stdout.join("")).profile.baseUrl).toBe("https://example.invalid/ords/dev");
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(String(fetch.mock.calls[0]?.[0]).includes("synthetic-")).toBe(true);
   });
 
   test("doctor snapshot writes a sanitized support artifact with user-only permissions", async () => {

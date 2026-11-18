@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { chmod, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { defaultConfigPath, loadConfig } from "../config.js";
+import { parsePreciseJson, toNativeApiNumbers, UnsafeApiIdError } from "./precise-json.js";
 
 export type DraftPayload = Record<string, unknown> & {
   kind: string;
@@ -151,7 +152,7 @@ export async function writeDraftBundle(
 
 export async function readDraftBundle(path: string): Promise<unknown> {
   try {
-    return JSON.parse(await readFile(path, "utf8")) as unknown;
+    return parseDraftStorageJson(await readFile(path, "utf8"));
   } catch (error) {
     if (isNodeError(error) && error.code === "ENOENT") {
       throw new DraftInventoryError(`Draft import file not found: ${path}`);
@@ -159,6 +160,7 @@ export async function readDraftBundle(path: string): Promise<unknown> {
     if (error instanceof SyntaxError) {
       throw new DraftInventoryError(`Invalid draft inventory file: ${path}`);
     }
+    if (error instanceof UnsafeApiIdError) throw new DraftInventoryError(error.message);
     throw error;
   }
 }
@@ -196,7 +198,7 @@ async function readAllDrafts(context: DraftContext): Promise<StoredDraft[]> {
 async function readStoredDraft(context: DraftContext, id: string): Promise<StoredDraft> {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(await readFile(draftPath(context, id), "utf8")) as unknown;
+    parsed = parseDraftStorageJson(await readFile(draftPath(context, id), "utf8"));
   } catch (error) {
     if (isNodeError(error) && error.code === "ENOENT") {
       throw new DraftInventoryError(`Saved draft not found: ${id}`);
@@ -204,6 +206,7 @@ async function readStoredDraft(context: DraftContext, id: string): Promise<Store
     if (error instanceof SyntaxError) {
       throw new DraftInventoryError(`Invalid saved draft: ${id}`);
     }
+    if (error instanceof UnsafeApiIdError) throw new DraftInventoryError(error.message);
     throw error;
   }
   const stored = parseStoredDraft(parsed);
@@ -211,6 +214,21 @@ async function readStoredDraft(context: DraftContext, id: string): Promise<Store
     throw new DraftInventoryError(`Saved draft does not belong to the active profile: ${id}`);
   }
   return stored;
+}
+
+function parseDraftStorageJson(text: string): unknown {
+  const value = parsePreciseJson(text);
+  const records = isRecord(value) && value.kind === "draft-inventory-export" && Array.isArray(value.drafts)
+    ? value.drafts : [value];
+  for (const record of records) {
+    if (!isRecord(record) || !isRecord(record.draft) || record.draft.kind !== "reply-draft") continue;
+    const { topicId, parentPostId } = record.draft;
+    if (typeof topicId !== "number" || !Number.isSafeInteger(topicId) || topicId < 1
+      || (parentPostId !== undefined && parentPostId !== null && (typeof parentPostId !== "number" || !Number.isSafeInteger(parentPostId) || parentPostId < 1))) {
+      throw new UnsafeApiIdError();
+    }
+  }
+  return toNativeApiNumbers(value);
 }
 
 async function writeStoredDraft(context: DraftContext, stored: StoredDraft, replace: boolean): Promise<void> {

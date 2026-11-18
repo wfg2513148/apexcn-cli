@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import Ajv from "ajv";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createProgram } from "../src/index.js";
+import { createWriteOperation } from "../src/core/write-operation.js";
 import { publicSchemaForId } from "../src/schemas/registry.js";
 
 afterEach(() => {
@@ -12,6 +13,37 @@ afterEach(() => {
 });
 
 describe("business write confirmation", () => {
+  test.each(["--dry-run", "--preview"])("%s output masks URL credentials without changing the stored target", async (mode) => {
+    const root = await mkdtemp(join(tmpdir(), "apexcn-url-preview-"));
+    const configPath = join(root, "config.json");
+    const baseUrl = "https://synthetic-user:synthetic-password@example.invalid/ords/dev?unknown=synthetic-query#synthetic-fragment";
+    try {
+      await writeFile(configPath, JSON.stringify({ current: "dev", profiles: { dev: { baseUrl, token: "test-token-value" } } }));
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      const fetch = vi.fn(async () => Response.json({ ok: true }));
+      vi.stubGlobal("fetch", fetch);
+      const program = createProgram({ configPath, stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
+
+      await program.parseAsync(["node", "apexcn", "favorite", "add", "42", mode, "--json"]);
+
+      expect((stdout.join("") + stderr.join("")).includes("synthetic-")).toBe(false);
+      const result = JSON.parse(stdout.join(""));
+      expect(result.baseUrl).toBe("https://example.invalid/ords/dev");
+      expect(fetch).not.toHaveBeenCalled();
+      if (mode === "--preview") {
+        const stored = JSON.parse(await readFile(join(root, "operations", `${result.operationId}.json`), "utf8"));
+        expect(stored.target.baseUrl === baseUrl).toBe(true);
+        stdout.length = 0;
+        await program.parseAsync(["node", "apexcn", "confirm", result.operationId, "--yes", "--json"]);
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(JSON.parse(stdout.join("")).status).toBe("completed");
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   describe("topic favorite and subscription modes", () => {
     const cases = [
       { name: "favorite", action: "add", method: "POST", path: "/api/v1/topics/42/favorite" },
@@ -337,6 +369,72 @@ describe("business write confirmation", () => {
     await context.program.parseAsync(["node", "apexcn", "confirm", preview.operationId, "--yes", "--json"]);
     expect(context.fetch).not.toHaveBeenCalled();
     expect(context.stderr.join("")).toContain("hash mismatch");
+  });
+
+  test("confirmation rejects an imprecise saved parent ID before network", async () => {
+    const context = await testContext();
+    try {
+      await context.program.parseAsync(["node", "apexcn", "reply", "create", "42", "--parent-post-id", "9007199254740991", "--content", "Nested reply", "--json"]);
+      const preview = JSON.parse(context.stdout.join(""));
+      const operationPath = join(dirname(context.configPath), "operations", `${preview.operationId}.json`);
+      const operation = await readFile(operationPath, "utf8");
+      expect(operation).toContain('"parentPostId": 9007199254740991');
+      await writeFile(operationPath, operation.replace('"parentPostId": 9007199254740991', '"parentPostId": 9007199254740991.1'));
+      const confirmation = programFor(context.configPath, context.fetch);
+
+      await confirmation.program.parseAsync(["node", "apexcn", "confirm", preview.operationId, "--yes", "--json"]);
+
+      expect(process.exitCode).toBe(1);
+      expect(confirmation.stderr.join("")).toMatch(/unsafe|imprecise/i);
+      expect(context.fetch).not.toHaveBeenCalled();
+    } finally {
+      await rm(dirname(dirname(context.configPath)), { recursive: true, force: true });
+    }
+  });
+
+  test("confirmation rejects an imprecise saved non-ID request number before network", async () => {
+    const context = await testContext();
+    try {
+      const preview = await createWriteOperation({
+        configPath: context.configPath,
+        session: { profile: "test", baseUrl: "https://example.test/ords/api", token: "test-token" },
+        action: "topic.create", summary: "Synthetic only",
+        request: { method: "POST", path: "/api/v1/topics", body: { priority: Number.MAX_SAFE_INTEGER } }
+      });
+      const operationPath = join(dirname(context.configPath), "operations", `${preview.operationId}.json`);
+      const operation = await readFile(operationPath, "utf8");
+      expect(operation).toContain('"priority": 9007199254740991');
+      await writeFile(operationPath, operation.replace('"priority": 9007199254740991', '"priority": 9007199254740991.1'));
+      const confirmation = programFor(context.configPath, context.fetch);
+
+      await confirmation.program.parseAsync(["node", "apexcn", "confirm", preview.operationId, "--yes", "--json"]);
+
+      expect(process.exitCode).toBe(1);
+      expect(confirmation.stderr.join("")).toMatch(/unsafe|imprecise/i);
+      expect(context.fetch).not.toHaveBeenCalled();
+    } finally {
+      await rm(dirname(dirname(context.configPath)), { recursive: true, force: true });
+    }
+  });
+
+  test.each([
+    "/api/v1/topics/9007199254740992", "/api/v1/%74opics/9007199254740992",
+    "/api/v1/topics//9007199254740992", "/api/v1/topics;param/9007199254740992",
+    "/api/v1/topics/42?targetId=9007199254740992"
+  ])("write operation creation rejects an unsafe target path %s", async (path) => {
+    const context = await testContext();
+    try {
+      await expect(createWriteOperation({
+        configPath: context.configPath,
+        session: { profile: "test", baseUrl: "https://example.test/ords/api", token: "synthetic-test-token" },
+        action: "topic.delete", summary: "Synthetic only",
+        request: { method: "DELETE", path, body: {} }
+      })).rejects.toThrow(/unsafe|imprecise/i);
+      expect(context.fetch).not.toHaveBeenCalled();
+      await expect(readdir(join(dirname(context.configPath), "operations"))).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(dirname(dirname(context.configPath)), { recursive: true, force: true });
+    }
   });
 
   test("copying operation state to another config scope is rejected", async () => {

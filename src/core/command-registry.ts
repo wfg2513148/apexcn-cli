@@ -34,6 +34,7 @@ export const COMMAND_DESCRIPTORS: CommandDescriptor[] = [
   descriptor("update", ["update"], "Upgrade the managed installation from the official GitHub release", "local", "release-download", "high", false, "apexcn update", false, false, false),
   descriptor("admin.list", ["admin", "list"], "List public community admins", "read", "api-read", "low", true, "apexcn admin list --json"),
   descriptor("admin.operations", ["admin", "operations"], "Show administrator-only apexcn-cli operations aggregates", "read", "api-read", "medium", true, "apexcn admin operations --json"),
+  descriptor("admin.operations-v2", ["admin", "operations-v2"], "Show administrator operations v2 aggregates", "read", "api-read", "medium", true, "apexcn admin operations-v2 --json"),
   descriptor("ask", ["ask"], "Ask community RAG or scoped references", "read", "api-read", "medium", true, 'apexcn ask "问题" --top-k 3 --json'),
   descriptor("auth.audit", ["auth", "audit"], "Audit local auth profile configuration", "auth", "no-network", "medium", false, "apexcn auth audit --json"),
   descriptor("auth.list", ["auth", "list"], "List local auth profiles", "auth", "no-network", "medium", false, "apexcn auth list --json"),

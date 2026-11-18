@@ -100,16 +100,18 @@ describe("GA readiness contracts", () => {
 
   test("freezes every 1.1.6 public command with schemas and API operations", () => {
     const surface = readJson("qualification/releases/1.1.6/public-surface-v1.json");
-    const commandIds = new Set(surface.commandManifest.commands.map((command: { id: string }) => command.id));
+    const commandIds = new Set<string>(surface.commandManifest.commands.map((command: { id: string }) => command.id));
+    const currentCommandIds = new Set(COMMAND_DESCRIPTORS.map((command) => command.id));
 
     expect(surface.frozenForVersion).toBe("1.1.6");
     expect(surface.baselineVersion).toBe("1.0.14");
-    expect(surface.commandManifest.commands).toHaveLength(COMMAND_DESCRIPTORS.length);
+    expect(surface.commandManifest.commands).toHaveLength(85);
+    expect(commandIds.size).toBe(85);
     expect(Object.keys(surface.jsonSchemas)).toHaveLength(81);
     expect(surface.workflowGoals).toHaveLength(10);
     expect(surface.api.supportedOperations).toHaveLength(37);
-    for (const descriptor of COMMAND_DESCRIPTORS) {
-      expect(commandIds.has(descriptor.id)).toBe(true);
+    for (const id of commandIds) {
+      expect(currentCommandIds.has(id)).toBe(true);
     }
   });
 
@@ -136,11 +138,12 @@ describe("GA readiness contracts", () => {
   test("preserves 200 tasks and adds two update scenarios with full command coverage", () => {
     const tasks = readReleaseTasks();
     const commandCoverage = new Set(tasks.flatMap((task) => task.expectedPublicCommandIds));
+    const surface = readJson("qualification/releases/1.1.6/public-surface-v1.json");
 
     expect(tasks).toHaveLength(202);
     expect(new Set(tasks.map((task) => task.taskId))).toHaveLength(202);
     expect(new Set(tasks.map((task) => task.prompt))).toHaveLength(202);
-    for (const descriptor of COMMAND_DESCRIPTORS) {
+    for (const descriptor of surface.commandManifest.commands) {
       expect(commandCoverage.has(descriptor.id)).toBe(true);
     }
     expect(new Set(tasks.map((task) => task.role))).toEqual(new Set([

@@ -4,6 +4,7 @@ import { isAbsolute, join, normalize, parse, relative, resolve, sep } from "node
 import { Command, InvalidArgumentError } from "commander";
 import { ConfigFileError } from "../config.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
+import { isExactSafeIntegerInput, isPreciseObject, normalizeTopicForSelection, parseGuardedIdJson, parsePreciseJson, safeApiId, toNativeApiNumbers, UnsafeApiIdError } from "../core/precise-json.js";
 import { currentContentLanguage } from "../core/request-context.js";
 import type { ContentLanguage } from "../core/content-language.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
@@ -333,6 +334,7 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
   for (const query of queries) {
     const search = await requestJson(session.baseUrl, "/api/v1/search", {
       token: session.token,
+      parseResponse: parsePreciseJson,
       query: {
         keyword: query,
         pageSize: limit,
@@ -343,7 +345,7 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
     });
     const requestId = requestIdFrom(search);
     if (requestId) requestIds.add(requestId);
-    for (const [searchIndex, item] of itemsFromData(search).slice(0, limit).entries()) {
+    for (const [searchIndex, item] of itemsFromData(search).filter(isPreciseObject).slice(0, limit).entries()) {
       const id = topicIdFromItem(item);
       if (id !== undefined) {
         addTopicSource(candidates, id, { type: "query", query, searchIndex });
@@ -360,7 +362,7 @@ async function buildCollection(io: CollectionCommandOptions, options: BuildOptio
     const relativePath = join("topics", `${id}.json`);
     const path = join(outputDir, relativePath);
     try {
-      const result = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token });
+      const result = normalizeTopicForSelection(await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token, parseResponse: parsePreciseJson }));
       const requestId = requestIdFrom(result);
       if (requestId) requestIds.add(requestId);
       const artifact = {
@@ -447,7 +449,7 @@ async function verifyCollection(io: CommandIo, options: VerifyOptions): Promise<
   const collectionPath = join(options.dir, "collection.json");
   let collection: unknown;
   try {
-    collection = JSON.parse(await readFile(collectionPath, "utf8")) as unknown;
+    collection = parseCollectionManifest(await readFile(collectionPath, "utf8"));
   } catch (error) {
     printError(io, { type: "validation", message: `Invalid collection: ${errorMessage(error)}` }, undefined, options.json);
     process.exitCode = 1;
@@ -568,7 +570,7 @@ async function collectionStats(io: CommandIo, options: StatsOptions): Promise<vo
   let meta: unknown;
   try {
     records = parseCollectionSearchRecords(await readFile(join(options.dir, "index.jsonl"), "utf8"));
-    meta = JSON.parse(await readFile(join(options.dir, "index.meta.json"), "utf8")) as unknown;
+    meta = parseGuardedIdJson(await readFile(join(options.dir, "index.meta.json"), "utf8"));
   } catch (error) {
     printError(io, { type: "validation", message: `Invalid collection index: ${errorMessage(error)}` }, undefined, options.json);
     process.exitCode = 1;
@@ -618,6 +620,7 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
   let unchangedCount = 0;
   let removedCount = 0;
   const requestIds = new Set<string>();
+  const pending: Array<{ id: number; relativePath: string; topic: Record<string, unknown>; result: unknown } | { id: number; relativePath: string; removed: true }> = [];
   for (const topic of loaded.collection.topics.filter(isRecord)) {
     const id = typeof topic.id === "number" ? topic.id : undefined;
     const relativePath = fieldText(topic.file);
@@ -625,47 +628,53 @@ async function syncCollection(io: CollectionCommandOptions, options: SyncOptions
       continue;
     }
     try {
-      const result = await requestJson(session.baseUrl, `/api/v1/topics/${id}`, { token: session.token, query: { lang: requestedContentLanguage } });
+      const result = normalizeTopicForSelection(await requestJson(session.baseUrl, `/api/v1/topics/${id}`, {
+        token: session.token, query: { lang: requestedContentLanguage }, parseResponse: parsePreciseJson
+      }));
       const requestId = requestIdFrom(result);
       if (requestId) requestIds.add(requestId);
-      const sources = Array.isArray(topic.sources) ? topic.sources : [];
-      const artifact = {
-        kind: "collection-topic",
-        schemaVersion: 1,
-        id,
-        sources,
-        request: { method: "GET", path: `/api/v1/topics/${id}`, query: { lang: requestedContentLanguage } },
-        requestId,
-        result
-      };
-      const canonicalHash = topicCanonicalHash(artifact);
-      if (canonicalHash === topic.canonicalHash) {
-        topics.push(topic);
-        const oldFile = fileById.get(id);
-        if (oldFile) files.push(oldFile);
-        unchangedCount += 1;
-        continue;
-      }
-      const evidence = await writeJsonWithEvidence(join(options.dir, relativePath), artifact);
-      topics.push({
-        ...topic,
-        title: topicTitle(result),
-        url: topicUrl(result),
-        originalUrl: topicOriginalUrl(result),
-        canonicalHash
-      });
-      files.push({ id, canonicalHash, ...evidence, path: relativePath });
-      changedCount += 1;
+      pending.push({ id, relativePath, topic, result });
     } catch (error) {
       const requestId = error instanceof HttpError ? error.requestId : undefined;
       if (requestId) requestIds.add(requestId);
       if (error instanceof HttpError && error.status === 404) {
-        await unlink(join(options.dir, relativePath));
-        removedCount += 1;
+        pending.push({ id, relativePath, removed: true });
         continue;
       }
       throw error;
     }
+  }
+  for (const entry of pending) {
+    const { id, relativePath } = entry;
+    if ("removed" in entry) {
+      await unlink(join(options.dir, relativePath));
+      removedCount += 1;
+      continue;
+    }
+    const { topic, result } = entry;
+    const requestId = requestIdFrom(result);
+    const sources = Array.isArray(topic.sources) ? topic.sources : [];
+    const artifact = {
+      kind: "collection-topic",
+      schemaVersion: 1,
+      id,
+      sources,
+      request: { method: "GET", path: `/api/v1/topics/${id}`, query: { lang: requestedContentLanguage } },
+      requestId,
+      result
+    };
+    const canonicalHash = topicCanonicalHash(artifact);
+    if (canonicalHash === topic.canonicalHash) {
+      topics.push(topic);
+      const oldFile = fileById.get(id);
+      if (oldFile) files.push(oldFile);
+      unchangedCount += 1;
+      continue;
+    }
+    const evidence = await writeJsonWithEvidence(join(options.dir, relativePath), artifact);
+    topics.push({ ...topic, title: topicTitle(result), url: topicUrl(result), originalUrl: topicOriginalUrl(result), canonicalHash });
+    files.push({ id, canonicalHash, ...evidence, path: relativePath });
+    changedCount += 1;
   }
   const indexText = collectionIndexMarkdown(topics, []);
   const indexFile = { ...await writeTextWithEvidence(join(options.dir, "index.md"), indexText), path: "index.md" };
@@ -709,12 +718,13 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
   do {
     const data = await requestJson(session.baseUrl, "/api/v1/me/favorites/export", {
       token: session.token,
+      parseResponse: parsePreciseJson,
       query: { pageSize, cursor }
     });
     const requestId = requestIdFrom(data);
     if (requestId) requestIds.add(requestId);
     pageCount += 1;
-    for (const item of itemsFromData(data)) {
+    for (const item of itemsFromData(data).filter(isPreciseObject)) {
       items.push({ item, requestId, contentLanguage: isRecord(data) ? data.contentLanguage : undefined });
     }
     const page = isRecord(data) && isRecord(data.page) ? data.page : {};
@@ -726,6 +736,16 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
     cursor = next;
   } while (cursor);
 
+  for (const { item } of items) {
+    const targetType = favoriteTargetType(item);
+    if (targetType === "POST") {
+      positiveIdFromKeys(item, ["topicId", "threadId"]);
+      positiveIdFromKeys(item, ["replyId", "postId", "targetId", "id"]);
+    } else {
+      positiveIdFromKeys(item, ["topicId", "threadId", "targetId", "id"]);
+    }
+  }
+
   const topicsDir = join(options.outputDir, "topics");
   await mkdir(topicsDir, { recursive: true });
   const topics: Array<Record<string, unknown>> = [];
@@ -733,7 +753,8 @@ async function buildFavoritesCollection(io: CollectionCommandOptions, options: F
   const seenIds = new Set<number>();
   const errors: Array<Record<string, unknown>> = [];
   let excludedReplyCount = 0;
-  for (const { item, requestId, contentLanguage } of items) {
+  for (const { item: rawItem, requestId, contentLanguage } of items) {
+    const item = toNativeApiNumbers(rawItem) as Record<string, unknown>;
     const targetType = favoriteTargetType(item);
     if (targetType === "POST") {
       excludedReplyCount += 1;
@@ -909,7 +930,7 @@ async function importCollectionBundle(io: CommandIo, options: ImportOptions): Pr
     process.exitCode = 1;
     return;
   }
-  const collection = JSON.parse(await readFile(join(options.outputDir, "collection.json"), "utf8")) as unknown;
+  const collection = parseCollectionManifest(await readFile(join(options.outputDir, "collection.json"), "utf8"));
   const verification = await collectionVerificationReport(options.outputDir, collection);
   if (!verification.ok) {
     printError(io, { type: "validation", message: "Imported collection verification failed." }, undefined, options.json);
@@ -934,7 +955,7 @@ async function restoreCollectionBundle(io: CommandIo, options: RestoreOptions): 
     process.exitCode = 1;
     return;
   }
-  const collection = JSON.parse(await readFile(join(options.dir, "collection.json"), "utf8")) as unknown;
+  const collection = parseCollectionManifest(await readFile(join(options.dir, "collection.json"), "utf8"));
   const verification = await collectionVerificationReport(options.dir, collection);
   if (!verification.ok) {
     printError(io, { type: "validation", message: "Restored collection verification failed." }, undefined, options.json);
@@ -948,7 +969,7 @@ async function bundleVerificationReport(path: string): Promise<Record<string, un
   const issues: Array<{ code: string; path?: string }> = [];
   let value: unknown;
   try {
-    value = JSON.parse(await readFile(path, "utf8")) as unknown;
+    value = parseGuardedIdJson(await readFile(path, "utf8"));
   } catch {
     return { kind: "collection-bundle-verification", schemaVersion: 1, ok: false, documentCount: 0, issues: [{ code: "invalid-bundle" }] };
   }
@@ -978,7 +999,7 @@ function verifyEmbeddedBundle(bundle: CollectionBundle, issues: Array<{ code: st
   }
   let collection: unknown;
   try {
-    collection = JSON.parse(collectionFile.content) as unknown;
+    collection = parseCollectionManifest(collectionFile.content);
   } catch {
     issues.push({ code: "invalid-collection-manifest", path: "collection.json" });
     return;
@@ -1017,7 +1038,7 @@ function verifyEmbeddedBundle(bundle: CollectionBundle, issues: Array<{ code: st
     }
     if (path.startsWith("topics/")) {
       try {
-        const artifact = JSON.parse(file.content) as unknown;
+        const artifact = parseCollectionTopicArtifact(file.content);
         if (!topicLanguageMatches(artifact, collection.source.requestedContentLanguage)) {
           issues.push({ code: "collection-language-mismatch", path });
         }
@@ -1044,7 +1065,7 @@ async function readVerifiedBundle(path: string): Promise<CollectionBundle | unde
   const report = await bundleVerificationReport(path);
   if (!report.ok) return undefined;
   try {
-    const value = JSON.parse(await readFile(path, "utf8")) as unknown;
+    const value = parseGuardedIdJson(await readFile(path, "utf8"));
     return isCollectionBundle(value) ? value : undefined;
   } catch {
     return undefined;
@@ -1220,7 +1241,7 @@ function parseCollectionSearchRecords(text: string): CollectionSearchRecord[] {
     .map((line, index) => ({ line: line.trim(), index }))
     .filter((item) => item.line.length > 0)
     .map((item) => {
-      const parsed = JSON.parse(item.line) as unknown;
+      const parsed = parseGuardedIdJson(item.line);
       if (!isCollectionSearchRecord(parsed)) {
         const legacy = legacyCollectionIndexRecord(parsed);
         if (!legacy) {
@@ -1230,6 +1251,28 @@ function parseCollectionSearchRecords(text: string): CollectionSearchRecord[] {
       }
       return parsed;
     });
+}
+
+function parseCollectionManifest(text: string): unknown {
+  const value = parsePreciseJson(text);
+  if (isRecord(value)) {
+    if (isRecord(value.source) && Array.isArray(value.source.topicIds)) value.source.topicIds.forEach(requireCollectionId);
+    if (Array.isArray(value.topics)) value.topics.filter(isRecord).forEach((topic) => requireCollectionId(topic.id));
+    if (isRecord(value.files) && Array.isArray(value.files.topics)) value.files.topics.filter(isRecord).forEach((file) => requireCollectionId(file.id));
+  }
+  return toNativeApiNumbers(value);
+}
+
+function parseCollectionTopicArtifact(text: string): unknown {
+  const value = parsePreciseJson(text);
+  if (!isRecord(value)) return toNativeApiNumbers(value);
+  requireCollectionId(value.id);
+  const result = normalizeTopicForSelection(value.result);
+  return { ...(toNativeApiNumbers(value) as Record<string, unknown>), result };
+}
+
+function requireCollectionId(value: unknown): void {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) throw new UnsafeApiIdError();
 }
 
 async function collectionVerificationReport(dir: string, collection: unknown): Promise<Record<string, unknown> & { ok: boolean }> {
@@ -1272,7 +1315,7 @@ async function readCollectionFile(io: CommandIo, dir: string, json?: boolean): P
   let content: string;
   try {
     content = await readFile(collectionPath, "utf8");
-    collection = JSON.parse(content) as unknown;
+    collection = parseCollectionManifest(content);
   } catch (error) {
     printError(io, { type: "validation", message: `Invalid collection: ${errorMessage(error)}` }, undefined, json);
     process.exitCode = 1;
@@ -1299,7 +1342,7 @@ async function collectionSearchRecords(dir: string, collection: ValidCollection)
     if (!resolved) {
       throw new Error(issues[0]?.message ?? `Invalid topic file path for topic ${id}`);
     }
-    const artifact = JSON.parse(await readFile(resolved.absolutePath, "utf8")) as unknown;
+    const artifact = parseCollectionTopicArtifact(await readFile(resolved.absolutePath, "utf8"));
     const result = isRecord(artifact) ? artifact.result : undefined;
     const topicDataRecord = topicData(result);
     const title = topicTitle(result) ?? fieldText(topic.title || `Topic ${id}`);
@@ -1482,7 +1525,7 @@ async function verifyTopicArtifact(dir: string, file: Record<string, unknown>, i
     return undefined;
   }
   try {
-    const artifact = JSON.parse(await readFile(resolved.absolutePath, "utf8")) as unknown;
+    const artifact = parseCollectionTopicArtifact(await readFile(resolved.absolutePath, "utf8"));
     if (!isRecord(artifact) || artifact.kind !== "collection-topic" || artifact.schemaVersion !== 1 || artifact.id !== file.id || !Array.isArray(artifact.sources) || !isRecord(artifact.request) || artifact.request.method !== "GET" || !isRecord(artifact.result)) {
       issues.push({ code: "invalid-topic-artifact", message: "Topic artifact schema is invalid.", path: resolved.relativePath });
       return undefined;
@@ -1588,13 +1631,8 @@ function sha256Hex(content: Buffer): string {
 
 function topicIdFromItem(item: Record<string, unknown>): number | undefined {
   for (const key of ["id", "topicId", "threadId", "targetId"]) {
-    const value = item[key];
-    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
-      return value;
-    }
-    if (typeof value === "string" && /^\d+$/.test(value)) {
-      return Number(value);
-    }
+    const value = safeApiId(item[key]);
+    if (value !== undefined) return value;
   }
   return undefined;
 }
@@ -1612,13 +1650,8 @@ function favoriteTargetType(item: Record<string, unknown>): "THREAD" | "POST" | 
 
 function positiveIdFromKeys(item: Record<string, unknown>, keys: string[]): number | undefined {
   for (const key of keys) {
-    const value = item[key];
-    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
-      return value;
-    }
-    if (typeof value === "string" && /^\d+$/.test(value)) {
-      return Number(value);
-    }
+    const value = safeApiId(item[key]);
+    if (value !== undefined) return value;
   }
   return undefined;
 }
@@ -1685,7 +1718,7 @@ function validateDateRange(io: CommandIo, fromDate?: string, toDate?: string, js
 
 function parsePositiveInteger(value: string): number {
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1) {
+  if (!isExactSafeIntegerInput(value) || parsed < 1) {
     throw new InvalidArgumentError(`Expected a positive integer: ${value}`);
   }
   return parsed;
@@ -1735,6 +1768,11 @@ function errorMessage(error: unknown): string {
 }
 
 function handleCollectionError(io: CommandIo, error: unknown, json?: boolean): void {
+  if (error instanceof UnsafeApiIdError) {
+    printError(io, { type: "validation", message: error.message, exitCode: 1 }, undefined, json);
+    process.exitCode = 1;
+    return;
+  }
   if (error instanceof HttpError) {
     printError(io, {
       type: "http",

@@ -4,6 +4,8 @@ import { dirname, join, resolve } from "node:path";
 import { defaultConfigPath } from "../config.js";
 import { HttpError, NetworkError, requestJson, TimeoutError } from "../http.js";
 import { assessCapabilityCompatibility } from "./capability-compatibility.js";
+import { assertSafeWriteTarget, containsImpreciseNumbers, parsePreciseJson, toNativeApiNumbers, UnsafeApiIdError } from "./precise-json.js";
+import { sanitizeUrlForDisplay } from "./url-redaction.js";
 
 export type WriteOperationSession = {
   profile: string;
@@ -91,6 +93,7 @@ export async function createWriteOperation(input: {
   request: WriteOperationRequest;
   now?: Date;
 }): Promise<WriteOperationPreview> {
+  validateWriteRequestIds(input.request);
   const operationId = `op_${randomBytes(8).toString("hex")}`;
   const now = input.now ?? new Date();
   const target = operationTarget(input.session);
@@ -274,7 +277,12 @@ async function readOperation(configPath: string | undefined, operationId: string
   }
   let value: unknown;
   try {
-    value = JSON.parse(await readFile(operationPath(configPath, operationId), "utf8"));
+    const precise = parsePreciseJson(await readFile(operationPath(configPath, operationId), "utf8"));
+    if (isRecord(precise) && (containsImpreciseNumbers(precise.request)
+      || (isRecord(precise.approval) && containsImpreciseNumbers(precise.approval.request)))) {
+      throw new UnsafeApiIdError("Unsafe or imprecise number in stored operation request.");
+    }
+    value = toNativeApiNumbers(precise);
   } catch (error) {
     if (isNodeError(error) && error.code === "ENOENT") {
       throw new Error(`Operation ${operationId} was not found.`);
@@ -299,7 +307,13 @@ async function readOperation(configPath: string | undefined, operationId: string
       || !Array.isArray(value.audit)) {
     throw new Error(`Operation ${operationId} is invalid.`);
   }
+  validateWriteRequestIds(value.request);
+  if (isRecord(value.approval) && isWriteRequest(value.approval.request)) validateWriteRequestIds(value.approval.request);
   return value as WriteOperation;
+}
+
+function validateWriteRequestIds(request: WriteOperationRequest): void {
+  assertSafeWriteTarget(request.path, request.body);
 }
 
 async function writeOperation(configPath: string | undefined, operation: WriteOperation): Promise<void> {
@@ -324,7 +338,7 @@ function previewFrom(operation: WriteOperation): WriteOperationPreview {
     expiresAt: operation.expiresAt,
     willExecute: false,
     profile: operation.target.profile,
-    baseUrl: operation.target.baseUrl,
+    baseUrl: sanitizeUrlForDisplay(operation.target.baseUrl),
     method: operation.request.method,
     path: operation.request.path,
     body: operation.request.body,

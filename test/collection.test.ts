@@ -1,16 +1,20 @@
-import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createProgram } from "../src/index.js";
 
+const testRoots = new Set<string>();
+
 async function tempConfigPath() {
   const dir = await mkdtemp(join(tmpdir(), "apexcn-collection-"));
+  testRoots.add(dir);
   return join(dir, ".apexcn", "config.json");
 }
 
 async function tempPath(name: string) {
   const dir = await mkdtemp(join(tmpdir(), "apexcn-collection-"));
+  testRoots.add(dir);
   return join(dir, name);
 }
 
@@ -44,9 +48,241 @@ async function readJson(path: string): Promise<Record<string, unknown>> {
 }
 
 describe("collection commands", () => {
-  afterEach(() => {
+  afterEach(async () => {
     vi.unstubAllGlobals();
     process.exitCode = undefined;
+    await Promise.all([...testRoots].map((root) => rm(root, { recursive: true, force: true })));
+    testRoots.clear();
+  });
+
+  test.each(["9007199254740993", "9007199254740991.1", '"9007199254740993"'])("collection build refuses an imprecise search ID %s before topic fetch", async (id) => {
+    const outputDir = await tempPath("unsafe-search");
+    const { program, stderr, fetch } = await configuredProgram(async () =>
+      new Response(`{"requestId":"req-search","items":[{"id":${id},"title":"unsafe"}]}`, { headers: { "content-type": "application/json" } })
+    );
+
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--query", "synthetic", "--output-dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("collection build checks the selected IDs after ignoring a numeric placeholder", async () => {
+    const outputDir = await tempPath("unsafe-search-placeholder");
+    const { program, stderr, fetch } = await configuredProgram(async () =>
+      new Response('{"items":[9007199254740993,{"id":1},{"id":2},{"id":9007199254740991.1}]}', { headers: { "content-type": "application/json" } })
+    );
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--query", "synthetic", "--limit", "3", "--output-dir", outputDir, "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("favorites import rejects an imprecise topic ID before writing a topic", async () => {
+    const outputDir = await tempPath("unsafe-favorite");
+    const { program, stderr, fetch } = await configuredProgram(async () =>
+      new Response('{"requestId":"req-favorites","items":[{"targetType":"THREAD","topicId":9007199254740991.1,"title":"unsafe"}],"page":{"nextCursor":null}}', { headers: { "content-type": "application/json" } })
+    );
+
+    await program.parseAsync(["node", "apexcn", "collection", "favorites", "--output-dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await expect(readFile(join(outputDir, "topics", "9007199254740991.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("favorites import does not fall back from an unsafe topic ID to a different ID", async () => {
+    const outputDir = await tempPath("unsafe-favorite-alias");
+    const { program, stderr, fetch } = await configuredProgram(async () =>
+      new Response('{"items":[{"targetType":"THREAD","topicId":"9.007199254740993e15","id":42,"title":"unsafe"}],"page":{"nextCursor":null}}', { headers: { "content-type": "application/json" } })
+    );
+
+    await program.parseAsync(["node", "apexcn", "collection", "favorites", "--output-dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await expect(readFile(join(outputDir, "topics", "42.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("favorites import ignores a numeric placeholder before valid items", async () => {
+    const outputDir = await tempPath("favorite-placeholder");
+    const { program, stdout, stderr } = await configuredProgram(async () =>
+      new Response('{"items":[9007199254740993,{"targetType":"THREAD","id":42,"title":"safe"}],"page":{"nextCursor":null}}', { headers: { "content-type": "application/json" } })
+    );
+    await program.parseAsync(["node", "apexcn", "collection", "favorites", "--output-dir", outputDir, "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    expect(stderr.join("")).toBe("");
+    expect(JSON.parse(stdout.join(""))).toMatchObject({ topicCount: 1 });
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test.each(['"9007199254740993"', '"not-an-id"'])("favorites import validates ID %s before overwriting any existing topic", async (badId) => {
+    const outputDir = await tempPath("unsafe-favorite-existing");
+    await mkdir(join(outputDir, "topics"), { recursive: true });
+    await writeFile(join(outputDir, "topics", "42.json"), "existing topic");
+    const { program, stderr } = await configuredProgram(async () =>
+      new Response(`{"items":[{"targetType":"THREAD","id":"42"},{"targetType":"THREAD","id":${badId}}],"page":{"nextCursor":null}}`, { headers: { "content-type": "application/json" } })
+    );
+
+    await program.parseAsync(["node", "apexcn", "collection", "favorites", "--output-dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(await readFile(join(outputDir, "topics", "42.json"), "utf8")).toBe("existing topic");
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("collection verify and sync reject a manifest whose ID was rounded", async () => {
+    const outputDir = await tempPath("unsafe-manifest");
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ topic: { id: Number.MAX_SAFE_INTEGER, title: "safe" } }));
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--topic-id", "9007199254740991", "--output-dir", outputDir, "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    const manifestPath = join(outputDir, "collection.json");
+    const manifest = await readFile(manifestPath, "utf8");
+    expect(manifest).toContain('"id": 9007199254740991');
+    await writeFile(manifestPath, manifest.replace('"id": 9007199254740991', '"id": 9007199254740991.1'));
+    stdout.length = 0;
+    stderr.length = 0;
+    fetch.mockClear();
+
+    await program.parseAsync(["node", "apexcn", "collection", "verify", "--dir", outputDir, "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+
+    process.exitCode = undefined;
+    stdout.length = 0;
+    stderr.length = 0;
+    await program.parseAsync(["node", "apexcn", "collection", "sync", "--dir", outputDir, "--json"]);
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).not.toHaveBeenCalled();
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("collection verify rejects an unsafe source topicIds array", async () => {
+    const outputDir = await tempPath("unsafe-source-ids");
+    const { program, stdout, stderr } = await configuredProgram(async () => Response.json({ topic: { id: 42, title: "safe" } }));
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--topic-id", "42", "--output-dir", outputDir, "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    const manifestPath = join(outputDir, "collection.json");
+    const manifest = await readFile(manifestPath, "utf8");
+    const changed = manifest.replace(/"topicIds":\s*\[\s*42\s*\]/, '"topicIds": [9007199254740993]');
+    expect(changed).not.toBe(manifest);
+    await writeFile(manifestPath, changed);
+    stdout.length = 0;
+    stderr.length = 0;
+
+    await program.parseAsync(["node", "apexcn", "collection", "verify", "--dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test.each(["null", '"42"'])("collection sync rejects a nonnumeric manifest target ID %s", async (badId) => {
+    const outputDir = await tempPath("invalid-manifest-id");
+    const { program, stdout, stderr, fetch } = await configuredProgram(async () => Response.json({ topic: { id: 42, title: "safe" } }));
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--topic-id", "42", "--output-dir", outputDir, "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    const manifestPath = join(outputDir, "collection.json");
+    const manifest = await readFile(manifestPath, "utf8");
+    expect(manifest).toContain('"id": 42');
+    await writeFile(manifestPath, manifest.replace('"id": 42', `"id": ${badId}`));
+    stdout.length = 0;
+    stderr.length = 0;
+    fetch.mockClear();
+
+    await program.parseAsync(["node", "apexcn", "collection", "sync", "--dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).not.toHaveBeenCalled();
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("collection sync rejects an unsafe reply ID before changing existing files", async () => {
+    const outputDir = await tempPath("unsafe-sync");
+    let syncing = false;
+    const { program, stdout, stderr } = await configuredProgram(async (input) => {
+      const isSecond = String(input).includes("/topics/2");
+      const body = syncing && isSecond
+        ? '{"topic":{"id":2,"title":"unsafe"},"replies":[{"id":9007199254740993}]}'
+        : JSON.stringify({ topic: { id: isSecond ? 2 : 1, title: syncing ? "changed" : "original" } });
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--topic-id", "1", "--topic-id", "2", "--output-dir", outputDir, "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    const manifest = await readFile(join(outputDir, "collection.json"), "utf8");
+    const firstTopic = await readFile(join(outputDir, "topics", "1.json"), "utf8");
+    syncing = true;
+    stdout.length = 0;
+    stderr.length = 0;
+
+    await program.parseAsync(["node", "apexcn", "collection", "sync", "--dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(await readFile(join(outputDir, "collection.json"), "utf8")).toBe(manifest);
+    expect(await readFile(join(outputDir, "topics", "1.json"), "utf8")).toBe(firstTopic);
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("collection query rejects an unsafe ID in a local index", async () => {
+    const outputDir = await tempPath("unsafe-index");
+    await mkdir(outputDir, { recursive: true });
+    await writeFile(join(outputDir, "index.jsonl"), '{"kind":"collection-index-record","schemaVersion":1,"engine":"bm25","topicId":9007199254740993,"title":"oracle","sourcePath":"topics/42.json","terms":{"oracle":1},"documentLength":1,"excerpt":"oracle"}\n');
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const program = createProgram({ stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
+
+    await program.parseAsync(["node", "apexcn", "collection", "query", "oracle", "--dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(stdout.join("")).toBe("");
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("collection stats rejects an unsafe ID in index metadata", async () => {
+    const outputDir = await tempPath("unsafe-index-meta");
+    await mkdir(outputDir, { recursive: true });
+    await writeFile(join(outputDir, "index.jsonl"), '{"kind":"collection-index-record","schemaVersion":1,"engine":"bm25","topicId":42,"title":"oracle","sourcePath":"topics/42.json","terms":{"oracle":1},"documentLength":1,"excerpt":"oracle"}\n');
+    await writeFile(join(outputDir, "index.meta.json"), '{"sourceDocuments":[{"topicId":9007199254740993}]}');
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const program = createProgram({ stdout: (text) => stdout.push(text), stderr: (text) => stderr.push(text) });
+
+    await program.parseAsync(["node", "apexcn", "collection", "stats", "--dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(stdout.join("")).toBe("");
+    await rm(outputDir, { recursive: true, force: true });
+  });
+
+  test("collection can verify a topic with an unrelated large author ID", async () => {
+    const outputDir = await tempPath("large-author");
+    const { program, stdout, stderr } = await configuredProgram(async () =>
+      new Response('{"topic":{"id":42,"title":"safe","author":{"id":9007199254740993},"score":0.123456789012345678}}', { headers: { "content-type": "application/json" } })
+    );
+    await program.parseAsync(["node", "apexcn", "collection", "build", "--topic-id", "42", "--output-dir", outputDir, "--json"]);
+    expect(process.exitCode).toBeUndefined();
+    stdout.length = 0;
+    stderr.length = 0;
+
+    await program.parseAsync(["node", "apexcn", "collection", "verify", "--dir", outputDir, "--json"]);
+
+    expect(process.exitCode).toBeUndefined();
+    expect(stderr.join("")).toBe("");
+    expect(JSON.parse(stdout.join(""))).toMatchObject({ ok: true });
+    await rm(outputDir, { recursive: true, force: true });
   });
 
   test("collection build creates a deduplicated local knowledge collection", async () => {

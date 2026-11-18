@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -8,9 +8,11 @@ import { currentCliOperation } from "../src/core/request-context.js";
 import { createProgram } from "../src/index.js";
 
 const packageVersion = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
+const testConfigRoots = new Set<string>();
 
 async function tempConfigPath() {
   const dir = await mkdtemp(join(tmpdir(), "apexcn-content-"));
+  testConfigRoots.add(dir);
   return join(dir, ".apexcn", "config.json");
 }
 
@@ -131,6 +133,7 @@ const neverApiDryRunCommands = [
   "auth audit",
   "admin list",
   "admin operations",
+  "admin operations-v2",
   "collection build",
   "collection automation plan",
   "collection automation run",
@@ -200,12 +203,14 @@ const neverApiDryRunCommands = [
 ].sort();
 
 describe("content commands", () => {
-  afterEach(() => {
+  afterEach(async () => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
     process.exitCode = undefined;
     delete process.env.APEXCN_HTTP_TIMEOUT_MS;
     delete process.env.APEXCN_ERROR_FORMAT;
+    await Promise.all([...testConfigRoots].map((root) => rm(root, { recursive: true, force: true })));
+    testConfigRoots.clear();
   });
 
   test("category list prints categories as JSON", async () => {
@@ -1651,7 +1656,7 @@ describe("content commands", () => {
 
   test("format option is exposed only on read commands with text output", () => {
     const program = createProgram();
-    const formatCommands = ["doctor", "doctor snapshot", "draft list", "draft reply", "draft question", "draft restore", "guide", "review reply", "review topic", "workflow audit-log", "workflow plan", "admin list", "admin operations", "me", "me capabilities", "me dashboard", "me favorites", "me inbox", "me notifications", "me privacy", "me replies", "me rules", "me search", "me stats", "me subscriptions", "me topics", "category list", "search", "stats category", "stats tag", "stats topic", "rag retrieve", "research", "topic list", "topic recent", "topic view", "thread list", "thread recent", "thread view", "ask"];
+    const formatCommands = ["doctor", "doctor snapshot", "draft list", "draft reply", "draft question", "draft restore", "guide", "review reply", "review topic", "workflow audit-log", "workflow plan", "admin list", "admin operations", "admin operations-v2", "me", "me capabilities", "me dashboard", "me favorites", "me inbox", "me notifications", "me privacy", "me replies", "me rules", "me search", "me stats", "me subscriptions", "me topics", "category list", "search", "stats category", "stats tag", "stats topic", "rag retrieve", "research", "topic list", "topic recent", "topic view", "thread list", "thread recent", "thread view", "ask"];
 
     for (const path of leafCommandPaths(program)) {
       if (formatCommands.includes(path)) {
@@ -1909,6 +1914,225 @@ describe("content commands", () => {
       process.exitCode = undefined;
       vi.unstubAllGlobals();
     }
+  });
+
+  test.each(["0", "9007199254740991"])("topic list accepts exact safe offset %s", async (offset) => {
+    const { program, fetch } = await configuredProgram(async () => Response.json({ items: [] }));
+
+    await program.parseAsync(["node", "apexcn", "topic", "list", "--offset", offset, "--json"]);
+
+    expect(process.exitCode).toBeUndefined();
+    expect(new URL(String(fetch.mock.calls[0][0])).searchParams.get("offset")).toBe(offset);
+  });
+
+  test.each([["1.0", "1"], ["1e2", "100"], ["0x2", "2"], ["+1", "1"]])("topic view preserves exact safe input %s", async (inputId, expectedId) => {
+    const { program, fetch } = await configuredProgram(async () => Response.json({ topic: { id: Number(expectedId) } }));
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", inputId, "--json"]);
+
+    expect(process.exitCode).toBeUndefined();
+    expect(fetch).toHaveBeenLastCalledWith(`https://oracleapex.cn/ords/test/api/v1/topics/${expectedId}`, expect.any(Object));
+  });
+
+  test("research refuses an unsafe search ID before fetching a topic", async () => {
+    const { program, stderr, fetch } = await configuredProgram(async () =>
+      new Response('{"items":[{"id":9007199254740993,"title":"unsafe"}]}', { headers: { "content-type": "application/json" } })
+    );
+
+    await program.parseAsync(["node", "apexcn", "research", "synthetic", "--limit", "1", "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("research rejects a selected imprecise ID after ignoring a numeric placeholder", async () => {
+    const { program, stderr, fetch } = await configuredProgram(async () =>
+      new Response('{"items":[9007199254740993,{"id":1},{"id":2},{"id":9007199254740991.1}]}', { headers: { "content-type": "application/json" } })
+    );
+
+    await program.parseAsync(["node", "apexcn", "research", "synthetic", "--limit", "3", "--json"]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toMatch(/unsafe|imprecise/i);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("topic view preserves a large topic ID and response integers exactly", async () => {
+    const topicId = "1234567890123456789012345678";
+    const accountId = "9007199254740993";
+    const viewCount = "9007199254740993123456789012";
+    const { program, stdout, fetch } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? `{"user":{"id":${accountId}},"requestId":"req-me"}`
+        : `{"topic":{"id":${topicId},"createdBy":${accountId},"viewCount":${viewCount},"title":"Precision"},"requestId":"req-topic"}`;
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", topicId, "--json"]);
+
+    expect(fetch).toHaveBeenLastCalledWith(`https://oracleapex.cn/ords/test/api/v1/topics/${topicId}`, expect.any(Object));
+    expect(stdout.join("")).toContain(`"id": ${topicId}`);
+    expect(stdout.join("")).toContain(`"createdBy": ${accountId}`);
+    expect(stdout.join("")).toContain(`"viewCount": ${viewCount}`);
+    expect(stdout.join("")).toContain('"canEdit": true');
+    expect(stdout.join("")).toContain('"canDelete": true');
+  });
+
+  test("topic view does not grant ownership to adjacent large account IDs", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":9007199254740992},"requestId":"req-me"}'
+        : '{"topic":{"id":42,"createdBy":9007199254740993,"canEdit":true,"canDelete":true},"requestId":"req-topic"}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--json"]);
+
+    expect(stdout.join("")).toContain('"canEdit": false');
+    expect(stdout.join("")).toContain('"canDelete": false');
+    expect(stdout.join("")).toContain('"createdBy": 9007199254740993');
+  });
+
+  test("topic view recognizes equal large account IDs in decimal and exponential JSON", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":9007199254740993}}'
+        : '{"topic":{"id":42,"createdBy":9.007199254740993e15}}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--json"]);
+
+    expect(stdout.join("")).toContain('"canEdit": true');
+    expect(stdout.join("")).toContain('"canDelete": true');
+  });
+
+  test("topic view recognizes equivalent decimal and exponential account ID strings", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":"9007199254740993"}}'
+        : '{"topic":{"id":42,"createdBy":"9.007199254740993e15"}}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--json"]);
+
+    expect(stdout.join("")).toContain('"canEdit": true');
+    expect(stdout.join("")).toContain('"canDelete": true');
+  });
+
+  test("topic view refuses ownership for account IDs with imprecise exponents", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":"1e9007199254740992"}}'
+        : '{"topic":{"id":42,"createdBy":"1e9007199254740993"}}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--json"]);
+
+    expect(stdout.join("")).toContain('"canEdit": false');
+    expect(stdout.join("")).toContain('"canDelete": false');
+  });
+
+  test("topic view rejects exponent rounding before normalizing account IDs", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":"0.1e9007199254740993"}}'
+        : '{"topic":{"id":42,"createdBy":"1e9007199254740991"}}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--json"]);
+
+    expect(stdout.join("")).toContain('"canEdit": false');
+    expect(stdout.join("")).toContain('"canDelete": false');
+  });
+
+  test("topic view does not collide large exponents after leading-zero normalization", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":"001e9007199254740991"}}'
+        : '{"topic":{"id":42,"createdBy":"1e9007199254740990"}}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--json"]);
+
+    expect(stdout.join("")).toContain('"canEdit": false');
+    expect(stdout.join("")).toContain('"canDelete": false');
+  });
+
+  test("topic view preserves a large ID recovered from a source URL", async () => {
+    const id = "1234567890123456789012345678";
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":1}}'
+        : `{"topic":{"threadUrl":"https://example.invalid/t/${id}","title":"Precision"}}`;
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--json"]);
+
+    expect(stdout.join("")).toContain(`"id": ${id}`);
+  });
+
+  test("topic view does not replace a large numeric schemaVersion", async () => {
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":1}}'
+        : '{"schemaVersion":9007199254740993,"topic":{"id":42}}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", "42", "--json"]);
+
+    expect(stdout.join("")).toContain('"schemaVersion": 9007199254740993');
+  });
+
+  test("topic view text preserves large numeric fields", async () => {
+    const topicId = "1234567890123456789012345678";
+    const { program, stdout } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":1}}'
+        : `{"topic":{"id":${topicId},"viewCount":9007199254740993,"title":"Precision"}}`;
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync(["node", "apexcn", "topic", "view", topicId, "--format", "text"]);
+
+    expect(stdout.join("")).toContain(`id: ${topicId}\n`);
+    expect(stdout.join("")).toContain("Views: 9007199254740993\n");
+  });
+
+  test("topic delete rejects an unsafe integer ID before making a request", async () => {
+    const { program, fetch } = await configuredProgram(async () => Response.json({ ok: true }));
+    exitOverrideTree(program);
+
+    await expect(program.parseAsync([
+      "node", "apexcn", "topic", "delete", "9007199254740993",
+      "--if-version", "1", "--confirm-title", "Example", "--preview", "--json"
+    ])).rejects.toMatchObject({ code: "commander.invalidArgument" });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("topic deletion preview refuses adjacent large account IDs", async () => {
+    const { program, stdout, stderr, fetch } = await configuredProgram(async (input) => {
+      const body = String(input).endsWith("/api/v1/me")
+        ? '{"user":{"id":9007199254740992},"requestId":"req-me"}'
+        : '{"topic":{"id":42,"createdBy":9007199254740993},"requestId":"req-topic"}';
+      return new Response(body, { headers: { "content-type": "application/json" } });
+    });
+
+    await program.parseAsync([
+      "node", "apexcn", "topic", "delete", "42", "--if-version", "1", "--confirm-title", "Example", "--preview", "--json"
+    ]);
+
+    expect(process.exitCode).toBe(1);
+    expect(stdout.join("")).toBe("");
+    expect(JSON.parse(stderr.join(""))).toMatchObject({ error: { type: "safety" } });
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   test("topic view supports text format", async () => {

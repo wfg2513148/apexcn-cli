@@ -127,6 +127,7 @@ describe("release version check", () => {
       "docs/security-model.md",
       "docs/user-guide.en.md",
       "node_modules/commander/package.json",
+      "node_modules/lossless-json/package.json",
       "package.json",
       "qualification/releases/1.1.6/public-surface-v1.json",
       "qualification/releases/1.1.6/qualification-contract-v1.json",
@@ -134,7 +135,9 @@ describe("release version check", () => {
       "scripts/install-agent.ps1",
       "scripts/install-agent.sh",
       "scripts/lifecycle-agent.ps1",
-      "scripts/lifecycle-agent.sh"
+      "scripts/lifecycle-agent.sh",
+      "scripts/verify-release-supply-chain.mjs",
+      "scripts/inspect-release-archive.mjs"
     ]));
     expect(files).not.toEqual(expect.arrayContaining([
       ".github/workflows/ci.yml",
@@ -170,6 +173,7 @@ describe("release version check", () => {
         "package/dist/index.js",
         "package/dist/version.js",
         "package/node_modules/commander/package.json",
+        "package/node_modules/lossless-json/package.json",
         "package/agent-skill/SKILL.md",
         "package/agent-skill/intent-routes.json",
         "package/docs/cli-manual.en.md",
@@ -189,7 +193,9 @@ describe("release version check", () => {
         "package/scripts/install-agent.ps1",
         "package/scripts/install-agent.sh",
         "package/scripts/lifecycle-agent.ps1",
-        "package/scripts/lifecycle-agent.sh"
+        "package/scripts/lifecycle-agent.sh",
+        "package/scripts/verify-release-supply-chain.mjs",
+        "package/scripts/inspect-release-archive.mjs"
       ]));
       expect(entries.some((entry) => entry.startsWith("package/.github/"))).toBe(false);
       expect(entries.some((entry) => entry.startsWith("package/artifacts/"))).toBe(false);

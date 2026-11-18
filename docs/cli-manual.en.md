@@ -125,6 +125,8 @@ apexcn doctor --timeout-ms 10000 --json
 
 `doctor snapshot` is a local-only support snapshot and does not call the community API. It reads the config file directly and outputs `kind: "doctor-snapshot"`, `schemaVersion: 1`, `diagnostics`, `environment`, `config`, `agentSkill`, and stable `checks[].code` values. Hard issue codes include `config-unreadable`, `config-invalid-json`, `no-active-profile`, `missing-current-profile`, `invalid-base-url`, and `invalid-timeout-env`; warning codes include `api-key-env-missing`, `missing-token`, and `agent-skill-missing`. Environment variables are reported only as present/valid, and tokens are reported only as presence plus redacted length. `--output <file>` writes the same sanitized snapshot with user-only permissions.
 
+Profile URLs displayed by `auth` and `doctor`, and URLs in transport errors, omit userinfo, query strings, and fragments. Snapshot diagnostic strings also mask recognizable credential patterns; review support artifacts before sharing them because arbitrary secret formats cannot always be detected.
+
 ## category
 
 List categories:
@@ -159,11 +161,17 @@ apexcn admin list --json
 apexcn admin list --format text
 apexcn admin operations --json
 apexcn admin operations --from 2026-07-01 --to 2026-07-07 --user-id 42 --limit 20 --format text
+apexcn admin operations-v2 --json
+apexcn admin operations-v2 --from 2026-07-01 --to 2026-07-07 --user-id 42 --limit 50 --format text
 ```
 
 `admin list` returns only server-approved public admin fields and public contact entries; private contact data is not exposed.
 
 `admin operations` is an administrator-only view of apexcn-cli requests received by the server. The default window is the last seven days. A custom window must provide both `--from` and `--to`; they are inclusive `YYYY-MM-DD` dates with a maximum 90-day window. `--user-id` applies an exact community user filter, and `--limit` bounds each operation, error, and keyword section to 1-100 rows, defaulting to 20. Output contains five aggregate sections: summary, daily trend, operation/route distribution, HTTP status and stable error distribution, and explicit search keywords, followed by the `requestId`. Errors also use structured JSON with `--format json`, `--format pretty`, or `--json`. Its JSON contract is `admin-operations-response-v1`.
+
+`admin operations-v2` uses a separate administrator aggregate and requires the server to advertise the `admin-operations-v2` capability and endpoint. It defaults to the last seven Shanghai business dates. Supply both `--from` and `--to` for an inclusive window of at most 90 days; the end date cannot be in the future in Shanghai. `--user-id` filters an exact community user ID. `--limit` accepts 10, 20, 50, or 100; when omitted, the server defaults to 20. The JSON contract is `admin-operations-response-v2`, with `schemaVersion: 2` and `semanticsId: AFA-CLI-OPS-1.0`.
+
+V2 reports successful, failed, and unclassified calls separately, along with success rate, classification coverage, and zero-filled days. Do not count unclassified calls as successes or failures; an unavailable rate is null. V2 contains no keyword details: use the existing `admin operations` command when keyword data is needed. Missing capability, insufficient permission, or an invalid server response is reported as an error; the command does not fall back to v1.
 
 Counts represent requests that reached the server with a valid versioned client marker, not local process starts. Local validation/configuration failures and network failures that never reach the server are absent. Keywords come only from explicit `search` and `me search` input; `research` and `rag retrieve` appear through the search requests they perform, while `ask` question bodies are never included in keyword analytics. The response never exposes API keys, Authorization values, or request bodies.
 
@@ -408,6 +416,8 @@ apexcn confirm op_0123456789abcdef --yes --json
 
 Confirmation can execute only the exact account, community target, and request bound to that id. A changed target, body, version, or local configuration invalidates the id, and repeated confirmation never creates a second write. Create a fresh preview after expiry or `409 VERSION_CONFLICT`.
 
+Workflow previews also bind the request, target and version to the run state. If the preview anchor is changed or missing before any execution attempt, create a new preview, review it, and approve it again. If execution was attempted and its outcome is unknown, first verify the original write; do not create a replacement operation until the outcome is known. Pending previews from older versions without an anchor require the same precautions. Completed historical runs using the current request format can still be inspected with an anchor warning; verification may report other issues, such as an expired approval. These local hashes detect inconsistent files, but do not authenticate files against someone who can rewrite the entire run directory.
+
 ## topic / thread
 
 `thread` is an alias of `topic`.
@@ -419,6 +429,8 @@ apexcn topic view 30549 --json
 apexcn thread view 30549 --json
 apexcn topic view 30549 --format text
 ```
+
+`topic view` accepts decimal topic IDs beyond JavaScript's safe integer range and preserves response numbers in text and JSON output. JSON consumers must also use a lossless parser. Numeric arguments for topic/reply writes, workflows, drafts, reviews, and collections currently require safe integers; larger values are rejected to avoid rounding a target ID. The administrator `operations-v2 --user-id` option separately accepts positive decimal integers of at most 28 digits, preserving any leading zeros in the request. This does not imply full large-integer support in other API responses or imported files.
 
 Create a topic from a file:
 

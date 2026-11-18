@@ -2,14 +2,20 @@ import { readFile } from "node:fs/promises";
 import { stdin as processStdin, stdout as processStdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { Command, InvalidArgumentError, Option } from "commander";
+import { isLosslessNumber } from "lossless-json";
 import { ConfigFileError } from "../config.js";
-import { currentContentLanguage } from "../core/request-context.js";
+import { currentContentLanguage, runWithCliRequestContext } from "../core/request-context.js";
 import { createApiClient } from "../core/api-client.js";
+import { isAdminOperationsV2Response, matchesAdminOperationsV2Filters } from "../core/admin-operations-v2.js";
+import { isExactSafeIntegerInput, isPreciseObject, normalizeTopicForSelection, parsePreciseJson, precisePositiveIdKey, safeApiId, stringifyPreciseJson, toNativeApiNumbers, UnsafeApiIdError } from "../core/precise-json.js";
+import { assessCapabilityCompatibility } from "../core/capability-compatibility.js";
 import { formatHttpErrorText, formatTransportErrorText, remediationForHttpError, remediationForTransportError, stableErrorCode } from "../core/errors.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
+import { sanitizeUrlForDisplay } from "../core/url-redaction.js";
 import { confirmWriteOperation, createWriteOperation, type WriteOperationRequest, type WriteOperationSession } from "../core/write-operation.js";
 import {
   adminOperations,
+  adminOperationsV2,
   askCommunity,
   listAdmins,
   listCategories,
@@ -92,6 +98,8 @@ type AdminOperationsOptions = FormatOption & {
   userId?: number;
   limit?: number;
 };
+
+type AdminOperationsV2Options = Omit<AdminOperationsOptions, "userId"> & { userId?: string };
 
 type AskFilterOptions = {
   topK?: number;
@@ -297,6 +305,47 @@ export function createAdminCommand(options: ApiCommandOptions): Command {
           limit: commandOptions.limit
         });
         printData(options, data, outputFormat(commandOptions), formatAdminOperationsText);
+      });
+    });
+
+  admin
+    .command("operations-v2")
+    .description("show administrator-only operations v2 aggregates")
+    .option("--from <date>", "inclusive Shanghai start date, YYYY-MM-DD", parseSearchDate)
+    .option("--to <date>", "inclusive Shanghai end date, YYYY-MM-DD", parseSearchDate)
+    .option("--user-id <id>", "exact community user id", parseAdminOperationsV2UserId)
+    .option("--limit <n>", "maximum operation and error rows: 10, 20, 50, or 100", parseAdminOperationsV2Limit)
+    .option("--json", "pretty-print JSON")
+    .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
+    .action(async (commandOptions: AdminOperationsV2Options) => {
+      if (!validateFormatOptions(options, commandOptions) || !validateAdminOperationsV2DateRange(options, commandOptions)) return;
+      await runApi(options, commandOptions, async (session) => {
+        const capabilities = await runWithCliRequestContext("me_capabilities", () =>
+          requestJson(session.baseUrl, "/api/v1/capabilities", { token: session.token }));
+        const compatibility = assessCapabilityCompatibility(capabilities, ["admin-operations-v2"]);
+        const entries = isRecord(capabilities) && Array.isArray(capabilities.capabilities)
+          ? capabilities.capabilities.filter(isRecord) : [];
+        const matching = entries.filter((entry) => entry.id === "admin-operations-v2");
+        const capability = matching[0];
+        if (!compatibility.ok || matching.length !== 1 || capability?.available !== true || !Array.isArray(capability.endpoints)
+          || !capability.endpoints.includes("/admin/operations/v2")) {
+          const requestId = isRecord(capabilities) && typeof capabilities.requestId === "string"
+            && /^req_[A-Za-z0-9_-]{1,100}$/.test(capabilities.requestId) ? capabilities.requestId : undefined;
+          if (compatibility.status === "missing-capability" && matching.length === 1
+            && capability?.available === false && capability.unavailableReason === "FORBIDDEN") {
+            throw new CliSafetyError("Administrator permission is required for operations v2.", "FORBIDDEN", requestId);
+          }
+          throw new CliSafetyError("Administrator operations v2 is unavailable or incompatible with this server.", "CAPABILITY_UNAVAILABLE", requestId);
+        }
+        const data = await runWithCliRequestContext("admin_operations", () => adminOperationsV2(createApiClient(session), {
+          from: commandOptions.from, to: commandOptions.to, userId: commandOptions.userId, limit: commandOptions.limit
+        }));
+        if (!isAdminOperationsV2Response(data) || !matchesAdminOperationsV2Filters(data, commandOptions)) {
+          throw new CliValidationError("Invalid administrator operations v2 response or mismatched filters.");
+        }
+        const format = outputFormat(commandOptions);
+        if (format === "text") printData(options, data, format, formatAdminOperationsV2Text);
+        else options.stdout(`${stringifyPreciseJson(data, format === "pretty")}\n`);
       });
     });
   return admin;
@@ -536,18 +585,21 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
 
   topic
     .command("view")
-    .argument("<id>", "topic id", parsePositiveInteger)
+    .argument("<id>", "topic id", parseTopicViewId)
     .option("--json", "pretty-print JSON")
     .addOption(new Option("--format <format>", "output format: json, pretty, text").argParser(parseOutputFormat))
-    .action(async (id: number, commandOptions: FormatOption) => {
+    .action(async (id: number | string, commandOptions: FormatOption) => {
       if (!validateFormatOptions(options, commandOptions)) {
         return;
       }
       await runApi(options, commandOptions, async (session) => {
-        const me = await requestJson(session.baseUrl, "/api/v1/me", { token: session.token });
-        const data = bindTopicOwnership(await viewTopic(createApiClient(session), id), me);
+        const me = await requestJson(session.baseUrl, "/api/v1/me", { token: session.token, parseResponse: parsePreciseJson });
+        const data = bindTopicOwnership(await viewTopic(createApiClient(session), id, parsePreciseJson), me);
         const topic = topicFromData(data);
-        printData(options, withReadProvenance(data, "topic-detail", topic ? [topic] : []), outputFormat(commandOptions), formatTopicText);
+        const result = withReadProvenance(data, "topic-detail", topic ? [topic] : [], true);
+        const format = outputFormat(commandOptions);
+        if (format === "text") printData(options, result, format, formatTopicText);
+        else options.stdout(`${stringifyPreciseJson(result, format === "pretty")}\n`);
       });
     });
 
@@ -568,7 +620,7 @@ export function createTopicCommand(options: ApiCommandOptions): Command {
           process.exitCode = 1;
           return;
         }
-        const categoryId = commandOptions.categoryId ?? await promptCategoryId(options, session);
+        const categoryId = commandOptions.categoryId ?? await promptCategoryId(options, session, commandOptions.json);
         if (categoryId === undefined) {
           return;
         }
@@ -943,6 +995,9 @@ class CliValidationError extends Error {
 }
 
 class CliSafetyError extends Error {
+  constructor(message: string, readonly code?: string, readonly requestId?: string) {
+    super(message);
+  }
 }
 
 async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOption, callback: (session: Session) => Promise<void>): Promise<void> {
@@ -970,13 +1025,13 @@ async function runApi(options: ApiCommandOptions, commandOptions: ErrorFormatOpt
       process.exitCode = 1;
       return;
     }
-    if (error instanceof CliValidationError) {
+    if (error instanceof CliValidationError || error instanceof UnsafeApiIdError) {
       printError(options, { type: "validation", message: error.message, exitCode: 1 }, undefined, jsonErrors);
       process.exitCode = 1;
       return;
     }
     if (error instanceof CliSafetyError) {
-      printError(options, { type: "safety", message: error.message, exitCode: 1 }, undefined, jsonErrors);
+      printError(options, { type: "safety", code: error.code, message: error.message, requestId: error.requestId, exitCode: 1 }, undefined, jsonErrors);
       process.exitCode = 1;
       return;
     }
@@ -1031,7 +1086,7 @@ function printDryRun(options: CommandIo, session: Session, request: ApiRequestPl
     preview: mode === "preview",
     mode,
     profile: session.profile,
-    baseUrl: session.baseUrl,
+    baseUrl: sanitizeUrlForDisplay(session.baseUrl),
     method: request.method,
     path: request.path,
     query: request.query,
@@ -1273,6 +1328,21 @@ function validateAdminOperationsDateRange(options: CommandIo, dates: Pick<AdminO
   return true;
 }
 
+function validateAdminOperationsV2DateRange(options: CommandIo, dates: Pick<AdminOperationsOptions, "from" | "to" | "json" | "format">): boolean {
+  if (!validateAdminOperationsDateRange(options, dates)) return false;
+  if (!dates.to) return true;
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(new Date()).map(({ type, value }) => [type, value]));
+  const today = `${parts.year}-${parts.month}-${parts.day}`;
+  if (dates.to > today) {
+    printError(options, { type: "validation", message: "--to must not be later than the current Shanghai date", exitCode: 1 }, undefined, usesJsonOutput(dates));
+    process.exitCode = 1;
+    return false;
+  }
+  return true;
+}
+
 function formatCategoryListText(data: unknown): string {
   const items = itemsFromData(data);
   return items.map((item) => `${fieldText(item.id)}\t${fieldText(item.name)}`).join("\n");
@@ -1353,6 +1423,32 @@ function formatAdminOperationsText(data: unknown): string {
     `Operations:\n${operations}`,
     `Errors:\n${errors}`,
     `Keywords:\n${keywords}`,
+    line("requestId", data.requestId)
+  ].filter(Boolean).join("\n");
+}
+
+function formatAdminOperationsV2Text(data: unknown): string {
+  if (!isRecord(data) || !isRecord(data.window) || !isRecord(data.filter) || !isRecord(data.totals)) return "";
+  const window = data.window;
+  const filter = data.filter;
+  const totals = data.totals;
+  const user = isRecord(filter.user) ? filter.user : undefined;
+  const percent = (value: unknown) => value === null ? "n/a" : `${fieldText(value)}%`;
+  const summary = lines([
+    line("schemaVersion", data.schemaVersion), line("semanticsId", data.semanticsId),
+    `window: ${fieldText(window.from)} to ${fieldText(window.to)} (${fieldText(window.days)} days, ${fieldText(window.timeZone)})`,
+    line("client", filter.client), line("limit", filter.limit),
+    user ? `user: ${fieldText(user.id)} ${fieldText(user.nickname)}`.trimEnd() : "user: all",
+    line("calls", totals.calls), line("success", totals.successCount), line("failures", totals.failureCount),
+    line("unclassified", totals.unclassifiedCalls), line("classified", totals.classifiedCalls),
+    line("distinct users", totals.distinctUsers), `success rate: ${percent(totals.successRate)}`,
+    `classification coverage: ${percent(totals.classificationCoverage)}`, line("freshness", totals.freshnessAt)
+  ]);
+  return [
+    `Summary:\n${summary}`,
+    `Daily:\ndate\tcalls\tsuccess\tfailure\tunclassified\n${adminOperationsRows(data.daily, (item) => [item.date, item.calls, item.successCount, item.failureCount, item.unclassifiedCalls])}`,
+    `Operations:\noperation\troute\tcalls\tsuccess\tfailure\tunclassified\tdistinctUsers\tsuccessRate\tavgDurationMs\tfreshnessAt\n${adminOperationsRows(data.operations, (item) => [item.operation, item.route, item.calls, item.successCount, item.failureCount, item.unclassifiedCalls, item.distinctUsers, percent(item.successRate), item.avgDurationMs, item.freshnessAt])}`,
+    `Errors:\nhttpStatus\terrorCode\toperation\troute\tcalls\tdistinctUsers\tfreshnessAt\n${adminOperationsRows(data.errors, (item) => [item.httpStatus, item.errorCode, item.operation, item.route, item.calls, item.distinctUsers, item.freshnessAt])}`,
     line("requestId", data.requestId)
   ].filter(Boolean).join("\n");
 }
@@ -1483,11 +1579,11 @@ async function retrieveRagEvidence(
       fromDate: input.fromDate,
       toDate: input.toDate,
       tag: input.tag
-    });
+    }, parsePreciseJson);
     if (isRecord(search) && typeof search.requestId === "string" && search.requestId.trim()) {
       requestIds.add(search.requestId);
     }
-    const items = itemsFromData(search).slice(0, input.topK);
+    const items = itemsFromData(search).filter(isPreciseObject).slice(0, input.topK);
     searchAttempts.push(compactBody({
       query,
       resultCount: items.length,
@@ -1527,7 +1623,7 @@ async function retrieveRagEvidence(
   const retrievalErrors: Array<Record<string, unknown>> = [];
   for (const topicId of [...topicMatches.keys()].slice(0, input.topK)) {
     try {
-      const detail = await viewTopic(client, topicId);
+      const detail = normalizeTopicForSelection(await viewTopic(client, topicId, parsePreciseJson), "evidence");
       if (isRecord(detail) && typeof detail.requestId === "string" && detail.requestId.trim()) {
         requestIds.add(detail.requestId);
       }
@@ -1626,7 +1722,7 @@ function appendTopicEvidence(
     .sort((left, right) => Number(right.reply.isUseful === true) - Number(left.reply.isUseful === true))
     .slice(0, 3);
   for (const { reply, sourceIndex } of replies) {
-    const replyId = positiveId(reply.replyId ?? reply.id ?? reply.postId);
+    const replyId = safeApiId(reply.replyId ?? reply.id ?? reply.postId);
     const replyUrl = firstAbsoluteUrl(reply.replyUrl, reply.url) ?? communityUrl;
     const replyLabel = currentContentLanguage() === "en"
       ? (reply.isUseful === true ? "Correct answer" : `Reply ${sourceIndex + 1}`)
@@ -1785,8 +1881,10 @@ async function recentTopicsFromSearchFallback(
     cursor: options.cursor,
     fromDate: options.fromDate,
     toDate: options.toDate
-  });
-  const items = itemsFromData(search).filter((item) => !options.since || isOnOrAfter(item.updatedDate ?? item.createdDate, options.since));
+  }, parsePreciseJson);
+  for (const item of itemsFromData(search)) topicIdFromSearchItem(item);
+  const safeSearch = toNativeApiNumbers(search);
+  const items = itemsFromData(safeSearch).filter((item) => !options.since || isOnOrAfter(item.updatedDate ?? item.createdDate, options.since));
   const recentItems = [];
   const topicRequestIds = [];
   const errors = [];
@@ -1797,7 +1895,7 @@ async function recentTopicsFromSearchFallback(
       continue;
     }
     try {
-      const topic = await viewTopic(createApiClient(session), id);
+      const topic = normalizeTopicForSelection(await viewTopic(createApiClient(session), id, parsePreciseJson), "none");
       recentItems.push(recentTopicFromData(topic, item, sourceItemIndex));
       if (isRecord(topic) && topic.requestId) {
         topicRequestIds.push(topic.requestId);
@@ -1824,7 +1922,7 @@ async function recentTopicsFromSearchFallback(
       searchKeyword: "%"
     }),
     items: recentItems,
-    page: isRecord(search) ? search.page : undefined,
+    page: isRecord(safeSearch) ? safeSearch.page : undefined,
     requestIds: {
       search: isRecord(search) ? search.requestId : undefined,
       topics: topicRequestIds
@@ -1944,14 +2042,12 @@ function accountId(data: unknown): string | undefined {
   }
   const user = isRecord(data.user) ? data.user : data;
   const value = user.id ?? user.userId ?? user.user_id;
-  const id = fieldText(value).trim();
-  return id || undefined;
+  return precisePositiveIdKey(value);
 }
 
 function topicAuthorId(data: unknown): string | undefined {
   const topic = topicFromData(data);
-  const id = topic ? fieldText(topic.createdBy ?? topic.createdById ?? topic.authorId).trim() : "";
-  return id || undefined;
+  return topic ? precisePositiveIdKey(topic.createdBy ?? topic.createdById ?? topic.authorId) : undefined;
 }
 
 function bindTopicOwnership(data: unknown, me: unknown): unknown {
@@ -1970,8 +2066,8 @@ function bindTopicOwnership(data: unknown, me: unknown): unknown {
 }
 
 async function requireOwnedTopic(session: Session, topicId: number): Promise<void> {
-  const me = await requestJson(session.baseUrl, "/api/v1/me", { token: session.token });
-  const data = await viewTopic(createApiClient(session), topicId);
+  const me = await requestJson(session.baseUrl, "/api/v1/me", { token: session.token, parseResponse: parsePreciseJson });
+  const data = await viewTopic(createApiClient(session), topicId, parsePreciseJson);
   const currentUserId = accountId(me);
   const authorId = topicAuthorId(data);
   if (!currentUserId || !authorId) {
@@ -2228,7 +2324,7 @@ function firstAbsoluteUrl(...values: unknown[]): string | undefined {
     .find((value) => /^https?:\/\//i.test(value));
 }
 
-function topicIdFromAskReference(source: Record<string, unknown>): number | undefined {
+function topicIdFromAskReference(source: Record<string, unknown>, preserveNumbers = false): unknown {
   for (const key of ["topicId", "threadId"]) {
     const direct = positiveId(source[key]);
     if (direct !== undefined) {
@@ -2241,11 +2337,10 @@ function topicIdFromAskReference(source: Record<string, unknown>): number | unde
       continue;
     }
     const match = /(?:P14_THREAD_ID:|\/t\/)(\d+)/.exec(value);
-    if (match) {
-      return Number(match[1]);
-    }
-    if (/^\d+$/.test(value)) {
-      return Number(value);
+    const rawId = match?.[1] ?? (/^\d+$/.test(value) ? value : undefined);
+    if (rawId) {
+      const normalized = rawId.replace(/^0+/, "");
+      if (normalized) return preserveNumbers ? parsePreciseJson(normalized) : Number(normalized);
     }
   }
   return positiveId(source.id);
@@ -2253,13 +2348,8 @@ function topicIdFromAskReference(source: Record<string, unknown>): number | unde
 
 function topicIdFromSearchItem(item: Record<string, unknown>): number | undefined {
   for (const key of ["id", "topicId", "threadId"]) {
-    const value = item[key];
-    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
-      return value;
-    }
-    if (typeof value === "string" && /^\d+$/.test(value)) {
-      return Number(value);
-    }
+    const value = safeApiId(item[key]);
+    if (value !== undefined) return value;
   }
   return undefined;
 }
@@ -2288,19 +2378,20 @@ function researchLinks(items: Array<Record<string, unknown>>, topics: Array<Reco
 function withReadProvenance(
   data: unknown,
   kind: string,
-  sourceRecords: Array<Record<string, unknown>> = []
+  sourceRecords: Array<Record<string, unknown>> = [],
+  preserveNumbers = false
 ): unknown {
   if (!isRecord(data)) {
     return data;
   }
   const requestIds = readRequestIds(data);
   const sources = sourceRecords
-    .map(readSourceSummary)
+    .map((source) => readSourceSummary(source, preserveNumbers))
     .filter((source) => Object.keys(source).length > 0);
   return {
     ...data,
     kind: typeof data.kind === "string" ? data.kind : kind,
-    schemaVersion: typeof data.schemaVersion === "number" ? data.schemaVersion : 1,
+    schemaVersion: typeof data.schemaVersion === "number" || (preserveNumbers && isLosslessNumber(data.schemaVersion)) ? data.schemaVersion : 1,
     provenance: {
       requestIds,
       sources
@@ -2333,8 +2424,8 @@ function readRequestIds(value: unknown): string[] {
   return [...requestIds];
 }
 
-function readSourceSummary(source: Record<string, unknown>): Record<string, unknown> {
-  const topicId = topicIdFromAskReference(source);
+function readSourceSummary(source: Record<string, unknown>, preserveNumbers = false): Record<string, unknown> {
+  const topicId = topicIdFromAskReference(source, preserveNumbers);
   const url = source.canonicalUrl ?? source.threadUrl ?? source.url;
   return compactBody({
     id: source.id ?? source.topicId ?? source.threadId ?? topicId,
@@ -2448,31 +2539,44 @@ function lines(values: Array<string | undefined>): string {
   return values.filter((value): value is string => Boolean(value)).join("\n");
 }
 
-async function promptCategoryId(options: CommandIo, session: Session): Promise<number | undefined> {
+async function promptCategoryId(options: CommandIo, session: Session, json?: boolean): Promise<number | undefined> {
   if (processStdin.isTTY !== true) {
     printError(options, { type: "validation", message: "Missing --category-id in non-interactive mode" });
     process.exitCode = 1;
     return undefined;
   }
 
-  const data = await requestJson<{ items?: Array<{ id: number; name: string; canCreateTopic?: boolean }> }>(session.baseUrl, "/api/v1/categories", {
-    token: session.token
+  const data = await requestJson<{ items?: Array<{ id: unknown; name: string; canCreateTopic?: boolean }> }>(session.baseUrl, "/api/v1/categories", {
+    token: session.token,
+    parseResponse: parsePreciseJson
   });
-  const categories = (data.items ?? []).filter((item) => item.canCreateTopic !== false);
+  let unsafeCount = 0;
+  const categories = (data.items ?? []).filter((item) => item.canCreateTopic !== false).flatMap((item) => {
+    try {
+      const id = safeApiId(item.id);
+      if (id === undefined) throw new UnsafeApiIdError();
+      return [{ ...item, id }];
+    } catch (error) {
+      if (!(error instanceof UnsafeApiIdError)) throw error;
+      unsafeCount += 1;
+      return [];
+    }
+  });
   if (categories.length === 0) {
-    printError(options, { type: "validation", message: "No categories are available for topic creation" });
+    printError(options, { type: "validation", message: unsafeCount ? "No safe categories are available; unsafe or imprecise identifiers were omitted" : "No categories are available for topic creation" }, undefined, json);
     process.exitCode = 1;
     return undefined;
   }
 
+  if (unsafeCount > 0) options.stdout(`${unsafeCount} categories with unsafe identifiers were omitted.\n`);
   options.stdout("Select a category:\n");
   categories.forEach((category, index) => {
     options.stdout(`${index + 1}. ${category.name} (${category.id})\n`);
   });
   const answer = await promptText("Category number: ");
   const index = Number(answer);
-  if (!Number.isInteger(index) || index < 1 || index > categories.length) {
-    printError(options, { type: "validation", message: "Invalid category selection" });
+  if (!isExactSafeIntegerInput(answer) || index < 1 || index > categories.length) {
+    printError(options, { type: "validation", message: "Invalid category selection" }, undefined, json);
     process.exitCode = 1;
     return undefined;
   }
@@ -2481,7 +2585,7 @@ async function promptCategoryId(options: CommandIo, session: Session): Promise<n
 
 function parseNumber(value: string): number {
   const parsed = Number(value);
-  if (!Number.isInteger(parsed)) {
+  if (!isExactSafeIntegerInput(value)) {
     throw new InvalidArgumentError(`Invalid number: ${value}`);
   }
   return parsed;
@@ -2492,7 +2596,20 @@ function parsePositiveInteger(value: string): number {
   if (parsed < 1) {
     throw new InvalidArgumentError(`Expected a positive integer: ${value}`);
   }
+  if (!Number.isSafeInteger(parsed)) {
+    throw new InvalidArgumentError(`Expected a positive integer within the safe range: ${value}`);
+  }
   return parsed;
+}
+
+function parseTopicViewId(value: string): number | string {
+  const parsed = Number(value);
+  if (isExactSafeIntegerInput(value) && parsed > 0) return parsed;
+  if (/^\d+$/.test(value)) {
+    const normalized = value.replace(/^0+/, "");
+    if (normalized) return normalized;
+  }
+  throw new InvalidArgumentError(`Expected a positive integer: ${value}`);
 }
 
 function parseRelationTarget(value: string): RelationTarget {
@@ -2532,6 +2649,20 @@ function parseAdminOperationsLimit(value: string): number {
     throw new InvalidArgumentError("Expected --limit to be between 1 and 100");
   }
   return parsed;
+}
+
+function parseAdminOperationsV2Limit(value: string): number {
+  if (!["10", "20", "50", "100"].includes(value)) {
+    throw new InvalidArgumentError("Expected --limit to be one of 10, 20, 50, or 100");
+  }
+  return Number(value);
+}
+
+function parseAdminOperationsV2UserId(value: string): string {
+  if (!/^\d{1,28}$/.test(value) || !/[1-9]/.test(value)) {
+    throw new InvalidArgumentError("Expected --user-id to be a positive integer of at most 28 digits");
+  }
+  return value;
 }
 
 function collectRagQuery(value: string, previous: string[]): string[] {

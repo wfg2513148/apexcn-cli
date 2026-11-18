@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import { ConfigFileError, defaultConfigPath } from "../config.js";
 import { createDoctorSnapshot, type DoctorSnapshotOutput } from "../core/doctor-snapshot.js";
 import { loadRuntimeSession } from "../core/runtime-session.js";
+import { sanitizeUrlForDisplay } from "../core/url-redaction.js";
 import { DEFAULT_USER_AGENT, HttpError, NetworkError, redactSecret, requestJson, TimeoutError } from "../http.js";
 import { fieldText, isRecord, parseOutputFormat, printData, validateFormatOptions, type FormatOption, type OutputFormat } from "../output.js";
 import { CLI_VERSION } from "../version.js";
@@ -134,7 +135,7 @@ async function runDoctor(options: DoctorCommandOptions, commandOptions: { checkA
   return {
     ok: checks.every((check) => check.ok),
     diagnostics: diagnostics(configPath),
-    profile: { name: profile, baseUrl },
+    profile: { name: profile, baseUrl: sanitizeUrlForDisplay(baseUrl) },
     checks
   };
 }

@@ -31,7 +31,9 @@ The community and CLI are community projects, not official Oracle products. Cont
 
 The recommended experience is **you describe your goal → your AI uses the skill → the CLI accesses the community → your AI explains the results with sources**. You do not need to learn command names or flags.
 
-Choose an AI tool that can run local commands and load local skills, such as Codex. A browser-only chatbot without local execution cannot use this workflow. Node.js 20 or later is required; installers support macOS, Linux, and Windows.
+Choose an AI tool that can run local commands and load local skills, such as Codex. A browser-only chatbot without local execution cannot use this workflow.
+
+The macOS, Linux, and Windows installers require Node.js 20 or later. For new installations, use a maintained LTS release such as Node.js 22 or 24. [Node.js release schedule](https://nodejs.org/en/about/previous-releases)
 
 ### 1. Ask your AI to install the CLI and skill
 

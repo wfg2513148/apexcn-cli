@@ -112,6 +112,7 @@ const commonReadScenarios: Scenario[] = [
   scenario("admin list", "查看 APEX 中文社区管理员公开列表", "admin list", "read", ["read"], "none", ["--json"]),
   scenario("admin operations summary", "查看最近七天 apexcn-cli 的调用量、成功和失败情况", "admin operations", "read", ["read"], "none", ["--json"]),
   scenario("admin operations by user", "按用户 42 查看本月 CLI 调用异常和搜索关键词", "admin operations", "read", ["read"], "none", ["--from <date>", "--to <date>", "--user-id <id>", "--json"]),
+  scenario("admin operations v2 rates", "查看 CLI 调用成功率、分类覆盖率和未分类数", "admin operations-v2", "read", ["read"], "none", ["--json"]),
   scenario("my stats", "统计我在社区发了多少帖子、回复、收藏和订阅", "me stats", "read", ["read"], "none", ["--json"]),
   scenario("personal capabilities", "检查个人工作台哪些服务端能力真实可用", "me capabilities", "read", ["read"], "none", ["--json"]),
   scenario("personal dashboard", "打开我的个人看板，显示我创建的、回复的、收藏的和订阅的内容", "me dashboard", "read", ["read"], "none", ["--page-size <n>", "--json"]),
@@ -829,6 +830,32 @@ function executableCommandCoverageScenarios(): ExecutableNaturalLanguageScenario
           errors: [expect.objectContaining({ errorCode: "VALIDATION_ERROR" })],
           keywords: [expect.objectContaining({ keyword: "apex" })]
         }));
+      }
+    },
+    {
+      name: "admin operations v2 reads classified aggregates",
+      userSays: "查看 CLI 调用成功率与未分类数。",
+      commandPath: "admin operations-v2",
+      argv: ["node", "apexcn", "admin", "operations-v2", "--json"],
+      responseForUrl: (url) => {
+        if (url.endsWith("/api/v1/capabilities")) return Response.json({
+          kind: "capabilities", contractVersion: "0.10.0-candidate", requestId: "req_capabilities",
+          supportedContractVersions: ["0.10.0-candidate", "0.9.1-candidate", "0.9.0-candidate", "0.8.3-candidate", "0.8.0-candidate", "0.7.0-candidate", "0.6.0-candidate"],
+          capabilities: [{ id: "admin-operations-v2", available: true, endpoints: ["/admin/operations/v2"] }]
+        });
+        expect(url).toBe("https://oracleapex.cn/ords/test/api/v1/admin/operations/v2");
+        return Response.json({
+          kind: "admin-operations", schemaVersion: 2, semanticsId: "AFA-CLI-OPS-1.0", requestId: "req_operations_v2",
+          window: { from: "2026-06-25", to: "2026-07-01", days: 7, timeZone: "Asia/Shanghai" },
+          filter: { client: "apexcn-cli", limit: 20 },
+          totals: { calls: 0, successCount: 0, failureCount: 0, unclassifiedCalls: 0, classifiedCalls: 0, distinctUsers: 0, successRate: null, classificationCoverage: null, freshnessAt: null },
+          daily: Array.from({ length: 7 }, (_, index) => ({ date: new Date(Date.UTC(2026, 5, 25 + index)).toISOString().slice(0, 10), calls: 0, successCount: 0, failureCount: 0, unclassifiedCalls: 0 })), operations: [], errors: []
+        });
+      },
+      assertFeedback: ({ stdout, stderr, fetch }) => {
+        expect(fetch).toHaveBeenCalledTimes(2);
+        expect(stderr).toBe("");
+        expect(JSON.parse(stdout)).toEqual(expect.objectContaining({ schemaVersion: 2, semanticsId: "AFA-CLI-OPS-1.0" }));
       }
     },
     {

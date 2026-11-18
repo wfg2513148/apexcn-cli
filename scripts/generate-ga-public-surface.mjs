@@ -62,6 +62,7 @@ export async function buildGaPublicSurface(releaseVersion = currentReleaseVersio
 export const SUPPORTED_API_OPERATIONS = [
   operation("GET", "/api/v1/admin-list", "admin.list"),
   operation("GET", "/api/v1/admin/operations", "admin.operations"),
+  operation("GET", "/api/v1/admin/operations/v2", "admin.operations-v2"),
   operation("POST", "/api/v1/ask", "ask"),
   operation("GET", "/api/v1/capabilities", "me.capabilities"),
   operation("GET", "/api/v1/categories", "category.list"),

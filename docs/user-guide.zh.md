@@ -11,6 +11,8 @@
 - 该账号的 API Key；
 - 一个能够在本机运行命令的 AI 工具。
 
+新安装建议使用仍在维护的 Node.js LTS 版本，例如 22 或 24。[Node.js 发布周期](https://nodejs.org/en/about/previous-releases)
+
 如果还没有安装，可以把下面的话发给 AI：
 
 > 请帮我安装 apexcn-cli。安装完成后检查版本是否可用。安装阶段不要向我索取 API Key。
