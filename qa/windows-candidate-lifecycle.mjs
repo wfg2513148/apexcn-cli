@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { closeSync, existsSync, fsyncSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync, writeSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync, writeSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -18,7 +18,7 @@ const shell = process.env.APEXCN_QA_SHELL ?? "pwsh.exe";
 const expectedShell = process.env.APEXCN_QA_EXPECTED_SHELL;
 let root;
 try {
-  root = mkdtempSync(join(tmpdir(), "apexcn-independent-windows-"));
+  root = realpathSync.native(mkdtempSync(join(tmpdir(), "apexcn-independent-windows-")));
 } catch (error) {
   const failure = { ok: false, stage: "create-temp", error: error instanceof Error ? error.message : String(error) };
   process.stderr.write(`${JSON.stringify(failure)}\n`);
