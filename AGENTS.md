@@ -26,3 +26,16 @@
 - Source secrets from the approved secure store. Do not print, commit or embed
   keys/credentials in arguments, logs, drafts or validation evidence; DEV test
   credentials do not authorize production community writes.
+
+## Independent release testing
+
+- Start each new `apexcn-cli-test` task with Codex Auto-review (Approve for me).
+  Verify the test project's effective approval configuration before dispatch.
+- Assign the independent task the role of a first-time `apexcn-cli` user. It uses
+  the installed frozen candidate, public instructions, and the assigned scenarios.
+  Its deliverable is the observed results and reproducible raw evidence, including
+  the first failure for each affected scenario, reported to the implementation task.
+- The implementation task owns all cause analysis, product fixes, and repairs to
+  test fixtures and tooling. It reviews observations, fixes confirmed problems,
+  freezes changed candidates, and requests fresh novice retests until 100% of the
+  assigned fixed and dynamic acceptance scenarios pass with the required evidence.
