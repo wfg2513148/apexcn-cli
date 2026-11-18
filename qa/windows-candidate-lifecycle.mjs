@@ -7,7 +7,8 @@ import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { runtimeManifest } from "./runtime-manifest.mjs";
 
-const candidateSha = "1a05fd09dafda059de60436da0da2d7cc525addb8674afb5192be5517e9dabcd";
+const candidateSha = process.env.VALIDATOR_EXPECTED_SHA ?? "";
+assert.match(candidateSha, /^[0-9a-f]{64}$/u, "A frozen candidate digest is required");
 const priorSha = "bd3ed6cae470af9710397805b609c6b93e479995295dbb74f0fb15b32656b852";
 const assets = resolve("candidate-assets");
 const candidate = join(assets, "apexcn-cli.tgz");

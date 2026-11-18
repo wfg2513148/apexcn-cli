@@ -123,6 +123,7 @@ jobs:
           APEXCN_QA_SHELL: ${{ matrix.shell }}
           APEXCN_QA_EXPECTED_SHELL: ${{ matrix.expected }}
           APEXCN_QA_REPORT: reports/${{ matrix.id }}-candidate-lifecycle.json
+          VALIDATOR_EXPECTED_SHA: ${{ inputs.archive_sha256 }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
