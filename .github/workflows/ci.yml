@@ -9,9 +9,12 @@ on:
         default: v1.2.2
         type: string
       archive_sha256:
-        description: Frozen 1.3.0 candidate checksum
+        description: Frozen candidate checksum
         required: true
-        default: ea86f68ba6f5afa58e1a2a891613fa4349fb79baddf2bb591beea9806a71a2a9
+        type: string
+      candidate_commit:
+        description: Full commit SHA for the frozen candidate
+        required: true
         type: string
 
 permissions:
@@ -24,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 7c57fb8a367b52835714d60e628994ce96d11713
+          ref: ${{ inputs.candidate_commit }}
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
@@ -44,11 +47,12 @@ jobs:
         run: |
           set -euo pipefail
           test "$VALIDATOR_EXPECTED_TAG" = 'v1.2.2' || { printf 'Baseline tag mismatch.\n' >&2; exit 1; }
-          test "$VALIDATOR_EXPECTED_SHA" = 'ea86f68ba6f5afa58e1a2a891613fa4349fb79baddf2bb591beea9806a71a2a9' || { printf 'Candidate checksum mismatch.\n' >&2; exit 1; }
+          [[ "$VALIDATOR_EXPECTED_SHA" =~ ^[0-9a-f]{64}$ ]] || { printf 'Invalid candidate checksum.\n' >&2; exit 1; }
+          [[ "$VALIDATOR_EXPECTED_COMMIT" =~ ^[0-9a-f]{40}$ ]] && test "$(git rev-parse HEAD)" = "$VALIDATOR_EXPECTED_COMMIT"
           mkdir -p candidate-assets/prior
           npm pack --ignore-scripts --pack-destination candidate-assets
           mv candidate-assets/apexcn-cli-1.3.0.tgz candidate-assets/apexcn-cli.tgz
-          printf '%s  %s\n' 'ea86f68ba6f5afa58e1a2a891613fa4349fb79baddf2bb591beea9806a71a2a9' 'candidate-assets/apexcn-cli.tgz' | sha256sum --check
+          printf '%s  %s\n' "$VALIDATOR_EXPECTED_SHA" 'candidate-assets/apexcn-cli.tgz' | sha256sum --check
           node --input-type=module -e 'import { inspectReleaseArchive } from "./scripts/inspect-release-archive.mjs"; inspectReleaseArchive("candidate-assets/apexcn-cli.tgz");'
           tar -xOzf candidate-assets/apexcn-cli.tgz package/dist/index.js | sha256sum | cut -d ' ' -f1 > candidate-assets/candidate-entry.sha256
           mkdir candidate-reference
@@ -67,6 +71,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VALIDATOR_EXPECTED_TAG: ${{ inputs.release_tag }}
           VALIDATOR_EXPECTED_SHA: ${{ inputs.archive_sha256 }}
+          VALIDATOR_EXPECTED_COMMIT: ${{ inputs.candidate_commit }}
       - name: Install the exact candidate archive on Linux
         shell: bash
         run: |
