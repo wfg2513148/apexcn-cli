@@ -1,0 +1,73 @@
+{
+  "kind": "release-qualification-summary",
+  "version": "1.3.0",
+  "testedSourceCommit": "742fad67058caa5767713ed4a7d8be7789bf7377",
+  "archiveSha256": "2868890e0cb45f8d63beec668751be13363e293338c053c514d4d85b5b65ae67",
+  "fixed": {
+    "assigned": 204,
+    "passed": 203,
+    "stoppedByReleaseOwner": 1
+  },
+  "dynamic": {
+    "assigned": 5,
+    "passed": 5
+  },
+  "exceptions": [
+    {
+      "taskId": "M110-Q-194",
+      "disposition": "testing stopped by release owner",
+      "description": "Cross-account reply deletion on DEV",
+      "confirmationSubmitted": false,
+      "actualServerDenialObserved": false,
+      "sameReplyVisibleAfterDenialVerified": false
+    }
+  ],
+  "resolvedFindings": [
+    {
+      "id": "CLI-20261106-LARGE-INTEGER-PRECISION",
+      "title": "Preserve large identifiers and fail closed on imprecise values",
+      "independentScenarios": [
+        "CLI-20261106-LARGE-INTEGER-PRECISION"
+      ]
+    },
+    {
+      "id": "CLI-20261106-DIAGNOSTIC-URL-REDACTION",
+      "title": "Prevent diagnostic output from exposing URL credentials",
+      "independentScenarios": [
+        "CLI-20261106-DIAGNOSTIC-URL-REDACTION"
+      ]
+    },
+    {
+      "id": "CLI-20261106-V2-USER-ID-REPRESENTATION",
+      "title": "Preserve the supplied decimal user ID and enforce its length",
+      "independentScenarios": [
+        "CLI-20261106-V2-USER-ID-REPRESENTATION"
+      ]
+    },
+    {
+      "id": "CLI-20261106-WORKFLOW-PREVIEW-INTEGRITY",
+      "title": "Bind workflow verification, approval and execution to the original preview",
+      "independentScenarios": [
+        "CLI-20261106-WORKFLOW-PREVIEW-INTEGRITY"
+      ]
+    },
+    {
+      "id": "CLI-20261119-FAVORITE-REPLY-EXCLUSION",
+      "title": "Report reply favorites excluded from a topic collection",
+      "independentScenarios": [
+        "M110-Q-031",
+        "M110-Q-032",
+        "M110-Q-185"
+      ]
+    }
+  ],
+  "platformValidation": {
+    "workflow": "https://github.com/wfg2513148/apexcn-cli/actions/runs/44356844930",
+    "localTests": {
+      "node20": 1186,
+      "node22": 1186,
+      "node24": 1186,
+      "skippedOnMacPerRun": 1
+    }
+  }
+}
