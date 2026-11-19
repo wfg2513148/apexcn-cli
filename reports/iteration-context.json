@@ -1,43 +1,40 @@
 {
   "kind": "apexcn-iteration-context",
   "schemaVersion": 1,
-  "generatedAt": "2026-10-14T16:06:59.441Z",
+  "generatedAt": "2026-11-19T13:24:57.402Z",
   "release": {
-    "version": "1.2.2",
-    "tag": "v1.2.2",
-    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.2.2"
+    "version": "1.3.0",
+    "tag": "v1.3.0",
+    "url": "https://github.com/wfg2513148/apexcn-cli/releases/tag/v1.3.0"
   },
   "repository": {
     "branch": "main",
-    "commit": "cc2a8c0f8b7bb1ad460ea3dd6dbc4262f284bd7b"
+    "commit": "32d4144c0278b5a2a1784157a7d9fc91d9e17247"
   },
   "milestone": {
-    "completedIterationFor": "1.1",
-    "resumeMilestoneId": null,
-    "resumeMilestoneStatus": null
+    "completedIterationFor": null,
+    "resumeMilestoneId": "0.9",
+    "resumeMilestoneStatus": "timeboxed"
   },
   "enhancedCapabilities": [
-    "可选 OCI CLI 健康监控：每30分钟检查，连续两次失败告警，恢复通知复用现有飞书安全配置。",
-    "1.2.2 稳定版11个发布附件与冻结安装包哈希一致。"
+    "v1.3.0 提供 operations-v2，保留大整数精度并验证工作流预览完整性。",
+    "修复诊断 URL 脱敏、安装器相对路径、活动身份缺失提示和回复收藏排除计数。"
   ],
   "unexpectedProblems": [
-    "旧版本断言和英文文档检查失败，已修复并保留首轮失败证据。",
-    "前四轮独立验证存在夹具、范围或重试预算问题，不作为验收通过依据。"
+    "首轮截图早于 APEX 回复区加载。Q194 的跨账号确认未执行。"
   ],
   "rootCauses": [
-    "硬编码历史版本与验证流程约束不一致。"
+    "APEX 页面框架和回复内容分开加载。删除预览不产生服务端授权决定。"
   ],
   "preventionActions": [
-    "使用 package.json 精确版本断言；冻结工具、材料、候选包和零重试预算。",
-    "独立R5一次通过，保留原始报告和外部纠错附录；不移动发布tag。"
+    "独立测试员使用冻结包，并等待真实 Chrome 渲染同一条回复后保存截图。保留首次失败及复验记录。"
   ],
-  "nextMilestoneGoal": "本补丁发布闭环，不激活后续里程碑，不重新激活历史0.9 timeboxed；下一任务按用户新目标规划。",
+  "nextMilestoneGoal": "下一里程碑等待单独指定。",
   "expectedResults": [
-    "881项本地测试通过、1项跳过；独立26基线与11动态场景通过；两种Windows平台和OCI候选只读验证通过。"
+    "发布标签的构建与已测试包字节一致。203 个固定场景和 5 个动态场景通过，Q194 按发布负责人决定终止验证。"
   ],
   "majorRisks": [
-    "完整202题资格化仍有176项未执行，不视为通过或豁免，GitHub issue #2 保持开放。",
-    "生产私有监控CLI仍为1.2.1；发布不会自动升级该实例。"
+    "Q194 缺少服务端实际拒绝删除的回执及拒绝后同一条回复仍可见的截图。"
   ],
   "activeIssues": [],
   "resume": {
@@ -49,7 +46,7 @@
     "instructions": [
       "Re-read current repository state before planning.",
       "Create only a just-in-time plan for the active milestone.",
-      "After release closure, automatically activate only the next planned milestone and create its dedicated goal."
+      "Resume the existing milestone; do not activate a later milestone until its acceptance and completion review are closed."
     ]
   }
 }
